@@ -9,6 +9,30 @@
       <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/build" />
       <excludeFolder url="file://$MODULE_DIR$/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/geolocator_apple/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/geolocator_apple/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/geolocator_apple/build" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/geolocator_apple/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/geolocator_apple/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/geolocator_apple/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/build" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/ios14/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/ios14/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/ios14/build" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/ios15/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/ios15/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/ios15/build" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/shared/maps_example_dart/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/shared/maps_example_dart/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ios/.symlinks/plugins/google_maps_flutter_ios/example/shared/maps_example_dart/build" />
+      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/geolocator_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/geolocator_windows/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/geolocator_windows/build" />
+      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/geolocator_windows/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/geolocator_windows/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/geolocator_windows/example/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Dart SDK" level="project" />
