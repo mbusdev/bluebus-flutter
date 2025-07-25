@@ -1,38 +1,40 @@
+// Import necessary Flutter packages
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'screens/map_screen.dart';
+import 'services/bus_repository.dart';
+import 'providers/bus_provider.dart';
 
+// This function initializes the Flutter app and runs the MainApp widget
 void main() {
-  runApp(const MainApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => BusProvider(repository: BusRepository()),
+        ),
+      ],
+      child: const MainApp(),
+    ),
+  );
 }
 
-class MainApp extends StatefulWidget {
+// Main application widget that manages the Google Maps interface
+// This is a stateful widget because we need to maintain the map controller
+class MainApp extends StatelessWidget {
   const MainApp({super.key});
-
-  @override
-  State<MainApp> createState() => _MainAppState();
-}
-
-class _MainAppState extends State<MainApp> {
-  late GoogleMapController mapController;
-
-  final LatLng _center = const LatLng(45.521563, -122.677433);
-
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
-  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        body: GoogleMap(
-          onMapCreated: _onMapCreated,
-          initialCameraPosition: CameraPosition(
-            target: _center,
-            zoom: 11.0,
-          ),
-        ),
+      // Remove the debug banner
+      debugShowCheckedModeBanner: false,
+      title: 'BlueBus',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
       ),
+      home: const MapScreen(),
     );
   }
 }

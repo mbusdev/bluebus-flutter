@@ -4,12 +4,15 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: ^3.8.1
+  sdk: ^3.8.0
 
 dependencies:
   flutter:
     sdk: flutter
   google_maps_flutter: ^2.12.3
+  geolocator: ^13.0.1
+  http: ^1.4.0
+  provider: ^6.0.0
 
 dev_dependencies:
   flutter_test:
