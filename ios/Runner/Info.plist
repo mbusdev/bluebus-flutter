@@ -56,5 +56,7 @@
 		<string>_dartobservatory._tcp</string>
 		<string>_dartobservatory._tcp.</string>
 	</array>
+	<key>GMapApiKey</key>
+	<string>$(GMapApiKey)</string>
 </dict>
 </plist>
