@@ -263,8 +263,11 @@ class _MapScreenState extends State<MapScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showBusRoutesModal(busProvider.routes),
         backgroundColor: Colors.blue,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(56)
+        ),
         child: const Icon(
-          Icons.directions_bus,
+          Icons.alt_route_rounded,
           color: Colors.white,
         ),
       ),

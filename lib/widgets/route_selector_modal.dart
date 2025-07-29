@@ -29,6 +29,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
   @override
   Widget build(BuildContext context) {
+
+    // pop scope lets us update busses when the modal closes
     return PopScope(
       onPopInvokedWithResult: (bool didPop, Object? result) {
         if (didPop){
@@ -36,96 +38,108 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
           widget.onApply(tempSelectedRoutes);
         }
       },
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-      
-          children: [
-      
-            // Title
-            Padding(
-              padding: const EdgeInsets.only(left: 16, top: 20),
-              child: const Text(
-                'Routes Selector',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontFamily: 'Urbanist',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 30,
-                ),
+
+      // draggable scroll sheet is a widget that allows the modal to close when its scrolled all the way up
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.8,
+        minChildSize: 0.0, // leave at 0.0 to allow full dismissal
+        maxChildSize: 0.9, 
+        expand: false, 
+        snap: true, 
+        // snapSizes: const [0.0, 0.5, 1.0], 
+
+        builder: (BuildContext context, ScrollController scrollController) {
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.8,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
             ),
-      
-            // Subtext
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: const Text(
-                'Choose which bus routes are displayed on the map',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontFamily: 'Urbanist',
-                  fontWeight: FontWeight.w400,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-      
-            // Scrollable list of bus routes with selection functionality
-            Expanded(
-              child: ListView.builder(
-                itemCount: widget.availableRoutes.length,
-                itemBuilder: (context, index) {
-                  final route = widget.availableRoutes[index];
-                  final isSelected = tempSelectedRoutes.contains(route['id']);
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.directions_bus,
-                        color: isSelected ? Colors.blue : Colors.grey,
-                      ),
-                      title: Text(
-                        route['name'] ?? route['id']!,
+
+            child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: widget.availableRoutes.length + 2,
+                  itemBuilder: (context, index) {
+
+                  // TITLE
+                  if (index == 0) {
+                    return const Padding(
+                      padding: EdgeInsets.only(left: 16, top: 20, bottom: 4), // Added some bottom padding
+                      child: Text(
+                        'Routes Selector',
                         style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: Colors.black,
+                          fontFamily: 'Urbanist',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 30,
                         ),
                       ),
-                      trailing: Checkbox(
-                        value: isSelected,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            if (value == true) {
-                              tempSelectedRoutes.add(route['id']!);
-                            } else {
-                              tempSelectedRoutes.remove(route['id']!);
-                            }
-                          });
-                        },
+                    );
+
+                  // SUBTITLE
+                  } else if (index == 1) {
+                    return const Padding(
+                      padding: EdgeInsets.only(left: 16, bottom: 16), // Added some bottom padding
+                      child: Text(
+                        'Choose which bus routes are displayed on the map',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontFamily: 'Urbanist',
+                          fontWeight: FontWeight.w400,
+                          fontSize: 18,
+                        ),
                       ),
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            tempSelectedRoutes.remove(route['id']!);
-                          } else {
-                            tempSelectedRoutes.add(route['id']!);
-                          }
-                        });
-                      },
-                    ),
-                  );
-                },
-              ),
+                    );
+
+                  // ACTUAL LIST
+                  } else {
+                      final route = widget.availableRoutes[index - 2]; // -2 to account for title and subtitle
+                      final isSelected = tempSelectedRoutes.contains(route['id']);
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.directions_bus,
+                            color: isSelected ? Colors.blue : Colors.grey,
+                          ),
+                          title: Text(
+                            route['name'] ?? route['id']!,
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          trailing: Checkbox(
+                            value: isSelected,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  tempSelectedRoutes.add(route['id']!);
+                                } else {
+                                  tempSelectedRoutes.remove(route['id']!);
+                                }
+                              });
+                            },
+                          ),
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                tempSelectedRoutes.remove(route['id']!);
+                              } else {
+                                tempSelectedRoutes.add(route['id']!);
+                              }
+                            });
+                          },
+                        ),
+                      );
+                  }
+              },
             ),
-          ],
-        ),
+          );
+        }
       ),
     );
   }
