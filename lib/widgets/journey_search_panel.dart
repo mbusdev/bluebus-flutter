@@ -4,7 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../widgets/search_bar.dart' as custom_widgets;
 import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
@@ -169,17 +168,16 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => SafeArea(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              constraints: const BoxConstraints(maxHeight: 400),
-              child: JourneyResultsWidget(journeys: journeys),
-            ),
+      builder: (context) => SafeArea(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
+          constraints: const BoxConstraints(maxHeight: 400),
+          child: JourneyResultsWidget(journeys: journeys),
+        ),
+      ),
     );
   }
 
@@ -223,6 +221,12 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
                                   _startController.text = location.name;
                                 });
                               },
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.my_location),
+                                labelText: 'From',
+                                hintText: 'Enter start location...',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                             const SizedBox(height: 8),
                             LocationSearchBar(
@@ -236,6 +240,12 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
                                   _onSearch(location.name);
                                 }
                               },
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.location_on),
+                                labelText: 'To',
+                                hintText: 'Enter destination...',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ],
                         ),
@@ -282,14 +292,15 @@ class Location {
 class LocationSearchBar extends HookWidget {
   final void Function(Location) onLocationSelected;
   final TextEditingController controller;
-
   final FocusNode focusNode;
+  final InputDecoration decoration;
 
   const LocationSearchBar({
     super.key,
     required this.onLocationSelected,
     required this.controller,
     required this.focusNode,
+    required this.decoration,
   });
 
   @override
@@ -367,12 +378,11 @@ class LocationSearchBar extends HookWidget {
       query = query.toLowerCase().trim();
       if (query.length < 2) return [];
 
-      final sizes =
-          query.length == 2
-              ? [2]
-              : query.length == 3
-              ? [2, 3]
-              : [2, 3, 4];
+      final sizes = query.length == 2
+          ? [2]
+          : query.length == 3
+          ? [2, 3]
+          : [2, 3, 4];
       final seen = <String>{};
       final score = <Location, int>{};
 
@@ -393,11 +403,10 @@ class LocationSearchBar extends HookWidget {
       final total = seen.length;
       final minScore = (0.2 + 0.08 * (query.length - 2)).clamp(0.2, 0.8);
 
-      final filtered =
-          score.entries
-              .map((e) => MapEntry(e.key, e.value / total))
-              .where((e) => e.value >= minScore)
-              .toList();
+      final filtered = score.entries
+          .map((e) => MapEntry(e.key, e.value / total))
+          .where((e) => e.value >= minScore)
+          .toList();
       filtered.sort((a, b) => b.value.compareTo(a.value));
       return filtered
           .take(score.length.clamp(0, 10).toInt())
@@ -421,16 +430,26 @@ class LocationSearchBar extends HookWidget {
         TextField(
           controller: controller,
           focusNode: focusNode,
-          decoration: const InputDecoration(
-            hintText: 'Search destination...',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
-          ),
+          decoration: decoration,
           onChanged: (val) {
             searchQuery.value = val;
             showSuggestions.value = true;
           },
+          onSubmitted: (val) async {
+            final idx = await ngramIndex;
+            final matches = ngramSearch(val, idx);
+
+            if (matches.isNotEmpty) {
+              final selected = matches.first;
+              controller.text = selected.name;
+              onLocationSelected(
+                selected,
+              ); // triggers _onSearch if it's the "To" field
+              showSuggestions.value = false;
+            }
+          },
         ),
+
         const SizedBox(height: 8),
         FutureBuilder<List<Location>>(
           future: results,
