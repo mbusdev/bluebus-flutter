@@ -33,6 +33,7 @@ class MainApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
+        fontFamily: 'Urbanist'
       ),
       home: const MapScreen(),
     );

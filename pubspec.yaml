@@ -20,4 +20,27 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter:
+  fonts:
+    - family: Urbanist
+      fonts:
+        - asset: fonts/urbanist/static/Urbanist-Thin.ttf
+          weight: 100
+        - asset: fonts/urbanist/static/Urbanist-ExtraLight.ttf
+          weight: 200
+        - asset: fonts/urbanist/static/Urbanist-Light.ttf
+          weight: 300
+        - asset: fonts/urbanist/static/Urbanist-Regular.ttf
+          weight: 400
+        - asset: fonts/urbanist/static/Urbanist-Medium.ttf
+          weight: 500
+        - asset: fonts/urbanist/static/Urbanist-SemiBold.ttf
+          weight: 600
+        - asset: fonts/urbanist/static/Urbanist-Bold.ttf
+          weight: 700
+        - asset: fonts/urbanist/static/Urbanist-ExtraBold.ttf
+          weight: 800
+        - asset: fonts/urbanist/static/Urbanist-Black.ttf
+          weight: 900
+        - asset: fonts/urbanist/Urbanist-Italic-VariableFont_wght.ttf
+          style: italic
   uses-material-design: true
