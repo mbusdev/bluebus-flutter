@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../widgets/search_bar.dart' as custom_widgets;
@@ -18,6 +20,10 @@ class JourneySearchPanel extends StatefulWidget {
 class _JourneySearchPanelState extends State<JourneySearchPanel> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _startController = TextEditingController();
+
+  final FocusNode _startFocusNode = FocusNode();
+  final FocusNode _searchFocusNode = FocusNode();
+
   bool _isLoadingJourney = false;
   String? _journeyError;
 
@@ -27,6 +33,15 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
   void initState() {
     super.initState();
     _fetchBuildingLocations();
+  }
+
+  @override
+  void dispose() {
+    _startController.dispose();
+    _searchController.dispose();
+    _startFocusNode.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchBuildingLocations() async {
@@ -154,16 +169,17 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      builder:
+          (context) => SafeArea(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              constraints: const BoxConstraints(maxHeight: 400),
+              child: JourneyResultsWidget(journeys: journeys),
+            ),
           ),
-          constraints: const BoxConstraints(maxHeight: 400),
-          child: JourneyResultsWidget(journeys: journeys),
-        ),
-      ),
     );
   }
 
@@ -187,7 +203,10 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
             child: Container(
               width: double.infinity,
               constraints: const BoxConstraints(maxWidth: 500),
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 12.0,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -196,26 +215,27 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
                       Expanded(
                         child: Column(
                           children: [
-                            TextField(
+                            LocationSearchBar(
                               controller: _startController,
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.my_location),
-                                labelText: 'From',
-                                hintText: 'Enter start location...',
-                                border: const OutlineInputBorder(),
-                              ),
-                              onSubmitted: (_) {},
+                              focusNode: _startFocusNode,
+                              onLocationSelected: (location) {
+                                setState(() {
+                                  _startController.text = location.name;
+                                });
+                              },
                             ),
                             const SizedBox(height: 8),
-                            TextField(
+                            LocationSearchBar(
                               controller: _searchController,
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.location_on),
-                                labelText: 'To',
-                                hintText: 'Enter destination...',
-                                border: const OutlineInputBorder(),
-                              ),
-                              onSubmitted: _isLoadingJourney ? null : (query) { _onSearch(query); },
+                              focusNode: _searchFocusNode,
+                              onLocationSelected: (location) {
+                                setState(() {
+                                  _searchController.text = location.name;
+                                });
+                                if (!_isLoadingJourney) {
+                                  _onSearch(location.name);
+                                }
+                              },
                             ),
                           ],
                         ),
@@ -237,6 +257,212 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class Location {
+  final String name;
+  final List<String> aliases;
+
+  final int? stopId;
+  final LatLng? latlng;
+
+  final bool isBusStop;
+
+  Location(
+    this.name,
+    List<String> aliases,
+    this.isBusStop, {
+    this.stopId,
+    this.latlng,
+  }) : aliases = aliases;
+}
+
+class LocationSearchBar extends HookWidget {
+  final void Function(Location) onLocationSelected;
+  final TextEditingController controller;
+
+  final FocusNode focusNode;
+
+  const LocationSearchBar({
+    super.key,
+    required this.onLocationSelected,
+    required this.controller,
+    required this.focusNode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final showSuggestions = useState(false);
+    useEffect(() {
+      void listener() {
+        if (!focusNode.hasFocus) {
+          showSuggestions.value = false;
+        }
+      }
+
+      focusNode.addListener(listener);
+      return () => focusNode.removeListener(listener);
+    }, [focusNode]);
+    final searchQuery = useState('');
+
+    final locations = useMemoized(() async {
+      try {
+        final uri = Uri.parse(BACKEND_URL + '/getBuildingLocations');
+        final response = await http.get(uri);
+
+        if (response.statusCode != 200 ||
+            response.body.trim() == '{}' ||
+            response.body.trim().isEmpty) {
+          return <Location>[];
+        }
+
+        final buildingLocations = jsonDecode(response.body) as List<dynamic>;
+        return buildingLocations.map((building) {
+          final name = building['buildingName'] as String;
+          final abbrev = building['abbrev'] as String?;
+          final altName = building['altName'] as String?;
+          final lat = building['lat'] as double;
+          final long = building['long'] as double;
+
+          return Location(
+            name,
+            [if (abbrev != null) abbrev, if (altName != null) altName],
+            false,
+            latlng: LatLng(lat, long),
+          );
+        }).toList();
+      } catch (e) {
+        print('Failed to fetch building locations: $e');
+        return <Location>[];
+      }
+    }, []);
+
+    Map<String, Set<Location>> buildNgramIndex(
+      List<Location> locations, {
+      List<int> ngramSizes = const [2, 3, 4],
+    }) {
+      final Map<String, Set<Location>> index = {};
+      for (final loc in locations) {
+        final name = loc.name.toLowerCase();
+        final alias = loc.aliases.map((a) => a.toLowerCase()).join(' ');
+        final seen = <String>{};
+
+        for (final n in ngramSizes) {
+          for (int i = 0; i <= name.length - n; i++) {
+            final ngram = name.substring(i, i + n);
+            if (seen.add(ngram)) index.putIfAbsent(ngram, () => {}).add(loc);
+          }
+          for (int i = 0; i <= alias.length - n; i++) {
+            final ngram = alias.substring(i, i + n);
+            if (seen.add(ngram)) index.putIfAbsent(ngram, () => {}).add(loc);
+          }
+        }
+      }
+      return index;
+    }
+
+    List<Location> ngramSearch(String query, Map<String, Set<Location>> index) {
+      query = query.toLowerCase().trim();
+      if (query.length < 2) return [];
+
+      final sizes =
+          query.length == 2
+              ? [2]
+              : query.length == 3
+              ? [2, 3]
+              : [2, 3, 4];
+      final seen = <String>{};
+      final score = <Location, int>{};
+
+      for (final n in sizes) {
+        for (int i = 0; i <= query.length - n; i++) {
+          final ngram = query.substring(i, i + n);
+          if (seen.add(ngram)) {
+            final matches = index[ngram];
+            if (matches != null) {
+              for (final loc in matches) {
+                score[loc] = (score[loc] ?? 0) + 1;
+              }
+            }
+          }
+        }
+      }
+
+      final total = seen.length;
+      final minScore = (0.2 + 0.08 * (query.length - 2)).clamp(0.2, 0.8);
+
+      final filtered =
+          score.entries
+              .map((e) => MapEntry(e.key, e.value / total))
+              .where((e) => e.value >= minScore)
+              .toList();
+      filtered.sort((a, b) => b.value.compareTo(a.value));
+      return filtered
+          .take(score.length.clamp(0, 10).toInt())
+          .map((e) => e.key)
+          .toList();
+    }
+
+    final ngramIndex = useMemoized(() async {
+      final locs = await locations;
+      return buildNgramIndex(locs);
+    }, []);
+
+    final results = useMemoized(() async {
+      final idx = await ngramIndex;
+      return ngramSearch(searchQuery.value, idx);
+    }, [searchQuery.value]);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: const InputDecoration(
+            hintText: 'Search destination...',
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (val) {
+            searchQuery.value = val;
+            showSuggestions.value = true;
+          },
+        ),
+        const SizedBox(height: 8),
+        FutureBuilder<List<Location>>(
+          future: results,
+          builder: (context, snapshot) {
+            if (!showSuggestions.value || searchQuery.value.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const CircularProgressIndicator();
+            } else if (snapshot.hasData) {
+              final locations = snapshot.data!;
+              return ListView.builder(
+                itemCount: locations.length,
+                shrinkWrap: true,
+                itemBuilder: (context, index) {
+                  final loc = locations[index];
+                  return ListTile(
+                    title: Text(loc.name),
+                    onTap: () {
+                      controller.text = loc.name;
+                      onLocationSelected(loc);
+                      showSuggestions.value = false;
+                    },
+                  );
+                },
+              );
+            } else {
+              return const Text('No results');
+            }
+          },
+        ),
+      ],
     );
   }
 }
