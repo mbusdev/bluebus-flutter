@@ -8,7 +8,6 @@ import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 import '../providers/bus_provider.dart';
 import 'package:geolocator/geolocator.dart';
-import '../widgets/search_bar.dart' as custom_widgets;
 import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
