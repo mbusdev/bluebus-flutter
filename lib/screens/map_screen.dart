@@ -114,18 +114,21 @@ class _MapScreenState extends State<MapScreen> {
 
   void _cacheRouteOverlays(List<BusRouteLine> routes) {
     for (final r in routes) {
-      if (!_routePolylines.containsKey(r.routeId)) {
-        _routePolylines[r.routeId] = Polyline(
-          polylineId: PolylineId(r.routeId + r.points.hashCode.toString()),
+      // Create unique key for each route variant
+      final routeKey = '${r.routeId}_${r.points.hashCode}';
+      
+      if (!_routePolylines.containsKey(routeKey)) {
+        _routePolylines[routeKey] = Polyline(
+          polylineId: PolylineId(routeKey),
           points: r.points,
           color: Colors.blue,
           width: 4,
         );
       }
-      if (!_routeStopMarkers.containsKey(r.routeId)) {
-        _routeStopMarkers[r.routeId] = r.stops
+      if (!_routeStopMarkers.containsKey(routeKey)) {
+        _routeStopMarkers[routeKey] = r.stops
             .map((stop) => Marker(
-                  markerId: MarkerId('stop_${stop.id}'),
+                  markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
                   position: stop.location,
                   icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
                   infoWindow: InfoWindow(title: stop.name),
@@ -134,16 +137,27 @@ class _MapScreenState extends State<MapScreen> {
       }
     }
   }
+  
+
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
     final selectedStopMarkers = <Marker>{};
+    
     for (final routeId in _selectedRoutes) {
-      final polyline = _routePolylines[routeId];
-      if (polyline != null) selectedPolylines.add(polyline);
-      final stops = _routeStopMarkers[routeId];
-      if (stops != null) selectedStopMarkers.addAll(stops);
+      // Find all variants of this route
+      final routeVariants = _routePolylines.keys.where((key) => key.startsWith('${routeId}_'));
+      
+      for (final routeKey in routeVariants) {
+        final polyline = _routePolylines[routeKey];
+        if (polyline != null) selectedPolylines.add(polyline);
+        final stops = _routeStopMarkers[routeKey];
+        if (stops != null) {
+          selectedStopMarkers.addAll(stops);
+        }
+      }
     }
+    
     setState(() {
       _displayedPolylines = selectedPolylines;
       _displayedStopMarkers = selectedStopMarkers;
@@ -170,8 +184,16 @@ class _MapScreenState extends State<MapScreen> {
 
   void _refreshAllMarkers() {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
+    _refreshCachedStopMarkers();
     _updateDisplayedRoutes();
     _updateDisplayedBuses(busProvider.buses);
+  }
+
+  void _refreshCachedStopMarkers() {
+    // Clear cached stop markers so they'll be recreated with the new icons
+    _routeStopMarkers.clear();
+    // Re-cache all route overlays with the new icons
+    _cacheRouteOverlays(Provider.of<BusProvider>(context, listen: false).routes);
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -266,6 +288,20 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _zoomIn() {
+    if (_mapController != null) {
+      _mapController!.animateCamera(CameraUpdate.zoomIn());
+    }
+  }
+
+  void _zoomOut() {
+    if (_mapController != null) {
+      _mapController!.animateCamera(CameraUpdate.zoomOut());
+    }
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final busProvider = Provider.of<BusProvider>(context);
@@ -308,6 +344,32 @@ class _MapScreenState extends State<MapScreen> {
                 Icons.my_location,
                 color: Colors.black87,
               ),
+            ),
+          ),
+          // Zoom controls
+          Positioned(
+            bottom: 45,
+            right: 16,
+            child: Column(
+              children: [
+                FloatingActionButton.small(
+                  onPressed: _zoomIn,
+                  backgroundColor: Colors.white,
+                  child: const Icon(
+                    Icons.add,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton.small(
+                  onPressed: _zoomOut,
+                  backgroundColor: Colors.white,
+                  child: const Icon(
+                    Icons.remove,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
