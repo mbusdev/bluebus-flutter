@@ -55,8 +55,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
               ),
             ),
 
@@ -102,9 +102,24 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                       return Card(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         child: ListTile(
-                          leading: Icon(
-                            Icons.directions_bus,
-                            color: isSelected ? Colors.blue : Colors.grey,
+                          leading: Container(
+                            width: 47,
+                            height: 47,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black, 
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              route['id']!,
+                              style: TextStyle(
+                                color: Colors.white, 
+                                fontSize: 23,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                           title: Text(
                             route['name'] ?? route['id']!,

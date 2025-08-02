@@ -15,5 +15,5 @@ const Map<String, String> ROUTE_CODE_TO_NAME = {
 
 String getPrettyRouteName(String code) {
   final name = ROUTE_CODE_TO_NAME[code];
-  return name != null ? '$code - $name' : code;
+  return name != null ? name : code;
 }

@@ -243,15 +243,18 @@ class _MapScreenState extends State<MapScreen> {
             onMapCreated: _onMapCreated,
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
-            zoomControlsEnabled: true,
+            zoomControlsEnabled: false,
             mapToolbarEnabled: true,
           ),
           Positioned(
-            top: 100,
+            top: 350,
             right: 16,
             child: FloatingActionButton.small(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40)
+              ),
               onPressed: _centerOnUserLocation,
-              backgroundColor: Colors.white,
+              backgroundColor: const Color.fromARGB(173, 255, 255, 255),
               child: const Icon(
                 Icons.my_location,
                 color: Colors.black87,
