@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../widgets/map_widget.dart';
@@ -29,6 +32,10 @@ class _MapScreenState extends State<MapScreen> {
   List<Map<String, String>> _availableRoutes = [];
   Map<String, String> _routeIdToName = {};
 
+  // Custom marker icons
+  BitmapDescriptor? _busIcon;
+  BitmapDescriptor? _stopIcon;
+
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
   final Map<String, Set<Marker>> _routeStopMarkers = {};
@@ -36,6 +43,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCustomMarkers();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final busProvider = Provider.of<BusProvider>(context, listen: false);
       busProvider.loadRoutes().then((_) {
@@ -46,6 +54,41 @@ class _MapScreenState extends State<MapScreen> {
         busProvider.startBusUpdates();
       });
     });
+  }
+
+  Future<void> _loadCustomMarkers() async {
+    try {
+      // Load and resize bus icon
+      final busBytes = await rootBundle.load('assets/bus_blue.png');
+      final busCodec = await ui.instantiateImageCodec(
+        busBytes.buffer.asUint8List(),
+        targetWidth: 150,
+        targetHeight: 250,
+      );
+      final busFrame = await busCodec.getNextFrame();
+      final busData = await busFrame.image.toByteData(format: ui.ImageByteFormat.png);
+      _busIcon = BitmapDescriptor.fromBytes(busData!.buffer.asUint8List());
+
+      // Load and resize stop icon
+      final stopBytes = await rootBundle.load('assets/bus_stop.png');
+      final stopCodec = await ui.instantiateImageCodec(
+        stopBytes.buffer.asUint8List(),
+        targetWidth: 90,
+        targetHeight: 90,
+      );
+      final stopFrame = await stopCodec.getNextFrame();
+      final stopData = await stopFrame.image.toByteData(format: ui.ImageByteFormat.png);
+      _stopIcon = BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
+      
+      // Refresh markers with new icons
+      if (mounted) {
+        _refreshAllMarkers();
+      }
+    } catch (e) {
+      // Fallback to default markers if custom loading fails
+      _busIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+      _stopIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
   }
 
   @override
@@ -71,36 +114,50 @@ class _MapScreenState extends State<MapScreen> {
 
   void _cacheRouteOverlays(List<BusRouteLine> routes) {
     for (final r in routes) {
-      if (!_routePolylines.containsKey(r.routeId)) {
-        _routePolylines[r.routeId] = Polyline(
-          polylineId: PolylineId(r.routeId + r.points.hashCode.toString()),
+      // Create unique key for each route variant
+      final routeKey = '${r.routeId}_${r.points.hashCode}';
+      
+      if (!_routePolylines.containsKey(routeKey)) {
+        _routePolylines[routeKey] = Polyline(
+          polylineId: PolylineId(routeKey),
           points: r.points,
           color: Colors.blue,
           width: 4,
         );
       }
-      if (!_routeStopMarkers.containsKey(r.routeId)) {
-        _routeStopMarkers[r.routeId] = r.stops
+      if (!_routeStopMarkers.containsKey(routeKey)) {
+        _routeStopMarkers[routeKey] = r.stops
             .map((stop) => Marker(
-                  markerId: MarkerId('stop_${stop.id}'),
+                  markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
                   position: stop.location,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                  icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
                   infoWindow: InfoWindow(title: stop.name),
                 ))
             .toSet();
       }
     }
   }
+  
+
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
     final selectedStopMarkers = <Marker>{};
+    
     for (final routeId in _selectedRoutes) {
-      final polyline = _routePolylines[routeId];
-      if (polyline != null) selectedPolylines.add(polyline);
-      final stops = _routeStopMarkers[routeId];
-      if (stops != null) selectedStopMarkers.addAll(stops);
+      // Find all variants of this route
+      final routeVariants = _routePolylines.keys.where((key) => key.startsWith('${routeId}_'));
+      
+      for (final routeKey in routeVariants) {
+        final polyline = _routePolylines[routeKey];
+        if (polyline != null) selectedPolylines.add(polyline);
+        final stops = _routeStopMarkers[routeKey];
+        if (stops != null) {
+          selectedStopMarkers.addAll(stops);
+        }
+      }
     }
+    
     setState(() {
       _displayedPolylines = selectedPolylines;
       _displayedStopMarkers = selectedStopMarkers;
@@ -114,14 +171,29 @@ class _MapScreenState extends State<MapScreen> {
         .map((bus) => Marker(
               markerId: MarkerId('bus_${bus.id}'),
               position: bus.position,
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+              icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
               rotation: bus.heading,
+              anchor: const Offset(0.5, 0.5), // Center the icon on the position
               infoWindow: InfoWindow(title: 'Bus ${bus.id}'),
             ))
         .toSet();
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
     });
+  }
+
+  void _refreshAllMarkers() {
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
+    _refreshCachedStopMarkers();
+    _updateDisplayedRoutes();
+    _updateDisplayedBuses(busProvider.buses);
+  }
+
+  void _refreshCachedStopMarkers() {
+    // Clear cached stop markers so they'll be recreated with the new icons
+    _routeStopMarkers.clear();
+    // Re-cache all route overlays with the new icons
+    _cacheRouteOverlays(Provider.of<BusProvider>(context, listen: false).routes);
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -216,6 +288,20 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _zoomIn() {
+    if (_mapController != null) {
+      _mapController!.animateCamera(CameraUpdate.zoomIn());
+    }
+  }
+
+  void _zoomOut() {
+    if (_mapController != null) {
+      _mapController!.animateCamera(CameraUpdate.zoomOut());
+    }
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final busProvider = Provider.of<BusProvider>(context);
@@ -231,7 +317,9 @@ class _MapScreenState extends State<MapScreen> {
     }
     // Only update bus markers when buses change
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateDisplayedBuses(busProvider.buses);
+      if (busProvider.buses.isNotEmpty) {
+        _updateDisplayedBuses(busProvider.buses);
+      }
     });
     return Scaffold(
       body: Stack(
@@ -259,6 +347,32 @@ class _MapScreenState extends State<MapScreen> {
                 Icons.my_location,
                 color: Colors.black87,
               ),
+            ),
+          ),
+          // Zoom controls
+          Positioned(
+            bottom: 45,
+            right: 16,
+            child: Column(
+              children: [
+                FloatingActionButton.small(
+                  onPressed: _zoomIn,
+                  backgroundColor: Colors.white,
+                  child: const Icon(
+                    Icons.add,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton.small(
+                  onPressed: _zoomOut,
+                  backgroundColor: Colors.white,
+                  child: const Icon(
+                    Icons.remove,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
