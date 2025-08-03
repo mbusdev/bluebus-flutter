@@ -1,7 +1,54 @@
-# bluebus-flutter
-Google Maps SDK
-To use the Google Maps SDK, you will need to create a new project on the Google Cloud Platform and enable the Maps SDK for Android and iOS.
+# BlueBus Flutter App
 
-To set your keys for Android, (create and) edit the local.properties file in the android directory and define a API_KEY property with your API key.
+## Google Maps Setup (iOS)
 
-To set your keys for iOS, create the gmap.xcconfig file in ios/Flutter and define a GMAP_API_KEY property with your API key for the Google Maps SDK.
+1. **Create the API key config file:**
+   - Create a file at `ios/Flutter/gmap.xcconfig`
+   - Add your key:
+     ```
+     GMapApiKey=YOUR_IOS_GOOGLE_MAPS_API_KEY
+     ```
+
+## Running the App (IOS)
+
+1. **Launch the iOS Simulator:**
+     ```
+     open -a Simulator
+     ```
+
+2. **Run the App**
+   ```
+   flutter pub get
+   flutter run
+   ```
+
+## Running the App With Latest Graph Backend (iOS)
+
+### 1. Set Up the Backend
+
+```sh
+git clone git@github.com:mbusdev/mbus-backend-dev.git
+cd mbus-backend-dev
+git checkout graph-data-endpoint
+```
+
+- Set up your MBus API key as required by the backend instructions.
+- Start the local backend server (refer to backend README for details).
+
+---
+
+### 2. Launch the iOS Simulator
+
+```sh
+open -a Simulator
+```
+
+---
+
+### 3. Run the App with the Local Backend
+
+```sh
+flutter run --dart-define=BACKEND_URL=http://localhost:3000/mbus/api/v3
+```
+
+---

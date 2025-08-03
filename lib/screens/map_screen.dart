@@ -11,7 +11,11 @@ import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 import '../providers/bus_provider.dart';
 import 'package:geolocator/geolocator.dart';
+import '../models/journey.dart';
+import '../services/journey_repository.dart';
+import '../widgets/journey_results_widget.dart';
 import '../constants.dart';
+import '../widgets/journey_search_panel.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -324,57 +328,40 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          MapWidget(
-            initialCenter: _defaultCenter,
-            polylines: _displayedPolylines,
-            markers: _displayedStopMarkers.union(_displayedBusMarkers),
-            onMapCreated: _onMapCreated,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            mapToolbarEnabled: true,
-          ),
-          Positioned(
-            top: 350,
-            right: 16,
-            child: FloatingActionButton.small(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(40)
-              ),
-              onPressed: _centerOnUserLocation,
-              backgroundColor: const Color.fromARGB(173, 255, 255, 255),
-              child: const Icon(
-                Icons.my_location,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-          // Zoom controls
-          Positioned(
-            bottom: 45,
-            right: 16,
-            child: Column(
-              children: [
-                FloatingActionButton.small(
-                  onPressed: _zoomIn,
-                  backgroundColor: Colors.white,
-                  child: const Icon(
-                    Icons.add,
-                    color: Colors.black87,
-                  ),
+          Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    MapWidget(
+                      initialCenter: _defaultCenter,
+                      polylines: _displayedPolylines,
+                      markers: _displayedStopMarkers.union(_displayedBusMarkers),
+                      onMapCreated: _onMapCreated,
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: true,
+                      mapToolbarEnabled: true,
+                    ),
+                    Positioned(
+                      top: 100,
+                      right: 16,
+                      child: FloatingActionButton.small(
+                        onPressed: _centerOnUserLocation,
+                        backgroundColor: Colors.white,
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                FloatingActionButton.small(
-                  onPressed: _zoomOut,
-                  backgroundColor: Colors.white,
-                  child: const Icon(
-                    Icons.remove,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
+          // Overlay the journey search panel at the top
+          const JourneySearchPanel(),
         ],
       ),
       floatingActionButton: FloatingActionButton(
