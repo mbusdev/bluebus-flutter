@@ -1,5 +1,5 @@
 // Backend url for the api
-const String BACKEND_URL = 'https://www.efeakinci.host/mbus/api/v3'; 
+const String BACKEND_URL = 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3/'; 
 
 // Mapping from route code to full name
 const Map<String, String> ROUTE_CODE_TO_NAME = {

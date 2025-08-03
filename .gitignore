@@ -7,7 +7,8 @@
 .buildlog/
 .history
 
-
+# api key
+gmap.xcconfig
 
 # Flutter repo-specific
 /bin/cache/

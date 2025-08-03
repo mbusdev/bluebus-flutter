@@ -44,3 +44,5 @@ flutter:
         - asset: fonts/urbanist/Urbanist-Italic-VariableFont_wght.ttf
           style: italic
   uses-material-design: true
+  assets:
+    - assets/
