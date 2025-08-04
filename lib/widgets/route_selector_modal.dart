@@ -68,7 +68,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                   // TITLE
                   if (index == 0) {
                     return const Padding(
-                      padding: EdgeInsets.only(left: 16, top: 20, bottom: 4), // Added some bottom padding
+                      padding: EdgeInsets.only(left: 16, top: 20, bottom: 4), 
                       child: Text(
                         'Routes Selector',
                         style: TextStyle(
@@ -83,7 +83,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                   // SUBTITLE
                   } else if (index == 1) {
                     return const Padding(
-                      padding: EdgeInsets.only(left: 16, bottom: 16), // Added some bottom padding
+                      padding: EdgeInsets.only(left: 16, bottom: 16, right: 16), 
                       child: Text(
                         'Choose which bus routes are displayed on the map',
                         style: TextStyle(

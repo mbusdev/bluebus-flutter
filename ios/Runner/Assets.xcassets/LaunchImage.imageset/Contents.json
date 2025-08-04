@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "app_icon_real.png",
+      "filename" : "Adobe Express - file.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "app_icon_real 1.png",
+      "filename" : "Adobe Express - file 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "app_icon_real 2.png",
+      "filename" : "Adobe Express - file 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

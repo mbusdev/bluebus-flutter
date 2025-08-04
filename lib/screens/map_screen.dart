@@ -292,20 +292,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _zoomIn() {
-    if (_mapController != null) {
-      _mapController!.animateCamera(CameraUpdate.zoomIn());
-    }
-  }
-
-  void _zoomOut() {
-    if (_mapController != null) {
-      _mapController!.animateCamera(CameraUpdate.zoomOut());
-    }
-  }
-
-
-
   @override
   Widget build(BuildContext context) {
     final busProvider = Provider.of<BusProvider>(context);
@@ -325,57 +311,131 @@ class _MapScreenState extends State<MapScreen> {
         _updateDisplayedBuses(busProvider.buses);
       }
     });
-    return Scaffold(
-      body: Stack(
-        children: [
-          Column(
+
+    return Stack(
+      children: [
+        // underlying map layer
+        MapWidget(
+          initialCenter: _defaultCenter,
+          polylines: _displayedPolylines,
+          markers: _displayedStopMarkers.union(_displayedBusMarkers),
+          onMapCreated: _onMapCreated,
+          myLocationEnabled: true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: true,
+          mapToolbarEnabled: true,
+        ),
+
+        // Safe-Area (for UI)
+        SafeArea(
+          // buttons
+          child: Column(
             children: [
-              Expanded(
-                child: Stack(
+              Spacer(),
+
+              // temp row (might add settings button to it later)
+              Padding(
+                padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    MapWidget(
-                      initialCenter: _defaultCenter,
-                      polylines: _displayedPolylines,
-                      markers: _displayedStopMarkers.union(_displayedBusMarkers),
-                      onMapCreated: _onMapCreated,
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: false,
-                      zoomControlsEnabled: true,
-                      mapToolbarEnabled: true,
-                    ),
-                    Positioned(
-                      top: 100,
-                      right: 16,
-                      child: FloatingActionButton.small(
-                        onPressed: _centerOnUserLocation,
-                        backgroundColor: Colors.white,
-                        child: const Icon(
-                          Icons.my_location,
-                          color: Colors.black87,
-                        ),
+                    // location button
+                    FloatingActionButton.small(
+                      onPressed: _centerOnUserLocation,
+                      backgroundColor: const ui.Color.fromARGB(176, 255, 255, 255),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(56)
+                      ),
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.black87,
                       ),
                     ),
                   ],
                 ),
               ),
+
+              // main buttons row
+              Padding(
+                padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+
+                  children: [
+                    // routes
+                    SizedBox(
+                      width: 55,
+                      height: 55,
+                      child: FittedBox(
+                        child: FloatingActionButton(
+                          onPressed: () => _showBusRoutesModal(busProvider.routes),
+                          backgroundColor: maizeBusDarkBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(56)
+                          ),
+                          child: const Icon(
+                            Icons.alt_route_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+
+                    SizedBox(
+                      width: 15,
+                    ),
+                
+                    // favorites
+                    SizedBox(
+                      width: 55,
+                      height: 55,
+                      child: FittedBox(
+                        child: FloatingActionButton(
+                          onPressed: () => print("hi"),
+                          backgroundColor: maizeBusDarkBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(56)
+                          ),
+                          child: const Icon(
+                            Icons.favorite,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    Spacer(),
+                    
+                    // search
+                    SizedBox(
+                      width: 75,
+                      height: 75,
+                      child: FittedBox(
+                        child: FloatingActionButton(
+                          onPressed: () => print("hi"),
+                          backgroundColor: maizeBusDarkBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(56)
+                          ),
+                          child: const Icon(
+                            Icons.search,
+                            size: 35,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              )
             ],
           ),
-          // Overlay the journey search panel at the top
-          const JourneySearchPanel(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showBusRoutesModal(busProvider.routes),
-        backgroundColor: Colors.blue,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(56)
-        ),
-        child: const Icon(
-          Icons.alt_route_rounded,
-          color: Colors.white,
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+        )
+      ],
     );
+
+    // Overlay the journey search panel at the top
+    //const JourneySearchPanel(),
   }
 } 

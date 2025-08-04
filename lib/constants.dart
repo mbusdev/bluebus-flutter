@@ -1,6 +1,8 @@
 // Backend url for the api
 //onst String BACKEND_URL = 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3/'; 
 // const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'https://www.efeakinci.host/mbus/api/v3');
+import 'package:flutter/material.dart';
+
 const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000/mbus/api/v3');
 
 // Mapping from route code to full name
@@ -19,3 +21,6 @@ String getPrettyRouteName(String code) {
   final name = ROUTE_CODE_TO_NAME[code];
   return name != null ? name : code;
 }
+
+// COLORS
+const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
