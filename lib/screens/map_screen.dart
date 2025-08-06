@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +9,7 @@ import '../widgets/route_selector_modal.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 import '../providers/bus_provider.dart';
+import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 
@@ -116,12 +116,13 @@ class _MapScreenState extends State<MapScreen> {
     for (final r in routes) {
       // Create unique key for each route variant
       final routeKey = '${r.routeId}_${r.points.hashCode}';
+      final routeColor = RouteColorService.getRouteColor(r.routeId);
       
       if (!_routePolylines.containsKey(routeKey)) {
         _routePolylines[routeKey] = Polyline(
           polylineId: PolylineId(routeKey),
           points: r.points,
-          color: Colors.blue,
+          color: routeColor,
           width: 4,
         );
       }
@@ -168,18 +169,30 @@ class _MapScreenState extends State<MapScreen> {
   void _updateDisplayedBuses(List<Bus> allBuses) {
     final selectedBusMarkers = allBuses
         .where((bus) => _selectedRoutes.contains(bus.routeId))
-        .map((bus) => Marker(
-              markerId: MarkerId('bus_${bus.id}'),
-              position: bus.position,
-              icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
-              rotation: bus.heading,
-              anchor: const Offset(0.5, 0.5), // Center the icon on the position
-              infoWindow: InfoWindow(title: 'Bus ${bus.id}'),
-            ))
+        .map((bus) {
+          final routeColor = RouteColorService.getRouteColor(bus.routeId);
+          return Marker(
+            markerId: MarkerId('bus_${bus.id}'),
+            position: bus.position,
+            icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor)),
+            rotation: bus.heading,
+            anchor: const Offset(0.5, 0.5), // Center the icon on the position
+            infoWindow: InfoWindow(
+              title: 'Bus ${bus.id}',
+              snippet: 'Route ${bus.routeId}',
+            ),
+          );
+        })
         .toSet();
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
     });
+  }
+
+  /// Convert a Color to a BitmapDescriptor hue value
+  double _colorToHue(Color color) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl.hue;
   }
 
   void _refreshAllMarkers() {

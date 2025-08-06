@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/route_color_service.dart';
 
 // Selecting routes
 class RouteSelectorModal extends StatefulWidget {
@@ -7,11 +8,11 @@ class RouteSelectorModal extends StatefulWidget {
   final void Function(Set<String>) onApply;
 
   const RouteSelectorModal({
-    Key? key,
+    super.key,
     required this.availableRoutes,
     required this.initialSelectedRoutes,
     required this.onApply,
-  }) : super(key: key);
+  });
 
   @override
   State<RouteSelectorModal> createState() => _RouteSelectorModalState();
@@ -75,17 +76,27 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
               itemBuilder: (context, index) {
                 final route = widget.availableRoutes[index];
                 final isSelected = tempSelectedRoutes.contains(route['id']);
+                final routeColor = RouteColorService.getRouteColor(route['id']!);
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: ListTile(
-                    leading: Icon(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: routeColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
                       Icons.directions_bus,
-                      color: isSelected ? Colors.blue : Colors.grey,
+                        color: RouteColorService.getContrastingColor(route['id']!),
+                        size: 20,
+                      ),
                     ),
                     title: Text(
                       route['name'] ?? route['id']!,
                       style: TextStyle(
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? routeColor : null,
                       ),
                     ),
                     trailing: Checkbox(

@@ -13,7 +13,7 @@ class MapWidget extends StatelessWidget {
   final bool mapToolbarEnabled;
 
   const MapWidget({
-    Key? key,
+    super.key,
     required this.initialCenter,
     required this.polylines,
     required this.markers,
@@ -22,7 +22,7 @@ class MapWidget extends StatelessWidget {
     this.myLocationButtonEnabled = false,
     this.zoomControlsEnabled = true,
     this.mapToolbarEnabled = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
