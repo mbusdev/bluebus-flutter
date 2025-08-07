@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/route_color_service.dart';
 
 // Selecting routes
 class RouteSelectorModal extends StatefulWidget {
@@ -7,11 +8,11 @@ class RouteSelectorModal extends StatefulWidget {
   final void Function(Set<String>) onApply;
 
   const RouteSelectorModal({
-    Key? key,
+    super.key,
     required this.availableRoutes,
     required this.initialSelectedRoutes,
     required this.onApply,
-  }) : super(key: key);
+  });
 
   @override
   State<RouteSelectorModal> createState() => _RouteSelectorModalState();
