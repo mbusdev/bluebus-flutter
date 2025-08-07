@@ -271,24 +271,6 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
   }
 }
 
-class Location {
-  final String name;
-  final List<String> aliases;
-
-  final int? stopId;
-  final LatLng? latlng;
-
-  final bool isBusStop;
-
-  Location(
-    this.name,
-    List<String> aliases,
-    this.isBusStop, {
-    this.stopId,
-    this.latlng,
-  }) : aliases = aliases;
-}
-
 class LocationSearchBar extends HookWidget {
   final void Function(Location) onLocationSelected;
   final TextEditingController controller;
@@ -339,6 +321,7 @@ class LocationSearchBar extends HookWidget {
 
           return Location(
             name,
+            (abbrev != null)? abbrev : "",
             [if (abbrev != null) abbrev, if (altName != null) altName],
             false,
             latlng: LatLng(lat, long),

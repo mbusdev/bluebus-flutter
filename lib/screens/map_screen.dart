@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -227,7 +228,32 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Future<void> _centerOnUserLocation() async {
+  void _showSearchSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        // Pass the callback function here
+        return SearchSheet(
+          // Define what happens when a location is selected in the sheet
+          onSearch: (Location location) {
+
+            final searchCoordinates = location.latlng;
+
+            // null-proofing
+            if (searchCoordinates != null) {
+              _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
+            } else {
+              print("Error: The selected location '${location.name}' has no coordinates.");
+            }
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _centerOnLocation(bool userLocation, [double lat = 0, double long = 0] ) async {
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -265,11 +291,16 @@ class _MapScreenState extends State<MapScreen> {
         );
         return;
       }
+      
+      // at first create a default position. User location can overwrite later if needed
+      Position position = Position(longitude: long, latitude: lat, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);
 
-      // Get the user's current position with high accuracy
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+      if (userLocation){
+        // Get the user's current position with high accuracy
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+      }
 
       // Animate the map camera to the user's location
       if (_mapController != null) {
@@ -277,7 +308,7 @@ class _MapScreenState extends State<MapScreen> {
           CameraUpdate.newCameraPosition(
             CameraPosition(
               target: LatLng(position.latitude, position.longitude),
-              zoom: 15.0,
+              zoom: userLocation? 15.0 : 17.0,
             ),
           ),
         );
@@ -312,127 +343,131 @@ class _MapScreenState extends State<MapScreen> {
       }
     });
 
-    return Stack(
-      children: [
-        // underlying map layer
-        MapWidget(
-          initialCenter: _defaultCenter,
-          polylines: _displayedPolylines,
-          markers: _displayedStopMarkers.union(_displayedBusMarkers),
-          onMapCreated: _onMapCreated,
-          myLocationEnabled: true,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: true,
-          mapToolbarEnabled: true,
-        ),
-
-        // Safe-Area (for UI)
-        SafeArea(
-          // buttons
-          child: Column(
-            children: [
-              Spacer(),
-
-              // temp row (might add settings button to it later)
-              Padding(
-                padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // location button
-                    FloatingActionButton.small(
-                      onPressed: _centerOnUserLocation,
-                      backgroundColor: const ui.Color.fromARGB(176, 255, 255, 255),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(56)
-                      ),
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // main buttons row
-              Padding(
-                padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-
-                  children: [
-                    // routes
-                    SizedBox(
-                      width: 55,
-                      height: 55,
-                      child: FittedBox(
-                        child: FloatingActionButton(
-                          onPressed: () => _showBusRoutesModal(busProvider.routes),
-                          backgroundColor: maizeBusDarkBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(56)
-                          ),
-                          child: const Icon(
-                            Icons.alt_route_rounded,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-
-                    SizedBox(
-                      width: 15,
-                    ),
-                
-                    // favorites
-                    SizedBox(
-                      width: 55,
-                      height: 55,
-                      child: FittedBox(
-                        child: FloatingActionButton(
-                          onPressed: () => print("hi"),
-                          backgroundColor: maizeBusDarkBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(56)
-                          ),
-                          child: const Icon(
-                            Icons.favorite,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    Spacer(),
-                    
-                    // search
-                    SizedBox(
-                      width: 75,
-                      height: 75,
-                      child: FittedBox(
-                        child: FloatingActionButton(
-                          onPressed: () => print("hi"),
-                          backgroundColor: maizeBusDarkBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(56)
-                          ),
-                          child: const Icon(
-                            Icons.search,
-                            size: 35,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
-                ),
-              )
-            ],
+    return Scaffold(
+      body: Stack(
+        children: [
+          // underlying map layer
+          MapWidget(
+            initialCenter: _defaultCenter,
+            polylines: _displayedPolylines,
+            markers: _displayedStopMarkers.union(_displayedBusMarkers),
+            onMapCreated: _onMapCreated,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: true,
+            mapToolbarEnabled: true,
           ),
-        )
-      ],
+      
+          // Safe-Area (for UI)
+          SafeArea(
+            // buttons
+            child: Column(
+              children: [
+                Spacer(),
+      
+                // temp row (might add settings button to it later)
+                Padding(
+                  padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // location button
+                      FloatingActionButton.small(
+                        onPressed: (){
+                          _centerOnLocation(true);
+                        },
+                        backgroundColor: const ui.Color.fromARGB(176, 255, 255, 255),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(56)
+                        ),
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+      
+                // main buttons row
+                Padding(
+                  padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+      
+                    children: [
+                      // routes
+                      SizedBox(
+                        width: 55,
+                        height: 55,
+                        child: FittedBox(
+                          child: FloatingActionButton(
+                            onPressed: () => _showBusRoutesModal(busProvider.routes),
+                            backgroundColor: maizeBusDarkBlue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(56)
+                            ),
+                            child: const Icon(
+                              Icons.directions_bus,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+      
+                      SizedBox(
+                        width: 15,
+                      ),
+                  
+                      // favorites
+                      SizedBox(
+                        width: 55,
+                        height: 55,
+                        child: FittedBox(
+                          child: FloatingActionButton(
+                            onPressed: () => print("hi"),
+                            backgroundColor: maizeBusDarkBlue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(56)
+                            ),
+                            child: const Icon(
+                              Icons.favorite,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      Spacer(),
+                      
+                      // search
+                      SizedBox(
+                        width: 75,
+                        height: 75,
+                        child: FittedBox(
+                          child: FloatingActionButton(
+                            onPressed: () => _showSearchSheet(),
+                            backgroundColor: maizeBusDarkBlue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(56)
+                            ),
+                            child: const Icon(
+                              Icons.search,
+                              size: 35,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          )
+        ],
+      ),
     );
 
     // Overlay the journey search panel at the top

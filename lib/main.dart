@@ -35,6 +35,7 @@ class MainApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Urbanist'
       ),
+      
       home: const MapScreen(),
     );
   }

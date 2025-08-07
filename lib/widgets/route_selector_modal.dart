@@ -46,7 +46,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
         maxChildSize: 0.9, 
         expand: false, 
         snap: true, 
-        // snapSizes: const [0.0, 0.5, 1.0], 
+        snapSizes: const [0.9], 
 
         builder: (BuildContext context, ScrollController scrollController) {
 
