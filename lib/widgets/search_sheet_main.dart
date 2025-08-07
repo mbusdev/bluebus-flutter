@@ -41,33 +41,59 @@ class LocationSearchBar extends HookWidget {
 
     final locations = useMemoized(() async {
       try {
-        final uri = Uri.parse(BACKEND_URL + '/getBuildingLocations');
-        final response = await http.get(uri);
-
-        if (response.statusCode != 200 ||
-            response.body.trim() == '{}' ||
-            response.body.trim().isEmpty) {
-          return <Location>[];
+        final buildingResponse = await http.get(
+          Uri.parse(BACKEND_URL + '/getBuildingLocations'),
+        );
+        List<Location> buildingLocs = [];
+        if (buildingResponse.statusCode == 200 &&
+            buildingResponse.body.trim().isNotEmpty &&
+            buildingResponse.body.trim() != '{}') {
+          final buildingLocations =
+              jsonDecode(buildingResponse.body) as List<dynamic>;
+          buildingLocs = buildingLocations.map((building) {
+            final name = building['buildingName'] as String;
+            final abbrev = building['abbrev'] as String?;
+            final altName = building['altName'] as String?;
+            final lat = building['lat'] as double;
+            final long = building['long'] as double;
+            return Location(
+              name,
+              (abbrev != null)? abbrev : "",
+              [if (abbrev != null) abbrev, if (altName != null) altName],
+              false,
+              latlng: LatLng(lat, long),
+            );
+          }).toList();
         }
 
-        final buildingLocations = jsonDecode(response.body) as List<dynamic>;
-        return buildingLocations.map((building) {
-          final name = building['buildingName'] as String;
-          final abbrev = building['abbrev'] as String?;
-          final altName = building['altName'] as String?;
-          final lat = building['lat'] as double;
-          final long = building['long'] as double;
+        final stopResponse = await http.get(
+          Uri.parse(BACKEND_URL + '/getAllStops'),
+        );
+        List<Location> stopLocs = [];
+        if (stopResponse.statusCode == 200 &&
+            stopResponse.body.trim().isNotEmpty &&
+            stopResponse.body.trim() != '{}') {
+          final stopList = jsonDecode(stopResponse.body) as List<dynamic>;
+          stopLocs = stopList.map((stop) {
+            final name = stop['name'] as String;
+            final aliases = [name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join()];
+            final stopId = stop['stopId'] as int?;
+            final lat = stop['lat'] as double?;
+            final lon = stop['lon'] as double?;
+            return Location(
+              name,
+              (stopId != null)? stopId.toString() : "",
+              aliases,
+              true,
+              stopId: stopId,
+              latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
+            );
+          }).toList();
+        }
 
-          return Location(
-            name,
-            (abbrev != null)? abbrev : "",
-            [if (abbrev != null) abbrev, if (altName != null) altName],
-            false,
-            latlng: LatLng(lat, long),
-          );
-        }).toList();
+        return [...buildingLocs, ...stopLocs];
       } catch (e) {
-        print('Failed to fetch building locations: $e');
+        print('Failed to fetch locations: $e');
         return <Location>[];
       }
     }, []);
@@ -202,15 +228,28 @@ class LocationSearchBar extends HookWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    subtitle: (loc.abbrev != "")? Row(
-                      children: [
-                        Text("Code: "),
-                        Text(loc.abbrev, style: TextStyle(
-                          fontWeight: FontWeight.bold,)
-                        )
-                      ],
-                    ) : Text("University Building"),
-                    leading: Icon(Icons.business_rounded, size: 40, color: Color.fromARGB(150, 0, 0, 0),),
+                    subtitle: (loc.abbrev != "")?
+                      (loc.isBusStop)? 
+                      Row(
+                        children: [
+                          Text("Stop ID: "),
+                          Text(loc.abbrev, style: TextStyle(
+                            fontWeight: FontWeight.bold,)
+                          )
+                        ]
+                      )
+                      : 
+                      Row(
+                        children: [
+                          Text("Code: "),
+                          Text(loc.abbrev, style: TextStyle(
+                            fontWeight: FontWeight.bold,)
+                          )
+                        ],
+                      ) : 
+                      (loc.isBusStop)? Text("Bus Stop") : Text("University Building"),
+                    leading: loc.isBusStop? Icon(Icons.hail, size: 40, color: Color.fromARGB(150, 0, 0, 0),)
+                                          : Icon(Icons.business_rounded, size: 40, color: Color.fromARGB(150, 0, 0, 0),),
                     onTap: () {
                       controller.text = loc.name;
                       onLocationSelected(loc);
