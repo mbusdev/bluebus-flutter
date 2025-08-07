@@ -18,7 +18,6 @@ import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
 import '../constants.dart';
-import '../widgets/journey_search_panel.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
