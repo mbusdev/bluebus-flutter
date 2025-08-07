@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:bluebus/widgets/building_sheet.dart';
+import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -248,9 +249,7 @@ class _MapScreenState extends State<MapScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        // Pass the callback function here
         return SearchSheet(
-          // Define what happens when a location is selected in the sheet
           onSearch: (Location location) {
 
             final searchCoordinates = location.latlng;
@@ -274,7 +273,26 @@ class _MapScreenState extends State<MapScreen> {
       enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return BuildingSheet(building: place,);
+        return BuildingSheet(building: place,
+          onGetDirections: (Location location){
+            Map<String, double>? start;
+            Map<String, double>? end = {'lat' : place.latlng!.latitude, 
+                                        'lon' : place.latlng!.longitude, };
+
+            _showDirectionsSheet(start, end);
+          },
+        );
+      },
+    );
+  }
+
+  void _showDirectionsSheet(Map<String, double>? start, Map<String, double>? end) {
+    showBottomSheet(
+      context: context,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return DirectionsSheet(origin: start, dest: end, useOrigin: false);
       },
     );
   }
