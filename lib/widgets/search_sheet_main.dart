@@ -321,8 +321,8 @@ class _SearchSheetState extends State<SearchSheet> {
             padding: const EdgeInsets.only(left: 16, right: 16),
             child: LocationSearchBar(
               onLocationSelected: (location) {
-                widget.onSearch(location);
                 Navigator.pop(context); 
+                widget.onSearch(location);
               },
               controller: _searchController, 
               focusNode: _searchFocusNode, 

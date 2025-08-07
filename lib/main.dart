@@ -29,14 +29,14 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       // Remove the debug banner
       debugShowCheckedModeBanner: false,
-      title: 'BlueBus',
+      title: 'MaizeBus',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
         fontFamily: 'Urbanist'
       ),
       
-      home: const MapScreen(),
+      home: Scaffold(body: const MapScreen()),
     );
   }
 }

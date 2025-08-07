@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -257,11 +258,23 @@ class _MapScreenState extends State<MapScreen> {
             // null-proofing
             if (searchCoordinates != null) {
               _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
+              _showBuildingSheet(location);
             } else {
               print("Error: The selected location '${location.name}' has no coordinates.");
             }
           },
         );
+      },
+    );
+  }
+
+  void _showBuildingSheet(Location place) {
+    showBottomSheet(
+      context: context,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return BuildingSheet(building: place,);
       },
     );
   }
@@ -356,8 +369,7 @@ class _MapScreenState extends State<MapScreen> {
       }
     });
 
-    return Scaffold(
-      body: Stack(
+    return Stack(
         children: [
           // underlying map layer
           MapWidget(
@@ -480,10 +492,6 @@ class _MapScreenState extends State<MapScreen> {
             ),
           )
         ],
-      ),
-    );
-
-    // Overlay the journey search panel at the top
-    //const JourneySearchPanel(),
+      );
   }
 } 
