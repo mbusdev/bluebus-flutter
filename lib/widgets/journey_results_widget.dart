@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/journey.dart';
 import '../constants.dart';
+import '../services/route_color_service.dart';
 
 class JourneyResultsWidget extends StatefulWidget {
   final List<Journey> journeys;
@@ -73,7 +74,12 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
         // Summary Row
         Row(
           children: [
-            Icon(Icons.directions_bus, color: Colors.blue),
+            Icon(
+              Icons.directions_bus, 
+              color: journey.legs.isNotEmpty && journey.legs.first.rt != null 
+                ? RouteColorService.getRouteColor(journey.legs.first.rt!)
+                : Colors.blue
+            ),
             const SizedBox(width: 8),
             Text(
               'Journey ${index + 1}',
@@ -101,7 +107,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
   Widget _buildLeg(BuildContext context, Leg leg) {
     final isBus = leg.rt != null && leg.rt!.isNotEmpty;
     final icon = isBus ? Icons.directions_bus : Icons.directions_walk;
-    final color = isBus ? Colors.blue : Colors.green;
+    final color = isBus ? RouteColorService.getRouteColor(leg.rt!) : Colors.green;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -115,8 +121,14 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                 if (isBus && leg.rt != null && leg.rt!.isNotEmpty) ...[
                   const SizedBox(width: 4),
                   Chip(
-                    label: Text(getPrettyRouteName(leg.rt!)),
-                    backgroundColor: Colors.blue[50],
+                    label: Text(
+                      RouteColorService.getRouteName(leg.rt!),
+                      style: TextStyle(
+                        color: RouteColorService.getContrastingColor(leg.rt!),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    backgroundColor: RouteColorService.getRouteColor(leg.rt!),
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: const EdgeInsets.symmetric(horizontal: 6),

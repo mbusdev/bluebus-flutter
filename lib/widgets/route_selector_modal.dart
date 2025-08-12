@@ -108,13 +108,13 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                             height: 47,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.black, 
+                              color: RouteColorService.getRouteColor(route['id']!), 
                             ),
                             alignment: Alignment.center,
                             child: Text(
                               route['id']!,
                               style: TextStyle(
-                                color: Colors.white, 
+                                color: RouteColorService.getContrastingColor(route['id']!), 
                                 fontSize: 23,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -1,
