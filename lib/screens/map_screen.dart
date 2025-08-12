@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../models/bus.dart';
@@ -62,7 +63,14 @@ class _MapScreenState extends State<MapScreen> {
       
       _updateAvailableRoutes(busProvider.routes);
       _cacheRouteOverlays(busProvider.routes);
-      _updateDisplayedRoutes();
+      
+      // Load previously selected routes
+      await _loadSelectedRoutes();
+      
+      // Only update displayed routes if we have selected routes
+      if (_selectedRoutes.isNotEmpty) {
+        _updateDisplayedRoutes();
+      }
       busProvider.loadBuses();
       busProvider.startBusUpdates();
     });
@@ -315,6 +323,32 @@ class _MapScreenState extends State<MapScreen> {
   
   // Get the number of route bus icons loaded
   int get loadedBusIconCount => _routeBusIcons.length;
+  
+  // Save selected routes to persistent storage
+  Future<void> _saveSelectedRoutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('selected_routes', _selectedRoutes.toList());
+  }
+  
+  // Load selected routes from persistent storage
+  Future<void> _loadSelectedRoutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedRoutes = prefs.getStringList('selected_routes') ?? [];
+    setState(() {
+      _selectedRoutes.addAll(savedRoutes);
+    });
+  }
+  
+  // Clear saved routes
+  // Currently only used for testing purposes
+  Future<void> _clearSavedRoutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('selected_routes');
+    setState(() {
+      _selectedRoutes.clear();
+    });
+    _updateDisplayedRoutes();
+  }
 
   void _refreshCachedStopMarkers() {
     // Clear cached stop markers so they'll be recreated with the new icons
@@ -336,13 +370,16 @@ class _MapScreenState extends State<MapScreen> {
         return RouteSelectorModal(
           availableRoutes: _availableRoutes,
           initialSelectedRoutes: _selectedRoutes,
-          onApply: (Set<String> newSelection) {
+          onApply: (Set<String> newSelection) async {
             if (newSelection.difference(_selectedRoutes).isNotEmpty || _selectedRoutes.difference(newSelection).isNotEmpty) {
               setState(() {
                 _selectedRoutes.clear();
                 _selectedRoutes.addAll(newSelection);
               });
               _updateDisplayedRoutes();
+              
+              // Save the new selection
+              await _saveSelectedRoutes();
             }
           },
         );
