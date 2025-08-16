@@ -32,7 +32,7 @@ class Location {
   final String abbrev;
   final List<String> aliases;
 
-  final int? stopId;
+  final String? stopId;
   final LatLng? latlng;
 
   final bool isBusStop;

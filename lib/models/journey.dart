@@ -23,6 +23,8 @@ class Leg {
   final List<StopTime>? stopTimes;
   final Trip? trip;
   final String? rt;
+  final String originID;
+  final String destinationID;
 
   Leg({
     required this.origin,
@@ -33,6 +35,8 @@ class Leg {
     this.stopTimes,
     this.trip,
     this.rt,
+    required this.originID,
+    required this.destinationID
   });
 
   factory Leg.fromJson(Map<String, dynamic> json) {
@@ -47,6 +51,8 @@ class Leg {
           : null,
       trip: json['trip'] != null ? Trip.fromJson(json['trip']) : null,
       rt: json['rt'],
+      originID: json['origin_id'] ?? '',
+      destinationID: json['destination_id'] ?? ''
     );
   }
 }

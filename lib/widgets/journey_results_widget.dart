@@ -1,6 +1,39 @@
+import 'dart:async';
+
+import 'package:bluebus/globals.dart';
 import 'package:flutter/material.dart';
 import '../models/journey.dart';
 import '../constants.dart';
+
+
+// helper class to display legs with expanded property
+class LegToDisplay {
+  final String origin;
+  final String destination;
+  final int duration;
+  final int startTime;
+  final int endTime;
+  final List<StopTime>? stopTimes;
+  final Trip? trip;
+  final String? rt;
+  final String originID;
+  final String destinationID;
+
+  bool expanded = false;
+
+  LegToDisplay({
+    required this.origin,
+    required this.destination,
+    required this.duration,
+    required this.startTime,
+    required this.endTime,
+    this.stopTimes,
+    this.trip,
+    this.rt,
+    required this.originID,
+    required this.destinationID
+  });
+}
 
 class JourneyResultsWidget extends StatefulWidget {
   final List<Journey> journeys;
@@ -12,170 +45,406 @@ class JourneyResultsWidget extends StatefulWidget {
 }
 
 class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
-  int? expandedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: widget.journeys.length,
-      itemBuilder: (context, index) {
-        final journey = widget.journeys[index];
-        final totalDuration = journey.arrivalTime - journey.departureTime;
-        final numTransfers = journey.legs.length - 1;
-        final isExpanded = expandedIndex == index;
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              expandedIndex = isExpanded ? null : index;
-            });
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: isExpanded
-                  ? SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width * 1.2,
-                          child: _buildJourneyContent(context, journey, index, totalDuration, numTransfers),
-                        ),
-                      ),
-                    )
-                  : _buildJourneyContent(context, journey, index, totalDuration, numTransfers),
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Options",
+            style: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Urbanist',
+              fontWeight: FontWeight.w700,
+              fontSize: 30,
             ),
           ),
-        );
-      },
-    );
-  }
 
-  Widget _buildJourneyContent(BuildContext context, Journey journey, int index, int totalDuration, int numTransfers) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Summary Row
-        Row(
-          children: [
-            Icon(Icons.directions_bus, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text(
-              'Journey ${index + 1}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const Spacer(),
-            Icon(Icons.schedule, size: 18, color: Colors.grey[600]),
-            const SizedBox(width: 4),
-            Text('${(totalDuration / 60).round()} min'),
-            const SizedBox(width: 12),
-            if (numTransfers > 0) ...[
-              Icon(Icons.swap_horiz, size: 18, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text('$numTransfers transfer${numTransfers > 1 ? 's' : ''}'),
-            ]
-          ],
-        ),
-        const SizedBox(height: 10),
-        // Timeline for each leg
-        ...journey.legs.map((leg) => _buildLeg(context, leg)).toList(),
-      ],
-    );
-  }
+          Column(
+            children: widget.journeys.map((Journey journey) {
+              final totalDuration = journey.arrivalTime - journey.departureTime;
+              final numTransfers = journey.legs.length - 1;
+          
+              Set<String> busIDs = {};
 
-  Widget _buildLeg(BuildContext context, Leg leg) {
-    final isBus = leg.rt != null && leg.rt!.isNotEmpty;
-    final icon = isBus ? Icons.directions_bus : Icons.directions_walk;
-    final color = isBus ? Colors.blue : Colors.green;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start, // <-- Align items to the top
-          children: [
-            // Icon and route chip in a row for proper alignment
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                if (isBus && leg.rt != null && leg.rt!.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Chip(
-                    label: Text(getPrettyRouteName(leg.rt!)),
-                    backgroundColor: Colors.blue[50],
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+              // get all bus ids for header
+              for (Leg l in journey.legs){
+
+                if (l.rt != null){
+                  busIDs.add(l.rt!);
+                }
+              }
+              
+              return Card(
+                // rounded corners and shadow.
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
+                color: Color.fromARGB(255, 240, 240, 240),
+          
+                // theme widget to override the default divider color.
+                child: Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${(totalDuration / 60).round()}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 40,
+                            height: 0
+                          ),
+                        ),
+                        Text(
+                          ' min',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 25,
+                            height: 1.5
+                          ),
+                        ),
+
+                        Spacer(),
+
+                        Text(
+                          'via ',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 25,
+                            height: 1.5
+                          ),
+                        ),
+
+                        ...busIDs.map((busID) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.black, 
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  busID,
+                                  style: TextStyle(
+                                    color: Colors.white, 
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -1,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                          );
+                        }),
+
+                        
+                      ],
+                    ),
+
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, right: 16),
+                        child: JourneyBody(journey: journey),
+                      )
+                    ],
                   ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      )
+    );
+  }
+}
+
+class JourneyBody extends StatefulWidget {
+  final Journey journey;
+  const JourneyBody({super.key, required this.journey});
+
+  @override
+  State<JourneyBody> createState() => _JourneyBodyState();
+}
+
+class _JourneyBodyState extends State<JourneyBody> {
+  late List<LegToDisplay> legsToDisplay;
+  void initState() {
+    super.initState();
+    // Initialize the list of legs from the journey prop
+    legsToDisplay = widget.journey.legs.map((leg) {
+      return LegToDisplay(
+          origin: leg.origin,
+          destination: leg.destination,
+          duration: leg.duration,
+          startTime: leg.startTime,
+          endTime: leg.endTime,
+          stopTimes: leg.stopTimes,
+          trip: leg.trip,
+          rt: leg.rt,
+          originID: leg.originID,
+          destinationID: leg.destinationID
+        );
+    }).toList();
+  }
+
+  //function to get intermediary stops between start and end
+  (bool, List<String>) intermediaryBusStops(String orgID, String desID, int legID){
+    
+    bool foundStart = false;
+    List<String> stopIDs = [];
+
+    // todo: add check for .trip being null
+    for(StopTime st in widget.journey.legs[legID].trip!.stopTimes){
+      if (st.stop == orgID){
+        foundStart = true;
+      }
+
+      if (st.stop == desID){
+        stopIDs.add(st.stop);
+        return (true, stopIDs);
+      }
+
+      if (foundStart){
+        stopIDs.add(st.stop);
+      }
+    }
+
+    return (false, []);
+  }
+
+  @override
+  Widget build(BuildContext context){
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // map each leg
+        ...legsToDisplay.map((leg) {
+          int index = legsToDisplay.indexOf(leg);
+
+          // walk or bus?
+          if (leg.rt == null){
+            // walk
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.directions_walk,
+                    size: 40,
+                  ),
+
+                  SizedBox(width: 10,),
+              
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Walk",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            height: 0
+                          ),
+                        ),
+                        Text(
+                          "to ${leg.destination}",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            height: 0
+                          ),
+                          maxLines: 2,
+                        ),
+                      ],
+                    ),
+                  )
                 ],
-              ],
-            ),
-            const SizedBox(width: 8),
-            // Text below icon/route
-            Expanded(
-              child: Column(
+              ),
+            );
+          } else {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(isBus ? 'Bus' : 'Walk', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 14)),
-                  const SizedBox(height: 4),
-                  expandedIndex == null
-                    ? Row(
-                        children: [
-                          Flexible(child: Text('${leg.origin} ', style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-                          if (leg.origin != leg.destination) ...[
-                            const Icon(Icons.arrow_forward, size: 16),
-                            Flexible(child: Text(' ${leg.destination}', style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-                          ],
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            leg.origin,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                            softWrap: true,
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black, 
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      leg.rt!,
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
+                  SizedBox(width: 10,),
+              
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Take ${getPrettyRouteName(leg.rt!)}",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            height: 0
                           ),
-                          if (leg.origin != leg.destination) ...[
+                        ),
+
+                        // if expanded show full list, otherwise dont lol
+                        leg.expanded?
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // list all the intermediary bus stops
+                            ...intermediaryBusStops(leg.originID, leg.destinationID, index).$2.map((id){
+
+                              // get index of this stop
+                              // TODO: I don't like running this function thrice, but like what's a clean way to do it?
+                              int indexId = intermediaryBusStops(leg.originID, leg.destinationID, index).$2.indexOf(id);
+                              int len = intermediaryBusStops(leg.originID, leg.destinationID, index).$2.length;
+
+                              return Padding(
+                                // conditional padding (to separate get on and get off stops)
+                                padding: (indexId == 0)? EdgeInsets.only(bottom: 7) : (indexId == len - 1)? EdgeInsets.only(top: 7) : EdgeInsets.zero,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // conditional icon
+                                    (indexId == 0)? Icon(Icons.login) : 
+                                    (indexId == len - 1)? Icon(Icons.logout) : 
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 5, left: 7, right: 7),
+                                      child: Icon(
+                                        Icons.fiber_manual_record,
+                                        size: 10,
+                                        color: Color.fromARGB(50, 0, 0, 0),
+                                      ),
+                                    ),
+                                
+                                    SizedBox(width: 10,),
+                                
+                                    // conditional size and padding for text
+                                    ((indexId == 0) || (indexId == len - 1))?
+                                    Expanded(
+                                      child: Text(
+                                        getStopNameFromID(id),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    )
+                                    :
+                                    Expanded(
+                                      child: Text(
+                                        getStopNameFromID(id),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              );
+                            })
+                          ],
+                        ) 
+                        :
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.arrow_forward, size: 16),
+                                Icon(Icons.login),
+                                SizedBox(width: 10,),
                                 Expanded(
                                   child: Text(
-                                    leg.destination,
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
-                                    softWrap: true,
+                                    leg.origin,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w400,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
+
+                            GestureDetector(
+                              onTap: () {     
+                                // Call the setState method with a function as its argument
+                                setState(() { 
+                                  leg.expanded = true;
+                                });
+                              },
+                              child: Text(
+                                "... show intermediate",
+                                style: TextStyle(
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color.fromARGB(255, 0, 0, 255)
+                                )
+                              ),
+                            ),
+
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.logout),
+                                SizedBox(width: 10,),
+                                Expanded(
+                                  child: Text(
+                                    leg.destination,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
                           ],
-                        ],
-                      ),
+                        ) 
+
+                      ],
+                    ),
+                  )
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
-            const SizedBox(width: 2),
-            Text('${(leg.duration / 60).round()} min'),
-          ],
-        ),
-        const SizedBox(height: 8),
+            );
+          }
+        }),
       ],
     );
   }

@@ -1,3 +1,4 @@
+import 'package:bluebus/globals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,6 +9,7 @@ import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
 import '../constants.dart';
+import '../globals.dart';
 
 class LocationSearchBar extends HookWidget {
   final void Function(Location) onLocationSelected;
@@ -76,12 +78,12 @@ class LocationSearchBar extends HookWidget {
           stopLocs = stopList.map((stop) {
             final name = stop['name'] as String;
             final aliases = [name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join()];
-            final stopId = stop['stopId'] as int?;
+            final stopId = stop['stpid'] as String?;
             final lat = stop['lat'] as double?;
             final lon = stop['lon'] as double?;
             return Location(
               name,
-              (stopId != null)? stopId.toString() : "",
+              (stopId != null)? stopId : "",
               aliases,
               true,
               stopId: stopId,
@@ -89,6 +91,8 @@ class LocationSearchBar extends HookWidget {
             );
           }).toList();
         }
+
+        globalStopLocs = stopLocs;
 
         return [...buildingLocs, ...stopLocs];
       } catch (e) {
