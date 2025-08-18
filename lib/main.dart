@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import 'screens/map_screen.dart';
 import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
+import 'services/route_color_service.dart';
 
 // This function initializes the Flutter app and runs the MainApp widget
-void main() {
+void main() async {
+  await RouteColorService.initialize();
+  
   runApp(
     MultiProvider(
       providers: [

@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../models/bus.dart';
@@ -41,6 +43,9 @@ class _MapScreenState extends State<MapScreen> {
   // Custom marker icons
   BitmapDescriptor? _busIcon;
   BitmapDescriptor? _stopIcon;
+  
+  // Route specific bus icons
+  final Map<String, BitmapDescriptor> _routeBusIcons = {};
 
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
@@ -50,31 +55,30 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _loadCustomMarkers();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final busProvider = Provider.of<BusProvider>(context, listen: false);
-      busProvider.loadRoutes().then((_) {
-        _updateAvailableRoutes(busProvider.routes);
-        _cacheRouteOverlays(busProvider.routes);
+      await busProvider.loadRoutes();
+      
+      // Load route specific bus icons after routes are loaded
+      await _loadRouteSpecificBusIcons();
+      
+      _updateAvailableRoutes(busProvider.routes);
+      _cacheRouteOverlays(busProvider.routes);
+      
+      // Load previously selected routes
+      await _loadSelectedRoutes();
+      
+      // Only update displayed routes if we have selected routes
+      if (_selectedRoutes.isNotEmpty) {
         _updateDisplayedRoutes();
-        busProvider.loadBuses();
-        busProvider.startBusUpdates();
-      });
+      }
+      busProvider.loadBuses();
+      busProvider.startBusUpdates();
     });
   }
 
   Future<void> _loadCustomMarkers() async {
     try {
-      // Load and resize bus icon
-      final busBytes = await rootBundle.load('assets/bus_blue.png');
-      final busCodec = await ui.instantiateImageCodec(
-        busBytes.buffer.asUint8List(),
-        targetWidth: 150,
-        targetHeight: 250,
-      );
-      final busFrame = await busCodec.getNextFrame();
-      final busData = await busFrame.image.toByteData(format: ui.ImageByteFormat.png);
-      _busIcon = BitmapDescriptor.fromBytes(busData!.buffer.asUint8List());
-
       // Load and resize stop icon
       final stopBytes = await rootBundle.load('assets/bus_stop.png');
       final stopCodec = await ui.instantiateImageCodec(
@@ -86,14 +90,84 @@ class _MapScreenState extends State<MapScreen> {
       final stopData = await stopFrame.image.toByteData(format: ui.ImageByteFormat.png);
       _stopIcon = BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
       
+      // Load route specific bus icons
+      await _loadRouteSpecificBusIcons();
+      
       // Refresh markers with new icons
       if (mounted) {
         _refreshAllMarkers();
       }
     } catch (e) {
       // Fallback to default markers if custom loading fails
-      _busIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
       _stopIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
+  }
+  
+  // Load route specific bus icons from the backend
+  Future<void> _loadRouteSpecificBusIcons() async {
+    try {
+      if (!RouteColorService.isInitialized) {
+        await RouteColorService.initialize();
+      }
+      final routeIds = RouteColorService.definedRouteIds;
+      
+      for (final routeId in routeIds) {
+        final imageUrl = RouteColorService.getRouteImageUrl(routeId);
+        if (imageUrl != null) {
+          await _loadRouteBusIcon(routeId, imageUrl);
+        } else {
+          _setFallbackBusIcon(routeId);
+        }
+      }
+    } catch (e) {
+      // Fallback to default bus icon
+      _busIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+    }
+  }
+  
+  // Load a specific route's bus icon
+  Future<void> _loadRouteBusIcon(String routeId, String imageUrl) async {
+    try {
+      final response = await http.get(Uri.parse(imageUrl));
+      
+      if (response.statusCode == 200) {
+        final imageBytes = response.bodyBytes;
+        
+        // Adjust bus icon size here
+        try {
+          final codec = await ui.instantiateImageCodec(
+            imageBytes,
+            targetWidth: 200,
+            targetHeight: 200,
+          );
+          final frame = await codec.getNextFrame();
+          final data = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+          
+          if (data != null) {
+            _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(data.buffer.asUint8List());
+          } else {
+            _setFallbackBusIcon(routeId);
+          }
+        } catch (codecError) {
+          _setFallbackBusIcon(routeId);
+        }
+      } else {
+        // Set fallback icon for this route
+        _setFallbackBusIcon(routeId);
+      }
+    } catch (e) {
+      // Set fallback icon for this route
+      _setFallbackBusIcon(routeId);
+    }
+  }
+  
+  // Set a fallback bus icon for a route
+  void _setFallbackBusIcon(String routeId) {
+    try {
+      final routeColor = RouteColorService.getRouteColor(routeId);
+      _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
+    } catch (e) {
+      // error handling
     }
   }
 
@@ -108,8 +182,17 @@ class _MapScreenState extends State<MapScreen> {
     final Map<String, String> routeIdToName = {};
     for (final r in routes) {
       if (!routeIdToName.containsKey(r.routeId)) {
-        final name = getPrettyRouteName(r.routeId);
+        // Use backend route name if available, otherwise fallback to local names
+        final name = RouteColorService.getRouteName(r.routeId);
         routeIdToName[r.routeId] = name;
+        
+        // Load bus icon for this route if not already loaded
+        if (!_routeBusIcons.containsKey(r.routeId)) {
+          final imageUrl = RouteColorService.getRouteImageUrl(r.routeId);
+          if (imageUrl != null) {
+            _loadRouteBusIcon(r.routeId, imageUrl);
+          }
+        }
       }
     }
     setState(() {
@@ -122,7 +205,8 @@ class _MapScreenState extends State<MapScreen> {
     for (final r in routes) {
       // Create unique key for each route variant
       final routeKey = '${r.routeId}_${r.points.hashCode}';
-      final routeColor = RouteColorService.getRouteColor(r.routeId);
+      // Use backend color if available, otherwise fallback to service
+      final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
       
       if (!_routePolylines.containsKey(routeKey)) {
         _routePolylines[routeKey] = Polyline(
@@ -176,11 +260,23 @@ class _MapScreenState extends State<MapScreen> {
     final selectedBusMarkers = allBuses
         .where((bus) => _selectedRoutes.contains(bus.routeId))
         .map((bus) {
-          final routeColor = RouteColorService.getRouteColor(bus.routeId);
+          // Use backend color if available, otherwise fallback to service
+          final routeColor = bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
+          
+          // Use route specific bus icon if available, otherwise fallback to default
+          BitmapDescriptor? busIcon;
+          if (_routeBusIcons.containsKey(bus.routeId)) {
+            busIcon = _routeBusIcons[bus.routeId];
+          } else if (_busIcon != null) {
+            busIcon = _busIcon;
+          } else {
+            busIcon = BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
+          }
+          
           return Marker(
             markerId: MarkerId('bus_${bus.id}'),
             position: bus.position,
-            icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor)),
+            icon: busIcon!,
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
             infoWindow: InfoWindow(
@@ -204,8 +300,55 @@ class _MapScreenState extends State<MapScreen> {
   void _refreshAllMarkers() {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
     _refreshCachedStopMarkers();
+    _refreshRouteBusIcons();
     _updateDisplayedRoutes();
     _updateDisplayedBuses(busProvider.buses);
+  }
+  
+  // Refresh route specific bus icons
+  void _refreshRouteBusIcons() {
+    _routeBusIcons.clear();
+    _loadRouteSpecificBusIcons();
+  }
+  
+  // Force refresh route specific bus icons
+  Future<void> _forceRefreshRouteBusIcons() async {
+    _routeBusIcons.clear();
+    await _loadRouteSpecificBusIcons();
+  }
+  
+  // Check if a route has specific bus icon loaded
+  bool hasRouteBusIcon(String routeId) {
+    return _routeBusIcons.containsKey(routeId);
+  }
+  
+  // Get the number of route bus icons loaded
+  int get loadedBusIconCount => _routeBusIcons.length;
+  
+  // Save selected routes to persistent storage
+  Future<void> _saveSelectedRoutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('selected_routes', _selectedRoutes.toList());
+  }
+  
+  // Load selected routes from persistent storage
+  Future<void> _loadSelectedRoutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedRoutes = prefs.getStringList('selected_routes') ?? [];
+    setState(() {
+      _selectedRoutes.addAll(savedRoutes);
+    });
+  }
+  
+  // Clear saved routes
+  // Currently only used for testing purposes
+  Future<void> _clearSavedRoutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('selected_routes');
+    setState(() {
+      _selectedRoutes.clear();
+    });
+    _updateDisplayedRoutes();
   }
 
   void _refreshCachedStopMarkers() {
@@ -228,13 +371,16 @@ class _MapScreenState extends State<MapScreen> {
         return RouteSelectorModal(
           availableRoutes: _availableRoutes,
           initialSelectedRoutes: _selectedRoutes,
-          onApply: (Set<String> newSelection) {
+          onApply: (Set<String> newSelection) async {
             if (newSelection.difference(_selectedRoutes).isNotEmpty || _selectedRoutes.difference(newSelection).isNotEmpty) {
               setState(() {
                 _selectedRoutes.clear();
                 _selectedRoutes.addAll(newSelection);
               });
               _updateDisplayedRoutes();
+              
+              // Save the new selection
+              await _saveSelectedRoutes();
             }
           },
         );
@@ -258,7 +404,7 @@ class _MapScreenState extends State<MapScreen> {
               _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
               _showBuildingSheet(location);
             } else {
-              print("Error: The selected location '${location.name}' has no coordinates.");
+              // Location has no coordinates
             }
           },
         );
@@ -482,7 +628,7 @@ class _MapScreenState extends State<MapScreen> {
                         height: 55,
                         child: FittedBox(
                           child: FloatingActionButton(
-                            onPressed: () => print("hi"),
+                            onPressed: () {},
                             backgroundColor: maizeBusDarkBlue,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(56)
