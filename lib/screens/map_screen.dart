@@ -9,16 +9,14 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
+import '../widgets/favorites_sheet.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
+import '../models/bus_stop.dart';
 import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
-import '../models/journey.dart';
-import '../services/journey_repository.dart';
-import '../widgets/journey_results_widget.dart';
 import '../constants.dart';
-import '../widgets/journey_search_panel.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -26,7 +24,6 @@ class MapScreen extends StatefulWidget {
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
-
 
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
@@ -42,7 +39,7 @@ class _MapScreenState extends State<MapScreen> {
   // Custom marker icons
   BitmapDescriptor? _busIcon;
   BitmapDescriptor? _stopIcon;
-  
+
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
 
@@ -57,16 +54,16 @@ class _MapScreenState extends State<MapScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final busProvider = Provider.of<BusProvider>(context, listen: false);
       await busProvider.loadRoutes();
-      
+
       // Load route specific bus icons after routes are loaded
       await _loadRouteSpecificBusIcons();
-      
+
       _updateAvailableRoutes(busProvider.routes);
       _cacheRouteOverlays(busProvider.routes);
-      
+
       // Load previously selected routes
       await _loadSelectedRoutes();
-      
+
       // Only update displayed routes if we have selected routes
       if (_selectedRoutes.isNotEmpty) {
         _updateDisplayedRoutes();
@@ -86,22 +83,26 @@ class _MapScreenState extends State<MapScreen> {
         targetHeight: 90,
       );
       final stopFrame = await stopCodec.getNextFrame();
-      final stopData = await stopFrame.image.toByteData(format: ui.ImageByteFormat.png);
+      final stopData = await stopFrame.image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       _stopIcon = BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
-      
+
       // Load route specific bus icons
       await _loadRouteSpecificBusIcons();
-      
+
       // Refresh markers with new icons
       if (mounted) {
         _refreshAllMarkers();
       }
     } catch (e) {
       // Fallback to default markers if custom loading fails
-      _stopIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+      _stopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
     }
   }
-  
+
   // Load route specific bus icons from the backend
   Future<void> _loadRouteSpecificBusIcons() async {
     try {
@@ -109,7 +110,7 @@ class _MapScreenState extends State<MapScreen> {
         await RouteColorService.initialize();
       }
       final routeIds = RouteColorService.definedRouteIds;
-      
+
       for (final routeId in routeIds) {
         final imageUrl = RouteColorService.getRouteImageUrl(routeId);
         if (imageUrl != null) {
@@ -120,18 +121,20 @@ class _MapScreenState extends State<MapScreen> {
       }
     } catch (e) {
       // Fallback to default bus icon
-      _busIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+      _busIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueYellow,
+      );
     }
   }
-  
+
   // Load a specific route's bus icon
   Future<void> _loadRouteBusIcon(String routeId, String imageUrl) async {
     try {
       final response = await http.get(Uri.parse(imageUrl));
-      
+
       if (response.statusCode == 200) {
         final imageBytes = response.bodyBytes;
-        
+
         // Adjust bus icon size here
         try {
           final codec = await ui.instantiateImageCodec(
@@ -140,10 +143,14 @@ class _MapScreenState extends State<MapScreen> {
             targetHeight: 200,
           );
           final frame = await codec.getNextFrame();
-          final data = await frame.image.toByteData(format: ui.ImageByteFormat.png);
-          
+          final data = await frame.image.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+
           if (data != null) {
-            _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(data.buffer.asUint8List());
+            _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(
+              data.buffer.asUint8List(),
+            );
           } else {
             _setFallbackBusIcon(routeId);
           }
@@ -159,12 +166,14 @@ class _MapScreenState extends State<MapScreen> {
       _setFallbackBusIcon(routeId);
     }
   }
-  
+
   // Set a fallback bus icon for a route
   void _setFallbackBusIcon(String routeId) {
     try {
       final routeColor = RouteColorService.getRouteColor(routeId);
-      _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
+      _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(
+        _colorToHue(routeColor),
+      );
     } catch (e) {
       // error handling
     }
@@ -184,7 +193,7 @@ class _MapScreenState extends State<MapScreen> {
         // Use backend route name if available, otherwise fallback to local names
         final name = RouteColorService.getRouteName(r.routeId);
         routeIdToName[r.routeId] = name;
-        
+
         // Load bus icon for this route if not already loaded
         if (!_routeBusIcons.containsKey(r.routeId)) {
           final imageUrl = RouteColorService.getRouteImageUrl(r.routeId);
@@ -196,7 +205,9 @@ class _MapScreenState extends State<MapScreen> {
     }
     setState(() {
       _routeIdToName = routeIdToName;
-      _availableRoutes = routeIdToName.entries.map((e) => {'id': e.key, 'name': e.value}).toList();
+      _availableRoutes = routeIdToName.entries
+          .map((e) => {'id': e.key, 'name': e.value})
+          .toList();
     });
   }
 
@@ -206,7 +217,7 @@ class _MapScreenState extends State<MapScreen> {
       final routeKey = '${r.routeId}_${r.points.hashCode}';
       // Use backend color if available, otherwise fallback to service
       final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
-      
+
       if (!_routePolylines.containsKey(routeKey)) {
         _routePolylines[routeKey] = Polyline(
           polylineId: PolylineId(routeKey),
@@ -217,27 +228,112 @@ class _MapScreenState extends State<MapScreen> {
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
         _routeStopMarkers[routeKey] = r.stops
-            .map((stop) => Marker(
-                  markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
-                  position: stop.location,
-                  icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                  infoWindow: InfoWindow(title: stop.name),
-                ))
+            .map(
+              (stop) => Marker(
+                markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
+                position: stop.location,
+                icon:
+                    _stopIcon ??
+                    BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueAzure,
+                    ),
+                infoWindow: InfoWindow(
+                  title: stop.name,
+                  snippet: 'Tap to favorite',
+                ),
+                onTap: () => _onStopTapped(stop),
+              ),
+            )
             .toSet();
       }
     }
   }
-  
 
+  // When a stop marker is tapped, show a bottom sheet to add/remove favorite
+  void _onStopTapped(BusStop stop) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext ctx) {
+        return Padding(
+          padding: MediaQuery.of(ctx).viewInsets,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stop.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await _addFavoriteStop(stop.id, stop.name);
+                        Navigator.of(ctx).pop();
+                      },
+                      icon: const Icon(Icons.favorite),
+                      label: const Text('Add to favorites'),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _addFavoriteStop(String stpid, String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('favorite_stops') ?? <String>[];
+    if (!list.contains(stpid)) {
+      list.add(stpid);
+      await prefs.setStringList('favorite_stops', list);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Added "$name" to favorites')));
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('"$name" is already a favorite')),
+        );
+      }
+    }
+  }
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
     final selectedStopMarkers = <Marker>{};
-    
+
     for (final routeId in _selectedRoutes) {
       // Find all variants of this route
-      final routeVariants = _routePolylines.keys.where((key) => key.startsWith('${routeId}_'));
-      
+      final routeVariants = _routePolylines.keys.where(
+        (key) => key.startsWith('${routeId}_'),
+      );
+
       for (final routeKey in routeVariants) {
         final polyline = _routePolylines[routeKey];
         if (polyline != null) selectedPolylines.add(polyline);
@@ -247,12 +343,14 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     }
-    
+
     setState(() {
       _displayedPolylines = selectedPolylines;
       _displayedStopMarkers = selectedStopMarkers;
     });
-    _updateDisplayedBuses(Provider.of<BusProvider>(context, listen: false).buses);
+    _updateDisplayedBuses(
+      Provider.of<BusProvider>(context, listen: false).buses,
+    );
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
@@ -260,8 +358,9 @@ class _MapScreenState extends State<MapScreen> {
         .where((bus) => _selectedRoutes.contains(bus.routeId))
         .map((bus) {
           // Use backend color if available, otherwise fallback to service
-          final routeColor = bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-          
+          final routeColor =
+              bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
+
           // Use route specific bus icon if available, otherwise fallback to default
           BitmapDescriptor? busIcon;
           if (_routeBusIcons.containsKey(bus.routeId)) {
@@ -269,9 +368,11 @@ class _MapScreenState extends State<MapScreen> {
           } else if (_busIcon != null) {
             busIcon = _busIcon;
           } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
+            busIcon = BitmapDescriptor.defaultMarkerWithHue(
+              _colorToHue(routeColor),
+            );
           }
-          
+
           return Marker(
             markerId: MarkerId('bus_${bus.id}'),
             position: bus.position,
@@ -303,33 +404,33 @@ class _MapScreenState extends State<MapScreen> {
     _updateDisplayedRoutes();
     _updateDisplayedBuses(busProvider.buses);
   }
-  
+
   // Refresh route specific bus icons
   void _refreshRouteBusIcons() {
     _routeBusIcons.clear();
     _loadRouteSpecificBusIcons();
   }
-  
+
   // Force refresh route specific bus icons
   Future<void> _forceRefreshRouteBusIcons() async {
     _routeBusIcons.clear();
     await _loadRouteSpecificBusIcons();
   }
-  
+
   // Check if a route has specific bus icon loaded
   bool hasRouteBusIcon(String routeId) {
     return _routeBusIcons.containsKey(routeId);
   }
-  
+
   // Get the number of route bus icons loaded
   int get loadedBusIconCount => _routeBusIcons.length;
-  
+
   // Save selected routes to persistent storage
   Future<void> _saveSelectedRoutes() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('selected_routes', _selectedRoutes.toList());
   }
-  
+
   // Load selected routes from persistent storage
   Future<void> _loadSelectedRoutes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -338,7 +439,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedRoutes.addAll(savedRoutes);
     });
   }
-  
+
   // Clear saved routes
   // Currently only used for testing purposes
   Future<void> _clearSavedRoutes() async {
@@ -354,7 +455,9 @@ class _MapScreenState extends State<MapScreen> {
     // Clear cached stop markers so they'll be recreated with the new icons
     _routeStopMarkers.clear();
     // Re-cache all route overlays with the new icons
-    _cacheRouteOverlays(Provider.of<BusProvider>(context, listen: false).routes);
+    _cacheRouteOverlays(
+      Provider.of<BusProvider>(context, listen: false).routes,
+    );
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -371,13 +474,14 @@ class _MapScreenState extends State<MapScreen> {
           availableRoutes: _availableRoutes,
           initialSelectedRoutes: _selectedRoutes,
           onApply: (Set<String> newSelection) async {
-            if (newSelection.difference(_selectedRoutes).isNotEmpty || _selectedRoutes.difference(newSelection).isNotEmpty) {
+            if (newSelection.difference(_selectedRoutes).isNotEmpty ||
+                _selectedRoutes.difference(newSelection).isNotEmpty) {
               setState(() {
                 _selectedRoutes.clear();
                 _selectedRoutes.addAll(newSelection);
               });
               _updateDisplayedRoutes();
-              
+
               // Save the new selection
               await _saveSelectedRoutes();
             }
@@ -397,12 +501,15 @@ class _MapScreenState extends State<MapScreen> {
         return SearchSheet(
           // Define what happens when a location is selected in the sheet
           onSearch: (Location location) {
-
             final searchCoordinates = location.latlng;
 
             // null-proofing
             if (searchCoordinates != null) {
-              _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
+              _centerOnLocation(
+                false,
+                searchCoordinates.latitude,
+                searchCoordinates.longitude,
+              );
             } else {
               // Location has no coordinates
             }
@@ -412,7 +519,11 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Future<void> _centerOnLocation(bool userLocation, [double lat = 0, double long = 0] ) async {
+  Future<void> _centerOnLocation(
+    bool userLocation, [
+    double lat = 0,
+    double long = 0,
+  ]) async {
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -450,11 +561,22 @@ class _MapScreenState extends State<MapScreen> {
         );
         return;
       }
-      
-      // at first create a default position. User location can overwrite later if needed
-      Position position = Position(longitude: long, latitude: lat, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);
 
-      if (userLocation){
+      // at first create a default position. User location can overwrite later if needed
+      Position position = Position(
+        longitude: long,
+        latitude: lat,
+        timestamp: DateTime.now(),
+        accuracy: 0,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
+      );
+
+      if (userLocation) {
         // Get the user's current position with high accuracy
         position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
@@ -467,7 +589,7 @@ class _MapScreenState extends State<MapScreen> {
           CameraUpdate.newCameraPosition(
             CameraPosition(
               target: LatLng(position.latitude, position.longitude),
-              zoom: userLocation? 15.0 : 17.0,
+              zoom: userLocation ? 15.0 : 17.0,
             ),
           ),
         );
@@ -486,14 +608,10 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     final busProvider = Provider.of<BusProvider>(context);
     if (busProvider.loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (busProvider.error != null) {
-      return Scaffold(
-        body: Center(child: Text(busProvider.error!)),
-      );
+      return Scaffold(body: Center(child: Text(busProvider.error!)));
     }
     // Only update bus markers when buses change
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -516,14 +634,14 @@ class _MapScreenState extends State<MapScreen> {
             zoomControlsEnabled: true,
             mapToolbarEnabled: true,
           ),
-      
+
           // Safe-Area (for UI)
           SafeArea(
             // buttons
             child: Column(
               children: [
                 Spacer(),
-      
+
                 // temp row (might add settings button to it later)
                 Padding(
                   padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
@@ -532,12 +650,17 @@ class _MapScreenState extends State<MapScreen> {
                     children: [
                       // location button
                       FloatingActionButton.small(
-                        onPressed: (){
+                        onPressed: () {
                           _centerOnLocation(true);
                         },
-                        backgroundColor: const ui.Color.fromARGB(176, 255, 255, 255),
+                        backgroundColor: const ui.Color.fromARGB(
+                          176,
+                          255,
+                          255,
+                          255,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(56)
+                          borderRadius: BorderRadius.circular(56),
                         ),
                         child: const Icon(
                           Icons.my_location,
@@ -547,13 +670,13 @@ class _MapScreenState extends State<MapScreen> {
                     ],
                   ),
                 ),
-      
+
                 // main buttons row
                 Padding(
                   padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
-      
+
                     children: [
                       // routes
                       SizedBox(
@@ -561,10 +684,11 @@ class _MapScreenState extends State<MapScreen> {
                         height: 55,
                         child: FittedBox(
                           child: FloatingActionButton(
-                            onPressed: () => _showBusRoutesModal(busProvider.routes),
+                            onPressed: () =>
+                                _showBusRoutesModal(busProvider.routes),
                             backgroundColor: maizeBusDarkBlue,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(56)
+                              borderRadius: BorderRadius.circular(56),
                             ),
                             child: const Icon(
                               Icons.directions_bus,
@@ -573,22 +697,28 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       ),
-                      
-      
-                      SizedBox(
-                        width: 15,
-                      ),
-                  
+
+                      SizedBox(width: 15),
+
                       // favorites
                       SizedBox(
                         width: 55,
                         height: 55,
                         child: FittedBox(
                           child: FloatingActionButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (BuildContext context) {
+                                  return FavoritesSheet();
+                                },
+                              );
+                            },
                             backgroundColor: maizeBusDarkBlue,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(56)
+                              borderRadius: BorderRadius.circular(56),
                             ),
                             child: const Icon(
                               Icons.favorite,
@@ -597,9 +727,9 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       ),
-                      
+
                       Spacer(),
-                      
+
                       // search
                       SizedBox(
                         width: 75,
@@ -609,7 +739,7 @@ class _MapScreenState extends State<MapScreen> {
                             onPressed: () => _showSearchSheet(),
                             backgroundColor: maizeBusDarkBlue,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(56)
+                              borderRadius: BorderRadius.circular(56),
                             ),
                             child: const Icon(
                               Icons.search,
@@ -618,13 +748,13 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -632,4 +762,4 @@ class _MapScreenState extends State<MapScreen> {
     // Overlay the journey search panel at the top
     //const JourneySearchPanel(),
   }
-} 
+}

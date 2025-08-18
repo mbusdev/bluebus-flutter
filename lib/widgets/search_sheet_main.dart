@@ -41,7 +41,7 @@ class LocationSearchBar extends HookWidget {
 
     final locations = useMemoized(() async {
       try {
-        final uri = Uri.parse(BACKEND_URL + '/getBuildingLocations');
+        final uri = Uri.parse('$BACKEND_URL/getBuildingLocations');
         final response = await http.get(uri);
 
         if (response.statusCode != 200 ||
@@ -240,9 +240,9 @@ class SearchSheet extends StatefulWidget {
   final void Function(Location selected) onSearch;
 
   const SearchSheet({
-    Key? key,
+    super.key,
     required this.onSearch,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchSheet> createState() => _SearchSheetState();

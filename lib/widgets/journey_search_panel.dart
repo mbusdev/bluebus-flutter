@@ -45,7 +45,7 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
 
   Future<void> _fetchBuildingLocations() async {
     try {
-      final buildingLocationsUrl = BACKEND_URL + '/getBuildingLocations';
+      final buildingLocationsUrl = '$BACKEND_URL/getBuildingLocations';
       final response = await http.get(Uri.parse(buildingLocationsUrl));
       if (response.statusCode == 200) {
         final List<dynamic> buildings = json.decode(response.body);
@@ -66,7 +66,7 @@ class _JourneySearchPanelState extends State<JourneySearchPanel> {
             }
           }
         }
-        print('DEBUG: buildingDict = ' + json.encode(dict)); // Debug print
+        print('DEBUG: buildingDict = ${json.encode(dict)}'); // Debug print
         if (mounted) {
           setState(() {
             _buildingDict = dict;
@@ -302,7 +302,7 @@ class LocationSearchBar extends HookWidget {
 
     final locations = useMemoized(() async {
       try {
-        final uri = Uri.parse(BACKEND_URL + '/getBuildingLocations');
+        final uri = Uri.parse('$BACKEND_URL/getBuildingLocations');
         final response = await http.get(uri);
 
         if (response.statusCode != 200 ||

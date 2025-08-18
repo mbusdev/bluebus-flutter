@@ -99,7 +99,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
         ),
         const SizedBox(height: 10),
         // Timeline for each leg
-        ...journey.legs.map((leg) => _buildLeg(context, leg)).toList(),
+        ...journey.legs.map((leg) => _buildLeg(context, leg)),
       ],
     );
   }

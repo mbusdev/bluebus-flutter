@@ -6,8 +6,8 @@ import '../constants.dart';
 // Fetch and manage route colors and images from the backend
 class RouteColorService {
   static Map<String, Color> _routeColors = {};
-  static Map<String, String> _routeImages = {};
-  static Map<String, String> _routeNames = {};
+  static final Map<String, String> _routeImages = {};
+  static final Map<String, String> _routeNames = {};
   static bool _isInitialized = false;
   static String? _lastError;
 
