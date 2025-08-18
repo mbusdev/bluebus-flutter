@@ -1,4 +1,4 @@
-# BlueBus Flutter App
+# MaizeBus
 
 ## Google Maps Setup (iOS)
 
