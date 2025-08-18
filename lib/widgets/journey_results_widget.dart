@@ -4,6 +4,8 @@ import 'package:bluebus/globals.dart';
 import 'package:flutter/material.dart';
 import '../models/journey.dart';
 import '../constants.dart';
+import 'package:bluebus/widgets/search_sheet_main.dart';
+import 'package:bluebus/widgets/directions_sheet.dart';
 
 
 // helper class to display legs with expanded property
@@ -35,10 +37,24 @@ class LegToDisplay {
   });
 }
 
+
 class JourneyResultsWidget extends StatefulWidget {
   final List<Journey> journeys;
+  final String start;
+  final String end;
+  final Map<String, double>? origin;
+  final Map<String, double>? dest;
+  final void Function(Location, bool) onChangeSelection;
 
-  const JourneyResultsWidget({super.key, required this.journeys});
+  const JourneyResultsWidget({
+    super.key, 
+    required this.journeys,
+    required this.start,
+    required this.end,
+    required this.origin,
+    required this.dest,
+    required this.onChangeSelection
+  });
 
   @override
   State<JourneyResultsWidget> createState() => _JourneyResultsWidgetState();
@@ -58,113 +74,263 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Options",
-            style: TextStyle(
-              color: Colors.black,
-              fontFamily: 'Urbanist',
-              fontWeight: FontWeight.w700,
-              fontSize: 30,
-            ),
-          ),
-
-          Column(
-            children: widget.journeys.map((Journey journey) {
-              final totalDuration = journey.arrivalTime - journey.departureTime;
-              final numTransfers = journey.legs.length - 1;
-          
-              Set<String> busIDs = {};
-
-              // get all bus ids for header
-              for (Leg l in journey.legs){
-
-                if (l.rt != null){
-                  busIDs.add(l.rt!);
-                }
-              }
-              
-              return Card(
-                // rounded corners and shadow.
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15.0),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color.fromARGB(95, 187, 187, 187), 
+                  spreadRadius: 2, 
+                  blurRadius: 6, 
+                  offset: Offset(0, 3), 
                 ),
-                color: Color.fromARGB(255, 240, 240, 240),
-          
-                // theme widget to override the default divider color.
-                child: Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    title: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${(totalDuration / 60).round()}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 40,
-                            height: 0
-                          ),
-                        ),
-                        Text(
-                          ' min',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 25,
-                            height: 1.5
-                          ),
-                        ),
+              ],
+            ),
 
-                        Spacer(),
-
-                        Text(
-                          'via ',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w400,
-                            fontSize: 25,
-                            height: 1.5
-                          ),
-                        ),
-
-                        ...busIDs.map((busID) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.black, 
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  busID,
-                                  style: TextStyle(
-                                    color: Colors.white, 
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -1,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                          );
-                        }),
-
-                        
-                      ],
-                    ),
-
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 16),
-                        child: JourneyBody(journey: journey),
+                      Icon(
+                        Icons.my_location,
+                        size: 25,
+                      ),
+
+                      SizedBox(width: 12,),
+
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () { 
+
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (BuildContext context) {
+                                return SearchSheet(
+                                  onSearch: (Location location) {
+                                    final searchCoordinates = location.latlng;
+                                    // null-proofing
+                                    if (searchCoordinates != null) {
+                                      Navigator.pop(context);
+                                      widget.onChangeSelection(location, true);
+                                    } else {
+                                      print("Error: The selected location '${location.name}' has no coordinates.");
+                                    }
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            alignment: Alignment.centerLeft,
+                            height: 27,
+                            decoration: BoxDecoration(
+                              color: Color.fromARGB(255, 235, 235, 235),
+                              borderRadius: BorderRadius.all(Radius.circular(10)
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10, right: 10),
+                              child: Text(
+                                widget.start,
+                                style:  TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  height: 0
+                                ),
+                                overflow: TextOverflow.ellipsis
+                              ),
+                            ),
+                          ),
+                        ),
                       )
                     ],
                   ),
-                ),
-              );
-            }).toList(),
+
+                  SizedBox(height: 10,),
+              
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 25,
+                      ),
+
+                      SizedBox(width: 12,),
+
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () { 
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (BuildContext context) {
+                                return SearchSheet(
+                                  onSearch: (Location location) {
+                                    final searchCoordinates = location.latlng;
+                                    // null-proofing
+                                    if (searchCoordinates != null) {
+                                      Navigator.pop(context);
+                                      widget.onChangeSelection(location, false);
+                                    } else {
+                                      print("Error: The selected location '${location.name}' has no coordinates.");
+                                    }
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            alignment: Alignment.centerLeft,
+                            height: 27,
+                            decoration: BoxDecoration(
+                              color: Color.fromARGB(255, 235, 235, 235),
+                              borderRadius: BorderRadius.all(Radius.circular(10)
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10, right: 10),
+                              child: Text(
+                                widget.end,
+                                style:  TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  height: 0
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.only(top: 20, left: 20, right:20),
+            child: Text(
+              "Options",
+              style: TextStyle(
+                color: Colors.black,
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w700,
+                fontSize: 30,
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.only(bottom: 20, left: 20, right:20),
+            child: Column(
+              children: widget.journeys.map((Journey journey) {
+                final totalDuration = journey.arrivalTime - journey.departureTime;
+                final numTransfers = journey.legs.length - 1;
+            
+                Set<String> busIDs = {};
+            
+                // get all bus ids for header
+                for (Leg l in journey.legs){
+            
+                  if (l.rt != null){
+                    busIDs.add(l.rt!);
+                  }
+                }
+                
+                return Card(
+                  // rounded corners and shadow.
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15.0),
+                  ),
+                  color: Color.fromARGB(255, 240, 240, 240),
+            
+                  // theme widget to override the default divider color.
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      title: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${(totalDuration / 60).round()}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 40,
+                              height: 0
+                            ),
+                          ),
+                          Text(
+                            ' min',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 25,
+                              height: 1.5
+                            ),
+                          ),
+            
+                          Spacer(),
+            
+                          Text(
+                            'via ',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 25,
+                              height: 1.5
+                            ),
+                          ),
+            
+                          ...busIDs.map((busID) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black, 
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    busID,
+                                    style: TextStyle(
+                                      color: Colors.white, 
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -1,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                            );
+                          }),
+            
+                          
+                        ],
+                      ),
+            
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16, right: 16),
+                          child: JourneyBody(journey: journey),
+                        )
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ],
       )
@@ -264,7 +430,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                           ),
                         ),
                         Text(
-                          "to ${leg.destination}",
+                          "to ${getStopNameFromID(leg.destinationID)}",
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
@@ -376,10 +542,30 @@ class _JourneyBodyState extends State<JourneyBody> {
                                   ],
                                 ),
                               );
-                            })
+                            }),
+
+                            SizedBox(height: 10,),
+
+                            GestureDetector(
+                              onTap: () {     
+                                setState(() { 
+                                  leg.expanded = false;
+                                });
+                              },
+                              child: Text(
+                                "hide",
+                                style: TextStyle(
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color.fromARGB(255, 0, 0, 255)
+                                )
+                              ),
+                            ),
                           ],
                         ) 
                         :
+                        // leg not expanded
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -390,7 +576,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                                 SizedBox(width: 10,),
                                 Expanded(
                                   child: Text(
-                                    leg.origin,
+                                    getStopNameFromID(leg.originID),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w400,
@@ -402,19 +588,21 @@ class _JourneyBodyState extends State<JourneyBody> {
 
                             GestureDetector(
                               onTap: () {     
-                                // Call the setState method with a function as its argument
                                 setState(() { 
                                   leg.expanded = true;
                                 });
                               },
-                              child: Text(
-                                "... show intermediate",
-                                style: TextStyle(
-                                  decoration: TextDecoration.underline,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color.fromARGB(255, 0, 0, 255)
-                                )
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 5, bottom: 5),
+                                child: Text(
+                                  "show intermediate",
+                                  style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color.fromARGB(255, 0, 0, 255)
+                                  )
+                                ),
                               ),
                             ),
 
@@ -425,7 +613,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                                 SizedBox(width: 10,),
                                 Expanded(
                                   child: Text(
-                                    leg.destination,
+                                    getStopNameFromID(leg.destinationID),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w400,

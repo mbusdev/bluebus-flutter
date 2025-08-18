@@ -278,20 +278,34 @@ class _MapScreenState extends State<MapScreen> {
             Map<String, double>? end = {'lat' : place.latlng!.latitude, 
                                         'lon' : place.latlng!.longitude, };
 
-            _showDirectionsSheet(start, end);
+            _showDirectionsSheet(start, end, "Current Location", place.name, false);
           },
         );
       },
     );
   }
 
-  void _showDirectionsSheet(Map<String, double>? start, Map<String, double>? end) {
+  void _showDirectionsSheet(Map<String, double>? start, Map<String, double>? end, 
+                            String startLoc, String endLoc, bool dontUseLocation) {
     showBottomSheet(
       context: context,
       enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return DirectionsSheet(origin: start, dest: end, useOrigin: false);
+        return DirectionsSheet(
+          origin: start, 
+          dest: end, 
+          useOrigin: dontUseLocation, 
+          originName: startLoc, 
+          destName: endLoc,                      // true = start changed, false = end changed
+          onChangeSelection: (Location location, bool startChanged){
+            if (startChanged){
+              _showDirectionsSheet({'lat' : location.latlng!.latitude,'lon' : location.latlng!.longitude, }, end, location.name, endLoc, true);
+            } else {
+              _showDirectionsSheet(start, {'lat' : location.latlng!.latitude,'lon' : location.latlng!.longitude, }, startLoc, location.name, dontUseLocation);
+            }
+          }
+        );
       },
     );
   }

@@ -3,17 +3,24 @@ import 'package:geolocator/geolocator.dart';
 import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
+import '../constants.dart';
 
 class DirectionsSheet extends StatefulWidget {
   final Map<String, double>? origin;
   final Map<String, double>? dest;
   final bool useOrigin;
+  final String originName;
+  final String destName;
+  final void Function(Location, bool) onChangeSelection;
 
   const DirectionsSheet({
     Key? key,
     required this.origin,
     required this.dest,
-    required this.useOrigin
+    required this.useOrigin,
+    required this.originName,
+    required this.destName,
+    required this.onChangeSelection
   }) : super(key: key);
 
   @override
@@ -32,7 +39,10 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
 
   Future<List<Journey>> _loadJourneys() async {
     double originLat, originLon;
-    if (widget.useOrigin && widget.origin != null) {
+
+    print("plotting route from ${widget.originName} to ${widget.destName}");
+
+    if (widget.useOrigin) {
       originLat = widget.origin!['lat']!;
       originLon = widget.origin!['lon']!;
     } else {
@@ -89,9 +99,13 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
           else if(journeyload.hasData){
             final journeys = journeyload.data!;
 
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: JourneyResultsWidget(journeys: journeys)
+            return JourneyResultsWidget(
+              journeys: journeys,
+              start: widget.originName,
+              end: widget.destName,
+              origin: widget.origin,
+              dest: widget.dest,
+              onChangeSelection: widget.onChangeSelection,
             );
 
           }

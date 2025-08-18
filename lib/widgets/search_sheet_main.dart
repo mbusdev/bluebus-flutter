@@ -9,7 +9,6 @@ import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
 import '../constants.dart';
-import '../globals.dart';
 
 class LocationSearchBar extends HookWidget {
   final void Function(Location) onLocationSelected;
@@ -181,6 +180,7 @@ class LocationSearchBar extends HookWidget {
         SizedBox(
           height: 50,
           child: TextField(
+            autofocus: true,
             controller: controller,
             focusNode: focusNode,
             decoration: decoration,
@@ -374,7 +374,7 @@ class _SearchSheetState extends State<SearchSheet> {
                 border: OutlineInputBorder(),
               ),*/
               InputDecoration(
-                fillColor: Color.fromARGB(255, 235, 235, 235), // A light grey color
+                fillColor: Color.fromARGB(255, 235, 235, 235), 
                 filled: true,
                 hintText: 'Start typing...',
                 prefixIcon: Icon(Icons.search),
