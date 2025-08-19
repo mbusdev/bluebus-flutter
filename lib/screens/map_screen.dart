@@ -4,6 +4,7 @@ import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
+import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -84,8 +85,8 @@ class _MapScreenState extends State<MapScreen> {
       final stopBytes = await rootBundle.load('assets/bus_stop.png');
       final stopCodec = await ui.instantiateImageCodec(
         stopBytes.buffer.asUint8List(),
-        targetWidth: 90,
-        targetHeight: 90,
+        targetWidth: 70,
+        targetHeight: 70,
       );
       final stopFrame = await stopCodec.getNextFrame();
       final stopData = await stopFrame.image.toByteData(format: ui.ImageByteFormat.png);
@@ -138,8 +139,8 @@ class _MapScreenState extends State<MapScreen> {
         try {
           final codec = await ui.instantiateImageCodec(
             imageBytes,
-            targetWidth: 200,
-            targetHeight: 200,
+            targetWidth: 125,
+            targetHeight: 125,
           );
           final frame = await codec.getNextFrame();
           final data = await frame.image.toByteData(format: ui.ImageByteFormat.png);
@@ -224,14 +225,15 @@ class _MapScreenState extends State<MapScreen> {
                   markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
                   position: stop.location,
                   icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                  infoWindow: InfoWindow(title: stop.name),
+                  consumeTapEvents: true,
+                  onTap: () {
+                    _showStopSheet(stop.id, stop.name);
+                  },
                 ))
             .toSet();
       }
     }
   }
-  
-
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
@@ -397,14 +399,19 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return SearchSheet(
-          onSearch: (Location location) {
+          onSearch: (Location location, bool isBusStop, String stopID) {
 
             final searchCoordinates = location.latlng;
 
             // null-proofing
             if (searchCoordinates != null) {
-              _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
-              _showBuildingSheet(location);
+              if (isBusStop){
+                _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
+                _showStopSheet(stopID, location.name);
+              } else{
+                _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
+                _showBuildingSheet(location);
+              }
             } else {
               // Location has no coordinates
             }
@@ -464,7 +471,22 @@ class _MapScreenState extends State<MapScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return BusSheet(busID: busID,);
+        return BusSheet(busID: busID,
+          onSelectStop: (name, id) {
+            _showStopSheet(id, name);
+          },
+        );
+      },
+    );
+  }
+
+  void _showStopSheet(String stopID, String stopName) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return StopSheet(stopID: stopID, stopName: stopName,);
       },
     );
   }

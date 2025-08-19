@@ -33,3 +33,21 @@ class BusStopWithPrediction {
     );
   }
 } 
+
+class BusWithPrediction {
+  final String id;
+  final String destination;
+  final String prediction;
+  final String direction;
+
+  BusWithPrediction({required this.id, required this.destination, required this.prediction, required this.direction});
+
+  factory BusWithPrediction.fromJson(Map<String, dynamic> json) {
+    return BusWithPrediction(
+      id: json['rt'] ?? '',
+      destination: json['des'] ?? '',
+      prediction: json['prdctdn'] as String,
+      direction: json['rtdir'] as String,
+    );
+  }
+} 

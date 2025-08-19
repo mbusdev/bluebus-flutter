@@ -112,7 +112,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                               backgroundColor: Colors.transparent,
                               builder: (BuildContext context) {
                                 return SearchSheet(
-                                  onSearch: (Location location) {
+                                  onSearch: (Location location, isStop, id) {
                                     final searchCoordinates = location.latlng;
                                     // null-proofing
                                     if (searchCoordinates != null) {
@@ -128,7 +128,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                           },
                           child: Container(
                             alignment: Alignment.centerLeft,
-                            height: 27,
+                            height: 30,
                             decoration: BoxDecoration(
                               color: Color.fromARGB(255, 235, 235, 235),
                               borderRadius: BorderRadius.all(Radius.circular(10)
@@ -139,7 +139,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                               child: Text(
                                 widget.start,
                                 style:  TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w400,
                                   height: 0
                                 ),
@@ -172,7 +172,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                               backgroundColor: Colors.transparent,
                               builder: (BuildContext context) {
                                 return SearchSheet(
-                                  onSearch: (Location location) {
+                                  onSearch: (Location location, isStop, id) {
                                     final searchCoordinates = location.latlng;
                                     // null-proofing
                                     if (searchCoordinates != null) {
@@ -188,7 +188,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                           },
                           child: Container(
                             alignment: Alignment.centerLeft,
-                            height: 27,
+                            height: 30,
                             decoration: BoxDecoration(
                               color: Color.fromARGB(255, 235, 235, 235),
                               borderRadius: BorderRadius.all(Radius.circular(10)
@@ -199,7 +199,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                               child: Text(
                                 widget.end,
                                 style:  TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w400,
                                   height: 0
                                 ),

@@ -11,7 +11,7 @@ import '../widgets/journey_results_widget.dart';
 import '../constants.dart';
 
 class LocationSearchBar extends HookWidget {
-  final void Function(Location) onLocationSelected;
+  final void Function(Location, bool, String) onLocationSelected;
   final TextEditingController controller;
   final FocusNode focusNode;
   final InputDecoration decoration;
@@ -196,8 +196,8 @@ class LocationSearchBar extends HookWidget {
                 final selected = matches.first;
                 controller.text = selected.name;
                 onLocationSelected(
-                  selected,
-                ); // triggers _onSearch if it's the "To" field
+                  selected, selected.isBusStop, selected.stopId ?? ""
+                ); 
                 showSuggestions.value = false;
               }
             },
@@ -255,7 +255,7 @@ class LocationSearchBar extends HookWidget {
                                           : Icon(Icons.business_rounded, size: 40, color: Color.fromARGB(150, 0, 0, 0),),
                     onTap: () {
                       controller.text = loc.name;
-                      onLocationSelected(loc);
+                      onLocationSelected(loc, loc.isBusStop, loc.stopId ?? "");
                       showSuggestions.value = false;
                     },
                   );
@@ -279,7 +279,7 @@ class LocationSearchBar extends HookWidget {
 
 // Selecting routes
 class SearchSheet extends StatefulWidget {
-  final void Function(Location selected) onSearch;
+  final void Function(Location, bool, String) onSearch;
 
   const SearchSheet({
     Key? key,
@@ -362,9 +362,9 @@ class _SearchSheetState extends State<SearchSheet> {
           Padding(
             padding: const EdgeInsets.only(left: 16, right: 16),
             child: LocationSearchBar(
-              onLocationSelected: (location) {
+              onLocationSelected: (location, isBusStop, stopID) {
                 Navigator.pop(context); 
-                widget.onSearch(location);
+                widget.onSearch(location, isBusStop, stopID);
               },
               controller: _searchController, 
               focusNode: _searchFocusNode, 

@@ -9,10 +9,12 @@ import 'package:intl/intl.dart';
 
 class BusSheet extends StatefulWidget {
   final String busID;
+  final void Function(String name, String id) onSelectStop;
 
   const BusSheet({
     Key? key,
     required this.busID,
+    required this.onSelectStop
   }) : super(key: key);
 
   @override
@@ -114,7 +116,7 @@ class _BusSheetState extends State<BusSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Next departures",
+                        "Next bus stops",
                         style: TextStyle(
                           fontFamily: 'Urbanist',
                           fontWeight: FontWeight.w400,
@@ -134,82 +136,96 @@ class _BusSheetState extends State<BusSheet> {
                             return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    decoration: const BoxDecoration(
-                                      color: Color.fromARGB(255, 235, 235, 235),
-                                      borderRadius: BorderRadius.all(Radius.circular(15)),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(left: 15, right: 15, top: 9, bottom: 9),
-                                      child: Row(
-                                        children: [
-                                          
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.pop(context); 
+                                      widget.onSelectStop(stop.name, stop.id);
+                                    },
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        color: Color.fromARGB(255, 235, 235, 235),
+                                        borderRadius: BorderRadius.all(Radius.circular(15)),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Color.fromARGB(95, 187, 187, 187), 
+                                            spreadRadius: 1.5, 
+                                            blurRadius: 2, 
+                                            offset: Offset(0, 3), 
+                                          ),
+                                        ],
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(left: 15, right: 15, top: 9, bottom: 9),
+                                        child: Row(
+                                          children: [
+                                            
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    stop.name,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontFamily: 'Urbanist',
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 16,
+                                                    )
+                                                  ),
+                                    
+                                                  // add subtitle if not due
+                                                  (stop.prediction != "DUE")?
+                                                  Text(
+                                                    "Estimated: ${futureTime(stop.prediction)}",
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontFamily: 'Urbanist',
+                                                      fontWeight: FontWeight.w400,
+                                                      fontSize: 16,
+                                                    )
+                                                  ) : SizedBox.shrink()
+                                                ],
+                                              ),
+                                            ),
+                                            
+                                            SizedBox(width: 20, height: 0,),
+                                            
+                                            (stop.prediction != "DUE")?
+                                            Column(
                                               children: [
                                                 Text(
-                                                  stop.name,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  stop.prediction,
                                                   style: TextStyle(
-                                                    fontFamily: 'Urbanist',
-                                                    fontWeight: FontWeight.w700,
-                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w400,
+                                                    fontSize: 20,
+                                                    height: 0
                                                   )
                                                 ),
-
-                                                // add subtitle if not due
-                                                (stop.prediction != "DUE")?
                                                 Text(
-                                                  "Estimated: ${futureTime(stop.prediction)}",
-                                                  overflow: TextOverflow.ellipsis,
+                                                  "min",
                                                   style: TextStyle(
-                                                    fontFamily: 'Urbanist',
                                                     fontWeight: FontWeight.w400,
-                                                    fontSize: 16,
+                                                    fontSize: 14,
+                                                    height: 0
                                                   )
-                                                ) : SizedBox.shrink()
+                                                )
                                               ],
-                                            ),
-                                          ),
-                                          
-                                          SizedBox(width: 20, height: 0,),
-                                          
-                                          (stop.prediction != "DUE")?
-                                          Column(
-                                            children: [
-                                              Text(
-                                                stop.prediction,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                  fontSize: 20,
-                                                  height: 0
-                                                )
-                                              ),
-                                              Text(
-                                                "min",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                  fontSize: 14,
-                                                  height: 0
-                                                )
-                                              )
-                                            ],
-                                          ) 
-                                          :
-                                          Column(
-                                            children: [
-                                              Text(
-                                                "now",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w400,
-                                                  fontSize: 20,
-                                                  height: 0
-                                                )
-                                              ),
-                                            ],
-                                          ) 
-                                        ],
+                                            ) 
+                                            :
+                                            Column(
+                                              children: [
+                                                Text(
+                                                  "now",
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w400,
+                                                    fontSize: 20,
+                                                    height: 0
+                                                  )
+                                                ),
+                                              ],
+                                            ) 
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
