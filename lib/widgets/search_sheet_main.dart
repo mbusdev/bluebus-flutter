@@ -282,9 +282,9 @@ class SearchSheet extends StatefulWidget {
   final void Function(Location, bool, String) onSearch;
 
   const SearchSheet({
-    Key? key,
+    super.key,
     required this.onSearch,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchSheet> createState() => _SearchSheetState();

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter/material.dart';
 import 'constants.dart';
 import 'models/bus_stop.dart';
 import 'models/bus.dart';
@@ -18,49 +17,63 @@ class BlueBusApi {
     final data = jsonDecode(response.body);
     final routes = <BusRouteLine>[];
     final routeJson = data['routes'] as Map<String, dynamic>;
-    
+
     await RouteColorService.initialize();
-    
+
     routeJson.forEach((routeId, subroutes) {
       for (final subroute in subroutes) {
         final points = <LatLng>[];
         final stops = <BusStop>[];
         for (final point in subroute['pt']) {
-          points.add(LatLng(point['lat']?.toDouble() ?? 0, point['lon']?.toDouble() ?? 0));
+          points.add(
+            LatLng(
+              point['lat']?.toDouble() ?? 0,
+              point['lon']?.toDouble() ?? 0,
+            ),
+          );
           if (point['typ'] == 'S') {
             stops.add(BusStop.fromJson(point, routeId));
           }
         }
-        
+
         // Get route color and image
         final routeColor = RouteColorService.getRouteColor(routeId);
         final routeImageUrl = RouteColorService.getRouteImageUrl(routeId);
-        
-        routes.add(BusRouteLine(
-          routeId: routeId, 
-          points: points, 
-          stops: stops,
-          color: routeColor,
-          imageUrl: routeImageUrl,
-        ));
-        
+
+        routes.add(
+          BusRouteLine(
+            routeId: routeId,
+            points: points,
+            stops: stops,
+            color: routeColor,
+            imageUrl: routeImageUrl,
+          ),
+        );
+
         // Handle detour points if present
         if (subroute.containsKey('dtrpt')) {
           final detourPoints = <LatLng>[];
           final detourStops = <BusStop>[];
           for (final point in subroute['dtrpt']) {
-            detourPoints.add(LatLng(point['lat']?.toDouble() ?? 0, point['lon']?.toDouble() ?? 0));
+            detourPoints.add(
+              LatLng(
+                point['lat']?.toDouble() ?? 0,
+                point['lon']?.toDouble() ?? 0,
+              ),
+            );
             if (point['typ'] == 'S') {
               detourStops.add(BusStop.fromJson(point, routeId));
             }
           }
-          routes.add(BusRouteLine(
-            routeId: routeId, 
-            points: detourPoints, 
-            stops: detourStops,
-            color: routeColor,
-            imageUrl: routeImageUrl,
-          ));
+          routes.add(
+            BusRouteLine(
+              routeId: routeId,
+              points: detourPoints,
+              stops: detourStops,
+              color: routeColor,
+              imageUrl: routeImageUrl,
+            ),
+          );
         }
       }
     });
@@ -74,16 +87,22 @@ class BlueBusApi {
     final data = jsonDecode(response.body);
     final buses = <Bus>[];
     final busJson = data['buses'] as List<dynamic>?;
-    
+
     await RouteColorService.initialize();
-    
+
     if (busJson != null) {
       for (final bus in busJson) {
         final routeId = bus['rt'] ?? '';
         final routeColor = RouteColorService.getRouteColor(routeId);
         final routeImageUrl = RouteColorService.getRouteImageUrl(routeId);
-        
-        buses.add(Bus.fromJson(bus, routeColor: routeColor, routeImageUrl: routeImageUrl));
+
+        buses.add(
+          Bus.fromJson(
+            bus,
+            routeColor: routeColor,
+            routeImageUrl: routeImageUrl,
+          ),
+        );
       }
     }
     return buses;

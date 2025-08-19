@@ -1,7 +1,7 @@
 // Import necessary Flutter packages
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/map_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
 import 'services/route_color_service.dart';
@@ -9,7 +9,7 @@ import 'services/route_color_service.dart';
 // This function initializes the Flutter app and runs the MainApp widget
 void main() async {
   await RouteColorService.initialize();
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -36,10 +36,12 @@ class MainApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
-        fontFamily: 'Urbanist'
+        fontFamily: 'Urbanist',
       ),
-      
-      home: Scaffold(body: const MapScreen()),
+
+      // Show onboarding on first run (terms acceptance). OnboardingDecider
+      // will display the welcome + terms flow if needed, otherwise the map.
+      home: const OnboardingDecider(),
     );
   }
 }

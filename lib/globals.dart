@@ -1,4 +1,5 @@
 import 'constants.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 List<Location> globalStopLocs = [];
 
@@ -15,4 +16,14 @@ String getStopNameFromID (String id){
   }
 
   return id;
+}
+
+// helper function
+LatLng? getLatLongFromStopID (String id){
+
+  for (Location l in globalStopLocs){
+    if (l.stopId == id){
+      return (l.latlng);
+    }
+  }
 }
