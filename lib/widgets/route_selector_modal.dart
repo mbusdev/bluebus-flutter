@@ -69,7 +69,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                   // TITLE
                   if (index == 0) {
                     return const Padding(
-                      padding: EdgeInsets.only(left: 16, top: 20, bottom: 4), 
+                      padding: EdgeInsets.only(left: 20, top: 20, bottom: 4), 
                       child: Text(
                         'Routes Selector',
                         style: TextStyle(
@@ -84,7 +84,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                   // SUBTITLE
                   } else if (index == 1) {
                     return const Padding(
-                      padding: EdgeInsets.only(left: 16, bottom: 16, right: 16), 
+                      padding: EdgeInsets.only(left: 20, bottom: 14, right: 20), 
                       child: Text(
                         'Choose which bus routes are displayed on the map',
                         style: TextStyle(
@@ -101,7 +101,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                       final route = widget.availableRoutes[index - 2]; // -2 to account for title and subtitle
                       final isSelected = tempSelectedRoutes.contains(route['id']);
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                         child: ListTile(
                           leading: Container(
                             width: 47,

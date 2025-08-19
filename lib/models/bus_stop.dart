@@ -17,3 +17,19 @@ class BusStop {
     );
   }
 } 
+
+class BusStopWithPrediction {
+  final String id;
+  final String name;
+  final String prediction;
+
+  BusStopWithPrediction({required this.id, required this.name, required this.prediction});
+
+  factory BusStopWithPrediction.fromJson(Map<String, dynamic> json) {
+    return BusStopWithPrediction(
+      id: json['stpid'] ?? '',
+      name: json['stpnm'] ?? '',
+      prediction: json['prdctdn'] as String,
+    );
+  }
+} 

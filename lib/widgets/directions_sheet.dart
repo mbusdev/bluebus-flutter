@@ -40,8 +40,6 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   Future<List<Journey>> _loadJourneys() async {
     double originLat, originLon;
 
-    print("plotting route from ${widget.originName} to ${widget.destName}");
-
     if (widget.useOrigin) {
       originLat = widget.origin!['lat']!;
       originLon = widget.origin!['lon']!;

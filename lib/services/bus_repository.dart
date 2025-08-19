@@ -6,7 +6,7 @@ import '../models/bus_route_line.dart';
 // Gets the routes and buses from the api
 class BusRepository {
   List<BusRouteLine> _routes = [];
-  List<Bus> _buses = [];
+  static List<Bus> _buses = [];
   Timer? _busUpdateTimer;
   final Duration busUpdateInterval;
 
@@ -36,5 +36,13 @@ class BusRepository {
 
   void dispose() {
     stopBusUpdates();
+  }
+
+  static Bus? getBus(String busID){
+    for (Bus b in _buses){
+      if (b.id == busID){
+        return b;
+      }
+    }
   }
 } 

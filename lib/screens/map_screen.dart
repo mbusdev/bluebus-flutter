@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:bluebus/widgets/building_sheet.dart';
+import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:flutter/material.dart';
@@ -198,6 +199,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _routeIdToName = routeIdToName;
       _availableRoutes = routeIdToName.entries.map((e) => {'id': e.key, 'name': e.value}).toList();
+      globalAvailableRoutes = _availableRoutes;
     });
   }
 
@@ -275,14 +277,14 @@ class _MapScreenState extends State<MapScreen> {
           
           return Marker(
             markerId: MarkerId('bus_${bus.id}'),
+            consumeTapEvents: true,
             position: bus.position,
             icon: busIcon!,
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
-            infoWindow: InfoWindow(
-              title: 'Bus ${bus.id}',
-              snippet: 'Route ${bus.routeId}',
-            ),
+            onTap: () {
+              _showBusSheet(bus.id);
+            },
           );
         })
         .toSet();
@@ -452,6 +454,17 @@ class _MapScreenState extends State<MapScreen> {
             }
           }
         );
+      },
+    );
+  }
+
+  void _showBusSheet(String busID) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return BusSheet(busID: busID,);
       },
     );
   }

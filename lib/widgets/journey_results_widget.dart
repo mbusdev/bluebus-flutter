@@ -1,11 +1,9 @@
-import 'dart:async';
-
 import 'package:bluebus/globals.dart';
 import 'package:flutter/material.dart';
 import '../models/journey.dart';
 import '../constants.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
-import 'package:bluebus/widgets/directions_sheet.dart';
+import '../services/route_color_service.dart';
 
 
 // helper class to display legs with expanded property
@@ -299,13 +297,13 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                   height: 30,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.black, 
+                                    color: RouteColorService.getRouteColor(busID), 
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
                                     busID,
                                     style: TextStyle(
-                                      color: Colors.white, 
+                                      color: RouteColorService.getContrastingColor(busID), 
                                       fontSize: 17,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: -1,
@@ -455,13 +453,13 @@ class _JourneyBodyState extends State<JourneyBody> {
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.black, 
+                      color: RouteColorService.getRouteColor(leg.rt!), 
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       leg.rt!,
                       style: TextStyle(
-                        color: Colors.white, 
+                        color: RouteColorService.getContrastingColor(leg.rt!), 
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -1,
