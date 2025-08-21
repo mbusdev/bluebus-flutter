@@ -39,11 +39,11 @@ class _OnboardingDeciderState extends State<OnboardingDecider> {
   @override
   Widget build(BuildContext context) {
     if (_checking) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()), resizeToAvoidBottomInset: false);
     }
 
     if (_accepted) {
-      return Scaffold(body: const MapScreen());
+      return const Scaffold(body: MapScreen(), resizeToAvoidBottomInset: false);
     }
 
     return const OnboardingScreen();
@@ -69,7 +69,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (mounted) {
         Navigator.of(
           context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => const MapScreen()));
+        ).pushReplacement(MaterialPageRoute(builder: (_) => Scaffold(body: const MapScreen(), resizeToAvoidBottomInset: false)));
       }
     }
   }

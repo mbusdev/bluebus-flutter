@@ -12,6 +12,7 @@ class StopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
   final Future<void> Function(String, String) onFavorite;
+  final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
 
   const StopSheet({
@@ -19,6 +20,7 @@ class StopSheet extends StatefulWidget {
     required this.stopID,
     required this.stopName,
     required this.onFavorite,
+    required this.onUnFavorite,
     required this.onGetDirections
   }) : super(key: key);
 
@@ -71,12 +73,13 @@ String format(String text) {
 }
 
 class _StopSheetState extends State<StopSheet> {
-  late Future<List<BusWithPrediction>> arrivingBuses;
+  late Future<(List<BusWithPrediction>, bool)> loadedStopData;
+  bool? _isFavorited;
 
   @override
   void initState() {
     super.initState();
-    arrivingBuses = fetchNextBusArrivals(widget.stopID);
+    loadedStopData = fetchStopData(widget.stopID);
   }
 
   @override
@@ -85,7 +88,6 @@ class _StopSheetState extends State<StopSheet> {
     double heightEst = textSizeEstimate.height;
     double itemHeightEst = 65;
     double screenHeight = MediaQuery.of(context).size.height;
-    print(heightEst);
     
     return Stack(
       children: [
@@ -100,8 +102,16 @@ class _StopSheetState extends State<StopSheet> {
           ),
         ),
         FutureBuilder(
-          future: arrivingBuses,
+          future: loadedStopData,
           builder: (context, snapshot) {
+            List<BusWithPrediction> arrivingBuses = [];
+            
+            if (snapshot.hasData){
+              arrivingBuses = snapshot.data!.$1;
+              if (_isFavorited == null) {
+                _isFavorited = snapshot.data!.$2;
+              }
+            }
             
             // so this stupid widget doesn't have a way to shrink to whatever
             // the size should be if the content is too small, so we're
@@ -110,7 +120,7 @@ class _StopSheetState extends State<StopSheet> {
             double initialSize;
         
             if (snapshot.hasData) {
-              final itemCount = snapshot.data!.length;
+              final itemCount = arrivingBuses.length;
               
               if(itemCount > 5){
                 initialSize = 0.7;
@@ -208,7 +218,7 @@ class _StopSheetState extends State<StopSheet> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      (snapshot.data!.length == 0)? "There are currently no departing busses" : "Next bus departures",
+                                      (arrivingBuses.length == 0)? "There are currently no departing busses" : "Next bus departures",
                                       style: TextStyle(
                                         fontFamily: 'Urbanist',
                                         fontWeight: FontWeight.w400,
@@ -221,9 +231,9 @@ class _StopSheetState extends State<StopSheet> {
                                     Expanded(
                                       child: ListView.separated(
                                         controller: scrollController,
-                                        itemCount: snapshot.data!.length,
+                                        itemCount: arrivingBuses.length,
                                         itemBuilder: (context, index) {
-                                          BusWithPrediction bus = snapshot.data![index];
+                                          BusWithPrediction bus = arrivingBuses[index];
                                       
                                           return Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,21 +343,35 @@ class _StopSheetState extends State<StopSheet> {
                                           icon: const Icon(
                                             Icons.directions, 
                                             color: Colors.white,
-                                            size: 20,), // The icon on the left
+                                            size: 20,), 
                                           label: const Text(
                                             'Get Directions',
                                             style: TextStyle(
                                               color: Colors.white, 
                                               fontSize: 16, fontWeight: 
                                               FontWeight.w600),
-                                          ), // The text on the right
+                                          ), 
                                         ),
                           
                                         Spacer(),
-                          
+
+                                        // THIS ONE
                                         ElevatedButton.icon(
                                           onPressed: () {
-                                            widget.onFavorite(widget.stopID, widget.stopName);
+                                            // Read the current state
+                                            final bool currentStatus = _isFavorited ?? false;
+
+                                            // Call the appropriate function
+                                            if (currentStatus){
+                                              widget.onUnFavorite(widget.stopID, widget.stopName);
+                                            } else {
+                                              widget.onFavorite(widget.stopID, widget.stopName);
+                                            }
+
+                                            // Update the UI immediately
+                                            setState(() {
+                                              _isFavorited = !currentStatus;
+                                            });
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Color.fromARGB(255, 235, 235, 235),
@@ -356,17 +380,17 @@ class _StopSheetState extends State<StopSheet> {
                                             ),
                                             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                                           ),
-                                          icon: const Icon(
-                                            Icons.favorite_border, 
-                                            color: Colors.black,
-                                            size: 20,), // The icon on the left
-                                          label: const Text(
-                                            'Add to Favorites',
-                                            style: TextStyle(
+                                          icon: Icon(
+                                            (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
+                                            color: (_isFavorited ?? false)? Colors.red : Colors.black,
+                                            size: 20,), 
+                                          label: Text(
+                                            (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
+                                            style: const TextStyle(
                                               color: Colors.black, 
                                               fontSize: 16, fontWeight: 
                                               FontWeight.w600),
-                                          ), // The text on the right
+                                          ),
                                         ),
                           
                                       ],

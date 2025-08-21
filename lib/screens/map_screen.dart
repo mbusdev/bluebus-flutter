@@ -309,8 +309,16 @@ class _MapScreenState extends State<MapScreen> {
     if (!list.contains(stpid)) {
       list.add(stpid);
       await prefs.setStringList('favorite_stops', list);
-    } else {
-    }
+    } 
+  }
+  
+  Future<void> _removeFavoriteStop(String stpid, String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('favorite_stops') ?? <String>[];
+    if (list.contains(stpid)) {
+      list.remove(stpid);
+      await prefs.setStringList('favorite_stops', list);
+    } 
   }
 
   void _updateDisplayedRoutes() {
@@ -570,6 +578,23 @@ class _MapScreenState extends State<MapScreen> {
       },
     );
   }
+  
+  void _showFavoritesSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return FavoritesSheet(onSelectStop: (name, id) {
+            LatLng? latLong = getLatLongFromStopID(id);
+            if (latLong != null){
+              _showStopSheet(id, name, latLong!.latitude, latLong!.longitude);
+            }
+          },
+        );
+      },
+    );
+  }
 
   void _showStopSheet(String stopID, String stopName, double lat, double long) {
     showModalBottomSheet(
@@ -578,7 +603,7 @@ class _MapScreenState extends State<MapScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return StopSheet(stopID: stopID, stopName: stopName, onFavorite: _addFavoriteStop,
+        return StopSheet(stopID: stopID, stopName: stopName, onFavorite: _addFavoriteStop, onUnFavorite: _removeFavoriteStop,
           onGetDirections: () {
             Map<String, double>? start;
             Map<String, double>? end = {'lat' : lat,  'lon' : long};
@@ -773,14 +798,7 @@ class _MapScreenState extends State<MapScreen> {
                         child: FittedBox(
                           child: FloatingActionButton(
                             onPressed: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (BuildContext context) {
-                                  return FavoritesSheet();
-                                },
-                              );
+                              _showFavoritesSheet();
                             },
                             backgroundColor: maizeBusDarkBlue,
                             shape: RoundedRectangleBorder(

@@ -112,6 +112,24 @@ class _BusSheetState extends State<BusSheet> {
                 }
               
                 if (snapshot.hasData) {
+
+                  // bus times aren't sorted for some reason
+                  snapshot.data!.sort((a, b) {
+                    // sorting function
+
+                    // edge cases
+                    if (a.prediction == "DUE"){
+                      return -1;
+                    }
+                    if (b.prediction == "DUE"){
+                      return 1;
+                    }
+
+                    int idA = int.parse(a.prediction);
+                    int idB = int.parse(b.prediction);
+                    return idA.compareTo(idB);
+                  });
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -125,11 +143,13 @@ class _BusSheetState extends State<BusSheet> {
                       ),
           
                       SizedBox(height: 10,),
-            
+
+                      // only show list with no data
+                      (snapshot.data!.length != 0)?
                       ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(), 
-                          itemCount: snapshot.data!.length,
+                          itemCount: (snapshot.data!.length > 6)? 6 : snapshot.data!.length,
                           itemBuilder: (context, index) {
                             BusStopWithPrediction stop = snapshot.data![index];
                         
@@ -234,7 +254,18 @@ class _BusSheetState extends State<BusSheet> {
                                 ],
                               );
                           },
-                        ),
+                        ):
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: Text(
+                            "There don't appear to be any upcoming stops for this bus",
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              fontSize: 16,
+                              height: 0
+                            )
+                          ),
+                        )
                     ],
                   );
                 } 
