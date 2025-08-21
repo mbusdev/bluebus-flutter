@@ -44,6 +44,7 @@ class _MapScreenState extends State<MapScreen> {
   // Custom marker icons
   BitmapDescriptor? _busIcon;
   BitmapDescriptor? _stopIcon;
+  BitmapDescriptor? _favStopIcon;
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -64,6 +65,11 @@ class _MapScreenState extends State<MapScreen> {
       await _loadRouteSpecificBusIcons();
 
       _updateAvailableRoutes(busProvider.routes);
+
+      // Load favorite stops from prefs before caching overlays so markers
+      // are created with the correct icon state
+      await _loadFavoriteStops();
+
       _cacheRouteOverlays(busProvider.routes);
 
       // Load previously selected routes
@@ -92,6 +98,27 @@ class _MapScreenState extends State<MapScreen> {
         format: ui.ImageByteFormat.png,
       );
       _stopIcon = BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
+
+      // Load favorite stop icon
+      try {
+        final favBytes = await rootBundle.load('assets/fav_stop.png');
+        final favCodec = await ui.instantiateImageCodec(
+          favBytes.buffer.asUint8List(),
+          targetWidth: 70,
+          targetHeight: 70,
+        );
+        final favFrame = await favCodec.getNextFrame();
+        final favData = await favFrame.image.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
+        if (favData != null) {
+          _favStopIcon = BitmapDescriptor.fromBytes(
+            favData.buffer.asUint8List(),
+          );
+        }
+      } catch (_) {
+        _favStopIcon = null;
+      }
 
       // Load route specific bus icons
       await _loadRouteSpecificBusIcons();
@@ -184,6 +211,20 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // In memory cache of favorited stop ids for quick lookup and immediate UI updates
+  final Set<String> _favoriteStops = <String>{};
+
+  Future<void> _loadFavoriteStops() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList('favorite_stops') ?? <String>[];
+      _favoriteStops.clear();
+      _favoriteStops.addAll(list);
+    } catch (e) {
+      // ignore
+    }
+  }
+
   @override
   void dispose() {
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
@@ -238,11 +279,16 @@ class _MapScreenState extends State<MapScreen> {
               (stop) => Marker(
                 markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
                 position: stop.location,
-                icon:
-                    _stopIcon ??
-                    BitmapDescriptor.defaultMarkerWithHue(
-                      BitmapDescriptor.hueAzure,
-                    ),
+                icon: _favoriteStops.contains(stop.id)
+                    ? (_favStopIcon ??
+                          _stopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          ))
+                    : (_stopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          )),
                 consumeTapEvents: true,
                 onTap: () {
                   _showStopSheet(
@@ -320,9 +366,13 @@ class _MapScreenState extends State<MapScreen> {
     if (!list.contains(stpid)) {
       list.add(stpid);
       await prefs.setStringList('favorite_stops', list);
+      // update in memory cache and marker icons
+      setState(() {
+        _favoriteStops.add(stpid);
+      });
+      _setStopFavorited(stpid, true);
     } else {}
   }
-
 
   Future<void> _removeFavoriteStop(String stpid, String name) async {
     final prefs = await SharedPreferences.getInstance();
@@ -330,8 +380,62 @@ class _MapScreenState extends State<MapScreen> {
     if (list.contains(stpid)) {
       list.remove(stpid);
       await prefs.setStringList('favorite_stops', list);
-    } 
+      // update in memory cache and marker icons
+      setState(() {
+        _favoriteStops.remove(stpid);
+      });
+      _setStopFavorited(stpid, false);
+    }
   }
+
+  // Update cached markers for a specific stop id to reflect favorite/unfavorite
+  void _setStopFavorited(String stpid, bool favored) {
+    // Update all routeStopMarkers entries that match this stop id
+    _routeStopMarkers.forEach((routeKey, markers) {
+      final updated = markers.map((m) {
+        if (m.markerId.value.startsWith('stop_${stpid}_')) {
+          return Marker(
+            markerId: m.markerId,
+            position: m.position,
+            icon: favored
+                ? (_favStopIcon ??
+                      _stopIcon ??
+                      BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueAzure,
+                      ))
+                : (_stopIcon ??
+                      BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueAzure,
+                      )),
+            consumeTapEvents: m.consumeTapEvents,
+            onTap: m.onTap,
+            rotation: m.rotation,
+            anchor: m.anchor,
+          );
+        }
+        return m;
+      }).toSet();
+      _routeStopMarkers[routeKey] = updated;
+    });
+
+    // If displayed, update displayed markers as well
+    setState(() {
+      // Rebuild displayed stop markers based on current selected routes
+      final selectedStopMarkers = <Marker>{};
+      for (final routeId in _selectedRoutes) {
+        final routeVariants = _routePolylines.keys.where(
+          (key) => key.startsWith('${routeId}_'),
+        );
+        for (final routeKey in routeVariants) {
+          final stops = _routeStopMarkers[routeKey];
+          if (stops != null) selectedStopMarkers.addAll(stops);
+        }
+      }
+      _displayedStopMarkers = selectedStopMarkers;
+    });
+  }
+
+  bool _isFavorited(String stpid) => _favoriteStops.contains(stpid);
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
@@ -451,14 +555,14 @@ class _MapScreenState extends State<MapScreen> {
 
   // Clear saved routes
   // Currently only used for testing purposes
-  Future<void> _clearSavedRoutes() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('selected_routes');
-    setState(() {
-      _selectedRoutes.clear();
-    });
-    _updateDisplayedRoutes();
-  }
+  // Future<void> _clearSavedRoutes() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.remove('selected_routes');
+  //   setState(() {
+  //     _selectedRoutes.clear();
+  //   });
+  //   _updateDisplayedRoutes();
+  // }
 
   void _refreshCachedStopMarkers() {
     // Clear cached stop markers so they'll be recreated with the new icons
@@ -635,18 +739,26 @@ class _MapScreenState extends State<MapScreen> {
       },
     );
   }
-  
+
   void _showFavoritesSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return FavoritesSheet(onSelectStop: (name, id) {
+        return FavoritesSheet(
+          onSelectStop: (name, id) {
             LatLng? latLong = getLatLongFromStopID(id);
-            if (latLong != null){
-              _showStopSheet(id, name, latLong!.latitude, latLong!.longitude);
+            if (latLong != null) {
+              _showStopSheet(id, name, latLong.latitude, latLong.longitude);
             }
+          },
+          onUnfavorite: (stpid) {
+            // update in memory and marker icons immediately
+            setState(() {
+              _favoriteStops.remove(stpid);
+            });
+            _setStopFavorited(stpid, false);
           },
         );
       },
