@@ -281,7 +281,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                           Spacer(),
             
                           Text(
-                            'via ',
+                            (busIDs.isEmpty)? '': 'via ',
                             style: const TextStyle(
                               fontWeight: FontWeight.w400,
                               fontSize: 25,
@@ -291,7 +291,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
             
                           ...busIDs.map((busID) {
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.only(bottom: 6, right: 6),
                               child: Container(
                                   width: 30,
                                   height: 30,

@@ -234,15 +234,26 @@ class _MapScreenState extends State<MapScreen> {
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
         _routeStopMarkers[routeKey] = r.stops
-            .map((stop) => Marker(
-                  markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
-                  position: stop.location,
-                  icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                  consumeTapEvents: true,
-                  onTap: () {
-                    _showStopSheet(stop.id, stop.name, stop.location.latitude, stop.location.longitude);
-                  },
-                ))
+            .map(
+              (stop) => Marker(
+                markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
+                position: stop.location,
+                icon:
+                    _stopIcon ??
+                    BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueAzure,
+                    ),
+                consumeTapEvents: true,
+                onTap: () {
+                  _showStopSheet(
+                    stop.id,
+                    stop.name,
+                    stop.location.latitude,
+                    stop.location.longitude,
+                  );
+                },
+              ),
+            )
             .toSet();
       }
     }
@@ -309,9 +320,10 @@ class _MapScreenState extends State<MapScreen> {
     if (!list.contains(stpid)) {
       list.add(stpid);
       await prefs.setStringList('favorite_stops', list);
-    } 
+    } else {}
   }
-  
+
+
   Future<void> _removeFavoriteStop(String stpid, String name) async {
     final prefs = await SharedPreferences.getInstance();
     final list = prefs.getStringList('favorite_stops') ?? <String>[];
@@ -496,16 +508,28 @@ class _MapScreenState extends State<MapScreen> {
       builder: (BuildContext context) {
         return SearchSheet(
           onSearch: (Location location, bool isBusStop, String stopID) {
-
             final searchCoordinates = location.latlng;
 
             // null-proofing
             if (searchCoordinates != null) {
-              if (isBusStop){
-                _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
-                _showStopSheet(stopID, location.name, searchCoordinates.latitude, searchCoordinates.longitude);
-              } else{
-                _centerOnLocation(false, searchCoordinates.latitude, searchCoordinates.longitude);
+              if (isBusStop) {
+                _centerOnLocation(
+                  false,
+                  searchCoordinates.latitude,
+                  searchCoordinates.longitude,
+                );
+                _showStopSheet(
+                  stopID,
+                  location.name,
+                  searchCoordinates.latitude,
+                  searchCoordinates.longitude,
+                );
+              } else {
+                _centerOnLocation(
+                  false,
+                  searchCoordinates.latitude,
+                  searchCoordinates.longitude,
+                );
                 _showBuildingSheet(location);
               }
             } else {
@@ -523,39 +547,71 @@ class _MapScreenState extends State<MapScreen> {
       enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return BuildingSheet(building: place,
-          onGetDirections: (Location location){
+        return BuildingSheet(
+          building: place,
+          onGetDirections: (Location location) {
             Map<String, double>? start;
-            Map<String, double>? end = {'lat' : place.latlng!.latitude, 
-                                        'lon' : place.latlng!.longitude, };
+            Map<String, double>? end = {
+              'lat': place.latlng!.latitude,
+              'lon': place.latlng!.longitude,
+            };
 
-            _showDirectionsSheet(start, end, "Current Location", place.name, false);
+            _showDirectionsSheet(
+              start,
+              end,
+              "Current Location",
+              place.name,
+              false,
+            );
           },
         );
       },
     );
   }
 
-  void _showDirectionsSheet(Map<String, double>? start, Map<String, double>? end, 
-                            String startLoc, String endLoc, bool dontUseLocation) {
+  void _showDirectionsSheet(
+    Map<String, double>? start,
+    Map<String, double>? end,
+    String startLoc,
+    String endLoc,
+    bool dontUseLocation,
+  ) {
     showBottomSheet(
       context: context,
       enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return DirectionsSheet(
-          origin: start, 
-          dest: end, 
-          useOrigin: dontUseLocation, 
-          originName: startLoc, 
-          destName: endLoc,                      // true = start changed, false = end changed
-          onChangeSelection: (Location location, bool startChanged){
-            if (startChanged){
-              _showDirectionsSheet({'lat' : location.latlng!.latitude,'lon' : location.latlng!.longitude, }, end, location.name, endLoc, true);
+          origin: start,
+          dest: end,
+          useOrigin: dontUseLocation,
+          originName: startLoc,
+          destName: endLoc, // true = start changed, false = end changed
+          onChangeSelection: (Location location, bool startChanged) {
+            if (startChanged) {
+              _showDirectionsSheet(
+                {
+                  'lat': location.latlng!.latitude,
+                  'lon': location.latlng!.longitude,
+                },
+                end,
+                location.name,
+                endLoc,
+                true,
+              );
             } else {
-              _showDirectionsSheet(start, {'lat' : location.latlng!.latitude,'lon' : location.latlng!.longitude, }, startLoc, location.name, dontUseLocation);
+              _showDirectionsSheet(
+                start,
+                {
+                  'lat': location.latlng!.latitude,
+                  'lon': location.latlng!.longitude,
+                },
+                startLoc,
+                location.name,
+                dontUseLocation,
+              );
             }
-          }
+          },
         );
       },
     );
@@ -567,10 +623,11 @@ class _MapScreenState extends State<MapScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return BusSheet(busID: busID,
+        return BusSheet(
+          busID: busID,
           onSelectStop: (name, id) {
             LatLng? latLong = getLatLongFromStopID(id);
-            if (latLong != null){
+            if (latLong != null) {
               _showStopSheet(id, name, latLong!.latitude, latLong!.longitude);
             }
           },
@@ -599,23 +656,37 @@ class _MapScreenState extends State<MapScreen> {
   void _showStopSheet(String stopID, String stopName, double lat, double long) {
     showModalBottomSheet(
       context: context,
-      isDismissible: true, 
+      isDismissible: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return StopSheet(stopID: stopID, stopName: stopName, onFavorite: _addFavoriteStop, onUnFavorite: _removeFavoriteStop,
+        return StopSheet(
+          stopID: stopID,
+          stopName: stopName,
+          onFavorite: _addFavoriteStop,
+          onUnFavorite: _removeFavoriteStop,
           onGetDirections: () {
             Map<String, double>? start;
-            Map<String, double>? end = {'lat' : lat,  'lon' : long};
+            Map<String, double>? end = {'lat': lat, 'lon': long};
 
-            _showDirectionsSheet(start, end, "Current Location", stopName, false);
+            _showDirectionsSheet(
+              start,
+              end,
+              "Current Location",
+              stopName,
+              false,
+            );
           },
         );
       },
     );
   }
 
-  Future<void> _centerOnLocation(bool userLocation, [double lat = 0, double long = 0] ) async {
+  Future<void> _centerOnLocation(
+    bool userLocation, [
+    double lat = 0,
+    double long = 0,
+  ]) async {
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -671,8 +742,9 @@ class _MapScreenState extends State<MapScreen> {
       if (userLocation) {
         // Get the user's current position with high accuracy
         position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
         );
+
+        print("got loc at ${position.latitude}, ${position.longitude}");
       }
 
       // Animate the map camera to the user's location
@@ -713,133 +785,137 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     return Stack(
-        children: [
-          // underlying map layer
-          MapWidget(
-            initialCenter: _defaultCenter,
-            polylines: _displayedPolylines,
-            markers: _displayedStopMarkers.union(_displayedBusMarkers),
-            onMapCreated: _onMapCreated,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: true,
-            mapToolbarEnabled: true,
-          ),
+      children: [
+        // underlying map layer
+        MapWidget(
+          initialCenter: _defaultCenter,
+          polylines: _displayedPolylines,
+          markers: _displayedStopMarkers.union(_displayedBusMarkers),
+          onMapCreated: _onMapCreated,
+          myLocationEnabled: true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: true,
+          mapToolbarEnabled: true,
+        ),
 
-          // Safe-Area (for UI)
-          SafeArea(
-            // buttons
-            child: Column(
-              children: [
-                Spacer(),
+        // Safe-Area (for UI)
+        SafeArea(
+          // buttons
+          child: Column(
+            children: [
+              Spacer(),
 
-                // temp row (might add settings button to it later)
-                Padding(
-                  padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // location button
-                      FloatingActionButton.small(
-                        onPressed: () {
-                          _centerOnLocation(true);
-                        },
-                        backgroundColor: const ui.Color.fromARGB(
-                          176,
-                          255,
-                          255,
-                          255,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(56),
-                        ),
-                        child: const Icon(
-                          Icons.my_location,
-                          color: Colors.black87,
-                        ),
+              // temp row (might add settings button to it later)
+              Padding(
+                padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // location button
+                    FloatingActionButton.small(
+                      onPressed: () {
+                        _centerOnLocation(true);
+                      },
+                      heroTag: 'location_fab',
+                      backgroundColor: const ui.Color.fromARGB(
+                        176,
+                        255,
+                        255,
+                        255,
                       ),
-                    ],
-                  ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(56),
+                      ),
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
 
-                // main buttons row
-                Padding(
-                  padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+              // main buttons row
+              Padding(
+                padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
 
-                    children: [
-                      // routes
-                      SizedBox(
-                        width: 55,
-                        height: 55,
-                        child: FittedBox(
-                          child: FloatingActionButton(
-                            onPressed: () =>
-                                _showBusRoutesModal(busProvider.routes),
-                            backgroundColor: maizeBusDarkBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(56),
-                            ),
-                            child: const Icon(
-                              Icons.directions_bus,
-                              color: Colors.white,
-                            ),
+                  children: [
+                    // routes
+                    SizedBox(
+                      width: 55,
+                      height: 55,
+                      child: FittedBox(
+                        child: FloatingActionButton(
+                          onPressed: () =>
+                              _showBusRoutesModal(busProvider.routes),
+                          heroTag: 'routes_fab',
+                          backgroundColor: maizeBusDarkBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(56),
+                          ),
+                          child: const Icon(
+                            Icons.directions_bus,
+                            color: Colors.white,
                           ),
                         ),
                       ),
+                    ),
 
-                      SizedBox(width: 15),
+                    SizedBox(width: 15),
 
-                      // favorites
-                      SizedBox(
-                        width: 55,
-                        height: 55,
-                        child: FittedBox(
-                          child: FloatingActionButton(
-                            onPressed: () {
-                              _showFavoritesSheet();
-                            },
-                            backgroundColor: maizeBusDarkBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(56),
-                            ),
-                            child: const Icon(
-                              Icons.favorite,
-                              color: Colors.white,
-                            ),
+                    // favorites
+                    SizedBox(
+                      width: 55,
+                      height: 55,
+                      child: FittedBox(
+                        child: FloatingActionButton(
+                          onPressed: () {
+                            _showFavoritesSheet();
+                          },
+                          heroTag: 'favorites_fab',
+                          backgroundColor: maizeBusDarkBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(56),
+                          ),
+                          child: const Icon(
+                            Icons.favorite,
+                            color: Colors.white,
                           ),
                         ),
                       ),
+                    ),
 
-                      Spacer(),
+                    Spacer(),
 
-                      // search
-                      SizedBox(
-                        width: 75,
-                        height: 75,
-                        child: FittedBox(
-                          child: FloatingActionButton(
-                            onPressed: () => _showSearchSheet(),
-                            backgroundColor: maizeBusDarkBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(56),
-                            ),
-                            child: const Icon(
-                              Icons.search,
-                              size: 35,
-                              color: Colors.white,
-                            ),
+                    // search
+                    SizedBox(
+                      width: 75,
+                      height: 75,
+                      child: FittedBox(
+                        child: FloatingActionButton(
+                          onPressed: () => _showSearchSheet(),
+                          heroTag: 'search_fab',
+                          backgroundColor: maizeBusDarkBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(56),
+                          ),
+                          child: const Icon(
+                            Icons.search,
+                            size: 35,
+                            color: Colors.white,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 }
