@@ -56,8 +56,9 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCustomMarkers();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Check if custom markers are loaded first
+      await _loadCustomMarkers();
       final busProvider = Provider.of<BusProvider>(context, listen: false);
       await busProvider.loadRoutes();
 
