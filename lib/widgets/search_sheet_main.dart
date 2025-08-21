@@ -39,6 +39,8 @@ class LocationSearchBar extends HookWidget {
     }, [focusNode]);
     final searchQuery = useState('');
 
+    final refreshKey = useState(0);
+
     final locations = useMemoized(() async {
       try {
         final buildingResponse = await http.get(
@@ -58,7 +60,7 @@ class LocationSearchBar extends HookWidget {
             final long = building['long'] as double;
             return Location(
               name,
-              (abbrev != null)? abbrev : "",
+              (abbrev != null) ? abbrev : "",
               [if (abbrev != null) abbrev, if (altName != null) altName],
               false,
               latlng: LatLng(lat, long),
@@ -76,13 +78,15 @@ class LocationSearchBar extends HookWidget {
           final stopList = jsonDecode(stopResponse.body) as List<dynamic>;
           stopLocs = stopList.map((stop) {
             final name = stop['name'] as String;
-            final aliases = [name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join()];
+            final aliases = [
+              name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
+            ];
             final stopId = stop['stpid'] as String?;
             final lat = stop['lat'] as double?;
             final lon = stop['lon'] as double?;
             return Location(
               name,
-              (stopId != null)? stopId : "",
+              (stopId != null) ? stopId : "",
               aliases,
               true,
               stopId: stopId,
@@ -93,12 +97,18 @@ class LocationSearchBar extends HookWidget {
 
         globalStopLocs = stopLocs;
 
-        return [...buildingLocs, ...stopLocs];
+        final allLocs = [...buildingLocs, ...stopLocs];
+        if (allLocs.isEmpty) {
+          refreshKey.value++;
+        }
+
+        return allLocs;
       } catch (e) {
         print('Failed to fetch locations: $e');
+        refreshKey.value++;
         return <Location>[];
       }
-    }, []);
+    }, [refreshKey.value]);
 
     Map<String, Set<Location>> buildNgramIndex(
       List<Location> locations, {
@@ -191,13 +201,15 @@ class LocationSearchBar extends HookWidget {
             onSubmitted: (val) async {
               final idx = await ngramIndex;
               final matches = ngramSearch(val, idx);
-          
+
               if (matches.isNotEmpty) {
                 final selected = matches.first;
                 controller.text = selected.name;
                 onLocationSelected(
-                  selected, selected.isBusStop, selected.stopId ?? ""
-                ); 
+                  selected,
+                  selected.isBusStop,
+                  selected.stopId ?? "",
+                );
                 showSuggestions.value = false;
               }
             },
@@ -227,32 +239,46 @@ class LocationSearchBar extends HookWidget {
                     title: Text(
                       loc.name,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    subtitle: (loc.abbrev != "")?
-                      (loc.isBusStop)? 
-                      Row(
-                        children: [
-                          Text("Stop ID: "),
-                          Text(loc.abbrev, style: TextStyle(
-                            fontWeight: FontWeight.bold,)
+                    subtitle: (loc.abbrev != "")
+                        ? (loc.isBusStop)
+                              ? Row(
+                                  children: [
+                                    Text("Stop ID: "),
+                                    Text(
+                                      loc.abbrev,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Text("Code: "),
+                                    Text(
+                                      loc.abbrev,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                        : (loc.isBusStop)
+                        ? Text("Bus Stop")
+                        : Text("University Building"),
+                    leading: loc.isBusStop
+                        ? Icon(
+                            Icons.hail,
+                            size: 40,
+                            color: Color.fromARGB(150, 0, 0, 0),
                           )
-                        ]
-                      )
-                      : 
-                      Row(
-                        children: [
-                          Text("Code: "),
-                          Text(loc.abbrev, style: TextStyle(
-                            fontWeight: FontWeight.bold,)
-                          )
-                        ],
-                      ) : 
-                      (loc.isBusStop)? Text("Bus Stop") : Text("University Building"),
-                    leading: loc.isBusStop? Icon(Icons.hail, size: 40, color: Color.fromARGB(150, 0, 0, 0),)
-                                          : Icon(Icons.business_rounded, size: 40, color: Color.fromARGB(150, 0, 0, 0),),
+                        : Icon(
+                            Icons.business_rounded,
+                            size: 40,
+                            color: Color.fromARGB(150, 0, 0, 0),
+                          ),
                     onTap: () {
                       controller.text = loc.name;
                       onLocationSelected(loc, loc.isBusStop, loc.stopId ?? "");
@@ -261,9 +287,7 @@ class LocationSearchBar extends HookWidget {
                   );
                 },
                 separatorBuilder: (BuildContext context, int index) {
-                  return const Divider(
-                    height: 0,
-                  );
+                  return const Divider(height: 0);
                 },
               );
             } else {
@@ -276,15 +300,11 @@ class LocationSearchBar extends HookWidget {
   }
 }
 
-
 // Selecting routes
 class SearchSheet extends StatefulWidget {
   final void Function(Location, bool, String) onSearch;
 
-  const SearchSheet({
-    super.key,
-    required this.onSearch,
-  });
+  const SearchSheet({super.key, required this.onSearch});
 
   @override
   State<SearchSheet> createState() => _SearchSheetState();
@@ -317,7 +337,7 @@ class _SearchSheetState extends State<SearchSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 16, top: 20, bottom: 4), 
+            padding: const EdgeInsets.only(left: 16, top: 20, bottom: 4),
             child: Row(
               children: [
                 const Text(
@@ -330,7 +350,7 @@ class _SearchSheetState extends State<SearchSheet> {
                   ),
                 ),
 
-                SizedBox(width: 10,),
+                SizedBox(width: 10),
 
                 Stack(
                   alignment: Alignment.center,
@@ -353,8 +373,8 @@ class _SearchSheetState extends State<SearchSheet> {
                         fontSize: 20,
                       ),
                     ),
-                  ]
-                )
+                  ],
+                ),
               ],
             ),
           ),
@@ -363,42 +383,35 @@ class _SearchSheetState extends State<SearchSheet> {
             padding: const EdgeInsets.only(left: 16, right: 16),
             child: LocationSearchBar(
               onLocationSelected: (location, isBusStop, stopID) {
-                Navigator.pop(context); 
+                Navigator.pop(context);
                 widget.onSearch(location, isBusStop, stopID);
               },
-              controller: _searchController, 
-              focusNode: _searchFocusNode, 
+              controller: _searchController,
+              focusNode: _searchFocusNode,
               decoration: /*InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: 'Start typing...',
                 border: OutlineInputBorder(),
-              ),*/
-              InputDecoration(
-                fillColor: Color.fromARGB(255, 235, 235, 235), 
+              ),*/ InputDecoration(
+                fillColor: Color.fromARGB(255, 235, 235, 235),
                 filled: true,
                 hintText: 'Start typing...',
                 prefixIcon: Icon(Icons.search),
 
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(20.0)),
-                  borderSide: BorderSide(
-                    color: Colors.transparent,
-                    width: 0,
-                  ),
+                  borderSide: BorderSide(color: Colors.transparent, width: 0),
                 ),
 
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(20.0)),
-                  borderSide: BorderSide(
-                    color: Colors.transparent,
-                    width: 0,
-                  ),
+                  borderSide: BorderSide(color: Colors.transparent, width: 0),
                 ),
-              )
+              ),
             ),
           ),
         ],
-      )
+      ),
     );
   }
-} 
+}
