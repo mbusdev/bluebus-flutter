@@ -740,11 +740,12 @@ class _MapScreenState extends State<MapScreen> {
       );
 
       if (userLocation) {
-        // Get the user's current position with high accuracy
-        position = await Geolocator.getCurrentPosition(
+        position = await Geolocator.getCurrentPosition().timeout(
+          Duration(seconds: 5),
+          onTimeout: () {
+            throw Exception("Location request timed out.");
+          },
         );
-
-        print("got loc at ${position.latitude}, ${position.longitude}");
       }
 
       // Animate the map camera to the user's location

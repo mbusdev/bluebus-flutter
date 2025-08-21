@@ -16,6 +16,7 @@ dependencies:
   flutter_hooks: ^0.21.2
   shared_preferences: ^2.2.2
   intl: ^0.20.2 
+  flutter_email_sender: ^7.0.0
 
 dev_dependencies:
   flutter_test:

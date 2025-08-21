@@ -1,6 +1,58 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 
+
+void sendEmailWithSender(BuildContext context, String locName) async {
+  final Email email = Email(
+    body: 'write the issue here:',
+    subject: 'MaizeBus - Issue with $locName',
+    recipients: ['ishaniik@umich.edu'],
+    isHTML: false,
+  );
+
+  try {
+    await FlutterEmailSender.send(email);
+  } catch (error) {
+    showFallbackOptions(context);
+  }
+}
+
+void showFallbackOptions(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(
+          'Email-Send failed',
+          style: TextStyle(
+            color: Colors.black,
+            fontFamily: 'Urbanist',
+            fontWeight: FontWeight.w700,
+            fontSize: 24,
+          ),
+        ),
+        content: Text(
+          'Unable to reach the email app on your device. You can still send us feedback by manually emailing ishaniik@umich.edu',
+          style: TextStyle(
+            color: Colors.black,
+            fontFamily: 'Urbanist',
+            fontWeight: FontWeight.w400,
+            fontSize: 16,
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
 
 // Selecting routes
 class BuildingSheet extends StatefulWidget {
@@ -138,7 +190,7 @@ class _BuildingSheetState extends State<BuildingSheet> {
 
                 ElevatedButton.icon(
                   onPressed: () {
-                    print('Button pressed!');
+                    sendEmailWithSender(context, widget.building.name);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 235, 235, 235),
