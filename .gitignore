@@ -7,6 +7,9 @@
 .buildlog/
 .history
 
+# JetBrains IDEs
+.idea/
+
 # api key
 gmap.xcconfig
 
