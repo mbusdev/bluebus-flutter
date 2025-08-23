@@ -1,4 +1,5 @@
 // Import necessary Flutter packages
+import 'package:bluebus/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/onboarding_screen.dart';
@@ -34,9 +35,12 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'MaizeBus',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: const ColorScheme.light(
+          primary: maizeBusDarkBlue,
+        ),
         useMaterial3: true,
         fontFamily: 'Urbanist',
+        scaffoldBackgroundColor: Colors.white,
       ),
 
       // Show onboarding on first run (terms acceptance). OnboardingDecider

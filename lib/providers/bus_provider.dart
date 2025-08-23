@@ -19,13 +19,12 @@ class BusProvider extends ChangeNotifier {
   BusProvider({required this.repository});
 
   Future<void> loadRoutes() async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
     try {
       _routes = await repository.fetchRoutes();
     } catch (e) {
       _error = e.toString();
+      // let futureBuilder catch the error up in the chain
+      rethrow;
     } finally {
       _loading = false;
       notifyListeners();

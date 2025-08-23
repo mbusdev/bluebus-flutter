@@ -31,6 +31,9 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
+  Future<void>? _dataLoadingFuture;
+  final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
+
   GoogleMapController? _mapController;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
@@ -52,30 +55,44 @@ class _MapScreenState extends State<MapScreen> {
   final Map<String, Polyline> _routePolylines = {};
   final Map<String, Set<Marker>> _routeStopMarkers = {};
 
+  // this function is to load all the data on app launch and 
+  // still keep context
   @override
-  void initState() {
-    super.initState();
-    _loadCustomMarkers();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final busProvider = Provider.of<BusProvider>(context, listen: false);
-      await busProvider.loadRoutes();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_dataLoadingFuture == null) {
+      _dataLoadingFuture = _loadAllData();
+    }
+  }
 
-      // Load route specific bus icons after routes are loaded
-      await _loadRouteSpecificBusIcons();
+  Future<void> _loadAllData() async {
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
 
-      _updateAvailableRoutes(busProvider.routes);
-      _cacheRouteOverlays(busProvider.routes);
+    _loadingMessageNotifier.value = 'Contacting server...';
+    // loading all this data in parallel
+    await Future.wait([
+      _loadCustomMarkers(),
+      busProvider.loadRoutes(),
+      _loadSelectedRoutes(),
+    ]);
 
-      // Load previously selected routes
-      await _loadSelectedRoutes();
+    // actions that depend on the data loaded earlier
+    _loadingMessageNotifier.value = 'Loading bus images...';
+    await _loadRouteSpecificBusIcons();
+    _updateAvailableRoutes(busProvider.routes);
+    _cacheRouteOverlays(busProvider.routes);
 
-      // Only update displayed routes if we have selected routes
-      if (_selectedRoutes.isNotEmpty) {
-        _updateDisplayedRoutes();
-      }
-      busProvider.loadBuses();
-      busProvider.startBusUpdates();
-    });
+    // update the map with previously selected routes.
+    if (_selectedRoutes.isNotEmpty) {
+      _updateDisplayedRoutes();
+    }
+
+    // Finally, get the initial bus locations and start the live updates.
+    _loadingMessageNotifier.value = 'Loading bus positions...';
+    await busProvider.loadBuses();
+    _loadingMessageNotifier.value = 'Starting app...';
+    busProvider.startBusUpdates();
+  
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -186,6 +203,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _loadingMessageNotifier.dispose();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
     _mapController?.dispose();
     super.dispose();
@@ -257,61 +275,6 @@ class _MapScreenState extends State<MapScreen> {
             .toSet();
       }
     }
-  }
-
-  // When a stop marker is tapped, show a bottom sheet to add/remove favorite
-  void _onStopTapped(BusStop stop) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (BuildContext ctx) {
-        return Padding(
-          padding: MediaQuery.of(ctx).viewInsets,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  stop.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        await _addFavoriteStop(stop.id, stop.name);
-                        Navigator.of(ctx).pop();
-                      },
-                      icon: const Icon(Icons.favorite),
-                      label: const Text('Add to favorites'),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _addFavoriteStop(String stpid, String name) async {
@@ -449,17 +412,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  // Clear saved routes
-  // Currently only used for testing purposes
-  Future<void> _clearSavedRoutes() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('selected_routes');
-    setState(() {
-      _selectedRoutes.clear();
-    });
-    _updateDisplayedRoutes();
-  }
-
   void _refreshCachedStopMarkers() {
     // Clear cached stop markers so they'll be recreated with the new icons
     _routeStopMarkers.clear();
@@ -586,7 +538,7 @@ class _MapScreenState extends State<MapScreen> {
           dest: end,
           useOrigin: dontUseLocation,
           originName: startLoc,
-          destName: endLoc, // true = start changed, false = end changed
+          destName: endLoc,                           // true = start changed, false = end changed
           onChangeSelection: (Location location, bool startChanged) {
             if (startChanged) {
               _showDirectionsSheet(
@@ -771,152 +723,230 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final busProvider = Provider.of<BusProvider>(context);
-    if (busProvider.loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (busProvider.error != null) {
-      return Scaffold(body: Center(child: Text(busProvider.error!)));
-    }
+
     // Only update bus markers when buses change
+    final busProvider = Provider.of<BusProvider>(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (busProvider.buses.isNotEmpty) {
         _updateDisplayedBuses(busProvider.buses);
       }
     });
 
-    return Stack(
-      children: [
-        // underlying map layer
-        MapWidget(
-          initialCenter: _defaultCenter,
-          polylines: _displayedPolylines,
-          markers: _displayedStopMarkers.union(_displayedBusMarkers),
-          onMapCreated: _onMapCreated,
-          myLocationEnabled: true,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: true,
-          mapToolbarEnabled: true,
-        ),
+    return FutureBuilder(
+      future: _dataLoadingFuture,
+      builder: (context, snapshot) {
 
-        // Safe-Area (for UI)
-        SafeArea(
-          // buttons
-          child: Column(
+        if (snapshot.connectionState == ConnectionState.done) {
+          return Stack(
             children: [
-              Spacer(),
-
-              // temp row (might add settings button to it later)
-              Padding(
-                padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // location button
-                    FloatingActionButton.small(
-                      onPressed: () {
-                        _centerOnLocation(true);
-                      },
-                      heroTag: 'location_fab',
-                      backgroundColor: const ui.Color.fromARGB(
-                        176,
-                        255,
-                        255,
-                        255,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(56),
-                      ),
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
+              // underlying map layer
+              MapWidget(
+                initialCenter: _defaultCenter,
+                polylines: _displayedPolylines,
+                markers: _displayedStopMarkers.union(_displayedBusMarkers),
+                onMapCreated: _onMapCreated,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: true,
+                mapToolbarEnabled: true,
               ),
-
-              // main buttons row
-              Padding(
-                padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-
+          
+              // Safe-Area (for UI)
+              SafeArea(
+                // buttons
+                child: Column(
                   children: [
-                    // routes
-                    SizedBox(
-                      width: 55,
-                      height: 55,
-                      child: FittedBox(
-                        child: FloatingActionButton(
-                          onPressed: () =>
-                              _showBusRoutesModal(busProvider.routes),
-                          heroTag: 'routes_fab',
-                          backgroundColor: maizeBusDarkBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(56),
-                          ),
-                          child: const Icon(
-                            Icons.directions_bus,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(width: 15),
-
-                    // favorites
-                    SizedBox(
-                      width: 55,
-                      height: 55,
-                      child: FittedBox(
-                        child: FloatingActionButton(
-                          onPressed: () {
-                            _showFavoritesSheet();
-                          },
-                          heroTag: 'favorites_fab',
-                          backgroundColor: maizeBusDarkBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(56),
-                          ),
-                          child: const Icon(
-                            Icons.favorite,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-
                     Spacer(),
-
-                    // search
-                    SizedBox(
-                      width: 75,
-                      height: 75,
-                      child: FittedBox(
-                        child: FloatingActionButton(
-                          onPressed: () => _showSearchSheet(),
-                          heroTag: 'search_fab',
-                          backgroundColor: maizeBusDarkBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(56),
+          
+                    // temp row (might add settings button to it later)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          // location button
+                          FloatingActionButton.small(
+                            onPressed: () {
+                              _centerOnLocation(true);
+                            },
+                            heroTag: 'location_fab',
+                            backgroundColor: const ui.Color.fromARGB(
+                              176,
+                              255,
+                              255,
+                              255,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(56),
+                            ),
+                            child: const Icon(
+                              Icons.my_location,
+                              color: Colors.black87,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.search,
-                            size: 35,
-                            color: Colors.white,
+                        ],
+                      ),
+                    ),
+          
+                    // main buttons row
+                    Padding(
+                      padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+          
+                        children: [
+                          // routes
+                          SizedBox(
+                            width: 55,
+                            height: 55,
+                            child: FittedBox(
+                              child: FloatingActionButton(
+                                onPressed: () =>
+                                    _showBusRoutesModal(busProvider.routes),
+                                heroTag: 'routes_fab',
+                                backgroundColor: maizeBusDarkBlue,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(56),
+                                ),
+                                child: const Icon(
+                                  Icons.directions_bus,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+          
+                          SizedBox(width: 15),
+          
+                          // favorites
+                          SizedBox(
+                            width: 55,
+                            height: 55,
+                            child: FittedBox(
+                              child: FloatingActionButton(
+                                onPressed: () {
+                                  _showFavoritesSheet();
+                                },
+                                heroTag: 'favorites_fab',
+                                backgroundColor: maizeBusDarkBlue,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(56),
+                                ),
+                                child: const Icon(
+                                  Icons.favorite,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+          
+                          Spacer(),
+          
+                          // search
+                          SizedBox(
+                            width: 75,
+                            height: 75,
+                            child: FittedBox(
+                              child: FloatingActionButton(
+                                onPressed: () => _showSearchSheet(),
+                                heroTag: 'search_fab',
+                                backgroundColor: maizeBusDarkBlue,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(56),
+                                ),
+                                child: const Icon(
+                                  Icons.search,
+                                  size: 35,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-          ),
-        ),
-      ],
+          );
+        } else {
+          // LOADING SCREEN
+          return Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                SizedBox(width: 30,),
+
+                Container(
+                  height: 100,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const ui.Color.fromARGB(255, 228, 228, 228),
+                        spreadRadius: 1,
+                        blurRadius: 6,
+                        offset: Offset(0, 5), // changes position of shadow
+                      ),
+                    ],
+                    image: DecorationImage(
+                      image: AssetImage('assets/appicon.png'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+                SizedBox(width: 30,),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Loading",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontFamily: 'Urbanist',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
+                      ),
+                    ),
+
+
+                    Row(
+                      children: [
+                        Container(
+                          height: 16, width: 16,
+                          child: CircularProgressIndicator()
+                        ),
+
+                        SizedBox(width: 10,),
+
+                        ValueListenableBuilder<String>(
+                          valueListenable: _loadingMessageNotifier,
+                          builder: (context, message, child) {
+                            return Text(
+                              message,
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontFamily: 'Urbanist',
+                                fontWeight: FontWeight.w400,
+                                fontSize: 18,
+                              ),
+                            );
+                          }
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              ],
+            ),
+          );
+        }
+      }
     );
   }
 }
