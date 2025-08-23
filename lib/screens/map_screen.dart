@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
@@ -18,6 +19,7 @@ import '../widgets/favorites_sheet.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 import '../models/bus_stop.dart';
+import '../models/journey.dart';
 import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
@@ -37,6 +39,11 @@ class _MapScreenState extends State<MapScreen> {
   Set<Polyline> _displayedPolylines = {};
   Set<Marker> _displayedStopMarkers = {};
   Set<Marker> _displayedBusMarkers = {};
+  // Journey overlays for search results
+  Set<Polyline> _displayedJourneyPolylines = {};
+  Set<Marker> _displayedJourneyMarkers = {};
+  // Buses relevant to the active journey (when overlay active)
+  Set<Marker> _displayedJourneyBusMarkers = {};
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
   Map<String, String> _routeIdToName = {};
@@ -52,6 +59,12 @@ class _MapScreenState extends State<MapScreen> {
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
   final Map<String, Set<Marker>> _routeStopMarkers = {};
+  // Whether a journey search overlay is currently active (shows only journey path)
+  bool _journeyOverlayActive = false;
+  // maximum allowed distance (meters) from a stop to a candidate polyline point
+  static const double _maxMatchDistanceMeters = 150.0;
+  // route ids that are part of the active journey
+  final Set<String> _activeJourneyRouteIds = {};
 
   @override
   void initState() {
@@ -578,6 +591,25 @@ class _MapScreenState extends State<MapScreen> {
     _mapController = controller;
   }
 
+  // Create a bus marker from a Bus model
+  Marker _createBusMarker(Bus bus) {
+    final routeColor =
+        bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
+    final icon =
+        _routeBusIcons[bus.routeId] ??
+        _busIcon ??
+        BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
+    return Marker(
+      markerId: MarkerId('bus_${bus.id}'),
+      consumeTapEvents: true,
+      position: bus.position,
+      icon: icon,
+      rotation: bus.heading,
+      anchor: const Offset(0.5, 0.5),
+      onTap: () => _showBusSheet(bus.id),
+    );
+  }
+
   void _showBusRoutesModal(List<BusRouteLine> allRouteLines) {
     showModalBottomSheet(
       context: context,
@@ -717,9 +749,263 @@ class _MapScreenState extends State<MapScreen> {
               );
             }
           },
+          onSelectJourney: (journey) {
+            _displayJourneyOnMap(journey);
+          },
         );
       },
     );
+  }
+
+  // Display a Journey on the map
+  void _displayJourneyOnMap(Journey journey) async {
+    // clear previous journey overlay
+    _displayedJourneyPolylines.clear();
+    _displayedJourneyMarkers.clear();
+
+    final allPoints = <LatLng>[];
+
+    for (int legIndex = 0; legIndex < journey.legs.length; legIndex++) {
+      final leg = journey.legs[legIndex];
+
+      _activeJourneyRouteIds.clear();
+      if (leg.rt != null && leg.trip != null) {
+        // Try to find a cached route polyline segment that follows streets
+        final startLatLng = getLatLongFromStopID(leg.originID);
+        final endLatLng = getLatLongFromStopID(leg.destinationID);
+
+        bool usedRouteGeometry = false;
+        if (startLatLng != null && endLatLng != null) {
+          final routeVariants = _routePolylines.keys.where(
+            (key) => key.startsWith('${leg.rt}_'),
+          );
+
+          List<LatLng>? bestSegment;
+          double? bestLength;
+
+          for (final routeKey in routeVariants) {
+            final poly = _routePolylines[routeKey];
+            if (poly == null) continue;
+            final ptsList = poly.points;
+            if (ptsList.length < 2) continue;
+
+            final seg = _extractRouteSegment(ptsList, startLatLng, endLatLng);
+            if (seg != null && seg.length >= 2) {
+              // compute approximate length
+              double len = 0;
+              for (int i = 1; i < seg.length; i++) {
+                final a = seg[i - 1];
+                final b = seg[i];
+                final dx = a.latitude - b.latitude;
+                final dy = a.longitude - b.longitude;
+                len += dx * dx + dy * dy;
+              }
+              if (bestSegment == null || len < bestLength!) {
+                bestSegment = seg;
+                bestLength = len;
+              }
+            }
+          }
+
+          if (bestSegment != null) {
+            final polyline = Polyline(
+              polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
+              points: bestSegment,
+              color: RouteColorService.getRouteColor(leg.rt!),
+              width: 6,
+            );
+            _displayedJourneyPolylines.add(polyline);
+
+            // add stop markers at endpoints of the segment (boarding/alighting)
+            _displayedJourneyMarkers.addAll([
+              Marker(
+                markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),
+                position: bestSegment.first,
+                icon:
+                    _stopIcon ??
+                    BitmapDescriptor.defaultMarkerWithHue(
+                      _colorToHue(RouteColorService.getRouteColor(leg.rt!)),
+                    ),
+              ),
+              Marker(
+                markerId: MarkerId(
+                  'journey_stop_${leg.destinationID}_$legIndex',
+                ),
+                position: bestSegment.last,
+                icon:
+                    _stopIcon ??
+                    BitmapDescriptor.defaultMarkerWithHue(
+                      _colorToHue(RouteColorService.getRouteColor(leg.rt!)),
+                    ),
+              ),
+            ]);
+
+            allPoints.addAll(bestSegment);
+            usedRouteGeometry = true;
+          }
+        }
+
+        if (!usedRouteGeometry) {
+          // Fallback to simple path
+          final pts = <LatLng>[];
+          bool started = false;
+          for (final st in leg.trip!.stopTimes) {
+            if (st.stop == leg.originID) started = true;
+            if (started) {
+              final latlng = getLatLongFromStopID(st.stop);
+              if (latlng != null) {
+                pts.add(latlng);
+                allPoints.add(latlng);
+                _displayedJourneyMarkers.add(
+                  Marker(
+                    markerId: MarkerId('journey_stop_${st.stop}_$legIndex'),
+                    position: latlng,
+                    icon:
+                        _stopIcon ??
+                        BitmapDescriptor.defaultMarkerWithHue(
+                          _colorToHue(RouteColorService.getRouteColor(leg.rt!)),
+                        ),
+                  ),
+                );
+              }
+            }
+            if (st.stop == leg.destinationID && started) break;
+          }
+
+          if (pts.isNotEmpty) {
+            final poly = Polyline(
+              polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
+              points: pts,
+              color: RouteColorService.getRouteColor(leg.rt!),
+              width: 6,
+            );
+            _displayedJourneyPolylines.add(poly);
+          }
+        }
+      }
+    }
+
+    // mark that a journey overlay is active (this will hide other route polylines)
+    _journeyOverlayActive = true;
+    // Build bus markers for buses matching active journey routes
+    _displayedJourneyBusMarkers.clear();
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
+    for (final bus in busProvider.buses) {
+      if (_activeJourneyRouteIds.contains(bus.routeId)) {
+        _displayedJourneyBusMarkers.add(_createBusMarker(bus));
+      }
+    }
+
+    setState(() {});
+
+    // Trying to move camera to include the journey bounds
+    if (_mapController != null && allPoints.isNotEmpty) {
+      try {
+        double south = allPoints.first.latitude;
+        double north = allPoints.first.latitude;
+        double west = allPoints.first.longitude;
+        double east = allPoints.first.longitude;
+        for (final p in allPoints) {
+          south = p.latitude < south ? p.latitude : south;
+          north = p.latitude > north ? p.latitude : north;
+          west = p.longitude < west ? p.longitude : west;
+          east = p.longitude > east ? p.longitude : east;
+        }
+
+        final bounds = LatLngBounds(
+          southwest: LatLng(south, west),
+          northeast: LatLng(north, east),
+        );
+
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 80),
+        );
+      } catch (e) {
+        // fallback to center on first point
+        if (allPoints.isNotEmpty) {
+          await _mapController!.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(target: allPoints.first, zoom: 15),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Clear/hide the currently displayed journey overlays and return to normal route view
+  void _clearJourneyOverlays() {
+    if (!_journeyOverlayActive) return;
+    _displayedJourneyPolylines.clear();
+    _displayedJourneyMarkers.clear();
+    _displayedJourneyBusMarkers.clear();
+    _journeyOverlayActive = false;
+    setState(() {});
+  }
+
+  // Haversine distance between two LatLngs in meters
+  double _haversineDistanceMeters(LatLng a, LatLng b) {
+    const R = 6371000; // Earth radius in meters
+    final lat1 = a.latitude * math.pi / 180.0;
+    final lat2 = b.latitude * math.pi / 180.0;
+    final dLat = (b.latitude - a.latitude) * math.pi / 180.0;
+    final dLon = (b.longitude - a.longitude) * math.pi / 180.0;
+
+    final sa =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(sa), math.sqrt(1 - sa));
+    return R * c;
+  }
+
+  // Find nearest index and its distance on polyline to target. Returns a pair [index, distanceMeters]
+  List<dynamic> _nearestIndexAndDistanceOnPolyline(
+    List<LatLng> poly,
+    LatLng target,
+  ) {
+    int bestIdx = 0;
+    double bestDist = double.infinity;
+    for (int i = 0; i < poly.length; i++) {
+      final p = poly[i];
+      final d = _haversineDistanceMeters(p, target);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    return [bestIdx, bestDist];
+  }
+
+  // Helper to extract a contiguous segment from polyline points between two latlngs
+  // Return null if indices are invalid or segment is too short.
+  List<LatLng>? _extractRouteSegment(
+    List<LatLng> poly,
+    LatLng start,
+    LatLng end,
+  ) {
+    final sRes = _nearestIndexAndDistanceOnPolyline(poly, start);
+    final eRes = _nearestIndexAndDistanceOnPolyline(poly, end);
+    final si = sRes[0] as int;
+    final ei = eRes[0] as int;
+    final sDist = sRes[1] as double;
+    final eDist = eRes[1] as double;
+
+    // If either nearest point is too far from the stop, we consider this polyline not a match
+    if (sDist > _maxMatchDistanceMeters || eDist > _maxMatchDistanceMeters)
+      return null;
+
+    if (si == ei) return null;
+
+    // Ensure start < end in index space, if reversed, flip the sublist
+    if (si < ei) {
+      return poly.sublist(si, ei + 1);
+    } else {
+      final seg = poly.sublist(ei, si + 1);
+      return seg.reversed.toList();
+    }
   }
 
   void _showBusSheet(String busID) {
@@ -733,7 +1019,7 @@ class _MapScreenState extends State<MapScreen> {
           onSelectStop: (name, id) {
             LatLng? latLong = getLatLongFromStopID(id);
             if (latLong != null) {
-              _showStopSheet(id, name, latLong!.latitude, latLong!.longitude);
+              _showStopSheet(id, name, latLong.latitude, latLong.longitude);
             }
           },
         );
@@ -903,8 +1189,14 @@ class _MapScreenState extends State<MapScreen> {
         // underlying map layer
         MapWidget(
           initialCenter: _defaultCenter,
-          polylines: _displayedPolylines,
-          markers: _displayedStopMarkers.union(_displayedBusMarkers),
+          polylines: _journeyOverlayActive
+              ? _displayedJourneyPolylines
+              : _displayedPolylines.union(_displayedJourneyPolylines),
+          markers: _journeyOverlayActive
+              ? _displayedJourneyMarkers.union(_displayedJourneyBusMarkers)
+              : _displayedStopMarkers
+                    .union(_displayedBusMarkers)
+                    .union(_displayedJourneyMarkers),
           onMapCreated: _onMapCreated,
           myLocationEnabled: true,
           myLocationButtonEnabled: false,
@@ -1023,6 +1315,24 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    // clear journey overlay button (only visible when an overlay is active)
+                    if (_journeyOverlayActive)
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: FittedBox(
+                          child: FloatingActionButton.small(
+                            onPressed: _clearJourneyOverlays,
+                            heroTag: 'clear_journey_fab',
+                            backgroundColor: Colors.white,
+                            child: const Icon(
+                              Icons.clear,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

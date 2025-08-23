@@ -12,6 +12,7 @@ class DirectionsSheet extends StatefulWidget {
   final String originName;
   final String destName;
   final void Function(Location, bool) onChangeSelection;
+  final void Function(Journey)? onSelectJourney;
 
   const DirectionsSheet({
     Key? key,
@@ -20,15 +21,15 @@ class DirectionsSheet extends StatefulWidget {
     required this.useOrigin,
     required this.originName,
     required this.destName,
-    required this.onChangeSelection
+    required this.onChangeSelection,
+    this.onSelectJourney,
   }) : super(key: key);
 
   @override
   State<DirectionsSheet> createState() => _DirectionsSheetState();
-} 
+}
 
 class _DirectionsSheetState extends State<DirectionsSheet> {
-  
   late Future<List<Journey>> _listOfJourneys;
 
   @override
@@ -85,16 +86,13 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
       child: FutureBuilder(
         future: _listOfJourneys,
         builder: (context, journeyload) {
-          
-          if(journeyload.connectionState == ConnectionState.waiting){
+          if (journeyload.connectionState == ConnectionState.waiting) {
             return SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             );
-          }
-          
-          else if(journeyload.hasData){
+          } else if (journeyload.hasData) {
             final journeys = journeyload.data!;
 
             return JourneyResultsWidget(
@@ -104,11 +102,9 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               origin: widget.origin,
               dest: widget.dest,
               onChangeSelection: widget.onChangeSelection,
+              onSelectJourney: widget.onSelectJourney,
             );
-
-          }
-          
-          else if (journeyload.hasError) {
+          } else if (journeyload.hasError) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -119,13 +115,15 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                 ),
               ),
             );
+          } else {
+            return const Center(
+              child: Text(
+                'Something went wrong. Contact ishaniik@umich.edu if persistent.',
+              ),
+            );
           }
-          
-          else {return const Center(
-            child: Text('Something went wrong. Contact ishaniik@umich.edu if persistent.'),
-          );}
-        }
-      )
+        },
+      ),
     );
   }
-} 
+}
