@@ -190,6 +190,7 @@ class LocationSearchBar extends HookWidget {
         SizedBox(
           height: 50,
           child: TextField(
+            textInputAction: TextInputAction.go,
             autofocus: true,
             controller: controller,
             focusNode: focusNode,

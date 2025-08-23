@@ -81,6 +81,12 @@ class _StopSheetState extends State<StopSheet> {
     super.initState();
     loadedStopData = fetchStopData(widget.stopID);
   }
+  
+  void _refreshData() {
+    setState(() {
+      loadedStopData = fetchStopData(widget.stopID);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -217,13 +223,49 @@ class _StopSheetState extends State<StopSheet> {
                             (snapshot.hasData)? Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    (arrivingBuses.length == 0)?
                                     Text(
-                                      (arrivingBuses.length == 0)? "There are currently no departing busses" : "Next bus departures",
+                                      "There are currently no departing busses",
                                       style: TextStyle(
                                         fontFamily: 'Urbanist',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 20,
                                       ),
+                                    ):
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Next bus departures",
+                                          style: TextStyle(
+                                            fontFamily: 'Urbanist',
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 20,
+                                          ),
+                                        ),
+
+                                        SizedBox(width: 10,),
+
+                                        GestureDetector(
+                                          onTap: () {
+                                            _refreshData();
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(10),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: const ui.Color.fromARGB(255, 228, 228, 228),
+                                                  spreadRadius: 1,
+                                                  blurRadius: 2,
+                                                  offset: Offset(0, 1), // changes position of shadow
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(Icons.refresh),
+                                          ),
+                                        )
+                                      ],
                                     ),
                                     
                                     SizedBox(height: 10,),

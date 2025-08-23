@@ -1,5 +1,4 @@
 // Import necessary Flutter packages
-import 'package:bluebus/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/onboarding_screen.dart';
@@ -35,9 +34,7 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'MaizeBus',
       theme: ThemeData(
-        colorScheme: const ColorScheme.light(
-          primary: maizeBusDarkBlue,
-        ),
+        primarySwatch: Colors.blue,
         useMaterial3: true,
         fontFamily: 'Urbanist',
         scaffoldBackgroundColor: Colors.white,

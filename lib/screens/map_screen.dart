@@ -1026,7 +1026,9 @@ class _MapScreenState extends State<MapScreen> {
                       children: [
                         Container(
                           height: 16, width: 16,
-                          child: CircularProgressIndicator()
+                          child: CircularProgressIndicator(
+                            color: const ui.Color.fromARGB(255, 11, 83, 148),
+                          )
                         ),
 
                         SizedBox(width: 10,),
