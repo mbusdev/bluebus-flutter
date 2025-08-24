@@ -22,6 +22,7 @@ import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
+import 'dart:convert';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -91,9 +92,44 @@ class _MapScreenState extends State<MapScreen> {
     // Finally, get the initial bus locations and start the live updates.
     _loadingMessageNotifier.value = 'Loading bus positions...';
     await busProvider.loadBuses();
+
+    _loadingMessageNotifier.value = 'Loading bus stops...';
+    _loadStopsForLaunch();
+
     _loadingMessageNotifier.value = 'Starting app...';
     busProvider.startBusUpdates();
   
+  }
+
+  // need this to make sure that the stop names exist in the cache
+  Future<void> _loadStopsForLaunch() async{
+    final stopResponse = await http.get(
+      Uri.parse(BACKEND_URL + '/getAllStops'),
+    );
+    List<Location> stopLocs = [];
+    if (stopResponse.statusCode == 200 &&
+        stopResponse.body.trim().isNotEmpty &&
+        stopResponse.body.trim() != '{}') {
+      final stopList = jsonDecode(stopResponse.body) as List<dynamic>;
+      stopLocs = stopList.map((stop) {
+        final name = stop['name'] as String;
+        final aliases = [
+          name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
+        ];
+        final stopId = stop['stpid'] as String?;
+        final lat = stop['lat'] as double?;
+        final lon = stop['lon'] as double?;
+        return Location(
+          name,
+          (stopId != null) ? stopId : "",
+          aliases,
+          true,
+          stopId: stopId,
+          latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
+        );
+      }).toList();
+    }
+    globalStopLocs = stopLocs;
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -962,7 +998,7 @@ class _MapScreenState extends State<MapScreen> {
                                   borderRadius: BorderRadius.circular(56),
                                 ),
                                 child: const Icon(
-                                  Icons.search,
+                                  Icons.search_sharp,
                                   size: 35,
                                   color: Colors.white,
                                 ),

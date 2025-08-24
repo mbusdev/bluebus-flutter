@@ -389,11 +389,7 @@ class _SearchSheetState extends State<SearchSheet> {
               },
               controller: _searchController,
               focusNode: _searchFocusNode,
-              decoration: /*InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Start typing...',
-                border: OutlineInputBorder(),
-              ),*/ InputDecoration(
+              decoration: InputDecoration(
                 fillColor: Color.fromARGB(255, 235, 235, 235),
                 filled: true,
                 hintText: 'Start typing...',

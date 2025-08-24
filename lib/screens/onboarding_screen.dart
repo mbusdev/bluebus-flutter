@@ -1,3 +1,4 @@
+import 'package:bluebus/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'map_screen.dart';
@@ -91,73 +92,212 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           children: [
             // Welcome page
             Container(
-              color: theme.scaffoldBackgroundColor,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Welcome to MaizeBus',
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                    child: Text(
-                      'MaizeBus helps you find buses and stops around campus.\n\nTap Continue to view Terms & Conditions.',
-                      style: theme.textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        text: 'Welcome to ',
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.black, fontFamily: 'Urbanist'),
+                        children: const <TextSpan>[
+                          TextSpan(text: 'maize', style: TextStyle(color: maizeBusYellow, fontWeight: FontWeight.w800, fontSize: 30)),
+                          TextSpan(text: 'bus', style: TextStyle(color: maizeBusBlue, fontWeight: FontWeight.w800, fontSize: 30)),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () => _controller.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+
+                    Text(
+                      'the student-developed bus tracker app',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                     ),
-                    child: const Text('Continue'),
-                  ),
-                ],
+
+                    const SizedBox(height: 60),
+                    
+                    Text(
+                      'Quick start guide:',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 55,
+                          height: 55,
+                          child: FittedBox(
+                            child: FloatingActionButton(
+                              elevation: 0,
+                              onPressed: (){},
+                              backgroundColor: maizeBusDarkBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(56),
+                              ),
+                              child: const Icon(
+                                Icons.directions_bus,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(width: 15,),
+
+                        Expanded(
+                          child: Text("Show bus routes and bus stops on the map",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
+                          ),
+                        )
+                      ],
+                    ),
+
+                    SizedBox(height: 10,),
+
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 55,
+                          height: 55,
+                          child: FittedBox(
+                            child: FloatingActionButton(
+                              elevation: 0,
+                              onPressed: (){},
+                              backgroundColor: maizeBusDarkBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(56),
+                              ),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(width: 15,),
+
+                        Expanded(
+                          child: Text("View the stops you've saved to your favorites",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
+                          ),
+                        )
+                      ],
+                    ),
+
+                    SizedBox(height: 10,),
+
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 55,
+                          height: 55,
+                          child: FittedBox(
+                            child: FloatingActionButton(
+                              elevation: 0,
+                              onPressed: (){},
+                              backgroundColor: maizeBusDarkBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(56),
+                              ),
+                              child: const Icon(
+                                Icons.search_sharp,
+                                size: 30,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(width: 15,),
+
+                        Expanded(
+                          child: Text("Search for locations and get directions",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
+                          ),
+                        )
+                      ],
+                    ),
+
+                    SizedBox(height: 80,),
+
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: () => _controller.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: maizeBusDarkBlue, // Sets the background color for all states
+                          foregroundColor: Colors.white, // Sets the text/icon color
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+                          child: const Text(
+                            'Continue',
+                            style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
             // Terms & Conditions + Privacy page
             Container(
-              color: theme.scaffoldBackgroundColor,
+              color: Colors.white,
               padding: const EdgeInsets.all(24),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
                   const Text(
-                    'Terms & Conditions & Privacy',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                    'Terms, Conditions, and Privacy Policy',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.black, fontFamily: 'Urbanist'),
                   ),
+                  const Text(
+                    '(scroll down to read more)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400, color: Colors.black, fontFamily: 'Urbanist'),
+                  ),
+                  
                   const SizedBox(height: 12),
+
                   Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Terms & Conditions',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Color.fromARGB(255, 228, 228, 228),
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                      ),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Terms & Conditions',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(TERMS_AND_CONDITIONS),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Privacy Policy',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(height: 8),
+                            Text(TERMS_AND_CONDITIONS),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Privacy Policy',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(PRIVACY_POLICY),
-                        ],
+                            const SizedBox(height: 8),
+                            Text(PRIVACY_POLICY),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -170,6 +310,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             _agreeChecked = v ?? false;
                           });
                         },
+                      fillColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                        if (states.contains(WidgetState.selected)) {
+                          // The color when the checkbox is checked.
+                          return maizeBusDarkBlue;
+                        }
+                        // The color when the checkbox is unchecked.
+                        return Colors.grey; 
+                      }),
+                      checkColor: Colors.white,
                       ),
                       const Expanded(
                         child: Text(
@@ -178,16 +327,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ],
                   ),
+                  SizedBox(height: 5,),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      TextButton(
-                        onPressed: () async {
-                          if (mounted) Navigator.of(context).maybePop();
-                        },
-                        child: const Text('Decline'),
-                      ),
                       ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: maizeBusDarkBlue, // Sets the background color for all states
+                          foregroundColor: Colors.white, // Sets the text/icon color
+                        ),
                         onPressed: _agreeChecked
                             ? () => _setAccepted(true)
                             : null,

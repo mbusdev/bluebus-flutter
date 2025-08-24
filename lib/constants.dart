@@ -36,6 +36,8 @@ String getPrettyRouteName(String code) {
 
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
+const Color maizeBusYellow = Color.fromARGB(255, 241, 194, 50);
+const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 //data types
 class Location {
