@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
+import 'package:bluebus/widgets/search_sheet_main.dart';
 import '../constants.dart';
 
 class DirectionsSheet extends StatefulWidget {
@@ -87,10 +88,174 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
         builder: (context, journeyload) {
           
           if(journeyload.connectionState == ConnectionState.waiting){
-            return SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+
+            // Show just the search sheet and the loading symbol if loading
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color.fromARGB(95, 187, 187, 187), 
+                        spreadRadius: 2, 
+                        blurRadius: 6, 
+                        offset: Offset(0, 3), 
+                      ),
+                    ],
+                  ),
+
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.my_location,
+                              size: 25,
+                            ),
+
+                            SizedBox(width: 12,),
+
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () { 
+
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (BuildContext context) {
+                                      return SearchSheet(
+                                        onSearch: (Location location, isStop, id) {
+                                          final searchCoordinates = location.latlng;
+                                          // null-proofing
+                                          if (searchCoordinates != null) {
+                                            Navigator.pop(context);
+                                            widget.onChangeSelection(location, true);
+                                          } else {
+                                            print("Error: The selected location '${location.name}' has no coordinates.");
+                                          }
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Container(
+                                  alignment: Alignment.centerLeft,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: Color.fromARGB(255, 235, 235, 235),
+                                    borderRadius: BorderRadius.all(Radius.circular(10)
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 10, right: 10),
+                                    child: Text(
+                                      widget.originName,
+                                      style:  TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w400,
+                                        height: 0
+                                      ),
+                                      overflow: TextOverflow.ellipsis
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+
+                        SizedBox(height: 10,),
+                    
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 25,
+                            ),
+
+                            SizedBox(width: 12,),
+
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () { 
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (BuildContext context) {
+                                      return SearchSheet(
+                                        onSearch: (Location location, isStop, id) {
+                                          final searchCoordinates = location.latlng;
+                                          // null-proofing
+                                          if (searchCoordinates != null) {
+                                            Navigator.pop(context);
+                                            widget.onChangeSelection(location, false);
+                                          } else {
+                                            print("Error: The selected location '${location.name}' has no coordinates.");
+                                          }
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Container(
+                                  alignment: Alignment.centerLeft,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: Color.fromARGB(255, 235, 235, 235),
+                                    borderRadius: BorderRadius.all(Radius.circular(10)
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 10, right: 10),
+                                    child: Text(
+                                      widget.destName,
+                                      style:  TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w400,
+                                        height: 0
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.only(top: 20, left: 20, right:20),
+                  child: Text(
+                    "Options",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontFamily: 'Urbanist',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 30,
+                    ),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.only(top: 30, bottom: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              ],
             );
           }
           

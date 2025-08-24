@@ -281,7 +281,10 @@ class _BusSheetState extends State<BusSheet> {
                   );
                 }
                 
-                return const CircularProgressIndicator();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 30, bottom: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                );
               },
             ),
           ],

@@ -716,6 +716,24 @@ class _MapScreenState extends State<MapScreen> {
             LatLng? latLong = getLatLongFromStopID(id);
             if (latLong != null) {
               _showStopSheet(id, name, latLong!.latitude, latLong!.longitude);
+            } else {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Error'),
+                    content: const Text('Couldn\'t load stop.'),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Dismiss the dialog
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  );
+                },
+              );
             }
           },
         );
@@ -734,6 +752,24 @@ class _MapScreenState extends State<MapScreen> {
             LatLng? latLong = getLatLongFromStopID(id);
             if (latLong != null) {
               _showStopSheet(id, name, latLong.latitude, latLong.longitude);
+            } else {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Error'),
+                    content: const Text('Couldn\'t load stop.'),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Dismiss the dialog
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  );
+                },
+              );
             }
           },
           onUnfavorite: (stpid) {

@@ -212,7 +212,10 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
             );
 
           } else if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
+            return Padding(
+              padding: const EdgeInsets.only(top: 30, bottom: 30),
+              child: Center(child: CircularProgressIndicator()),
+            );
 
           } else {
             return Text("couldn't load info for ${widget.stopName}");

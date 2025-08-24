@@ -17,8 +17,6 @@ class JourneyRepository {
       'destLon': destLon.toString(),
     });
     final response = await http.get(uri);
-    print('DEBUG: journey response status = ${response.statusCode}');
-    print('DEBUG: journey response body = ${response.body}');
     if (response.statusCode != 200) {
       throw Exception('Failed to plan journey: status ${response.statusCode}');
     }
