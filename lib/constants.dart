@@ -23,8 +23,8 @@ const Map<String, String> fallback_code_to_name = {
 };
 
 String getPrettyRouteName(String code) {
-  for (Map<String, String> route in globalAvailableRoutes){
-    if(route['id'] == code){
+  for (Map<String, String> route in globalAvailableRoutes) {
+    if (route['id'] == code) {
       return route['name'] ?? route['id']!;
     }
   }

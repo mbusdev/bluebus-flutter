@@ -5,7 +5,6 @@ import '../constants.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import '../services/route_color_service.dart';
 
-
 // helper class to display legs with expanded property
 class LegToDisplay {
   final String origin;
@@ -31,10 +30,9 @@ class LegToDisplay {
     this.trip,
     this.rt,
     required this.originID,
-    required this.destinationID
+    required this.destinationID,
   });
 }
-
 
 class JourneyResultsWidget extends StatefulWidget {
   final List<Journey> journeys;
@@ -43,15 +41,17 @@ class JourneyResultsWidget extends StatefulWidget {
   final Map<String, double>? origin;
   final Map<String, double>? dest;
   final void Function(Location, bool) onChangeSelection;
+  final void Function(Journey)? onSelectJourney;
 
   const JourneyResultsWidget({
-    super.key, 
+    super.key,
     required this.journeys,
     required this.start,
     required this.end,
     required this.origin,
     required this.dest,
-    required this.onChangeSelection
+    required this.onChangeSelection,
+    this.onSelectJourney,
   });
 
   @override
@@ -59,14 +59,122 @@ class JourneyResultsWidget extends StatefulWidget {
 }
 
 class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
+  int _selectedIndex = 0;
+  bool _autoSelected = false;
 
   @override
   void initState() {
     super.initState();
+    // Autoselect the top (first) journey and notify parent once
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_autoSelected && widget.journeys.isNotEmpty) {
+        _autoSelected = true;
+        widget.onSelectJourney?.call(widget.journeys[0]);
+        setState(() {
+          _selectedIndex = 0;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Prebuild journey cards list so the tree is cleaner and avoids deep inline closures
+    final List<Widget> journeyWidgets = widget.journeys.asMap().entries.map((
+      entry,
+    ) {
+      final idx = entry.key;
+      final Journey journey = entry.value;
+      final totalDuration = journey.arrivalTime - journey.departureTime;
+
+      Set<String> busIDs = {};
+      for (Leg l in journey.legs) {
+        if (l.rt != null) busIDs.add(l.rt!);
+      }
+
+      return GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedIndex = idx;
+          });
+          widget.onSelectJourney?.call(journey);
+        },
+        child: Card(
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          color: (_selectedIndex == idx)
+              ? Color.fromARGB(255, 220, 235, 255)
+              : Color.fromARGB(255, 240, 240, 240),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              title: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${(totalDuration / 60).round()}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 40,
+                      height: 0,
+                    ),
+                  ),
+                  Text(
+                    ' min',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 25,
+                      height: 1.5,
+                    ),
+                  ),
+                  Spacer(),
+                  Text(
+                    (busIDs.isEmpty) ? '' : 'via ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w400,
+                      fontSize: 25,
+                      height: 1.5,
+                    ),
+                  ),
+                  ...busIDs.map((busID) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6, right: 6),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: RouteColorService.getRouteColor(busID),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          busID,
+                          style: TextStyle(
+                            color: RouteColorService.getContrastingColor(busID),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 16),
+                  child: JourneyBody(journey: journey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }).toList();
 
     return SingleChildScrollView(
       child: Column(
@@ -81,10 +189,10 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Color.fromARGB(95, 187, 187, 187), 
-                  spreadRadius: 2, 
-                  blurRadius: 6, 
-                  offset: Offset(0, 3), 
+                  color: Color.fromARGB(95, 187, 187, 187),
+                  spreadRadius: 2,
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
                 ),
               ],
             ),
@@ -95,17 +203,13 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.my_location,
-                        size: 25,
-                      ),
+                      Icon(Icons.my_location, size: 25),
 
-                      SizedBox(width: 12,),
+                      SizedBox(width: 12),
 
                       Expanded(
                         child: GestureDetector(
-                          onTap: () { 
-
+                          onTap: () {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
@@ -119,7 +223,9 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                       Navigator.pop(context);
                                       widget.onChangeSelection(location, true);
                                     } else {
-                                      print("Error: The selected location '${location.name}' has no coordinates.");
+                                      print(
+                                        "Error: The selected location '${location.name}' has no coordinates.",
+                                      );
                                     }
                                   },
                                 );
@@ -131,41 +237,42 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             height: 30,
                             decoration: BoxDecoration(
                               color: Color.fromARGB(255, 235, 235, 235),
-                              borderRadius: BorderRadius.all(Radius.circular(10)
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(10),
                               ),
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.only(left: 10, right: 10),
+                              padding: const EdgeInsets.only(
+                                left: 10,
+                                right: 10,
+                              ),
                               child: Text(
                                 widget.start,
-                                style:  TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w400,
-                                  height: 0
+                                  height: 0,
                                 ),
-                                overflow: TextOverflow.ellipsis
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
 
-                  SizedBox(height: 10,),
-              
+                  SizedBox(height: 10),
+
                   Row(
                     children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 25,
-                      ),
+                      Icon(Icons.location_on, size: 25),
 
-                      SizedBox(width: 12,),
+                      SizedBox(width: 12),
 
                       Expanded(
                         child: GestureDetector(
-                          onTap: () { 
+                          onTap: () {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
@@ -179,7 +286,9 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                       Navigator.pop(context);
                                       widget.onChangeSelection(location, false);
                                     } else {
-                                      print("Error: The selected location '${location.name}' has no coordinates.");
+                                      print(
+                                        "Error: The selected location '${location.name}' has no coordinates.",
+                                      );
                                     }
                                   },
                                 );
@@ -191,24 +300,28 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             height: 30,
                             decoration: BoxDecoration(
                               color: Color.fromARGB(255, 235, 235, 235),
-                              borderRadius: BorderRadius.all(Radius.circular(10)
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(10),
                               ),
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.only(left: 10, right: 10),
+                              padding: const EdgeInsets.only(
+                                left: 10,
+                                right: 10,
+                              ),
                               child: Text(
                                 widget.end,
-                                style:  TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w400,
-                                  height: 0
+                                  height: 0,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ],
@@ -217,7 +330,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           ),
 
           Padding(
-            padding: const EdgeInsets.only(top: 20, left: 20, right:20),
+            padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
             child: Text(
               "Options",
               style: TextStyle(
@@ -230,108 +343,11 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           ),
 
           Padding(
-            padding: const EdgeInsets.only(bottom: 20, left: 20, right:20),
-            child: Column(
-              children: widget.journeys.map((Journey journey) {
-                final totalDuration = journey.arrivalTime - journey.departureTime;
-                final numTransfers = journey.legs.length - 1;
-            
-                Set<String> busIDs = {};
-            
-                // get all bus ids for header
-                for (Leg l in journey.legs){
-            
-                  if (l.rt != null){
-                    busIDs.add(l.rt!);
-                  }
-                }
-                
-                return Card(
-                  // rounded corners and shadow.
-                  margin: const EdgeInsets.symmetric(vertical: 8.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15.0),
-                  ),
-                  color: Color.fromARGB(255, 240, 240, 240),
-            
-                  // theme widget to override the default divider color.
-                  child: Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      title: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${(totalDuration / 60).round()}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 40,
-                              height: 0
-                            ),
-                          ),
-                          Text(
-                            ' min',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 25,
-                              height: 1.5
-                            ),
-                          ),
-            
-                          Spacer(),
-            
-                          Text(
-                            (busIDs.isEmpty)? '': 'via ',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w400,
-                              fontSize: 25,
-                              height: 1.5
-                            ),
-                          ),
-            
-                          ...busIDs.map((busID) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6, right: 6),
-                              child: Container(
-                                  width: 30,
-                                  height: 30,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: RouteColorService.getRouteColor(busID), 
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    busID,
-                                    style: TextStyle(
-                                      color: RouteColorService.getContrastingColor(busID), 
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                            );
-                          }),
-            
-                          
-                        ],
-                      ),
-            
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16, right: 16),
-                          child: JourneyBody(journey: journey),
-                        )
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+            padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+            child: Column(children: journeyWidgets),
           ),
         ],
-      )
+      ),
     );
   }
 }
@@ -351,38 +367,41 @@ class _JourneyBodyState extends State<JourneyBody> {
     // Initialize the list of legs from the journey prop
     legsToDisplay = widget.journey.legs.map((leg) {
       return LegToDisplay(
-          origin: leg.origin,
-          destination: leg.destination,
-          duration: leg.duration,
-          startTime: leg.startTime,
-          endTime: leg.endTime,
-          stopTimes: leg.stopTimes,
-          trip: leg.trip,
-          rt: leg.rt,
-          originID: leg.originID,
-          destinationID: leg.destinationID
-        );
+        origin: leg.origin,
+        destination: leg.destination,
+        duration: leg.duration,
+        startTime: leg.startTime,
+        endTime: leg.endTime,
+        stopTimes: leg.stopTimes,
+        trip: leg.trip,
+        rt: leg.rt,
+        originID: leg.originID,
+        destinationID: leg.destinationID,
+      );
     }).toList();
   }
 
   //function to get intermediary stops between start and end
-  (bool, List<String>) intermediaryBusStops(String orgID, String desID, int legID){
-    
+  (bool, List<String>) intermediaryBusStops(
+    String orgID,
+    String desID,
+    int legID,
+  ) {
     bool foundStart = false;
     List<String> stopIDs = [];
 
     // todo: add check for .trip being null
-    for(StopTime st in widget.journey.legs[legID].trip!.stopTimes){
-      if (st.stop == orgID){
+    for (StopTime st in widget.journey.legs[legID].trip!.stopTimes) {
+      if (st.stop == orgID) {
         foundStart = true;
       }
 
-      if (st.stop == desID){
+      if (st.stop == desID) {
         stopIDs.add(st.stop);
         return (true, stopIDs);
       }
 
-      if (foundStart){
+      if (foundStart) {
         stopIDs.add(st.stop);
       }
     }
@@ -391,7 +410,7 @@ class _JourneyBodyState extends State<JourneyBody> {
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,7 +419,7 @@ class _JourneyBodyState extends State<JourneyBody> {
           int index = legsToDisplay.indexOf(leg);
 
           // walk or bus?
-          if (leg.rt == null){
+          if (leg.rt == null) {
             // walk
             return Padding(
               padding: const EdgeInsets.only(bottom: 20),
@@ -408,13 +427,10 @@ class _JourneyBodyState extends State<JourneyBody> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.directions_walk,
-                    size: 40,
-                  ),
+                  Icon(Icons.directions_walk, size: 40),
 
-                  SizedBox(width: 10,),
-              
+                  SizedBox(width: 10),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,7 +440,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            height: 0
+                            height: 0,
                           ),
                         ),
                         Text(
@@ -432,13 +448,13 @@ class _JourneyBodyState extends State<JourneyBody> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
-                            height: 0
+                            height: 0,
                           ),
                           maxLines: 2,
                         ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             );
@@ -453,13 +469,13 @@ class _JourneyBodyState extends State<JourneyBody> {
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: RouteColorService.getRouteColor(leg.rt!), 
+                      color: RouteColorService.getRouteColor(leg.rt!),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       leg.rt!,
                       style: TextStyle(
-                        color: RouteColorService.getContrastingColor(leg.rt!), 
+                        color: RouteColorService.getContrastingColor(leg.rt!),
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -1,
@@ -468,8 +484,8 @@ class _JourneyBodyState extends State<JourneyBody> {
                     ),
                   ),
 
-                  SizedBox(width: 10,),
-              
+                  SizedBox(width: 10),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,153 +495,187 @@ class _JourneyBodyState extends State<JourneyBody> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            height: 0
+                            height: 0,
                           ),
                         ),
 
                         // if expanded show full list, otherwise dont lol
-                        leg.expanded?
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // list all the intermediary bus stops
-                            ...intermediaryBusStops(leg.originID, leg.destinationID, index).$2.map((id){
+                        leg.expanded
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // list all the intermediary bus stops
+                                  ...intermediaryBusStops(
+                                    leg.originID,
+                                    leg.destinationID,
+                                    index,
+                                  ).$2.map((id) {
+                                    // get index of this stop
+                                    // TODO: I don't like running this function thrice, but like what's a clean way to do it?
+                                    int indexId = intermediaryBusStops(
+                                      leg.originID,
+                                      leg.destinationID,
+                                      index,
+                                    ).$2.indexOf(id);
+                                    int len = intermediaryBusStops(
+                                      leg.originID,
+                                      leg.destinationID,
+                                      index,
+                                    ).$2.length;
 
-                              // get index of this stop
-                              // TODO: I don't like running this function thrice, but like what's a clean way to do it?
-                              int indexId = intermediaryBusStops(leg.originID, leg.destinationID, index).$2.indexOf(id);
-                              int len = intermediaryBusStops(leg.originID, leg.destinationID, index).$2.length;
+                                    return Padding(
+                                      // conditional padding (to separate get on and get off stops)
+                                      padding: (indexId == 0)
+                                          ? EdgeInsets.only(bottom: 7)
+                                          : (indexId == len - 1)
+                                          ? EdgeInsets.only(top: 7)
+                                          : EdgeInsets.zero,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // conditional icon
+                                          (indexId == 0)
+                                              ? Icon(Icons.login)
+                                              : (indexId == len - 1)
+                                              ? Icon(Icons.logout)
+                                              : Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 5,
+                                                        left: 7,
+                                                        right: 7,
+                                                      ),
+                                                  child: Icon(
+                                                    Icons.fiber_manual_record,
+                                                    size: 10,
+                                                    color: Color.fromARGB(
+                                                      50,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                    ),
+                                                  ),
+                                                ),
 
-                              return Padding(
-                                // conditional padding (to separate get on and get off stops)
-                                padding: (indexId == 0)? EdgeInsets.only(bottom: 7) : (indexId == len - 1)? EdgeInsets.only(top: 7) : EdgeInsets.zero,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // conditional icon
-                                    (indexId == 0)? Icon(Icons.login) : 
-                                    (indexId == len - 1)? Icon(Icons.logout) : 
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 5, left: 7, right: 7),
-                                      child: Icon(
-                                        Icons.fiber_manual_record,
-                                        size: 10,
-                                        color: Color.fromARGB(50, 0, 0, 0),
+                                          SizedBox(width: 10),
+
+                                          // conditional size and padding for text
+                                          ((indexId == 0) ||
+                                                  (indexId == len - 1))
+                                              ? Expanded(
+                                                  child: Text(
+                                                    getStopNameFromID(id),
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                    ),
+                                                  ),
+                                                )
+                                              : Expanded(
+                                                  child: Text(
+                                                    getStopNameFromID(id),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                    ),
+                                                  ),
+                                                ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+
+                                  SizedBox(height: 10),
+
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        leg.expanded = false;
+                                      });
+                                    },
+                                    child: Text(
+                                      "hide",
+                                      style: TextStyle(
+                                        decoration: TextDecoration.underline,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w400,
+                                        color: Color.fromARGB(255, 0, 0, 255),
                                       ),
                                     ),
-                                
-                                    SizedBox(width: 10,),
-                                
-                                    // conditional size and padding for text
-                                    ((indexId == 0) || (indexId == len - 1))?
-                                    Expanded(
+                                  ),
+                                ],
+                              )
+                            :
+                              // leg not expanded
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.login),
+                                      SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          getStopNameFromID(leg.originID),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        leg.expanded = true;
+                                      });
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 5,
+                                        bottom: 5,
+                                      ),
                                       child: Text(
-                                        getStopNameFromID(id),
+                                        "show intermediate",
                                         style: TextStyle(
+                                          decoration: TextDecoration.underline,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w400,
+                                          color: Color.fromARGB(255, 0, 0, 255),
                                         ),
                                       ),
-                                    )
-                                    :
-                                    Expanded(
-                                      child: Text(
-                                        getStopNameFromID(id),
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.logout),
+                                      SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          getStopNameFromID(leg.destinationID),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w400,
+                                          ),
                                         ),
                                       ),
-                                    )
-                                  ],
-                                ),
-                              );
-                            }),
-
-                            SizedBox(height: 10,),
-
-                            GestureDetector(
-                              onTap: () {     
-                                setState(() { 
-                                  leg.expanded = false;
-                                });
-                              },
-                              child: Text(
-                                "hide",
-                                style: TextStyle(
-                                  decoration: TextDecoration.underline,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color.fromARGB(255, 0, 0, 255)
-                                )
-                              ),
-                            ),
-                          ],
-                        ) 
-                        :
-                        // leg not expanded
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.login),
-                                SizedBox(width: 10,),
-                                Expanded(
-                                  child: Text(
-                                    getStopNameFromID(leg.originID),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w400,
-                                    ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
-
-                            GestureDetector(
-                              onTap: () {     
-                                setState(() { 
-                                  leg.expanded = true;
-                                });
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 5, bottom: 5),
-                                child: Text(
-                                  "show intermediate",
-                                  style: TextStyle(
-                                    decoration: TextDecoration.underline,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color.fromARGB(255, 0, 0, 255)
-                                  )
-                                ),
+                                ],
                               ),
-                            ),
-
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.logout),
-                                SizedBox(width: 10,),
-                                Expanded(
-                                  child: Text(
-                                    getStopNameFromID(leg.destinationID),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          ],
-                        ) 
-
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             );
