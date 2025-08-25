@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
@@ -158,15 +160,34 @@ class _MapScreenState extends State<MapScreen> {
       if (!RouteColorService.isInitialized) {
         await RouteColorService.initialize();
       }
+
+      // Check if we need to update cached assets based on version
+      final shouldRefreshAssets = await _shouldRefreshCachedAssets();
+
       final routeIds = RouteColorService.definedRouteIds;
 
       for (final routeId in routeIds) {
+        // Try to load from cache first if not forcing refresh
+        if (!shouldRefreshAssets) {
+          final cachedIcon = await _loadCachedBusIcon(routeId);
+          if (cachedIcon != null) {
+            _routeBusIcons[routeId] = cachedIcon;
+            continue;
+          }
+        }
+
+        // Load from backend if cache miss or forcing refresh
         final imageUrl = RouteColorService.getRouteImageUrl(routeId);
         if (imageUrl != null) {
           await _loadRouteBusIcon(routeId, imageUrl);
         } else {
           _setFallbackBusIcon(routeId);
         }
+      }
+
+      // Save version info after successful load
+      if (shouldRefreshAssets) {
+        await _saveCachedAssetsVersion();
       }
     } catch (e) {
       // Fallback to default bus icon
@@ -175,6 +196,97 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
   }
+
+  // Check if cached assets need to be refreshed based on backend version
+  Future<bool> _shouldRefreshCachedAssets() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedVersion = prefs.getString('cached_assets_version');
+
+      // Get minimum supported version from backend
+      final backendVersion = await _getBackendMinVersion();
+
+      // If no cached version or backend version is newer, refresh
+      return cachedVersion == null || cachedVersion != backendVersion;
+    } catch (e) {
+      // On error, assume refresh needed
+      return true;
+    }
+  }
+
+  // Get minimum supported version from backend
+  Future<String?> _getBackendMinVersion() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${BACKEND_URL}getMinSupportedVersion'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['min_supported_version'] as String?;
+      }
+    } catch (e) {
+      // Return null on error - will trigger refresh
+    }
+    return null;
+  }
+
+  // Save the current assets version to cache
+  Future<void> _saveCachedAssetsVersion() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final backendVersion = await _getBackendMinVersion();
+      if (backendVersion != null) {
+        await prefs.setString('cached_assets_version', backendVersion);
+      }
+    } catch (e) {
+      // Ignore cache save errors
+    }
+  }
+
+  // Load cached bus icon from SharedPreferences
+  Future<BitmapDescriptor?> _loadCachedBusIcon(String routeId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedBytes = prefs.getString('bus_icon_$routeId');
+      if (cachedBytes != null) {
+        final bytes = base64.decode(cachedBytes);
+        return BitmapDescriptor.fromBytes(bytes);
+      }
+    } catch (e) {
+      // Return null on error
+    }
+    return null;
+  }
+
+  // Save bus icon to cache
+  Future<void> _cacheBusIcon(String routeId, Uint8List bytes) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final base64String = base64.encode(bytes);
+      await prefs.setString('bus_icon_$routeId', base64String);
+    } catch (e) {
+      // Ignore cache save errors
+    }
+  }
+
+  // // Clear all cached bus icons and version info (useful for development/testing)
+  // Future<void> _clearIconCache() async {
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     final keys = prefs.getKeys();
+
+  //     for (final key in keys) {
+  //       if (key.startsWith('bus_icon_') || key == 'cached_assets_version') {
+  //         await prefs.remove(key);
+  //       }
+  //     }
+
+  //     // Clear in-memory cache too
+  //     _routeBusIcons.clear();
+  //   } catch (e) {
+  //     // Ignore errors
+  //   }
+  // }
 
   // Load a specific route's bus icon
   Future<void> _loadRouteBusIcon(String routeId, String imageUrl) async {
@@ -197,9 +309,13 @@ class _MapScreenState extends State<MapScreen> {
           );
 
           if (data != null) {
+            final processedBytes = data.buffer.asUint8List();
             _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(
-              data.buffer.asUint8List(),
+              processedBytes,
             );
+
+            // Cache the processed icon for future use
+            await _cacheBusIcon(routeId, processedBytes);
           } else {
             _setFallbackBusIcon(routeId);
           }
