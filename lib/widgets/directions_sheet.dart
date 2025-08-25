@@ -13,6 +13,7 @@ class DirectionsSheet extends StatefulWidget {
   final String destName;
   final void Function(Location, bool) onChangeSelection;
   final void Function(Journey)? onSelectJourney;
+  final void Function(Map<String, double>, Map<String, double>)? onResolved;
 
   const DirectionsSheet({
     Key? key,
@@ -23,6 +24,7 @@ class DirectionsSheet extends StatefulWidget {
     required this.destName,
     required this.onChangeSelection,
     this.onSelectJourney,
+    this.onResolved,
   }) : super(key: key);
 
   @override
@@ -62,6 +64,14 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
         destLat: widget.dest!['lat']!,
         destLon: widget.dest!['lon']!,
       );
+
+      // Inform parent about the resolved origin/dest coordinates
+      try {
+        widget.onResolved?.call(
+          {'lat': originLat, 'lon': originLon},
+          {'lat': widget.dest!['lat']!, 'lon': widget.dest!['lon']!},
+        );
+      } catch (_) {}
 
       if (journeys.isEmpty) {
         throw Exception('No journeys were found for this route.');
