@@ -24,7 +24,7 @@ class BusSheet extends StatefulWidget {
 class _BusSheetState extends State<BusSheet> {
   late Bus currBus = BusRepository.getBus(widget.busID)!;
   late Future<List<BusStopWithPrediction>> futureBusStops;
-
+  
   @override
   void initState() {
     super.initState();

@@ -76,10 +76,39 @@ class _StopSheetState extends State<StopSheet> {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
   bool? _isFavorited;
 
+  // for select bus stops with images
+  late bool imageBusStop;
+  late String imagePath;
+
   @override
   void initState() {
     super.initState();
     loadedStopData = fetchStopData(widget.stopID);
+    imageBusStop = (widget.stopID == "C250") || (widget.stopID == "N406") ||
+                   (widget.stopID == "N405") || (widget.stopID == "N550") ||
+                   (widget.stopID == "N551") || (widget.stopID == "N553") ||
+                   (widget.stopID == "C251");
+    if (widget.stopID == "C250"){
+      imagePath = "assets/CCTC.jpg";
+    }
+    if (widget.stopID == "C251"){
+      imagePath = "assets/CCTC_Ruthven.jpg";
+    }
+    if (widget.stopID == "N406"){
+      imagePath = "assets/FXB_outbound.jpg";
+    }
+    if (widget.stopID == "N405"){
+      imagePath = "assets/FXB_inbound.jpg";
+    }
+    if (widget.stopID == "N550"){
+      imagePath = "assets/Pierpont.jpg";
+    }
+    if (widget.stopID == "N551"){
+      imagePath = "assets/PierpontBursley.jpg";
+    }
+    if (widget.stopID == "N553"){
+      imagePath = "assets/PierpontNorthwood.jpg";
+    }
   }
   
   void _refreshData() {
@@ -134,13 +163,20 @@ class _StopSheetState extends State<StopSheet> {
                 initialSize = 165/screenHeight + (heightEst/screenHeight) + itemCount*(itemHeightEst/screenHeight);
               }
         
+              // edge cases
               if(itemCount == 0){
                 initialSize = 0.35;
               }
-        
+              if (imageBusStop){
+                initialSize = 0.9;
+              }
+              
             } else {
               // A fixed initial size for loading or error states.
               initialSize = 0.4; 
+              if (imageBusStop){
+                initialSize = 0.6;
+              }
             }
         
             return DraggableScrollableSheet(
@@ -158,13 +194,38 @@ class _StopSheetState extends State<StopSheet> {
                       topRight: Radius.circular(30),
                     ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // header
-                        Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      (imageBusStop)?
+                      // Image of bus stop
+                      ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(30),
+                          topRight: Radius.circular(30),
+                        ),
+                        child: ShaderMask(
+                          shaderCallback: (rect) {
+                            // Creates a linear gradient from opaque black at the top to transparent black at the bottom
+                            return LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.white, Colors.transparent],
+                              stops: [0.7, 1.0],
+                            ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
+                          },
+                          blendMode: BlendMode.dstIn,
+                          child: Image.asset(
+                            imagePath,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ) : SizedBox.shrink(),
+                  
+                      // header
+                      Padding(
+                        padding: EdgeInsets.only(top:(imageBusStop)? 0 : 20, left: 20, right: 20),
+                        child: Row(
                           children: [
                             Expanded(
                               child: Text(
@@ -180,9 +241,9 @@ class _StopSheetState extends State<StopSheet> {
                                 ),
                               ),
                             ),
-                
+                                    
                             SizedBox(width: 15,),
-                
+                                    
                             Column(
                               children: <Widget>[
                                 IntrinsicWidth(
@@ -212,15 +273,18 @@ class _StopSheetState extends State<StopSheet> {
                             )
                           ],
                         ),
-                
-                        SizedBox(height: 20,),
-                        
-                        // future data
-                        Expanded(
-                          child: 
-                            
-                            (snapshot.connectionState == ConnectionState.waiting)? Center(child: const CircularProgressIndicator()) :
-                            (snapshot.hasData)? Column(
+                      ),
+                                  
+                      SizedBox(height: 20,),
+                      
+                      // future data
+                      Expanded(
+                        child: 
+                          
+                          (snapshot.connectionState == ConnectionState.waiting)? Center(child: const CircularProgressIndicator()) :
+                          (snapshot.hasData)? Padding(
+                            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                            child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     (arrivingBuses.length == 0)?
@@ -242,9 +306,9 @@ class _StopSheetState extends State<StopSheet> {
                                             fontSize: 20,
                                           ),
                                         ),
-
+                                              
                                         SizedBox(width: 10,),
-
+                                              
                                         GestureDetector(
                                           onTap: () {
                                             _refreshData();
@@ -269,7 +333,7 @@ class _StopSheetState extends State<StopSheet> {
                                     ),
                                     
                                     SizedBox(height: 10,),
-                          
+                                                    
                                     Expanded(
                                       child: ListView.separated(
                                         controller: scrollController,
@@ -364,7 +428,7 @@ class _StopSheetState extends State<StopSheet> {
                                     ),
                                     
                                     SizedBox(height: 10,),
-                
+                                    
                                     // two bottom buttons
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
@@ -394,22 +458,21 @@ class _StopSheetState extends State<StopSheet> {
                                               FontWeight.w600),
                                           ), 
                                         ),
-                          
+                                                    
                                         Spacer(),
-
-                                        // THIS ONE
+                                              
                                         ElevatedButton.icon(
                                           onPressed: () {
                                             // Read the current state
                                             final bool currentStatus = _isFavorited ?? false;
-
+                                              
                                             // Call the appropriate function
                                             if (currentStatus){
                                               widget.onUnFavorite(widget.stopID, widget.stopName);
                                             } else {
                                               widget.onFavorite(widget.stopID, widget.stopName);
                                             }
-
+                                              
                                             // Update the UI immediately
                                             setState(() {
                                               _isFavorited = !currentStatus;
@@ -434,25 +497,25 @@ class _StopSheetState extends State<StopSheet> {
                                               FontWeight.w600),
                                           ),
                                         ),
-                          
+                                                    
                                       ],
                                     ),
-                          
+                                                    
                                     SizedBox(height: 10,)
                                   ],
+                                ),
+                          )
+                              
+                              : Text(
+                                  "There doesn't seem to be any departure data for this stop",
+                                  style: TextStyle(
+                                    fontFamily: 'Urbanist',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 20,
+                                  ),
                                 )
-                                
-                                : Text(
-                                    "There doesn't seem to be any departure data for this stop",
-                                    style: TextStyle(
-                                      fontFamily: 'Urbanist',
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 20,
-                                    ),
-                                  )
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   )
                 );
               }
