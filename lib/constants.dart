@@ -1,6 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+// UPDATE WHEN RELAUNCH
+final String currentVersion = '1.0.0';
+
+bool isCurrentVersionEqualOrHigher(String otherVersion) {
+  final List<int> currentParts =
+      currentVersion.split('.').map(int.parse).toList();
+  final List<int> otherParts =
+      otherVersion.split('.').map(int.parse).toList();
+
+  final int length =
+      (currentParts.length < otherParts.length) ? currentParts.length : otherParts.length;
+
+  for (int i = 0; i < length; i++) {
+    if (currentParts[i] > otherParts[i]) {
+      return true;
+    }
+    if (currentParts[i] < otherParts[i]) {
+      return false;
+    }
+  }
+
+  return currentParts.length >= otherParts.length;
+}
+
 // Backend url for the api
 const String BACKEND_URL = 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3'; 
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'https://www.efeakinci.host/mbus/api/v3');

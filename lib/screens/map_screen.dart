@@ -247,14 +247,11 @@ class _MapScreenState extends State<MapScreen> {
   // Check if cached assets need to be refreshed based on backend version
   Future<bool> _shouldRefreshCachedAssets() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final cachedVersion = prefs.getString('cached_assets_version');
-
-      // Get minimum supported version from backend
       final backendVersion = await _getBackendMinVersion();
-
-      // If no cached version or backend version is newer, refresh
-      return cachedVersion == null || cachedVersion != backendVersion;
+      if (backendVersion == null){
+        return true; // if you can't reach the server give up
+      }
+      return !isCurrentVersionEqualOrHigher(backendVersion!);
     } catch (e) {
       // On error, assume refresh needed
       return true;
@@ -265,7 +262,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<String?> _getBackendMinVersion() async {
     try {
       final response = await http.get(
-        Uri.parse('${BACKEND_URL}getMinSupportedVersion'),
+        Uri.parse('${BACKEND_URL}/getMinSupportedVersion'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
