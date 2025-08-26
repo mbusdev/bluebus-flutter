@@ -89,6 +89,45 @@ class _MapScreenState extends State<MapScreen> {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     _loadingMessageNotifier.value = 'Contacting server...';
+    StartupDataHolder? startupData = await _getBackendMinVersion();
+    
+    // keep trying to reach server. Can't start without this
+    while (startupData == null){
+      _loadingMessageNotifier.value = "Unable to connect";
+      await Future.delayed(Duration(seconds: 2));
+      startupData = await _getBackendMinVersion();
+    }
+
+    if (!isCurrentVersionEqualOrHigher(startupData.version)){
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              startupData!.updateTitle,
+              style: TextStyle(
+                color: Colors.black,
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w700,
+                fontSize: 24,
+              ),
+            ),
+            content: Text(
+              startupData!.updateMessage,
+              style: TextStyle(
+                color: Colors.black,
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w400,
+                fontSize: 16,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+
     // loading all this data in parallel
     await Future.wait([
       _loadCustomMarkers(),
@@ -231,11 +270,6 @@ class _MapScreenState extends State<MapScreen> {
           _setFallbackBusIcon(routeId);
         }
       }
-
-      // Save version info after successful load
-      if (shouldRefreshAssets) {
-        await _saveCachedAssetsVersion();
-      }
     } catch (e) {
       // Fallback to default bus icon
       _busIcon = BitmapDescriptor.defaultMarkerWithHue(
@@ -244,14 +278,40 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Future<int> getFrontEndImageVer() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final int counter = prefs.getInt('imageVer') ?? 0;
+
+    // if null, save the default value
+    if (prefs.getInt('imageVer') == null) {
+      await prefs.setInt('imageVer', counter);
+    }
+
+    return counter;
+  }
+
+  Future<void> setFrontEndImageVer(int a) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('imageVer', a);
+  }
+
   // Check if cached assets need to be refreshed based on backend version
   Future<bool> _shouldRefreshCachedAssets() async {
+    int frontEndVer;
+    frontEndVer = await getFrontEndImageVer();
+
     try {
-      final backendVersion = await _getBackendMinVersion();
-      if (backendVersion == null){
+      final backendImageVersion = await _getBackendImageVersion();
+      if (backendImageVersion == null){
         return true; // if you can't reach the server give up
       }
-      return !isCurrentVersionEqualOrHigher(backendVersion!);
+      if (int.parse(backendImageVersion) == frontEndVer){
+        return false;
+      } else {
+        await setFrontEndImageVer(int.parse(backendImageVersion));
+        return true;
+      }
     } catch (e) {
       // On error, assume refresh needed
       return true;
@@ -259,32 +319,37 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // Get minimum supported version from backend
-  Future<String?> _getBackendMinVersion() async {
+  Future<StartupDataHolder?> _getBackendMinVersion() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$BACKEND_URL/getStartupInfo'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final message = data['why_update_message'];
+        return StartupDataHolder(data['min_supported_version'], 
+                                 message['title'], 
+                                 message['subtitle']);
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get minimum supported version from backend
+  Future<String?> _getBackendImageVersion() async {
     try {
       final response = await http.get(
         Uri.parse('${BACKEND_URL}/getStartupInfo'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['min_supported_version'] as String?;
+        return data['bus_image_version'] as String?;
       }
     } catch (e) {
       // Return null on error - will trigger refresh
     }
     return null;
-  }
-
-  // Save the current assets version to cache
-  Future<void> _saveCachedAssetsVersion() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final backendVersion = await _getBackendMinVersion();
-      if (backendVersion != null) {
-        await prefs.setString('cached_assets_version', backendVersion);
-      }
-    } catch (e) {
-      // Ignore cache save errors
-    }
   }
 
   // Load cached bus icon from SharedPreferences
@@ -1642,6 +1707,8 @@ class _MapScreenState extends State<MapScreen> {
             ],
           );
         } else {
+          
+
           // LOADING SCREEN
           return Center(
             child: Row(
@@ -1671,49 +1738,51 @@ class _MapScreenState extends State<MapScreen> {
 
                 SizedBox(width: 30,),
 
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Loading",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Loading",
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontFamily: 'Urbanist',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20,
+                        ),
                       ),
-                    ),
-
-
-                    Row(
-                      children: [
-                        Container(
-                          height: 16, width: 16,
-                          child: CircularProgressIndicator(
-                            color: const ui.Color.fromARGB(255, 11, 83, 148),
-                          )
-                        ),
-
-                        SizedBox(width: 10,),
-
-                        ValueListenableBuilder<String>(
-                          valueListenable: _loadingMessageNotifier,
-                          builder: (context, message, child) {
-                            return Text(
-                              message,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontFamily: 'Urbanist',
-                                fontWeight: FontWeight.w400,
-                                fontSize: 18,
-                              ),
-                            );
-                          }
-                        ),
-                      ],
-                    ),
-                  ],
+                  
+                  
+                      Row(
+                        children: [
+                          Container(
+                            height: 16, width: 16,
+                            child: CircularProgressIndicator(
+                              color: const ui.Color.fromARGB(255, 11, 83, 148),
+                            )
+                          ),
+                  
+                          SizedBox(width: 10,),
+                  
+                          ValueListenableBuilder<String>(
+                            valueListenable: _loadingMessageNotifier,
+                            builder: (context, message, child) {
+                              return Text(
+                                message,
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontFamily: 'Urbanist',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 18,
+                                ),
+                              );
+                            }
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 )
               ],
             ),
