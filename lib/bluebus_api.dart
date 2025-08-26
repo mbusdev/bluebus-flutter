@@ -82,30 +82,36 @@ class BlueBusApi {
 
   // Fetch all buses and their positions
   static Future<List<Bus>> fetchBuses() async {
-    // todo add fix for this
-    final response = await http.get(Uri.parse('$baseUrl/getVehiclePositions'));
-    if (response.statusCode != 200) throw Exception('Failed to load buses');
-    final data = jsonDecode(response.body);
-    final buses = <Bus>[];
-    final busJson = data['buses'] as List<dynamic>?;
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/getVehiclePositions'));
+      if (response.statusCode != 200) throw Exception('Failed to load buses');
+      final data = jsonDecode(response.body);
+      final buses = <Bus>[];
+      final busJson = data['buses'] as List<dynamic>?;
 
-    await RouteColorService.initialize();
+      await RouteColorService.initialize();
 
-    if (busJson != null) {
-      for (final bus in busJson) {
-        final routeId = bus['rt'] ?? '';
-        final routeColor = RouteColorService.getRouteColor(routeId);
-        final routeImageUrl = RouteColorService.getRouteImageUrl(routeId);
+      if (busJson != null) {
+        for (final bus in busJson) {
+          final routeId = bus['rt'] ?? '';
+          final routeColor = RouteColorService.getRouteColor(routeId);
+          final routeImageUrl = RouteColorService.getRouteImageUrl(routeId);
 
-        buses.add(
-          Bus.fromJson(
-            bus,
-            routeColor: routeColor,
-            routeImageUrl: routeImageUrl,
-          ),
-        );
+          buses.add(
+            Bus.fromJson(
+              bus,
+              routeColor: routeColor,
+              routeImageUrl: routeImageUrl,
+            ),
+          );
+        }
       }
+
+      return buses;
+    } catch (e){
+
+      // on error return a blank list
+      return [];
     }
-    return buses;
   }
 }

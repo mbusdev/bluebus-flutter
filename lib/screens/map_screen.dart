@@ -590,6 +590,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
+    // null case or error contacting server case
+    if (allBuses == []) return;
+
     final selectedBusMarkers = allBuses
         .where((bus) => _selectedRoutes.contains(bus.routeId))
         .map((bus) {
