@@ -1574,6 +1574,46 @@ class _MapScreenState extends State<MapScreen> {
                 // buttons
                 child: Column(
                   children: [
+                    // if showing journey, show header
+                    (_journeyOverlayActive)?
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.all(Radius.circular(15),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ui.Color.fromARGB(39, 0, 0, 0),
+                            spreadRadius: 1,
+                            blurRadius: 2,
+                            offset: Offset(0, 3), // changes position of shadow
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(width: 10,),
+                          
+                          Icon(Icons.route),
+
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            child: Text(
+                              "Showing route on map",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontFamily: 'Urbanist',
+                                fontWeight: FontWeight.w400,
+                                fontSize: 18,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ) : SizedBox.shrink(),
+
                     Spacer(),
           
                     // temp row (might add settings button to it later)
@@ -1605,9 +1645,33 @@ class _MapScreenState extends State<MapScreen> {
                         ],
                       ),
                     ),
-          
-                    // main buttons row
-                    Padding(
+
+                    // if showing journey, show close button
+                    (_journeyOverlayActive)?
+                    ElevatedButton.icon(
+                      onPressed: _clearJourneyOverlays,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        elevation: 4
+                      ),
+                      icon: const Icon(
+                        Icons.close, 
+                        color: Colors.white,
+                        size: 18,), // The icon on the left
+                      label: const Text(
+                        'Close',
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontSize: 18, fontWeight: 
+                          FontWeight.w600),
+                      ), // The text on the right
+                    )
+                    // else, main buttons row
+                    : Padding(
                       padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -1683,24 +1747,6 @@ class _MapScreenState extends State<MapScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    // clear journey overlay button (only visible when an overlay is active)
-                    if (_journeyOverlayActive)
-                      SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: FittedBox(
-                          child: FloatingActionButton.small(
-                            onPressed: _clearJourneyOverlays,
-                            heroTag: 'clear_journey_fab',
-                            backgroundColor: Colors.white,
-                            child: const Icon(
-                              Icons.clear,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ),
 
                     SizedBox(height: (MediaQuery.of(context).padding.bottom == 0.0)? 10 : 0,)
                   ],
