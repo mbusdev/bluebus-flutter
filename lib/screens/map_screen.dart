@@ -1701,6 +1701,8 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       ),
+
+                    SizedBox(height: (MediaQuery.of(context).padding.bottom == 0.0)? 10 : 0,)
                   ],
                 ),
               ),

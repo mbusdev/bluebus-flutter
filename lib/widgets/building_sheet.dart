@@ -87,13 +87,15 @@ class _BuildingSheetState extends State<BuildingSheet> {
           topRight: Radius.circular(30),
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 20,),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
               widget.building.name,
               style: TextStyle(
                 color: Colors.black,
@@ -103,12 +105,15 @@ class _BuildingSheetState extends State<BuildingSheet> {
                 height: 0
               ),
             ),
-
-            SizedBox(width: double.infinity, height: 5,),
-
-            // show different subtitle depending on whether one exists
-            (widget.building.abbrev != "")?
-            Row(
+          ),
+      
+          SizedBox(width: double.infinity, height: 5,),
+      
+          // show different subtitle depending on whether one exists
+          (widget.building.abbrev != "")?
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
               children: [
                 Text("Building code: ",
                   style: TextStyle(
@@ -144,8 +149,11 @@ class _BuildingSheetState extends State<BuildingSheet> {
                   ],
                 )
               ],
-            ) : 
-            Text("No building code",
+            ),
+          ) : 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text("No building code",
               style: TextStyle(
                 color: Colors.black,
                 fontFamily: 'Urbanist',
@@ -153,71 +161,69 @@ class _BuildingSheetState extends State<BuildingSheet> {
                 fontSize: 20,
               ),
             ),
-
-            SizedBox(height: 20,),
-
-            // two bottom buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context); 
-                    widget.onGetDirections(widget.building);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: maizeBusDarkBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                    elevation: 4
+          ),
+      
+          SizedBox(height: 20,),
+      
+          // two bottom buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context); 
+                  widget.onGetDirections(widget.building);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: maizeBusDarkBlue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  icon: const Icon(
-                    Icons.directions, 
-                    color: Colors.white,
-                    size: 20,), // The icon on the left
-                  label: const Text(
-                    'Get Directions',
-                    style: TextStyle(
-                      color: Colors.white, 
-                      fontSize: 16, fontWeight: 
-                      FontWeight.w600),
-                  ), // The text on the right
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  elevation: 4
                 ),
-
-                SizedBox(width: 15,),
-
-                ElevatedButton.icon(
-                  onPressed: () {
-                    sendEmailWithSender(context, widget.building.name);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color.fromARGB(255, 235, 235, 235),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                icon: const Icon(
+                  Icons.directions, 
+                  color: Colors.white,
+                  size: 20,), // The icon on the left
+                label: const Text(
+                  'Get Directions',
+                  style: TextStyle(
+                    color: Colors.white, 
+                    fontSize: 16, fontWeight: 
+                    FontWeight.w600),
+                ), // The text on the right
+              ),
+      
+              ElevatedButton.icon(
+                onPressed: () {
+                  sendEmailWithSender(context, widget.building.name);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color.fromARGB(255, 235, 235, 235),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  icon: const Icon(
-                    Icons.warning_amber_rounded, 
-                    color: Colors.black,
-                    size: 20,), // The icon on the left
-                  label: const Text(
-                    'Report an Issue',
-                    style: TextStyle(
-                      color: Colors.black, 
-                      fontSize: 16, fontWeight: 
-                      FontWeight.w600),
-                  ), // The text on the right
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 ),
-
-              ],
-            ),
-
-            SizedBox(height: 10,)
-          ],
-        ),
+                icon: const Icon(
+                  Icons.warning_amber_rounded, 
+                  color: Colors.black,
+                  size: 20,), // The icon on the left
+                label: const Text(
+                  'Report an Issue',
+                  style: TextStyle(
+                    color: Colors.black, 
+                    fontSize: 16, fontWeight: 
+                    FontWeight.w600),
+                ), // The text on the right
+              ),
+      
+            ],
+          ),
+      
+          SizedBox(height: 30,)
+        ],
       )
     );
   }

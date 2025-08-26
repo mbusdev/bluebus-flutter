@@ -282,21 +282,24 @@ class _StopSheetState extends State<StopSheet> {
                         child: 
                           
                           (snapshot.connectionState == ConnectionState.waiting)? Center(child: const CircularProgressIndicator()) :
-                          (snapshot.hasData)? Padding(
-                            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                            child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    (arrivingBuses.length == 0)?
-                                    Text(
+                          (snapshot.hasData)? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  (arrivingBuses.length == 0)?
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    child: Text(
                                       "There are currently no departing busses",
                                       style: TextStyle(
                                         fontFamily: 'Urbanist',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 20,
                                       ),
-                                    ):
-                                    Row(
+                                    ),
+                                  ):
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    child: Row(
                                       children: [
                                         Text(
                                           "Next bus departures",
@@ -307,41 +310,30 @@ class _StopSheetState extends State<StopSheet> {
                                           ),
                                         ),
                                               
-                                        SizedBox(width: 10,),
+                                        SizedBox(width: 5,),
                                               
                                         GestureDetector(
                                           onTap: () {
                                             _refreshData();
                                           },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(10),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: const ui.Color.fromARGB(255, 228, 228, 228),
-                                                  spreadRadius: 1,
-                                                  blurRadius: 2,
-                                                  offset: Offset(0, 1), // changes position of shadow
-                                                ),
-                                              ],
-                                            ),
-                                            child: Icon(Icons.refresh),
-                                          ),
+                                          child: Icon(Icons.refresh),
                                         )
                                       ],
                                     ),
+                                  ),
+                                  
+                                  SizedBox(height: 10,),
+                                                  
+                                  Expanded(
+                                    child: ListView.separated(
+                                      controller: scrollController,
+                                      itemCount: arrivingBuses.length,
+                                      itemBuilder: (context, index) {
+                                        BusWithPrediction bus = arrivingBuses[index];
                                     
-                                    SizedBox(height: 10,),
-                                                    
-                                    Expanded(
-                                      child: ListView.separated(
-                                        controller: scrollController,
-                                        itemCount: arrivingBuses.length,
-                                        itemBuilder: (context, index) {
-                                          BusWithPrediction bus = arrivingBuses[index];
-                                      
-                                          return Column(
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                                          child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                                 Row(
@@ -367,7 +359,7 @@ class _StopSheetState extends State<StopSheet> {
                                                     ),
                                                     
                                                     SizedBox(width: 15,),
-                                    
+                                                                            
                                                     Expanded(
                                                       child: Column(
                                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,7 +373,7 @@ class _StopSheetState extends State<StopSheet> {
                                                               fontSize: 16,
                                                             )
                                                           ),
-                                    
+                                                                            
                                                           Text(
                                                             (bus.prediction != "DUE")? "${format(bus.direction)}, est: ${futureTime(bus.prediction)}" : "within the next minute",
                                                             overflow: TextOverflow.ellipsis,
@@ -394,7 +386,7 @@ class _StopSheetState extends State<StopSheet> {
                                                         ],
                                                       ),
                                                     ),
-                                    
+                                                                            
                                                     (bus.prediction != "DUE")?
                                                     Column(
                                                       children: [
@@ -419,101 +411,105 @@ class _StopSheetState extends State<StopSheet> {
                                                   ],
                                                 ),
                                               ],
-                                            );
-                                          },
-                                          separatorBuilder: (context, index) {
-                                            return Divider();
-                                          },
-                                        ),
-                                    ),
-                                    
-                                    SizedBox(height: 10,),
-                                    
-                                    // two bottom buttons
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            Navigator.pop(context); 
-                                            widget.onGetDirections();
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: maizeBusDarkBlue,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(15),
                                             ),
-                                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                                            elevation: 4
-                                          ),
-                                          icon: const Icon(
-                                            Icons.directions, 
-                                            color: Colors.white,
-                                            size: 20,), 
-                                          label: const Text(
-                                            'Get Directions',
-                                            style: TextStyle(
-                                              color: Colors.white, 
-                                              fontSize: 16, fontWeight: 
-                                              FontWeight.w600),
-                                          ), 
-                                        ),
-                                                    
-                                        Spacer(),
-                                              
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            // Read the current state
-                                            final bool currentStatus = _isFavorited ?? false;
-                                              
-                                            // Call the appropriate function
-                                            if (currentStatus){
-                                              widget.onUnFavorite(widget.stopID, widget.stopName);
-                                            } else {
-                                              widget.onFavorite(widget.stopID, widget.stopName);
-                                            }
-                                              
-                                            // Update the UI immediately
-                                            setState(() {
-                                              _isFavorited = !currentStatus;
-                                            });
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Color.fromARGB(255, 235, 235, 235),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(15),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                                          ),
-                                          icon: Icon(
-                                            (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                            color: (_isFavorited ?? false)? Colors.red : Colors.black,
-                                            size: 20,), 
-                                          label: Text(
-                                            (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
-                                            style: const TextStyle(
-                                              color: Colors.black, 
-                                              fontSize: 16, fontWeight: 
-                                              FontWeight.w600),
-                                          ),
-                                        ),
-                                                    
-                                      ],
-                                    ),
-                                                    
-                                    SizedBox(height: 10,)
-                                  ],
-                                ),
-                          )
-                              
-                              : Text(
-                                  "There doesn't seem to be any departure data for this stop",
-                                  style: TextStyle(
-                                    fontFamily: 'Urbanist',
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 20,
+                                        );
+                                        },
+                                        separatorBuilder: (context, index) {
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                                            child: Divider(),
+                                          );
+                                        },
+                                      ),
                                   ),
-                                )
+                                  
+                                  SizedBox(height: 10,),
+                                  
+                                  // two bottom buttons
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.pop(context); 
+                                          widget.onGetDirections();
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: maizeBusDarkBlue,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(15),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          elevation: 4
+                                        ),
+                                        icon: const Icon(
+                                          Icons.directions, 
+                                          color: Colors.white,
+                                          size: 20,), 
+                                        label: const Text(
+                                          'Get Directions',
+                                          style: TextStyle(
+                                            color: Colors.white, 
+                                            fontSize: 16, fontWeight: 
+                                            FontWeight.w600),
+                                        ), 
+                                      ),
+                                            
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          // Read the current state
+                                          final bool currentStatus = _isFavorited ?? false;
+                                            
+                                          // Call the appropriate function
+                                          if (currentStatus){
+                                            widget.onUnFavorite(widget.stopID, widget.stopName);
+                                          } else {
+                                            widget.onFavorite(widget.stopID, widget.stopName);
+                                          }
+                                            
+                                          // Update the UI immediately
+                                          setState(() {
+                                            _isFavorited = !currentStatus;
+                                          });
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Color.fromARGB(255, 235, 235, 235),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(15),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        ),
+                                        icon: Icon(
+                                          (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
+                                          color: (_isFavorited ?? false)? Colors.red : Colors.black,
+                                          size: 20,), 
+                                        label: Text(
+                                          (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
+                                          style: const TextStyle(
+                                            color: Colors.black, 
+                                            fontSize: 16, fontWeight: 
+                                            FontWeight.w600),
+                                        ),
+                                      ),
+                                                  
+                                    ],
+                                  ),
+                                                  
+                                  SizedBox(height: 30,)
+                                ],
+                              )
+                              
+                              : Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: Text(
+                                    "There doesn't seem to be any departure data for this stop",
+                                    style: TextStyle(
+                                      fontFamily: 'Urbanist',
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                              )
                       ),
                     ],
                   )

@@ -118,7 +118,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const SizedBox(height: 60),
                     
                     Text(
-                      'Quick start guide:',
+                      'How to use the buttons:',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                     ),
 
