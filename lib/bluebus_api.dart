@@ -82,6 +82,7 @@ class BlueBusApi {
 
   // Fetch all buses and their positions
   static Future<List<Bus>> fetchBuses() async {
+    // todo add fix for this
     final response = await http.get(Uri.parse('$baseUrl/getVehiclePositions'));
     if (response.statusCode != 200) throw Exception('Failed to load buses');
     final data = jsonDecode(response.body);

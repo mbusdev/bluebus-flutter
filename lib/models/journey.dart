@@ -85,13 +85,15 @@ class StopTime {
 
 class Trip {
   final String tripId;
+  final String vid;
   final List<StopTime> stopTimes;
 
-  Trip({required this.tripId, required this.stopTimes});
+  Trip({required this.tripId, required this.vid, required this.stopTimes});
 
   factory Trip.fromJson(Map<String, dynamic> json) {
     return Trip(
       tripId: json['tripId'] ?? '',
+      vid: json['vid'] ?? '',
       stopTimes: (json['stopTimes'] as List).map((e) => StopTime.fromJson(e)).toList(),
     );
   }

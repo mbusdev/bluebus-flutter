@@ -5,6 +5,21 @@ import '../constants.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import '../services/route_color_service.dart';
 
+int getSecondsAfterMidnightUtc() {
+  // Get the current time in UTC
+  DateTime nowUtc = DateTime.now().toUtc();
+
+  DateTime beginningOfDayUtc = DateTime.utc(
+    nowUtc.year,
+    nowUtc.month,
+    nowUtc.day,
+  );
+
+  Duration difference = nowUtc.difference(beginningOfDayUtc);
+  return difference.inSeconds;
+}
+
+
 // helper class to display legs with expanded property
 class LegToDisplay {
   final String origin;
@@ -85,7 +100,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
     ) {
       final idx = entry.key;
       final Journey journey = entry.value;
-      final totalDuration = journey.arrivalTime - journey.departureTime;
+      final totalDuration = journey.arrivalTime - getSecondsAfterMidnightUtc();
 
       Set<String> busIDs = {};
       for (Leg l in journey.legs) {

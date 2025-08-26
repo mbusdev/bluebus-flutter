@@ -70,7 +70,7 @@ class _MapScreenState extends State<MapScreen> {
   // maximum allowed distance (meters) from a stop to a candidate polyline point
   static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
-  final Set<String> _activeJourneyRouteIds = {};
+  final Set<String> _activeJourneyBusIds = {};
   // cache last directions request origin/dest coordinates (used for VIRTUAL_* stops)
   Map<String, double>? _lastJourneyRequestOrigin;
   Map<String, double>? _lastJourneyRequestDest;
@@ -262,7 +262,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<String?> _getBackendMinVersion() async {
     try {
       final response = await http.get(
-        Uri.parse('${BACKEND_URL}/getMinSupportedVersion'),
+        Uri.parse('${BACKEND_URL}/getStartupInfo'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -865,7 +865,7 @@ class _MapScreenState extends State<MapScreen> {
     // clear previous journey overlay
     _displayedJourneyPolylines.clear();
     _displayedJourneyMarkers.clear();
-    _activeJourneyRouteIds.clear();
+    _activeJourneyBusIds.clear();
 
     final allPoints = <LatLng>[];
 
@@ -880,8 +880,8 @@ class _MapScreenState extends State<MapScreen> {
 
       if (isBusLeg) {
         // Add route ID to active set for bus filtering
-        if (leg.rt != null) {
-          _activeJourneyRouteIds.add(leg.rt!);
+        if (leg.trip != null) {
+          _activeJourneyBusIds.add(leg.trip!.vid);
         } // Try to find a cached route polyline segment that follows streets
         final startLatLng = getLatLongFromStopID(leg.originID);
         final endLatLng = getLatLongFromStopID(leg.destinationID);
@@ -1130,7 +1130,7 @@ class _MapScreenState extends State<MapScreen> {
     _displayedJourneyBusMarkers.clear();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
     for (final bus in busProvider.buses) {
-      if (_activeJourneyRouteIds.contains(bus.routeId)) {
+      if (_activeJourneyBusIds.contains(bus.id)) {
         _displayedJourneyBusMarkers.add(_createBusMarker(bus));
       }
     }
