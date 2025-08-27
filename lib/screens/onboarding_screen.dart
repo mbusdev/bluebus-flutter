@@ -44,7 +44,7 @@ class _OnboardingDeciderState extends State<OnboardingDecider> {
     }
 
     if (_accepted) {
-      return const Scaffold(body: MapScreen(), resizeToAvoidBottomInset: false);
+      return const Scaffold(body: MaizeBusCore(), resizeToAvoidBottomInset: false);
     }
 
     return const OnboardingScreen();
@@ -70,7 +70,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (mounted) {
         Navigator.of(
           context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => Scaffold(body: const MapScreen(), resizeToAvoidBottomInset: false)));
+        ).pushReplacement(MaterialPageRoute(builder: (_) => Scaffold(body: const MaizeBusCore(), resizeToAvoidBottomInset: false)));
       }
     }
   }

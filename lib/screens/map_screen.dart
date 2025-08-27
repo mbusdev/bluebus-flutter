@@ -29,14 +29,14 @@ import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 //import 'dart:convert';
 
-class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+class MaizeBusCore extends StatefulWidget {
+  const MaizeBusCore({super.key});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  State<MaizeBusCore> createState() => _MaizeBusCoreState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
 
   Future<void>? _dataLoadingFuture;
@@ -700,11 +700,11 @@ class _MapScreenState extends State<MapScreen> {
         .toSet();
 
     // Update journey bus markers if journey is active
-    if (_journeyOverlayActive && _activeJourneyRoutes.isNotEmpty) {
+    if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
       _displayedJourneyBusMarkers.clear();
       for (final bus in allBuses) {
         // Show buses that are on routes used in the journey
-        if (_activeJourneyRoutes.contains(bus.routeId)) {
+        if (_activeJourneyBusIds.contains(bus.id)) {
           final routeColor =
               bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
           BitmapDescriptor? busIcon;
@@ -1086,7 +1086,7 @@ class _MapScreenState extends State<MapScreen> {
             );
             _displayedJourneyPolylines.add(polyline);
 
-            // add stop markers at endpoints of the segment (boarding/alighting)
+            // add stop markers at endpoints of the segment (boarding/getting off)
             _displayedJourneyMarkers.addAll([
               Marker(
                 markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),

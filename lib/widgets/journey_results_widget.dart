@@ -4,6 +4,7 @@ import '../models/journey.dart';
 import '../constants.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import '../services/route_color_service.dart';
+import 'package:intl/intl.dart';
 
 int getSecondsAfterMidnightUtc() {
   // Get the current time in UTC
@@ -424,6 +425,34 @@ class _JourneyBodyState extends State<JourneyBody> {
     return (false, []);
   }
 
+  // utc secs after midnight -> michigan time
+  String convertSecondsToFormattedTime(int secondsFromMidnightUtc) {
+    final now = DateTime.now().toUtc();
+    final midnightUtc = DateTime.utc(now.year, now.month, now.day);
+    final timeUtc = midnightUtc.add(Duration(seconds: secondsFromMidnightUtc));
+
+    // Convert the UTC time to the local timezone.
+    final localTime = timeUtc.toLocal();
+
+    // Use the DateFormat class to format the local time string.
+    return DateFormat('h:mm a').format(localTime);
+  }
+
+  // returns when the bus is arriving at this stop (used for navigation)
+  String? busArrivalAtStop(
+    String orgID,
+    int legID,
+  ) {
+    bool foundStart = false;
+
+    // todo: add check for .trip being null
+    for (StopTime st in widget.journey.legs[legID].trip!.stopTimes) {
+      if (st.stop == orgID) {
+        return convertSecondsToFormattedTime(st.arrivalTime);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -450,14 +479,19 @@ class _JourneyBodyState extends State<JourneyBody> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "Walk",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            height: 0,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              "Walk",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                height: 0,
+                              ),
+                            ),
+                          ],
                         ),
+
                         Text(
                           "to ${getStopNameFromID(leg.destinationID)}",
                           style: TextStyle(
@@ -468,6 +502,14 @@ class _JourneyBodyState extends State<JourneyBody> {
                           maxLines: 2,
                         ),
                       ],
+                    ),
+                  ),
+
+                  Text(
+                    "${(leg.duration / 60).round()} min",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
@@ -513,6 +555,8 @@ class _JourneyBodyState extends State<JourneyBody> {
                             height: 0,
                           ),
                         ),
+
+                        SizedBox(height: 5,),
 
                         // if expanded show full list, otherwise dont lol
                         leg.expanded
@@ -689,6 +733,15 @@ class _JourneyBodyState extends State<JourneyBody> {
                                 ],
                               ),
                       ],
+                    ),
+                  ),
+                
+                  
+                  Text(
+                    "${busArrivalAtStop(leg.originID,index)}",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
