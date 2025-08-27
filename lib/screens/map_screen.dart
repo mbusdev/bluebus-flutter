@@ -15,6 +15,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
@@ -36,6 +37,8 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
+  late bool canVibrate;
+
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
 
@@ -86,6 +89,8 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadAllData() async {
+    canVibrate = await Haptics.canVibrate();
+
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     _loadingMessageNotifier.value = 'Contacting server...';
@@ -798,6 +803,7 @@ class _MapScreenState extends State<MapScreen> {
               await _saveSelectedRoutes();
             }
           },
+          canVibrate: canVibrate,
         );
       },
     );
@@ -1595,7 +1601,7 @@ class _MapScreenState extends State<MapScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(width: 10,),
-                          
+
                           Icon(Icons.route),
 
                           Padding(
@@ -1683,8 +1689,12 @@ class _MapScreenState extends State<MapScreen> {
                             height: 55,
                             child: FittedBox(
                               child: FloatingActionButton(
-                                onPressed: () =>
-                                    _showBusRoutesModal(busProvider.routes),
+                                onPressed: () async {
+                                  if (canVibrate){
+                                    await Haptics.vibrate(HapticsType.medium);
+                                  }
+                                  _showBusRoutesModal(busProvider.routes);
+                                },
                                 heroTag: 'routes_fab',
                                 backgroundColor: maizeBusDarkBlue,
                                 shape: RoundedRectangleBorder(
@@ -1706,7 +1716,10 @@ class _MapScreenState extends State<MapScreen> {
                             height: 55,
                             child: FittedBox(
                               child: FloatingActionButton(
-                                onPressed: () {
+                                onPressed: () async {
+                                  if (canVibrate){
+                                    await Haptics.vibrate(HapticsType.medium);
+                                  }
                                   _showFavoritesSheet();
                                 },
                                 heroTag: 'favorites_fab',
@@ -1730,7 +1743,12 @@ class _MapScreenState extends State<MapScreen> {
                             height: 75,
                             child: FittedBox(
                               child: FloatingActionButton(
-                                onPressed: () => _showSearchSheet(),
+                                onPressed: () async {
+                                  if (canVibrate){
+                                    await Haptics.vibrate(HapticsType.medium);
+                                  }
+                                  _showSearchSheet();
+                                },
                                 heroTag: 'search_fab',
                                 backgroundColor: maizeBusDarkBlue,
                                 shape: RoundedRectangleBorder(

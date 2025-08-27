@@ -1,5 +1,5 @@
-import 'package:bluebus/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 import '../services/route_color_service.dart';
 
 // Selecting routes
@@ -7,12 +7,14 @@ class RouteSelectorModal extends StatefulWidget {
   final List<Map<String, String>> availableRoutes;
   final Set<String> initialSelectedRoutes;
   final void Function(Set<String>) onApply;
+  final bool canVibrate;
 
   const RouteSelectorModal({
     super.key,
     required this.availableRoutes,
     required this.initialSelectedRoutes,
     required this.onApply,
+    required this.canVibrate
   });
 
   @override
@@ -142,13 +144,25 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                               ),
                             ),
                             trailing: (isSelected)? SizedBox.shrink() : Icon(Icons.add),
-                            onTap: () {
+                            onTap: () async {
+                              if (widget.canVibrate){
+                                await Haptics.vibrate(HapticsType.selection);
+                              }
                               setState(() {
                                 if (isSelected) {
                                   tempSelectedRoutes.remove(route['id']!);
                                 } else {
                                   tempSelectedRoutes.add(route['id']!);
                                 }
+                              });
+                            },
+                            onLongPress: () async {
+                              if (widget.canVibrate){
+                                await Haptics.vibrate(HapticsType.soft);
+                              }
+                              setState(() {
+                                tempSelectedRoutes.clear();
+                                tempSelectedRoutes.add(route['id']!);
                               });
                             },
                           ),

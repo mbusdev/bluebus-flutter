@@ -17,6 +17,7 @@ dependencies:
   shared_preferences: ^2.2.2
   intl: ^0.20.2 
   flutter_email_sender: ^7.0.0
+  haptic_feedback: ^0.5.1+1
 
 dev_dependencies:
   flutter_test:
