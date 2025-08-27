@@ -20,13 +20,13 @@ import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
-import '../models/bus_stop.dart';
+//import '../models/bus_stop.dart';
 import '../models/journey.dart';
 import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
-import 'dart:convert';
+//import 'dart:convert';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -50,6 +50,8 @@ class _MapScreenState extends State<MapScreen> {
   Set<Marker> _displayedJourneyMarkers = {};
   // Buses relevant to the active journey (when overlay active)
   Set<Marker> _displayedJourneyBusMarkers = {};
+  // Search location marker (red pin when viewing building/stop details)
+  Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
   Map<String, String> _routeIdToName = {};
@@ -71,11 +73,13 @@ class _MapScreenState extends State<MapScreen> {
   static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
   final Set<String> _activeJourneyBusIds = {};
+  // route ids of routes used in the active journey
+  final Set<String> _activeJourneyRoutes = {};
   // cache last directions request origin/dest coordinates (used for VIRTUAL_* stops)
   Map<String, double>? _lastJourneyRequestOrigin;
   Map<String, double>? _lastJourneyRequestDest;
 
-  // this function is to load all the data on app launch and 
+  // this function is to load all the data on app launch and
   // still keep context
   @override
   void didChangeDependencies() {
@@ -90,15 +94,15 @@ class _MapScreenState extends State<MapScreen> {
 
     _loadingMessageNotifier.value = 'Contacting server...';
     StartupDataHolder? startupData = await _getBackendMinVersion();
-    
+
     // keep trying to reach server. Can't start without this
-    while (startupData == null){
+    while (startupData == null) {
       _loadingMessageNotifier.value = "Unable to connect";
       await Future.delayed(Duration(seconds: 2));
       startupData = await _getBackendMinVersion();
     }
 
-    if (!isCurrentVersionEqualOrHigher(startupData.version)){
+    if (!isCurrentVersionEqualOrHigher(startupData.version)) {
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -127,12 +131,12 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
 
-
     // loading all this data in parallel
     await Future.wait([
       _loadCustomMarkers(),
       busProvider.loadRoutes(),
       _loadSelectedRoutes(),
+      _loadFavoriteStops(),
     ]);
 
     // actions that depend on the data loaded earlier
@@ -155,11 +159,10 @@ class _MapScreenState extends State<MapScreen> {
 
     _loadingMessageNotifier.value = 'Starting app...';
     busProvider.startBusUpdates();
-  
   }
 
   // need this to make sure that the stop names exist in the cache
-  Future<void> _loadStopsForLaunch() async{
+  Future<void> _loadStopsForLaunch() async {
     final stopResponse = await http.get(
       Uri.parse(BACKEND_URL + '/getAllStops'),
     );
@@ -303,10 +306,10 @@ class _MapScreenState extends State<MapScreen> {
 
     try {
       final backendImageVersion = await _getBackendImageVersion();
-      if (backendImageVersion == null){
+      if (backendImageVersion == null) {
         return true; // if you can't reach the server give up
       }
-      if (int.parse(backendImageVersion) == frontEndVer){
+      if (int.parse(backendImageVersion) == frontEndVer) {
         return false;
       } else {
         await setFrontEndImageVer(int.parse(backendImageVersion));
@@ -321,15 +324,15 @@ class _MapScreenState extends State<MapScreen> {
   // Get minimum supported version from backend
   Future<StartupDataHolder?> _getBackendMinVersion() async {
     try {
-      final response = await http.get(
-        Uri.parse('$BACKEND_URL/getStartupInfo'),
-      );
+      final response = await http.get(Uri.parse('$BACKEND_URL/getStartupInfo'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final message = data['why_update_message'];
-        return StartupDataHolder(data['min_supported_version'], 
-                                 message['title'], 
-                                 message['subtitle']);
+        return StartupDataHolder(
+          data['min_supported_version'],
+          message['title'],
+          message['subtitle'],
+        );
       }
     } catch (e) {
       return null;
@@ -690,6 +693,41 @@ class _MapScreenState extends State<MapScreen> {
           );
         })
         .toSet();
+
+    // Update journey bus markers if journey is active
+    if (_journeyOverlayActive && _activeJourneyRoutes.isNotEmpty) {
+      _displayedJourneyBusMarkers.clear();
+      for (final bus in allBuses) {
+        // Show buses that are on routes used in the journey
+        if (_activeJourneyRoutes.contains(bus.routeId)) {
+          final routeColor =
+              bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
+          BitmapDescriptor? busIcon;
+          if (_routeBusIcons.containsKey(bus.routeId)) {
+            busIcon = _routeBusIcons[bus.routeId];
+          } else if (_busIcon != null) {
+            busIcon = _busIcon;
+          } else {
+            busIcon = BitmapDescriptor.defaultMarkerWithHue(
+              _colorToHue(routeColor),
+            );
+          }
+
+          _displayedJourneyBusMarkers.add(
+            Marker(
+              markerId: MarkerId('journey_bus_${bus.id}'),
+              consumeTapEvents: true,
+              position: bus.position,
+              icon: busIcon!,
+              rotation: bus.heading,
+              anchor: const Offset(0.5, 0.5),
+              onTap: () => _showBusSheet(bus.id),
+            ),
+          );
+        }
+      }
+    }
+
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
     });
@@ -699,6 +737,23 @@ class _MapScreenState extends State<MapScreen> {
   double _colorToHue(Color color) {
     final hsl = HSLColor.fromColor(color);
     return hsl.hue;
+  }
+
+  // Show a red pin marker at search location
+  void _showSearchLocationMarker(double lat, double lon) {
+    _searchLocationMarker = Marker(
+      markerId: const MarkerId('search_location'),
+      position: LatLng(lat, lon),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      consumeTapEvents: false,
+    );
+    setState(() {});
+  }
+
+  // Remove the search location marker
+  void _removeSearchLocationMarker() {
+    _searchLocationMarker = null;
+    setState(() {});
   }
 
   void _refreshAllMarkers() {
@@ -813,6 +868,9 @@ class _MapScreenState extends State<MapScreen> {
           onSearch: (Location location, bool isBusStop, String stopID) {
             final searchCoordinates = location.latlng;
 
+            // Clear any existing search location marker first
+            _removeSearchLocationMarker();
+
             // null-proofing
             if (searchCoordinates != null) {
               if (isBusStop) {
@@ -845,6 +903,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _showBuildingSheet(Location place) {
+    // Show red pin at the location
+    _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
+
     showBottomSheet(
       context: context,
       enableDrag: true,
@@ -889,9 +950,20 @@ class _MapScreenState extends State<MapScreen> {
           dest: end,
           useOrigin: dontUseLocation,
           originName: startLoc,
-          destName: endLoc,                           // true = start changed, false = end changed
+          destName: endLoc, // true = start changed, false = end changed
           onChangeSelection: (Location location, bool startChanged) {
+            // Clear any existing search location marker before showing new destination
+            _removeSearchLocationMarker();
+
             if (startChanged) {
+              // Show red pin for new start location if it's a building (not bus stop)
+              if (!location.isBusStop) {
+                _showSearchLocationMarker(
+                  location.latlng!.latitude,
+                  location.latlng!.longitude,
+                );
+              }
+
               _showDirectionsSheet(
                 {
                   'lat': location.latlng!.latitude,
@@ -903,6 +975,14 @@ class _MapScreenState extends State<MapScreen> {
                 true,
               );
             } else {
+              // Show red pin for new destination if it's a building (non-bus stop)
+              if (!location.isBusStop) {
+                _showSearchLocationMarker(
+                  location.latlng!.latitude,
+                  location.latlng!.longitude,
+                );
+              }
+
               _showDirectionsSheet(
                 start,
                 {
@@ -934,6 +1014,7 @@ class _MapScreenState extends State<MapScreen> {
     _displayedJourneyPolylines.clear();
     _displayedJourneyMarkers.clear();
     _activeJourneyBusIds.clear();
+    _activeJourneyRoutes.clear();
 
     final allPoints = <LatLng>[];
 
@@ -947,7 +1028,10 @@ class _MapScreenState extends State<MapScreen> {
       // Determine leg type for processing
 
       if (isBusLeg) {
-        // Add route ID to active set for bus filtering
+        // Add route ID and vehicle ID to active sets for bus filtering
+        if (leg.rt != null) {
+          _activeJourneyRoutes.add(leg.rt!);
+        }
         if (leg.trip != null) {
           _activeJourneyBusIds.add(leg.trip!.vid);
         } // Try to find a cached route polyline segment that follows streets
@@ -1195,10 +1279,12 @@ class _MapScreenState extends State<MapScreen> {
     _journeyOverlayActive = true;
 
     // Build bus markers for buses matching active journey routes
+    // Filter by route first, then optionally by specific vehicle ID if available
     _displayedJourneyBusMarkers.clear();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
     for (final bus in busProvider.buses) {
-      if (_activeJourneyBusIds.contains(bus.id)) {
+      // Show buses that are on routes used in the journey
+      if (_activeJourneyRoutes.contains(bus.routeId)) {
         _displayedJourneyBusMarkers.add(_createBusMarker(bus));
       }
     }
@@ -1268,7 +1354,11 @@ class _MapScreenState extends State<MapScreen> {
     _displayedJourneyPolylines.clear();
     _displayedJourneyMarkers.clear();
     _displayedJourneyBusMarkers.clear();
+    _activeJourneyBusIds.clear();
+    _activeJourneyRoutes.clear();
     _journeyOverlayActive = false;
+    // making sure to remove search location marker when clearing journey
+    _removeSearchLocationMarker();
     setState(() {});
   }
 
@@ -1348,7 +1438,7 @@ class _MapScreenState extends State<MapScreen> {
           onSelectStop: (name, id) {
             LatLng? latLong = getLatLongFromStopID(id);
             if (latLong != null) {
-              _showStopSheet(id, name, latLong!.latitude, latLong!.longitude);
+              _showStopSheet(id, name, latLong.latitude, latLong.longitude);
             } else {
               showDialog(
                 context: context,
@@ -1443,7 +1533,7 @@ class _MapScreenState extends State<MapScreen> {
           },
         );
       },
-    );
+    ).then((_) {});
   }
 
   Future<void> _centerOnLocation(
@@ -1535,7 +1625,6 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     // Only update bus markers when buses change
     final busProvider = Provider.of<BusProvider>(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1547,7 +1636,6 @@ class _MapScreenState extends State<MapScreen> {
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
-
         if (snapshot.connectionState == ConnectionState.done) {
           return Stack(
             children: [
@@ -1558,67 +1646,90 @@ class _MapScreenState extends State<MapScreen> {
                     ? _displayedJourneyPolylines
                     : _displayedPolylines.union(_displayedJourneyPolylines),
                 markers: _journeyOverlayActive
-                    ? _displayedJourneyMarkers.union(_displayedJourneyBusMarkers)
+                    ? _displayedJourneyMarkers
+                          .union(_displayedJourneyBusMarkers)
+                          .union(
+                            _searchLocationMarker != null
+                                ? {_searchLocationMarker!}
+                                : {},
+                          )
                     : _displayedStopMarkers
                           .union(_displayedBusMarkers)
-                          .union(_displayedJourneyMarkers),
+                          .union(_displayedJourneyMarkers)
+                          .union(
+                            _searchLocationMarker != null
+                                ? {_searchLocationMarker!}
+                                : {},
+                          ),
                 onMapCreated: _onMapCreated,
                 myLocationEnabled: true,
                 myLocationButtonEnabled: false,
                 zoomControlsEnabled: true,
                 mapToolbarEnabled: true,
               ),
-        
-            // Safe-Area (for UI)
+
+              // Safe-Area (for UI)
               SafeArea(
                 // buttons
                 child: Column(
                   children: [
                     // if showing journey, show header
-                    (_journeyOverlayActive)?
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.all(Radius.circular(15),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ui.Color.fromARGB(39, 0, 0, 0),
-                            spreadRadius: 1,
-                            blurRadius: 2,
-                            offset: Offset(0, 3), // changes position of shadow
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(width: 10,),
-                          
-                          Icon(Icons.route),
-
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            child: Text(
-                              "Showing route on map",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontFamily: 'Urbanist',
-                                fontWeight: FontWeight.w400,
-                                fontSize: 18,
+                    (_journeyOverlayActive)
+                        ? Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(15),
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ui.Color.fromARGB(39, 0, 0, 0),
+                                  spreadRadius: 1,
+                                  blurRadius: 2,
+                                  offset: Offset(
+                                    0,
+                                    3,
+                                  ), // changes position of shadow
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(width: 10),
+
+                                Icon(Icons.route),
+
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  child: Text(
+                                    "Showing route on map",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontFamily: 'Urbanist',
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           )
-                        ],
-                      ),
-                    ) : SizedBox.shrink(),
+                        : SizedBox.shrink(),
 
                     Spacer(),
-          
+
                     // temp row (might add settings button to it later)
                     Padding(
-                      padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
+                      padding: const EdgeInsets.only(
+                        left: 15,
+                        right: 15,
+                        top: 15,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -1647,122 +1758,134 @@ class _MapScreenState extends State<MapScreen> {
                     ),
 
                     // if showing journey, show close button
-                    (_journeyOverlayActive)?
-                    ElevatedButton.icon(
-                      onPressed: _clearJourneyOverlays,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        elevation: 4
-                      ),
-                      icon: const Icon(
-                        Icons.close, 
-                        color: Colors.white,
-                        size: 18,), // The icon on the left
-                      label: const Text(
-                        'Close',
-                        style: TextStyle(
-                          color: Colors.white, 
-                          fontSize: 18, fontWeight: 
-                          FontWeight.w600),
-                      ), // The text on the right
-                    )
-                    // else, main buttons row
-                    : Padding(
-                      padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-          
-                        children: [
-                          // routes
-                          SizedBox(
-                            width: 55,
-                            height: 55,
-                            child: FittedBox(
-                              child: FloatingActionButton(
-                                onPressed: () =>
-                                    _showBusRoutesModal(busProvider.routes),
-                                heroTag: 'routes_fab',
-                                backgroundColor: maizeBusDarkBlue,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(56),
-                                ),
-                                child: const Icon(
-                                  Icons.directions_bus,
-                                  color: Colors.white,
-                                ),
+                    (_journeyOverlayActive)
+                        ? ElevatedButton.icon(
+                            onPressed: _clearJourneyOverlays,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
                               ),
-                            ),
-                          ),
-          
-                          SizedBox(width: 15),
-          
-                          // favorites
-                          SizedBox(
-                            width: 55,
-                            height: 55,
-                            child: FittedBox(
-                              child: FloatingActionButton(
-                                onPressed: () {
-                                  _showFavoritesSheet();
-                                },
-                                heroTag: 'favorites_fab',
-                                backgroundColor: maizeBusDarkBlue,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(56),
-                                ),
-                                child: const Icon(
-                                  Icons.favorite,
-                                  color: Colors.white,
-                                ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
                               ),
+                              elevation: 4,
                             ),
-                          ),
-          
-                          Spacer(),
-          
-                          // search
-                          SizedBox(
-                            width: 75,
-                            height: 75,
-                            child: FittedBox(
-                              child: FloatingActionButton(
-                                onPressed: () => _showSearchSheet(),
-                                heroTag: 'search_fab',
-                                backgroundColor: maizeBusDarkBlue,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(56),
-                                ),
-                                child: const Icon(
-                                  Icons.search_sharp,
-                                  size: 35,
-                                  color: Colors.white,
-                                ),
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 18,
+                            ), // The icon on the left
+                            label: const Text(
+                              'Close',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
                               ),
+                            ), // The text on the right
+                          )
+                        // else, main buttons row
+                        : Padding(
+                            padding: const EdgeInsets.only(
+                              left: 15,
+                              right: 15,
+                              top: 10,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
 
-                    SizedBox(height: (MediaQuery.of(context).padding.bottom == 0.0)? 10 : 0,)
+                              children: [
+                                // routes
+                                SizedBox(
+                                  width: 55,
+                                  height: 55,
+                                  child: FittedBox(
+                                    child: FloatingActionButton(
+                                      onPressed: () => _showBusRoutesModal(
+                                        busProvider.routes,
+                                      ),
+                                      heroTag: 'routes_fab',
+                                      backgroundColor: maizeBusDarkBlue,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(56),
+                                      ),
+                                      child: const Icon(
+                                        Icons.directions_bus,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(width: 15),
+
+                                // favorites
+                                SizedBox(
+                                  width: 55,
+                                  height: 55,
+                                  child: FittedBox(
+                                    child: FloatingActionButton(
+                                      onPressed: () {
+                                        _showFavoritesSheet();
+                                      },
+                                      heroTag: 'favorites_fab',
+                                      backgroundColor: maizeBusDarkBlue,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(56),
+                                      ),
+                                      child: const Icon(
+                                        Icons.favorite,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                Spacer(),
+
+                                // search
+                                SizedBox(
+                                  width: 75,
+                                  height: 75,
+                                  child: FittedBox(
+                                    child: FloatingActionButton(
+                                      onPressed: () => _showSearchSheet(),
+                                      heroTag: 'search_fab',
+                                      backgroundColor: maizeBusDarkBlue,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(56),
+                                      ),
+                                      child: const Icon(
+                                        Icons.search_sharp,
+                                        size: 35,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                    SizedBox(
+                      height: (MediaQuery.of(context).padding.bottom == 0.0)
+                          ? 10
+                          : 0,
+                    ),
                   ],
                 ),
               ),
             ],
           );
         } else {
-          
-
           // LOADING SCREEN
           return Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                SizedBox(width: 30,),
+                SizedBox(width: 30),
 
                 Container(
                   height: 100,
@@ -1784,7 +1907,7 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
 
-                SizedBox(width: 30,),
+                SizedBox(width: 30),
 
                 Expanded(
                   child: Column(
@@ -1800,19 +1923,19 @@ class _MapScreenState extends State<MapScreen> {
                           fontSize: 20,
                         ),
                       ),
-                  
-                  
+
                       Row(
                         children: [
                           Container(
-                            height: 16, width: 16,
+                            height: 16,
+                            width: 16,
                             child: CircularProgressIndicator(
                               color: const ui.Color.fromARGB(255, 11, 83, 148),
-                            )
+                            ),
                           ),
-                  
-                          SizedBox(width: 10,),
-                  
+
+                          SizedBox(width: 10),
+
                           ValueListenableBuilder<String>(
                             valueListenable: _loadingMessageNotifier,
                             builder: (context, message, child) {
@@ -1825,18 +1948,18 @@ class _MapScreenState extends State<MapScreen> {
                                   fontSize: 18,
                                 ),
                               );
-                            }
+                            },
                           ),
                         ],
                       ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           );
         }
-      }
+      },
     );
   }
 }
