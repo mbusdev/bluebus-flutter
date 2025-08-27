@@ -88,5 +88,7 @@ class StartupDataHolder {
   String version;
   String updateTitle;
   String updateMessage;
-  StartupDataHolder(this.version, this.updateTitle, this.updateMessage);
+  String persistantMessageTitle;
+  String persistantMessage;
+  StartupDataHolder(this.version, this.updateTitle, this.updateMessage, this.persistantMessageTitle, this.persistantMessage);
 }

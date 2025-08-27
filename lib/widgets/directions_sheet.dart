@@ -9,6 +9,9 @@ import '../constants.dart';
 class LocationError implements Exception {
   const LocationError();
 }
+class NotInAnnArborError implements Exception {
+  const NotInAnnArborError();
+}
 
 class DirectionsSheet extends StatefulWidget {
   final Map<String, double>? origin;
@@ -55,8 +58,15 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
       Position? position;
       try {
         position = await Geolocator.getCurrentPosition();
-      } catch (e) {
+      } catch(e){
         throw const LocationError();
+      }
+      // check if you're in ann arbor
+      if ((position.latitude > 42.238948) && (position.latitude < 42.327619) &&
+          (position.longitude > -83.793253) && (position.longitude < -83.680937) ){
+        // we good
+      } else {
+        throw const NotInAnnArborError();
       }
       originLat = position.latitude;
       originLon = position.longitude;
@@ -301,6 +311,8 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                   Text(
                     (journeyload.error is LocationError)?
                       "Please make sure you have location permissions enabled in settings before trying to get directions"
+                    : (journeyload.error is NotInAnnArborError)?
+                      "Please make sure you are in Ann Arbor before trying to get on-campus bus directions"
                     : "Some other error was thrown. If this continues to persist, contact ishaniik@umich.edu",
                     textAlign: TextAlign.left,
                     style: const TextStyle(

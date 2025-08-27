@@ -98,13 +98,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     _loadingMessageNotifier.value = 'Contacting server...';
-    StartupDataHolder? startupData = await _getBackendMinVersion();
+    StartupDataHolder? startupData = await _getStartupData();
 
     // keep trying to reach server. Can't start without this
     while (startupData == null) {
-      _loadingMessageNotifier.value = "Unable to connect";
       await Future.delayed(Duration(seconds: 2));
-      startupData = await _getBackendMinVersion();
+      startupData = await _getStartupData();
     }
 
     if (!isCurrentVersionEqualOrHigher(startupData.version)) {
@@ -131,6 +130,42 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 fontSize: 16,
               ),
             ),
+          );
+        },
+      );
+    }
+
+    if (startupData.persistantMessageTitle != ''){
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              startupData!.persistantMessageTitle,
+              style: TextStyle(
+                color: Colors.black,
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w700,
+                fontSize: 24,
+              ),
+            ),
+            content: Text(
+              startupData.persistantMessage,
+              style: TextStyle(
+                color: Colors.black,
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w400,
+                fontSize: 16,
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: Text("OK"),
+                onPressed: () {
+                  Navigator.of(context).pop(); 
+                },
+              )
+            ],
           );
         },
       );
@@ -327,16 +362,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Get minimum supported version from backend
-  Future<StartupDataHolder?> _getBackendMinVersion() async {
+  Future<StartupDataHolder?> _getStartupData() async {
     try {
       final response = await http.get(Uri.parse('$BACKEND_URL/getStartupInfo'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final message = data['why_update_message'];
+        final p_message = data['persistant_message'];
         return StartupDataHolder(
           data['min_supported_version'],
           message['title'],
           message['subtitle'],
+          p_message['title'],
+          p_message['subtitle']
         );
       }
     } catch (e) {
