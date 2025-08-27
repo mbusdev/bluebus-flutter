@@ -144,10 +144,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                               ),
                             ),
                             trailing: (isSelected)? SizedBox.shrink() : Icon(Icons.add),
-                            onTap: () async {
-                              if (widget.canVibrate){
-                                await Haptics.vibrate(HapticsType.selection);
-                              }
+                            onTap: () {
                               setState(() {
                                 if (isSelected) {
                                   tempSelectedRoutes.remove(route['id']!);

@@ -6,6 +6,10 @@ import '../widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import '../constants.dart';
 
+class LocationError implements Exception {
+  const LocationError();
+}
+
 class DirectionsSheet extends StatefulWidget {
   final Map<String, double>? origin;
   final Map<String, double>? dest;
@@ -52,7 +56,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
       try {
         position = await Geolocator.getCurrentPosition();
       } catch (e) {
-        throw Exception('Location Error');
+        throw const LocationError();
       }
       originLat = position.latitude;
       originLon = position.longitude;
@@ -280,14 +284,32 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               onSelectJourney: widget.onSelectJourney,
             );
           } else if (journeyload.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Error: ${journeyload.error}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Error Loading Journey',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w700
+                    ),
+                  ),
+                  Text(
+                    (journeyload.error is LocationError)?
+                      "Please make sure you have location permissions enabled in settings before trying to get directions"
+                    : "Some other error was thrown. If this continues to persist, contact ishaniik@umich.edu",
+                    textAlign: TextAlign.left,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w400
+                    ),
+                  ),
+                  SizedBox(height: 10,)
+                ],
               ),
             );
           } else {

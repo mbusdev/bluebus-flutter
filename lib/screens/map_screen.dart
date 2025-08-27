@@ -1578,7 +1578,7 @@ class _MapScreenState extends State<MapScreen> {
       if (permission == LocationPermission.deniedForever) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Location permissions are permanently denied'),
+            content: Text('Location permissions are denied. Please enable them in settings'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1811,7 +1811,7 @@ class _MapScreenState extends State<MapScreen> {
                                     child: FloatingActionButton(
                                       onPressed: () async {
                                         if (canVibrate){
-                                          await Haptics.vibrate(HapticsType.medium);
+                                          await Haptics.vibrate(HapticsType.light);
                                         }
                                         _showBusRoutesModal(busProvider.routes,);
                                       },
@@ -1838,7 +1838,7 @@ class _MapScreenState extends State<MapScreen> {
                                     child: FloatingActionButton(
                                       onPressed: () async {
                                         if (canVibrate){
-                                          await Haptics.vibrate(HapticsType.medium);
+                                          await Haptics.vibrate(HapticsType.light);
                                         }
                                         _showFavoritesSheet();
                                       },
@@ -1865,7 +1865,7 @@ class _MapScreenState extends State<MapScreen> {
                                     child: FloatingActionButton(
                                       onPressed: () async {
                                         if (canVibrate){
-                                          await Haptics.vibrate(HapticsType.medium);
+                                          await Haptics.vibrate(HapticsType.light);
                                         }
                                         _showSearchSheet();
                                       },
