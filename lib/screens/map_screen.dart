@@ -1766,7 +1766,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         : SizedBox.shrink(),
 
                     Spacer(),
-
+                    
                     // temp row (might add settings button to it later)
                     Padding(
                       padding: const EdgeInsets.only(
