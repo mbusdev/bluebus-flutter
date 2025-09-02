@@ -1,4 +1,4 @@
-package com.example.bluebus
+package com.ishankumar.maizebus
 
 import io.flutter.embedding.android.FlutterActivity
 

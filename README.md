@@ -9,6 +9,15 @@
      GMapApiKey=YOUR_IOS_GOOGLE_MAPS_API_KEY
      ```
 
+## Google Maps Setup (Android)
+
+1. **Create the API key config file:**
+   - Create or edit the file at `android/local.properties`
+   - Add your key:
+     ```
+     GOOGLE_MAPS_API_KEY="_yourkeyhere_"
+     ```
+
 ## Running the App (IOS)
 
 1. **Launch the iOS Simulator:**
@@ -22,7 +31,7 @@
    flutter run
    ```
 
-## Running the App With Latest Graph Backend (iOS)
+## Running the App With Backend (iOS)
 
 ### 1. Set Up the Backend
 

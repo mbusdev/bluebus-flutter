@@ -1,14 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+  <uses-permission android:name="android.permission.INTERNET"/>   
     <application
         android:label="MaizeBus"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
 
-        <!-- TODO: Add your Google Maps API key here -->
         <meta-data android:name="com.google.android.geo.API_KEY"
-               android:value="AIzaSyBPYXIQWu-eWcvVUDjwVVfU3k4QQ7W3TSE"/>
+            android:value="@string/google_maps_api_key" />
 
         <activity
             android:name=".MainActivity"
