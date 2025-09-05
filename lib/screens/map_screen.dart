@@ -8,6 +8,7 @@ import 'package:bluebus/globals.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
+import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/material.dart';
@@ -39,6 +40,7 @@ class MaizeBusCore extends StatefulWidget {
 
 class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
+  late Journey currDisplayed;
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
@@ -1053,8 +1055,48 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
   }
 
+  _showJourneySheetOnReopen(){
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Steps',
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 15,),
+                JourneyBody(journey: currDisplayed),
+              ],
+            ),
+          )
+        );
+      },
+    );
+  }
+
   // Display a Journey on the map
   void _displayJourneyOnMap(Journey journey) async {
+    currDisplayed = journey;
+
     // clear previous journey overlay
     _displayedJourneyPolylines.clear();
     _displayedJourneyMarkers.clear();
@@ -1835,35 +1877,70 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         ),
                       ),
             
-                      // if showing journey, show close button
+                      // if showing journey, show close and reopen button
                       (_journeyOverlayActive)
-                          ? ElevatedButton.icon(
-                              onPressed: _clearJourneyOverlays,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 8,
-                                ),
-                                elevation: 4,
+                          ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                  onPressed: _showJourneySheetOnReopen,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 8,
+                                    ),
+                                    elevation: 4,
+                                  ),
+                                  icon: const Icon(
+                                    color: Colors.black,
+                                    Icons.keyboard_arrow_up,
+                                    size: 18,
+                                  ), // The icon on the left
+                                  label: const Text(
+                                    'Steps',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ), // The text on the right
                               ),
-                              icon: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 18,
-                              ), // The icon on the left
-                              label: const Text(
-                                'Close',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
+
+                              SizedBox(width: 20,),
+
+                              ElevatedButton.icon(
+                                  onPressed: _clearJourneyOverlays,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 8,
+                                    ),
+                                    elevation: 4,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ), // The icon on the left
+                                  label: const Text(
+                                    'Close',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ), // The text on the right
                                 ),
-                              ), // The text on the right
-                            )
+                            ],
+                          )
                           // else, main buttons row
                           : Padding(
                               padding: const EdgeInsets.only(
