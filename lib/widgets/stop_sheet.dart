@@ -346,15 +346,18 @@ class _StopSheetState extends State<StopSheet> {
                                                         color: RouteColorService.getRouteColor(bus.id), 
                                                       ),
                                                       alignment: Alignment.center,
-                                                      child: Text(
-                                                        bus.id,
-                                                        style: TextStyle(
-                                                          color: RouteColorService.getContrastingColor(bus.id), 
-                                                          fontSize: 20,
-                                                          fontWeight: FontWeight.w900,
-                                                          letterSpacing: -1,
+                                                      child: MediaQuery(
+                                                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                                        child: Text(
+                                                          bus.id,
+                                                          style: TextStyle(
+                                                            color: RouteColorService.getContrastingColor(bus.id), 
+                                                            fontSize: 20,
+                                                            fontWeight: FontWeight.w900,
+                                                            letterSpacing: -1,
+                                                          ),
+                                                          textAlign: TextAlign.center,
                                                         ),
-                                                        textAlign: TextAlign.center,
                                                       ),
                                                     ),
                                                     

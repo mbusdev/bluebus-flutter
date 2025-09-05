@@ -165,15 +165,19 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                           color: RouteColorService.getRouteColor(busID),
                         ),
                         alignment: Alignment.center,
-                        child: Text(
-                          busID,
-                          style: TextStyle(
-                            color: RouteColorService.getContrastingColor(busID),
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
+                        child: MediaQuery(
+                          // media query prevents text scaling
+                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                          child: Text(
+                            busID,
+                            style: TextStyle(
+                              color: RouteColorService.getContrastingColor(busID),
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ),
                     );
@@ -529,15 +533,19 @@ class _JourneyBodyState extends State<JourneyBody> {
                       color: RouteColorService.getRouteColor(leg.rt!),
                     ),
                     alignment: Alignment.center,
-                    child: Text(
-                      leg.rt!,
-                      style: TextStyle(
-                        color: RouteColorService.getContrastingColor(leg.rt!),
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1,
+                    child: MediaQuery(
+                      // media query prevents text scaling
+                      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                      child: Text(
+                        leg.rt!,
+                        style: TextStyle(
+                          color: RouteColorService.getContrastingColor(leg.rt!),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
 

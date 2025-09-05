@@ -125,15 +125,19 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 color: RouteColorService.getRouteColor(route['id']!), 
                               ),
                               alignment: Alignment.center,
-                              child: Text(
-                                route['id']!,
-                                style: TextStyle(
-                                  color: RouteColorService.getContrastingColor(route['id']!), 
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -1,
+                              child: MediaQuery(
+                                // media query prevents text scaling
+                                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                child: Text(
+                                  route['id']!,
+                                  style: TextStyle(
+                                    color: RouteColorService.getContrastingColor(route['id']!), 
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -1,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ),
                             title: Text(
