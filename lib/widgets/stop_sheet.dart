@@ -256,13 +256,16 @@ class _StopSheetState extends State<StopSheet> {
                                     child: Center(
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 5),
-                                        child: Text(
-                                          widget.stopID,
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontFamily: 'Urbanist',
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 17,
+                                        child: MediaQuery(
+                                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                          child: Text(
+                                            widget.stopID,
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontFamily: 'Urbanist',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 17,
+                                            ),
                                           ),
                                         ),
                                       ),
