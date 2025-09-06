@@ -156,16 +156,23 @@ class _StopSheetState extends State<StopSheet> {
         
             if (snapshot.hasData) {
               final itemCount = arrivingBuses.length;
-              
+
+              // start out with bottom heigh
+              double heightOfButtonsAndBottom = (MediaQuery.of(context).padding.bottom == 0.0)? 20 : MediaQuery.of(context).padding.bottom;
+              // add button height
+              heightOfButtonsAndBottom += 131;
+
               if(itemCount > 5){
                 initialSize = 0.7;
               } else {
-                initialSize = 165/screenHeight + (heightEst/screenHeight) + itemCount*(itemHeightEst/screenHeight);
+                initialSize = heightOfButtonsAndBottom/screenHeight 
+                              + (heightEst/screenHeight) 
+                              + itemCount*(itemHeightEst/screenHeight);
               }
         
               // edge cases
               if(itemCount == 0){
-                initialSize = 0.35;
+                initialSize = 0.4;
               }
               if (imageBusStop){
                 initialSize = 0.9;
@@ -501,7 +508,8 @@ class _StopSheetState extends State<StopSheet> {
                                     ],
                                   ),
                                                   
-                                  SizedBox(height: 30,)
+                                  (MediaQuery.of(context).padding.bottom == 0.0)?
+                                  SizedBox(height: 20,) : SizedBox(height: MediaQuery.of(context).padding.bottom,)
                                 ],
                               )
                               

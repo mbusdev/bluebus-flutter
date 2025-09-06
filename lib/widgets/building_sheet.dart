@@ -221,8 +221,9 @@ class _BuildingSheetState extends State<BuildingSheet> {
       
             ],
           ),
-      
-          SizedBox(height: 30,)
+          
+          (MediaQuery.of(context).padding.bottom == 0.0)?
+          SizedBox(height: 20,) : SizedBox(height: MediaQuery.of(context).padding.bottom,)
         ],
       )
     );
