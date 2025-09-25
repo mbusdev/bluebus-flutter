@@ -1,13 +1,9 @@
 import 'package:bluebus/services/bus_info_service.dart';
-import 'package:bluebus/services/bus_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import '../constants.dart';
-import '../models/bus.dart';
 import '../services/route_color_service.dart';
 import '../models/bus_stop.dart'; 
 import 'package:intl/intl.dart';
-import 'dart:ui' as ui;
                           
 String futureTime(String minutesInFuture){
   int min = int.parse(minutesInFuture);
@@ -135,15 +131,18 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                                     color: RouteColorService.getRouteColor(bus.id), 
                                   ),
                                   alignment: Alignment.center,
-                                  child: Text(
-                                    bus.id,
-                                    style: TextStyle(
-                                      color: RouteColorService.getContrastingColor(bus.id), 
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1,
+                                  child: MediaQuery(
+                                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                    child: Text(
+                                      bus.id,
+                                      style: TextStyle(
+                                        color: RouteColorService.getContrastingColor(bus.id), 
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -1,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
-                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                                 

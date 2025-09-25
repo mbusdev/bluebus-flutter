@@ -27,34 +27,6 @@ class StopSheet extends StatefulWidget {
   @override
   State<StopSheet> createState() => _StopSheetState();
 }
-
-// why flutter why do you make me do this
-Size estimateHeightOfHeader(BuildContext context, String text) {
-
-  final TextSpan textSpan = TextSpan(text: text, 
-    style: TextStyle(
-      color: Colors.black,
-      fontFamily: 'Urbanist',
-      fontWeight: FontWeight.w700,
-      fontSize: 30,
-      height: 0
-    ),
-  );
-
-  // text painter helps us estimate
-  final TextPainter textPainter = TextPainter(
-    text: textSpan,
-    textDirection: ui.TextDirection.ltr,
-  );
-
-  final double screenWidth = MediaQuery.of(context).size.width;
-  textPainter.layout(
-    minWidth: 0,
-    maxWidth: screenWidth - 95,
-  );
-
-  return textPainter.size;
-}
                           
 String futureTime(String minutesInFuture){
   int min = int.parse(minutesInFuture);
@@ -119,11 +91,6 @@ class _StopSheetState extends State<StopSheet> {
 
   @override
   Widget build(BuildContext context) {
-    Size textSizeEstimate = estimateHeightOfHeader(context, widget.stopName);
-    double heightEst = textSizeEstimate.height;
-    double itemHeightEst = 65;
-    double screenHeight = MediaQuery.of(context).size.height;
-    
     return Stack(
       children: [
         // stacking the sheet on top of a gesture detector so you can close it by tapping out of it
@@ -147,28 +114,15 @@ class _StopSheetState extends State<StopSheet> {
                 _isFavorited = snapshot.data!.$2;
               }
             }
-            
-            // so this stupid widget doesn't have a way to shrink to whatever
-            // the size should be if the content is too small, so we're
-            // going to just try to calculate it ourselves and set that height
-        
-            double initialSize;
+
+            double initialSize = 0.9;
         
             if (snapshot.hasData) {
               final itemCount = arrivingBuses.length;
-              
-              if(itemCount > 5){
-                initialSize = 0.7;
-              } else {
-                initialSize = 165/screenHeight + (heightEst/screenHeight) + itemCount*(itemHeightEst/screenHeight);
-              }
         
-              // edge cases
+              // edge case
               if(itemCount == 0){
-                initialSize = 0.35;
-              }
-              if (imageBusStop){
-                initialSize = 0.9;
+                initialSize = 0.4;
               }
               
             } else {
@@ -256,13 +210,16 @@ class _StopSheetState extends State<StopSheet> {
                                     child: Center(
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 5),
-                                        child: Text(
-                                          widget.stopID,
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontFamily: 'Urbanist',
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 17,
+                                        child: MediaQuery(
+                                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                          child: Text(
+                                            widget.stopID,
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontFamily: 'Urbanist',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 17,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -346,15 +303,18 @@ class _StopSheetState extends State<StopSheet> {
                                                         color: RouteColorService.getRouteColor(bus.id), 
                                                       ),
                                                       alignment: Alignment.center,
-                                                      child: Text(
-                                                        bus.id,
-                                                        style: TextStyle(
-                                                          color: RouteColorService.getContrastingColor(bus.id), 
-                                                          fontSize: 20,
-                                                          fontWeight: FontWeight.w900,
-                                                          letterSpacing: -1,
+                                                      child: MediaQuery(
+                                                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                                        child: Text(
+                                                          bus.id,
+                                                          style: TextStyle(
+                                                            color: RouteColorService.getContrastingColor(bus.id), 
+                                                            fontSize: 20,
+                                                            fontWeight: FontWeight.w900,
+                                                            letterSpacing: -1,
+                                                          ),
+                                                          textAlign: TextAlign.center,
                                                         ),
-                                                        textAlign: TextAlign.center,
                                                       ),
                                                     ),
                                                     
@@ -495,7 +455,8 @@ class _StopSheetState extends State<StopSheet> {
                                     ],
                                   ),
                                                   
-                                  SizedBox(height: 30,)
+                                  (MediaQuery.of(context).padding.bottom == 0.0)?
+                                  SizedBox(height: 20,) : SizedBox(height: MediaQuery.of(context).padding.bottom,)
                                 ],
                               )
                               

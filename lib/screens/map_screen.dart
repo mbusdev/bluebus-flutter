@@ -1,3 +1,4 @@
+import 'dart:io' show Platform, isIOS;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -7,6 +8,7 @@ import 'package:bluebus/globals.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
+import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +40,7 @@ class MaizeBusCore extends StatefulWidget {
 
 class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
+  late Journey currDisplayed;
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
@@ -1052,8 +1055,48 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
   }
 
+  _showJourneySheetOnReopen(){
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Steps',
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 15,),
+                JourneyBody(journey: currDisplayed),
+              ],
+            ),
+          )
+        );
+      },
+    );
+  }
+
   // Display a Journey on the map
   void _displayJourneyOnMap(Journey journey) async {
+    currDisplayed = journey;
+
     // clear previous journey overlay
     _displayedJourneyPolylines.clear();
     _displayedJourneyMarkers.clear();
@@ -1681,258 +1724,335 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          return Stack(
-            children: [
-              // underlying map layer
-              MapWidget(
-                initialCenter: _defaultCenter,
-                polylines: _journeyOverlayActive
-                    ? _displayedJourneyPolylines
-                    : _displayedPolylines.union(_displayedJourneyPolylines),
-                markers: _journeyOverlayActive
-                    ? _displayedJourneyMarkers
-                          .union(_displayedJourneyBusMarkers)
-                          .union(
-                            _searchLocationMarker != null
-                                ? {_searchLocationMarker!}
-                                : {},
-                          )
-                    : _displayedStopMarkers
-                          .union(_displayedBusMarkers)
-                          .union(_displayedJourneyMarkers)
-                          .union(
-                            _searchLocationMarker != null
-                                ? {_searchLocationMarker!}
-                                : {},
-                          ),
-                onMapCreated: _onMapCreated,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: true,
-                mapToolbarEnabled: true,
-              ),
-
-              // Safe-Area (for UI)
-              SafeArea(
-                // buttons
-                child: Column(
-                  children: [
-                    // if showing journey, show header
-                    (_journeyOverlayActive)
-                        ? Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(15),
+          //if (!Platform.isIOS){print("is androud");}
+          return PopScope(
+            // lets us prevent back button on map page
+            canPop: false,
+            child: Stack(
+              children: [
+                // underlying map layer (different ios and android)
+                Platform.isIOS?
+                  MapWidget(
+                    initialCenter: _defaultCenter,
+                    polylines: _journeyOverlayActive
+                        ? _displayedJourneyPolylines
+                        : _displayedPolylines.union(_displayedJourneyPolylines),
+                    markers: _journeyOverlayActive
+                        ? _displayedJourneyMarkers
+                              .union(_displayedJourneyBusMarkers)
+                              .union(
+                                _searchLocationMarker != null
+                                    ? {_searchLocationMarker!}
+                                    : {},
+                              )
+                        : _displayedStopMarkers
+                              .union(_displayedBusMarkers)
+                              .union(_displayedJourneyMarkers)
+                              .union(
+                                _searchLocationMarker != null
+                                    ? {_searchLocationMarker!}
+                                    : {},
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: ui.Color.fromARGB(39, 0, 0, 0),
-                                  spreadRadius: 1,
-                                  blurRadius: 2,
-                                  offset: Offset(
-                                    0,
-                                    3,
-                                  ), // changes position of shadow
+                    onMapCreated: _onMapCreated,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: true,
+                    mapToolbarEnabled: true,
+                  )
+                : AndroidMap(
+                    initialCenter: _defaultCenter,
+                    polylines: _journeyOverlayActive
+                        ? _displayedJourneyPolylines
+                        : _displayedPolylines.union(_displayedJourneyPolylines),
+                    staticMarkers: _journeyOverlayActive
+                        ? _displayedJourneyMarkers
+                              .union(
+                                _searchLocationMarker != null
+                                    ? {_searchLocationMarker!}
+                                    : {},
+                              )
+                        : _displayedStopMarkers
+                              .union(_displayedJourneyMarkers)
+                              .union(
+                                _searchLocationMarker != null
+                                    ? {_searchLocationMarker!}
+                                    : {},
+                              ),
+                    dynamicMarkers: _journeyOverlayActive
+                        ? _displayedJourneyBusMarkers
+                        : _displayedBusMarkers,
+                    onMapCreated: _onMapCreated,
+                    //myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    //zoomControlsEnabled: true,
+                    //mapToolbarEnabled: true,
+                ),
+            
+                // Safe-Area (for UI)
+                SafeArea(
+                  // buttons
+                  child: Column(
+                    children: [
+                      // if showing journey, show header
+                      (_journeyOverlayActive)
+                          ? Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(15),
                                 ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(width: 10),
-
-                                Icon(Icons.route),
-
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: ui.Color.fromARGB(39, 0, 0, 0),
+                                    spreadRadius: 1,
+                                    blurRadius: 2,
+                                    offset: Offset(
+                                      0,
+                                      3,
+                                    ), // changes position of shadow
                                   ),
-                                  child: Text(
-                                    "Showing route on map",
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(width: 10),
+            
+                                  Icon(Icons.route),
+            
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    child: Text(
+                                      "Showing route on map",
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontFamily: 'Urbanist',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : SizedBox.shrink(),
+            
+                      Spacer(),
+                      
+                      // temp row (might add settings button to it later)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 15,
+                          right: 15,
+                          top: 15,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            // location button
+                            FloatingActionButton.small(
+                              onPressed: () {
+                                _centerOnLocation(true);
+                              },
+                              heroTag: 'location_fab',
+                              backgroundColor: const ui.Color.fromARGB(
+                                176,
+                                255,
+                                255,
+                                255,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(56),
+                              ),
+                              child: const Icon(
+                                Icons.my_location,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+            
+                      // if showing journey, show close and reopen button
+                      (_journeyOverlayActive)
+                          ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                  onPressed: _showJourneySheetOnReopen,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 8,
+                                    ),
+                                    elevation: 4,
+                                  ),
+                                  icon: const Icon(
+                                    color: Colors.black,
+                                    Icons.keyboard_arrow_up,
+                                    size: 18,
+                                  ), // The icon on the left
+                                  label: const Text(
+                                    'Steps',
                                     style: TextStyle(
                                       color: Colors.black,
-                                      fontFamily: 'Urbanist',
-                                      fontWeight: FontWeight.w400,
                                       fontSize: 18,
+                                      fontWeight: FontWeight.w600,
                                     ),
+                                  ), // The text on the right
+                              ),
+
+                              SizedBox(width: 20,),
+
+                              ElevatedButton.icon(
+                                  onPressed: _clearJourneyOverlays,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 8,
+                                    ),
+                                    elevation: 4,
                                   ),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ), // The icon on the left
+                                  label: const Text(
+                                    'Close',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ), // The text on the right
                                 ),
-                              ],
-                            ),
+                            ],
                           )
-                        : SizedBox.shrink(),
+                          // else, main buttons row
+                          : Padding(
+                              padding: const EdgeInsets.only(
+                                left: 15,
+                                right: 15,
+                                top: 10,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+            
+                                children: [
+                                  // routes
+                                  SizedBox(
+                                    width: 55,
+                                    height: 55,
+                                    child: FittedBox(
+                                      child: FloatingActionButton(
+                                        onPressed: () async {
+                                          if (canVibrate){
+                                            await Haptics.vibrate(HapticsType.light);
+                                          }
 
-                    Spacer(),
-                    
-                    // temp row (might add settings button to it later)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 15,
-                        right: 15,
-                        top: 15,
+                                          // just in case
+                                          if (busProvider.routes.isEmpty){
+                                            await busProvider.loadRoutes();
+                                            _updateAvailableRoutes(busProvider.routes);
+                                            _cacheRouteOverlays(busProvider.routes);
+                                          }
+                                          
+                                          _showBusRoutesModal(busProvider.routes,);
+                                        },
+                                        heroTag: 'routes_fab',
+                                        backgroundColor: maizeBusDarkBlue,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(56),
+                                        ),
+                                        child: const Icon(
+                                          Icons.directions_bus,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+            
+                                  SizedBox(width: 15),
+            
+                                  // favorites
+                                  SizedBox(
+                                    width: 55,
+                                    height: 55,
+                                    child: FittedBox(
+                                      child: FloatingActionButton(
+                                        onPressed: () async {
+                                          if (canVibrate){
+                                            await Haptics.vibrate(HapticsType.light);
+                                          }
+                                          _showFavoritesSheet();
+                                        },
+                                        heroTag: 'favorites_fab',
+                                        backgroundColor: maizeBusDarkBlue,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(56),
+                                        ),
+                                        child: const Icon(
+                                          Icons.favorite,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+            
+                                  Spacer(),
+            
+                                  // search
+                                  SizedBox(
+                                    width: 75,
+                                    height: 75,
+                                    child: FittedBox(
+                                      child: FloatingActionButton(
+                                        onPressed: () async {
+                                          if (canVibrate){
+                                            await Haptics.vibrate(HapticsType.light);
+                                          }
+                                          _showSearchSheet();
+                                        },
+                                        heroTag: 'search_fab',
+                                        backgroundColor: maizeBusDarkBlue,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(56),
+                                        ),
+                                        child: const Icon(
+                                          Icons.search_sharp,
+                                          size: 35,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+            
+                      SizedBox(
+                        height: (MediaQuery.of(context).padding.bottom == 0.0)
+                            ? 10
+                            : 0,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // location button
-                          FloatingActionButton.small(
-                            onPressed: () {
-                              _centerOnLocation(true);
-                            },
-                            heroTag: 'location_fab',
-                            backgroundColor: const ui.Color.fromARGB(
-                              176,
-                              255,
-                              255,
-                              255,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(56),
-                            ),
-                            child: const Icon(
-                              Icons.my_location,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // if showing journey, show close button
-                    (_journeyOverlayActive)
-                        ? ElevatedButton.icon(
-                            onPressed: _clearJourneyOverlays,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 8,
-                              ),
-                              elevation: 4,
-                            ),
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 18,
-                            ), // The icon on the left
-                            label: const Text(
-                              'Close',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ), // The text on the right
-                          )
-                        // else, main buttons row
-                        : Padding(
-                            padding: const EdgeInsets.only(
-                              left: 15,
-                              right: 15,
-                              top: 10,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-
-                              children: [
-                                // routes
-                                SizedBox(
-                                  width: 55,
-                                  height: 55,
-                                  child: FittedBox(
-                                    child: FloatingActionButton(
-                                      onPressed: () async {
-                                        if (canVibrate){
-                                          await Haptics.vibrate(HapticsType.light);
-                                        }
-                                        _showBusRoutesModal(busProvider.routes,);
-                                      },
-                                      heroTag: 'routes_fab',
-                                      backgroundColor: maizeBusDarkBlue,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(56),
-                                      ),
-                                      child: const Icon(
-                                        Icons.directions_bus,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                SizedBox(width: 15),
-
-                                // favorites
-                                SizedBox(
-                                  width: 55,
-                                  height: 55,
-                                  child: FittedBox(
-                                    child: FloatingActionButton(
-                                      onPressed: () async {
-                                        if (canVibrate){
-                                          await Haptics.vibrate(HapticsType.light);
-                                        }
-                                        _showFavoritesSheet();
-                                      },
-                                      heroTag: 'favorites_fab',
-                                      backgroundColor: maizeBusDarkBlue,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(56),
-                                      ),
-                                      child: const Icon(
-                                        Icons.favorite,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                Spacer(),
-
-                                // search
-                                SizedBox(
-                                  width: 75,
-                                  height: 75,
-                                  child: FittedBox(
-                                    child: FloatingActionButton(
-                                      onPressed: () async {
-                                        if (canVibrate){
-                                          await Haptics.vibrate(HapticsType.light);
-                                        }
-                                        _showSearchSheet();
-                                      },
-                                      heroTag: 'search_fab',
-                                      backgroundColor: maizeBusDarkBlue,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(56),
-                                      ),
-                                      child: const Icon(
-                                        Icons.search_sharp,
-                                        size: 35,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                    SizedBox(
-                      height: (MediaQuery.of(context).padding.bottom == 0.0)
-                          ? 10
-                          : 0,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         } else {
           // LOADING SCREEN
