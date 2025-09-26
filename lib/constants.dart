@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 // UPDATE WHEN RELAUNCH
-final String currentVersion = '1.0.1';
+final String currentVersion = '1.0.2';
 
 bool isCurrentVersionEqualOrHigher(String otherVersion) {
   final List<int> currentParts =
