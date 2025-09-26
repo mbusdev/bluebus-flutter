@@ -1959,7 +1959,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
-                                          if (canVibrate){
+                                          if (canVibrate && Platform.isIOS){
                                             await Haptics.vibrate(HapticsType.light);
                                           }
 
@@ -1994,7 +1994,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
-                                          if (canVibrate){
+                                          if (canVibrate && Platform.isIOS){
                                             await Haptics.vibrate(HapticsType.light);
                                           }
                                           _showFavoritesSheet();
@@ -2021,7 +2021,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
-                                          if (canVibrate){
+                                          if (canVibrate && Platform.isIOS){
                                             await Haptics.vibrate(HapticsType.light);
                                           }
                                           _showSearchSheet();

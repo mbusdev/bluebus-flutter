@@ -211,7 +211,7 @@ class _AndroidMapState extends State<AndroidMap>
   Widget build(BuildContext context) {
     return GoogleMap(
       compassEnabled: false,
-      myLocationEnabled: widget.myLocationButtonEnabled,
+      myLocationEnabled: true,
       mapToolbarEnabled: false,
       zoomControlsEnabled: false,
       myLocationButtonEnabled: false,
