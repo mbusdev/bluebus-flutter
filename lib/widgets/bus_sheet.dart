@@ -162,11 +162,11 @@ class _BusSheetState extends State<BusSheet> {
                                     },
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
+                                        color: Theme.of(context).cardColor,
                                         borderRadius: BorderRadius.all(Radius.circular(15)),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: isDarkMode(context) ? Color.fromARGB(95, 68, 68, 68) : Color.fromARGB(95, 187, 187, 187), 
+                                            color: Theme.of(context).shadowColor,
                                             spreadRadius: 1.5, 
                                             blurRadius: 2, 
                                             offset: Offset(0, 3), 

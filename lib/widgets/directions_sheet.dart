@@ -127,7 +127,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: isDarkMode(context) ? Color.fromARGB(95, 68, 68, 68) : Color.fromARGB(95, 187, 187, 187),
+                        color: Theme.of(context).shadowColor,
                         spreadRadius: 2, 
                         blurRadius: 6, 
                         offset: Offset(0, 3), 
@@ -176,7 +176,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 30,
                                   decoration: BoxDecoration(
-                                    color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
+                                    color: Theme.of(context).cardColor,
                                     borderRadius: BorderRadius.all(Radius.circular(10)
                                     ),
                                   ),
@@ -236,7 +236,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 30,
                                   decoration: BoxDecoration(
-                                    color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
+                                    color: Theme.of(context).cardColor,
                                     borderRadius: BorderRadius.all(Radius.circular(10)
                                     ),
                                   ),

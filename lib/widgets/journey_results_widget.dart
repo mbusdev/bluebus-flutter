@@ -122,7 +122,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           ),
           color: (_selectedIndex == idx)
               ? isDarkMode(context) ? Color.fromARGB(255, 25, 40, 60) : Color.fromARGB(255, 220, 235, 255)
-              : isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 240, 240, 240),
+              : Theme.of(context).cardColor,
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
@@ -209,7 +209,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: isDarkMode(context) ? Color.fromARGB(95, 68, 68, 68) : Color.fromARGB(95, 187, 187, 187),
+                  color: Theme.of(context).shadowColor,
                   spreadRadius: 2,
                   blurRadius: 6,
                   offset: Offset(0, 3),
@@ -256,7 +256,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
+                              color: Theme.of(context).cardColor,
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),
@@ -319,7 +319,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
+                              color: Theme.of(context).cardColor,
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),

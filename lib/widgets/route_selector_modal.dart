@@ -107,8 +107,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.0),
                         ),
-                        color: !isDarkMode(context) ? (isSelected ? Colors.blue.shade200 : Color.fromARGB(255, 235, 235, 235))
-                                : (isSelected ? Colors.blue.shade800 : Color.fromARGB(255, 35, 35, 35)),
+                        color: isSelected ? (isDarkMode(context) ? Colors.blue.shade800 : Colors.blue.shade200)
+                                : Theme.of(context).cardColor,
                         // Increase elevation when selected
                         elevation: isSelected ? 6.0 : 2.0,
                         child: Theme(

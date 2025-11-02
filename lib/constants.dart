@@ -68,10 +68,14 @@ ThemeData lightMode = ThemeData(
   brightness: Brightness.light,
   fontFamily: 'Urbanist',
   
-  // Use this to switch text color to opposite of default:
+  // Usage example
   // color: Theme.of(context).primaryColorLight
   primaryColorLight: Colors.white,
   primaryColorDark: Colors.black,
+
+  // Gray box color and shadow color
+  cardColor: Color.fromARGB(255, 235, 235, 235),
+  shadowColor: Color.fromARGB(95, 187, 187, 187),
 
   // Default button colors
   floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -100,10 +104,14 @@ ThemeData darkMode = ThemeData(
   brightness: Brightness.dark,
   fontFamily: 'Urbanist',
   
-  // Use this to switch text color to opposite of default:
+  // Usage example
   // color: Theme.of(context).primaryColorLight
   primaryColorLight: Colors.black,
   primaryColorDark: Colors.white,
+  
+  // Gray box color and shadow color
+  cardColor: Color.fromARGB(255, 35, 35, 35),
+  shadowColor: Color.fromARGB(95, 68, 68, 68),
 
   // Default button themes
   floatingActionButtonTheme: FloatingActionButtonThemeData(
