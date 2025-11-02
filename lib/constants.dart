@@ -63,6 +63,76 @@ const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
 const Color maizeBusYellow = Color.fromARGB(255, 241, 194, 50);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
+// THEMES
+ThemeData lightMode = ThemeData(
+  brightness: Brightness.light,
+  fontFamily: 'Urbanist',
+  
+  // Use this to switch text color to opposite of default:
+  // color: Theme.of(context).primaryColorLight
+  primaryColorLight: Colors.white,
+  primaryColorDark: Colors.black,
+
+  // Default button colors
+  floatingActionButtonTheme: FloatingActionButtonThemeData(
+    backgroundColor: maizeBusDarkBlue,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(56),
+    ),
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: maizeBusDarkBlue,
+    )
+  ),
+
+  // set default text color
+  textTheme: TextTheme(
+    bodyMedium: TextStyle(
+      color: Colors.black,
+      fontFamily: 'Urbanist'
+    )
+  )
+);
+
+ThemeData darkMode = ThemeData(
+  brightness: Brightness.dark,
+  fontFamily: 'Urbanist',
+  
+  // Use this to switch text color to opposite of default:
+  // color: Theme.of(context).primaryColorLight
+  primaryColorLight: Colors.black,
+  primaryColorDark: Colors.white,
+
+  // Default button themes
+  floatingActionButtonTheme: FloatingActionButtonThemeData(
+    backgroundColor: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(56),
+    ),
+    
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.white,
+    )
+  ),
+  
+  // set default text color
+  textTheme: TextTheme(
+    bodyMedium: TextStyle(
+      color: Colors.white,
+      fontFamily: 'Urbanist'
+    )
+  )
+);
+
+bool isDarkMode(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark;
+}
+
 //data types
 class Location {
   final String name;

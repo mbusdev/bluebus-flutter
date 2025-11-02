@@ -34,8 +34,8 @@ class _BusSheetState extends State<BusSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColorLight,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -78,7 +78,6 @@ class _BusSheetState extends State<BusSheet> {
                     Text(
                       getPrettyRouteName(currBus.routeId),
                       style: TextStyle(
-                        color: Colors.black,
                         fontFamily: 'Urbanist',
                         fontWeight: FontWeight.w700,
                         fontSize: 30,
@@ -162,12 +161,12 @@ class _BusSheetState extends State<BusSheet> {
                                       widget.onSelectStop(stop.name, stop.id);
                                     },
                                     child: Container(
-                                      decoration: const BoxDecoration(
-                                        color: Color.fromARGB(255, 235, 235, 235),
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
                                         borderRadius: BorderRadius.all(Radius.circular(15)),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Color.fromARGB(95, 187, 187, 187), 
+                                            color: isDarkMode(context) ? Color.fromARGB(95, 68, 68, 68) : Color.fromARGB(95, 187, 187, 187), 
                                             spreadRadius: 1.5, 
                                             blurRadius: 2, 
                                             offset: Offset(0, 3), 

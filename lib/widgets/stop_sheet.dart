@@ -141,8 +141,8 @@ class _StopSheetState extends State<StopSheet> {
               snapSizes: const [0.9], 
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColorLight,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -164,7 +164,7 @@ class _StopSheetState extends State<StopSheet> {
                             return LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Colors.white, Colors.transparent],
+                              colors: [Theme.of(context).primaryColorLight, Colors.transparent],
                               stops: [0.7, 1.0],
                             ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
                           },
@@ -187,7 +187,6 @@ class _StopSheetState extends State<StopSheet> {
                                 // IF YOU CHANGE THIS STYLE make sure to change the estimate
                                 // function too (top of this file)
                                 style: TextStyle(
-                                  color: Colors.black,
                                   fontFamily: 'Urbanist',
                                   fontWeight: FontWeight.w700,
                                   fontSize: 30,

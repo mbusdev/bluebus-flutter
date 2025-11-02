@@ -80,8 +80,8 @@ class _BuildingSheetState extends State<BuildingSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColorLight,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -98,7 +98,6 @@ class _BuildingSheetState extends State<BuildingSheet> {
             child: Text(
               widget.building.name,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 40,
@@ -117,7 +116,6 @@ class _BuildingSheetState extends State<BuildingSheet> {
               children: [
                 Text("Building code: ",
                   style: TextStyle(
-                    color: Colors.black,
                     fontFamily: 'Urbanist',
                     fontWeight: FontWeight.w400,
                     fontSize: 20,

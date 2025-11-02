@@ -121,8 +121,8 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
             borderRadius: BorderRadius.circular(15.0),
           ),
           color: (_selectedIndex == idx)
-              ? Color.fromARGB(255, 220, 235, 255)
-              : Color.fromARGB(255, 240, 240, 240),
+              ? isDarkMode(context) ? Color.fromARGB(255, 25, 40, 60) : Color.fromARGB(255, 220, 235, 255)
+              : isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 240, 240, 240),
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
@@ -201,15 +201,15 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColorLight,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Color.fromARGB(95, 187, 187, 187),
+                  color: isDarkMode(context) ? Color.fromARGB(95, 68, 68, 68) : Color.fromARGB(95, 187, 187, 187),
                   spreadRadius: 2,
                   blurRadius: 6,
                   offset: Offset(0, 3),
@@ -256,7 +256,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: Color.fromARGB(255, 235, 235, 235),
+                              color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),
@@ -319,7 +319,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: Color.fromARGB(255, 235, 235, 235),
+                              color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),
@@ -354,7 +354,6 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
             child: Text(
               "Options",
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 30,
@@ -616,12 +615,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                                                   child: Icon(
                                                     Icons.fiber_manual_record,
                                                     size: 10,
-                                                    color: Color.fromARGB(
-                                                      50,
-                                                      0,
-                                                      0,
-                                                      0,
-                                                    ),
+                                                    color: isDarkMode(context) ? Color.fromARGB(50, 250, 250, 250) : Color.fromARGB(50, 0, 0, 0),
                                                   ),
                                                 ),
 
@@ -669,7 +663,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                                         decoration: TextDecoration.underline,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w400,
-                                        color: Color.fromARGB(255, 0, 0, 255),
+                                        color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
                                       ),
                                     ),
                                   ),
@@ -715,7 +709,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                                           decoration: TextDecoration.underline,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w400,
-                                          color: Color.fromARGB(255, 0, 0, 255),
+                                          color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
                                         ),
                                       ),
                                     ),

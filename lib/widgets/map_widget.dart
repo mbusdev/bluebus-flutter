@@ -4,6 +4,8 @@ import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import '../constants.dart';
 
 // iOS Map widget
 class MapWidget extends StatelessWidget {
@@ -90,6 +92,9 @@ class _AndroidMapState extends State<AndroidMap>
       Duration(milliseconds: (1000 / _targetFps).floor());
   Duration _lastPaint = Duration.zero;
 
+  String _darkMapStyle = "{}";
+  String _lightMapStyle = "{}";
+
   double _shortestAngleDelta(double fromDeg, double toDeg) {
     double delta = (toDeg - fromDeg + 540) % 360 - 180;
     return delta;
@@ -133,6 +138,14 @@ class _AndroidMapState extends State<AndroidMap>
         _onAnimationDone();
       }
     });
+
+    _loadMapStyles();
+  }
+
+  Future _loadMapStyles() async {
+    _darkMapStyle = await rootBundle.loadString('assets/maps_dark_style.json');
+    _lightMapStyle = await rootBundle.loadString('assets/maps_light_style.json');
+    setState(() {});
   }
 
   void _paintInterpolated(double t) {
@@ -228,6 +241,7 @@ class _AndroidMapState extends State<AndroidMap>
       ),
       polylines: widget.polylines,
       onMapCreated: widget.onMapCreated,
+      style: isDarkMode(context) ? _darkMapStyle : _lightMapStyle
     );
   }
 }

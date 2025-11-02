@@ -2,7 +2,8 @@ import 'package:bluebus/services/bus_info_service.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../services/route_color_service.dart';
-import '../models/bus_stop.dart'; 
+import '../models/bus_stop.dart';
+import '../constants.dart'; 
 import 'package:intl/intl.dart';
                           
 String futureTime(String minutesInFuture){
@@ -51,12 +52,12 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Color.fromARGB(255, 235, 235, 235),
+      decoration: BoxDecoration(
+        color: isDarkMode(context) ? Color.fromARGB(255, 35, 35, 35) : Color.fromARGB(255, 235, 235, 235),
         borderRadius: BorderRadius.all(Radius.circular(15)),
         boxShadow: [
           BoxShadow(
-            color: Color.fromARGB(95, 187, 187, 187), 
+            color: isDarkMode(context) ? Color.fromARGB(95, 68, 68, 68) : Color.fromARGB(95, 187, 187, 187),
             spreadRadius: 1.5, 
             blurRadius: 2, 
             offset: Offset(0, 3), 
@@ -88,7 +89,6 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                           child: Text(
                             widget.stopName,
                             style: TextStyle(
-                              color: Colors.black,
                               fontFamily: 'Urbanist',
                               fontWeight: FontWeight.w700,
                               fontSize: 22,

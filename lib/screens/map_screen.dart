@@ -118,7 +118,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             title: Text(
               startupData!.updateTitle,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
@@ -127,7 +126,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             content: Text(
               startupData!.updateMessage,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 16,
@@ -146,7 +144,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             title: Text(
               startupData!.persistantMessageTitle,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
@@ -155,7 +152,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             content: Text(
               startupData.persistantMessage,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 16,
@@ -1043,7 +1039,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             }
           },
           onSelectJourney: (journey) {
-            _displayJourneyOnMap(journey);
+            _displayJourneyOnMap(journey, Theme.of(context).primaryColorDark);
           },
           onResolved: (orig, dest) {
             // Cache resolved coordinates for virtual origin/destination resolution
@@ -1094,7 +1090,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Display a Journey on the map
-  void _displayJourneyOnMap(Journey journey) async {
+  void _displayJourneyOnMap(Journey journey, Color walkLineColor) async {
     currDisplayed = journey;
 
     // clear previous journey overlay
@@ -1320,7 +1316,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           final walkingPolyline = Polyline(
             polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
             points: [startLatLng, endLatLng],
-            color: Colors.black, // Walk line color
+            color: walkLineColor, // Walk line color
             width: 6, // lind width
             patterns: [
               PatternItem.dash(30), // Longer dashes
@@ -1796,8 +1792,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       // if showing journey, show header
                       (_journeyOverlayActive)
                           ? Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColorLight,
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(15),
                                 ),
@@ -1829,7 +1825,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: Text(
                                       "Showing route on map",
                                       style: TextStyle(
-                                        color: Colors.black,
                                         fontFamily: 'Urbanist',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 18,
@@ -1973,13 +1968,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showBusRoutesModal(busProvider.routes,);
                                         },
                                         heroTag: 'routes_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.directions_bus,
-                                          color: Colors.white,
+                                          color: Theme.of(context).primaryColorLight
                                         ),
                                       ),
                                     ),
@@ -2000,13 +1991,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showFavoritesSheet();
                                         },
                                         heroTag: 'favorites_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.favorite,
-                                          color: Colors.white,
+                                          color: Theme.of(context).primaryColorLight
                                         ),
                                       ),
                                     ),
@@ -2027,14 +2014,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showSearchSheet();
                                         },
                                         heroTag: 'search_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.search_sharp,
                                           size: 35,
-                                          color: Colors.white,
+                                          color: Theme.of(context).primaryColorLight
                                         ),
                                       ),
                                     ),
@@ -2092,7 +2075,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       Text(
                         "Loading",
                         style: TextStyle(
-                          color: Colors.black,
                           fontFamily: 'Urbanist',
                           fontWeight: FontWeight.w700,
                           fontSize: 20,
@@ -2117,7 +2099,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               return Text(
                                 message,
                                 style: TextStyle(
-                                  color: Colors.black,
                                   fontFamily: 'Urbanist',
                                   fontWeight: FontWeight.w400,
                                   fontSize: 18,

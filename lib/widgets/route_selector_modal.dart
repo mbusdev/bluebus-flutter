@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import '../services/route_color_service.dart';
+import '../constants.dart';
 
 // Selecting routes
 class RouteSelectorModal extends StatefulWidget {
@@ -56,8 +57,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
           return Container(
             height: MediaQuery.of(context).size.height * 0.8,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColorLight,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
@@ -76,7 +77,6 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                       child: Text(
                         'Routes Selector',
                         style: TextStyle(
-                          color: Colors.black,
                           fontFamily: 'Urbanist',
                           fontWeight: FontWeight.w700,
                           fontSize: 30,
@@ -91,7 +91,6 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                       child: Text(
                         'Choose which bus routes are displayed on the map. Long press a route to show only that one.',
                         style: TextStyle(
-                          color: Colors.black,
                           fontFamily: 'Urbanist',
                           fontWeight: FontWeight.w400,
                           fontSize: 18,
@@ -108,7 +107,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.0),
                         ),
-                        color: isSelected ? Colors.blue.shade200 : Color.fromARGB(255, 235, 235, 235),
+                        color: !isDarkMode(context) ? (isSelected ? Colors.blue.shade200 : Color.fromARGB(255, 235, 235, 235))
+                                : (isSelected ? Colors.blue.shade800 : Color.fromARGB(255, 35, 35, 35)),
                         // Increase elevation when selected
                         elevation: isSelected ? 6.0 : 2.0,
                         child: Theme(

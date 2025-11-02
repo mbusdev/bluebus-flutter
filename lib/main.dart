@@ -5,6 +5,7 @@ import 'screens/onboarding_screen.dart';
 import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
 import 'services/route_color_service.dart';
+import 'package:bluebus/constants.dart';
 
 // This function initializes the Flutter app and runs the MainApp widget
 void main() async {
@@ -33,12 +34,7 @@ class MainApp extends StatelessWidget {
       // Remove the debug banner
       debugShowCheckedModeBanner: false,
       title: 'MaizeBus',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        fontFamily: 'Urbanist',
-        scaffoldBackgroundColor: Colors.white,
-      ),
+      theme: false ? lightMode : darkMode,
 
       // Show onboarding on first run (terms acceptance). OnboardingDecider
       // will display the welcome + terms flow if needed, otherwise the map.

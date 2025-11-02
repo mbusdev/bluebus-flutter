@@ -2,6 +2,7 @@ import 'package:bluebus/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'map_screen.dart';
+import '../constants.dart';
 
 // Terms & Privacy text
 const String TERMS_AND_CONDITIONS =
@@ -92,7 +93,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           children: [
             // Welcome page
             Container(
-              color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -102,7 +102,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     RichText(
                       text: TextSpan(
                         text: 'Welcome to ',
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.black, fontFamily: 'Urbanist'),
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, fontFamily: 'Urbanist', color: Theme.of(context).primaryColorDark),
                         children: const <TextSpan>[
                           TextSpan(text: 'maize', style: TextStyle(color: maizeBusYellow, fontWeight: FontWeight.w800, fontSize: 30)),
                           TextSpan(text: 'bus', style: TextStyle(color: maizeBusBlue, fontWeight: FontWeight.w800, fontSize: 30)),
@@ -250,7 +250,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // Terms & Conditions + Privacy page
             Container(
-              color: Colors.white,
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,18 +257,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 8),
                   const Text(
                     'Terms, Conditions, and Privacy Policy',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.black, fontFamily: 'Urbanist'),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, fontFamily: 'Urbanist'),
                   ),
                   const Text(
                     '(scroll down to read more)',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400, color: Colors.black, fontFamily: 'Urbanist'),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400, fontFamily: 'Urbanist'),
                   ),
                   
                   const SizedBox(height: 12),
 
                   Expanded(
                     child: Container(
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Color.fromARGB(255, 228, 228, 228),
                         borderRadius: BorderRadius.all(Radius.circular(8)),
                       ),
@@ -282,20 +281,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
+                                color: Colors.black
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Text(TERMS_AND_CONDITIONS),
+                            Text(TERMS_AND_CONDITIONS, style: TextStyle(color: Colors.black)),
                             const SizedBox(height: 16),
                             const Text(
                               'Privacy Policy',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
+                                color: Colors.black
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Text(PRIVACY_POLICY),
+                            Text(PRIVACY_POLICY, style: TextStyle(color: Colors.black)),
                           ],
                         ),
                       ),
