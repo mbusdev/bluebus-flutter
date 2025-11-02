@@ -12,17 +12,21 @@ class MapWidget extends StatelessWidget {
   final LatLng initialCenter;
   final Set<Polyline> polylines;
   final Set<Marker> markers;
+  final String darkMapStyle;
+  final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
   final bool myLocationEnabled;
   final bool myLocationButtonEnabled;
   final bool zoomControlsEnabled;
   final bool mapToolbarEnabled;
-
+  
   const MapWidget({
     super.key,
     required this.initialCenter,
     required this.polylines,
     required this.markers,
+    required this.darkMapStyle,
+    required this.lightMapStyle,
     this.onMapCreated,
     this.myLocationEnabled = true,
     this.myLocationButtonEnabled = false,
@@ -50,6 +54,7 @@ class MapWidget extends StatelessWidget {
       mapToolbarEnabled: mapToolbarEnabled,
       polylines: polylines,
       markers: markers,
+      style: isDarkMode(context) ? darkMapStyle : lightMapStyle
     );
   }
 } 
@@ -61,6 +66,8 @@ class AndroidMap extends StatefulWidget {
   final Set<Polyline> polylines;
   final Set<Marker> dynamicMarkers;
   final Set<Marker> staticMarkers;
+  final String darkMapStyle;
+  final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
   final bool myLocationButtonEnabled;
   AndroidMap(
@@ -68,6 +75,8 @@ class AndroidMap extends StatefulWidget {
       required this.initialCenter,
       required this.dynamicMarkers,
       required this.staticMarkers,
+      required this.darkMapStyle,
+      required this.lightMapStyle,
       this.onMapCreated,
       this.polylines = const {},
       this.myLocationButtonEnabled = false,});
@@ -91,9 +100,6 @@ class _AndroidMapState extends State<AndroidMap>
   late final Duration _minFrameGap =
       Duration(milliseconds: (1000 / _targetFps).floor());
   Duration _lastPaint = Duration.zero;
-
-  String _darkMapStyle = "{}";
-  String _lightMapStyle = "{}";
 
   double _shortestAngleDelta(double fromDeg, double toDeg) {
     double delta = (toDeg - fromDeg + 540) % 360 - 180;
@@ -138,14 +144,6 @@ class _AndroidMapState extends State<AndroidMap>
         _onAnimationDone();
       }
     });
-
-    _loadMapStyles();
-  }
-
-  Future _loadMapStyles() async {
-    _darkMapStyle = await rootBundle.loadString('assets/maps_dark_style.json');
-    _lightMapStyle = await rootBundle.loadString('assets/maps_light_style.json');
-    setState(() {});
   }
 
   void _paintInterpolated(double t) {
@@ -241,7 +239,7 @@ class _AndroidMapState extends State<AndroidMap>
       ),
       polylines: widget.polylines,
       onMapCreated: widget.onMapCreated,
-      style: isDarkMode(context) ? _darkMapStyle : _lightMapStyle
+      style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle
     );
   }
 }

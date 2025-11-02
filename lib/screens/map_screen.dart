@@ -85,6 +85,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Map<String, double>? _lastJourneyRequestOrigin;
   Map<String, double>? _lastJourneyRequestDest;
 
+  // GoogleMaps styles
+  String _darkMapStyle = "{}";
+  String _lightMapStyle = "{}";
+  
+  Future _loadMapStyles() async {
+    _darkMapStyle = await rootBundle.loadString('assets/maps_dark_style.json');
+    _lightMapStyle = await rootBundle.loadString('assets/maps_light_style.json');
+  }
+
   // this function is to load all the data on app launch and
   // still keep context
   @override
@@ -188,6 +197,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (_selectedRoutes.isNotEmpty) {
       _updateDisplayedRoutes();
     }
+
+    // load GoogleMaps styles
+    await _loadMapStyles();
 
     // Finally, get the initial bus locations and start the live updates.
     _loadingMessageNotifier.value = 'Loading bus positions...';
@@ -1749,6 +1761,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ? {_searchLocationMarker!}
                                     : {},
                               ),
+                    darkMapStyle: _darkMapStyle,
+                    lightMapStyle: _lightMapStyle,
                     onMapCreated: _onMapCreated,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
@@ -1774,6 +1788,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ? {_searchLocationMarker!}
                                     : {},
                               ),
+                    darkMapStyle: _darkMapStyle,
+                    lightMapStyle: _lightMapStyle,
                     dynamicMarkers: _journeyOverlayActive
                         ? _displayedJourneyBusMarkers
                         : _displayedBusMarkers,
@@ -2052,7 +2068,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const ui.Color.fromARGB(255, 228, 228, 228),
+                        color: isDarkMode(context) ? ui.Color.fromARGB(100, 228, 228, 228) : ui.Color.fromARGB(255, 228, 228, 228),
                         spreadRadius: 1,
                         blurRadius: 6,
                         offset: Offset(0, 5), // changes position of shadow
