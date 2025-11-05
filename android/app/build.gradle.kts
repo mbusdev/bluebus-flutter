@@ -20,6 +20,9 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// needed for flutter_local_notifications
+require(flutter.compileSdkVersion >= 35);
+
 android {
     namespace = "com.ishankumar.maizebus"
     compileSdk = flutter.compileSdkVersion
@@ -28,6 +31,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -36,7 +41,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ishankumar.maizebus"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -57,6 +62,14 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+}
+
+dependencies {
+    // the following two might be needed if issues happen
+    // https://pub.dev/packages/flutter_local_notifications#-android-setup
+    // implementation("androidx.window:window:1.0.0")
+    // implementation("androidx.window:window-java:1.0.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
