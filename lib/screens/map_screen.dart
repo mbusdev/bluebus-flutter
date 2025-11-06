@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
@@ -105,6 +106,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+    ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
+    await theme.loadTheme();
+
     canVibrate = await Haptics.canVibrate();
 
     final busProvider = Provider.of<BusProvider>(context, listen: false);
@@ -1731,6 +1735,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
+          ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
           //if (!Platform.isIOS){print("is androud");}
           return PopScope(
             // lets us prevent back button on map page
@@ -1861,8 +1867,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           top: 15,
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // light/dark mode switch
+                            Switch(
+                              value: themeProvider.theme == ThemeStyle.dark,
+                              onChanged: (newVal) {
+                                setState(() {
+                                  themeProvider.swap();
+                                });
+                              },
+                            ),
+
                             // location button
                             FloatingActionButton.small(
                               onPressed: () {

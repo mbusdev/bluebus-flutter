@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/route_color_service.dart';
 import 'package:bluebus/constants.dart';
 
@@ -17,6 +18,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => BusProvider(repository: BusRepository()),
         ),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider()
+        )
       ],
       child: const MainApp(),
     ),
@@ -30,15 +34,17 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      // Remove the debug banner
-      debugShowCheckedModeBanner: false,
-      title: 'MaizeBus',
-      theme: darkMode,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeObj, child) => MaterialApp(
+        // Remove the debug banner
+        debugShowCheckedModeBanner: false,
+        title: 'MaizeBus',
+        theme: themeDataMap[themeObj.theme],
 
-      // Show onboarding on first run (terms acceptance). OnboardingDecider
-      // will display the welcome + terms flow if needed, otherwise the map.
-      home: const OnboardingDecider(),
+        // Show onboarding on first run (terms acceptance). OnboardingDecider
+        // will display the welcome + terms flow if needed, otherwise the map.
+        home: const OnboardingDecider(),
+      )
     );
   }
 }
