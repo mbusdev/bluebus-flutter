@@ -102,7 +102,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).canvasColor,
+        color: getColor(context, 'background'),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -120,14 +120,14 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).canvasColor,
+                    color: getColor(context, 'background'),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).shadowColor,
+                        color: getColor(context, 'shadow'),
                         spreadRadius: 2, 
                         blurRadius: 6, 
                         offset: Offset(0, 3), 
@@ -176,7 +176,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 30,
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).cardColor,
+                                    color: getColor(context, 'dim'),
                                     borderRadius: BorderRadius.all(Radius.circular(10)
                                     ),
                                   ),
@@ -236,7 +236,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 30,
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).cardColor,
+                                    color: getColor(context, 'dim'),
                                     borderRadius: BorderRadius.all(Radius.circular(10)
                                     ),
                                   ),
@@ -278,7 +278,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                   padding: const EdgeInsets.only(top: 30, bottom: 40),
                   child: Center(
                     child: CircularProgressIndicator(
-                      color: Theme.of(context).primaryColorDark
+                      color: getColor(context, 'opposite')
                     )
                   ),
                 )

@@ -35,7 +35,7 @@ class _BusSheetState extends State<BusSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).canvasColor,
+        color: getColor(context, 'background'),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -162,11 +162,11 @@ class _BusSheetState extends State<BusSheet> {
                                     },
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).cardColor,
+                                        color: getColor(context, 'dim'),
                                         borderRadius: BorderRadius.all(Radius.circular(15)),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Theme.of(context).shadowColor,
+                                            color: getColor(context, 'shadow'),
                                             spreadRadius: 1.5, 
                                             blurRadius: 2, 
                                             offset: Offset(0, 3), 

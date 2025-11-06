@@ -102,7 +102,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     RichText(
                       text: TextSpan(
                         text: 'Welcome to ',
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, fontFamily: 'Urbanist', color: Theme.of(context).primaryColorDark),
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, fontFamily: 'Urbanist', color: getColor(context, 'opposite')),
                         children: const <TextSpan>[
                           TextSpan(text: 'maize', style: TextStyle(color: maizeBusYellow, fontWeight: FontWeight.w800, fontSize: 30)),
                           TextSpan(text: 'bus', style: TextStyle(color: maizeBusBlue, fontWeight: FontWeight.w800, fontSize: 30)),

@@ -328,7 +328,7 @@ class _SearchSheetState extends State<SearchSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
-        color: Theme.of(context).canvasColor,
+        color: getColor(context, 'background'),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -389,7 +389,7 @@ class _SearchSheetState extends State<SearchSheet> {
               controller: _searchController,
               focusNode: _searchFocusNode,
               decoration: InputDecoration(
-                fillColor: Theme.of(context).cardColor,
+                fillColor: getColor(context, 'dim'),
                 filled: true,
                 hintText: 'Start typing...',
                 prefixIcon: Icon(Icons.search),

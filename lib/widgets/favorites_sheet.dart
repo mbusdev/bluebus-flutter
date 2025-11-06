@@ -107,7 +107,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).canvasColor,
+                    color: getColor(context, 'background'),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),

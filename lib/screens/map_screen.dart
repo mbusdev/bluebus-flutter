@@ -1051,7 +1051,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             }
           },
           onSelectJourney: (journey) {
-            _displayJourneyOnMap(journey, Theme.of(context).primaryColorDark);
+            _displayJourneyOnMap(journey, getColor(context, 'opposite'));
           },
           onResolved: (orig, dest) {
             // Cache resolved coordinates for virtual origin/destination resolution
@@ -1071,7 +1071,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       builder: (BuildContext context) {
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).canvasColor,
+            color: getColor(context, 'background'),
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
@@ -1808,7 +1808,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       (_journeyOverlayActive)
                           ? Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).canvasColor,
+                                color: getColor(context, 'background'),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(15),
                                 ),
@@ -1980,7 +1980,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         heroTag: 'routes_fab',
                                         child: Icon(
                                           Icons.directions_bus,
-                                          color: Theme.of(context).primaryColorLight
+                                          color: getColor(context, 'primary')
                                         ),
                                       ),
                                     ),
@@ -2003,7 +2003,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         heroTag: 'favorites_fab',
                                         child: Icon(
                                           Icons.favorite,
-                                          color: Theme.of(context).primaryColorLight
+                                          color: getColor(context, 'primary')
                                         ),
                                       ),
                                     ),
@@ -2027,7 +2027,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         child: Icon(
                                           Icons.search_sharp,
                                           size: 35,
-                                          color: Theme.of(context).primaryColorLight
+                                          color: getColor(context, 'primary')
                                         ),
                                       ),
                                     ),

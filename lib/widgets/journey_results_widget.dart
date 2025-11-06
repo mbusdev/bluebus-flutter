@@ -122,7 +122,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           ),
           color: (_selectedIndex == idx)
               ? isDarkMode(context) ? Color.fromARGB(255, 25, 40, 60) : Color.fromARGB(255, 220, 235, 255)
-              : Theme.of(context).cardColor,
+              : getColor(context, 'dim'),
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
@@ -202,14 +202,14 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).canvasColor,
+              color: getColor(context, 'background'),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).shadowColor,
+                  color: getColor(context, 'shadow'),
                   spreadRadius: 2,
                   blurRadius: 6,
                   offset: Offset(0, 3),
@@ -256,7 +256,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
+                              color: getColor(context, 'dim'),
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),
@@ -319,7 +319,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
+                              color: getColor(context, 'dim'),
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),

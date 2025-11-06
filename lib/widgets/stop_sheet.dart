@@ -142,7 +142,7 @@ class _StopSheetState extends State<StopSheet> {
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).canvasColor,
+                    color: getColor(context, 'background'),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -164,7 +164,7 @@ class _StopSheetState extends State<StopSheet> {
                             return LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Theme.of(context).primaryColorLight, Colors.transparent],
+                              colors: [getColor(context, 'primary'), Colors.transparent],
                               stops: [0.7, 1.0],
                             ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
                           },
