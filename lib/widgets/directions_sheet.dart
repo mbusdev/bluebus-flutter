@@ -102,7 +102,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColorLight,
+        color: Theme.of(context).canvasColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -120,7 +120,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColorLight,
+                    color: Theme.of(context).canvasColor,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -276,7 +276,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
 
                 Padding(
                   padding: const EdgeInsets.only(top: 30, bottom: 40),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Theme.of(context).primaryColorDark
+                    )
+                  ),
                 )
               ],
             );

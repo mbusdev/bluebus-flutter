@@ -1070,9 +1070,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return Container(
-          
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: Theme.of(context).canvasColor,
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
@@ -1809,7 +1808,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       (_journeyOverlayActive)
                           ? Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColorLight,
+                                color: Theme.of(context).canvasColor,
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(15),
                                 ),
@@ -1870,12 +1869,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 _centerOnLocation(true);
                               },
                               heroTag: 'location_fab',
-                              backgroundColor: const ui.Color.fromARGB(
-                                176,
-                                255,
-                                255,
-                                255,
-                              ),
+                              backgroundColor: getColor(context, 'mapButtonSecondary'),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
@@ -1957,7 +1951,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               padding: const EdgeInsets.only(
                                 left: 15,
                                 right: 15,
-                                top: 10,
+                                top: 15,
                               ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,

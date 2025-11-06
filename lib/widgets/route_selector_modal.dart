@@ -58,7 +58,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
           return Container(
             height: MediaQuery.of(context).size.height * 0.8,
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColorLight,
+              color: Theme.of(context).canvasColor,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
@@ -107,10 +107,9 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.0),
                         ),
-                        color: isSelected ? (isDarkMode(context) ? Colors.blue.shade800 : Colors.blue.shade200)
-                                : Theme.of(context).cardColor,
+                        color: isSelected ? getColor(context, 'buttonSelected') : Theme.of(context).cardColor,
                         // Increase elevation when selected
-                        elevation: isSelected ? 6.0 : 2.0,
+                        shadowColor: Colors.blue,
                         child: Theme(
                           data: Theme.of(context).copyWith(
                             splashColor: Colors.transparent,

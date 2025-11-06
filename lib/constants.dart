@@ -63,6 +63,22 @@ const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
 const Color maizeBusYellow = Color.fromARGB(255, 241, 194, 50);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
+const Map<String, Color> lightColors = {
+  'background': Colors.white,
+  'mapButtonPrimary': Color.fromARGB(204, 29, 23, 84), // 204 is 80% opacity
+  'mapButtonSecondary': Color.fromARGB(204, 156, 196, 230),
+  'buttonSelected': Color.fromARGB(255, 120, 192, 255),
+  'button': Color.fromARGB(255, 229, 242, 255),
+};
+
+const Map<String, Color> darkColors = {
+  'background': Color.fromARGB(255, 19, 34, 47),
+  'mapButtonPrimary': Color.fromARGB(217, 229, 242, 255), // 217 is 85% opacity
+  'mapButtonSecondary': Color.fromARGB(204, 106, 146, 181),
+  'buttonSelected': Color.fromARGB(255, 45, 151, 243),
+  'button': Color.fromARGB(255, 33, 71, 105)
+};
+
 // THEMES
 ThemeData lightMode = ThemeData(
   brightness: Brightness.light,
@@ -72,14 +88,18 @@ ThemeData lightMode = ThemeData(
   // color: Theme.of(context).primaryColorLight
   primaryColorLight: Colors.white,
   primaryColorDark: Colors.black,
+  
+  // Use for background colors
+  canvasColor: lightColors['background'],
 
   // Gray box color and shadow color
-  cardColor: Color.fromARGB(255, 235, 235, 235),
+  // cardColor: Color.fromARGB(255, 235, 235, 235),
+  cardColor: lightColors['button'],
   shadowColor: Color.fromARGB(95, 187, 187, 187),
 
   // Default button colors
   floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: maizeBusDarkBlue,
+    backgroundColor: lightColors['mapButtonPrimary'],
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(56),
     ),
@@ -87,7 +107,7 @@ ThemeData lightMode = ThemeData(
 
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
-      backgroundColor: maizeBusDarkBlue,
+      backgroundColor: lightColors['mapButtonPrimary'],
     )
   ),
 
@@ -109,22 +129,25 @@ ThemeData darkMode = ThemeData(
   primaryColorLight: Colors.black,
   primaryColorDark: Colors.white,
   
+  // Use for background colors
+  canvasColor: darkColors['background'],
+  
   // Gray box color and shadow color
-  cardColor: Color.fromARGB(255, 35, 35, 35),
+  // cardColor: Color.fromARGB(255, 35, 35, 35),
+  cardColor: darkColors['button'],
   shadowColor: Color.fromARGB(95, 68, 68, 68),
 
   // Default button themes
   floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: Colors.white,
+    backgroundColor: darkColors['mapButtonPrimary'],
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(56),
     ),
-    
   ),
 
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.white,
+      backgroundColor: darkColors['mapButtonPrimary'],
     )
   ),
   
@@ -139,6 +162,10 @@ ThemeData darkMode = ThemeData(
 
 bool isDarkMode(BuildContext context) {
   return Theme.of(context).brightness == Brightness.dark;
+}
+
+Color getColor(BuildContext context, String type) {
+  return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
 }
 
 //data types

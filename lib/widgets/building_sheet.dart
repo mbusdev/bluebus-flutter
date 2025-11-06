@@ -81,7 +81,7 @@ class _BuildingSheetState extends State<BuildingSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColorLight,
+        color: Theme.of(context).canvasColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -153,7 +153,6 @@ class _BuildingSheetState extends State<BuildingSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text("No building code",
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 20,

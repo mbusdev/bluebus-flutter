@@ -202,7 +202,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColorLight,
+              color: Theme.of(context).canvasColor,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
