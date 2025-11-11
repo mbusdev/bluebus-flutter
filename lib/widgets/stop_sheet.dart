@@ -1,5 +1,6 @@
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
+import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../models/bus.dart';
@@ -451,7 +452,14 @@ class _StopSheetState extends State<StopSheet> {
                                             FontWeight.w600),
                                         ),
                                       ),
-                                                  
+
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          NotificationService.requestPermission();
+                                          NotificationService.sendNotification();
+                                        },
+                                        child: Icon(Icons.notifications_none, size: 20)
+                                      )
                                     ],
                                   ),
                                                   
