@@ -48,19 +48,27 @@ class NotificationService {
     }
   }
 
-  static Future<void> sendNotification() async {
-    
+  static Future<void> sendNotification(String? title, String? body) async {
     const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails('your channel id', 'your channel name',
-            channelDescription: 'your channel description',
-            importance: Importance.defaultImportance,
-            priority: Priority.defaultPriority,
-            ticker: 'ticker');
-    const NotificationDetails notificationDetails =
-        NotificationDetails(android: androidNotificationDetails);
+        AndroidNotificationDetails(
+          'your channel id',
+          'your channel name',
+          channelDescription: 'your channel description',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          ticker: 'ticker',
+        );
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidNotificationDetails,
+    );
     await _notificationsPlugin.show(
-        0, 'plain title', 'plain body', notificationDetails,
-        payload: 'item x');
-
+      _id++,
+      title,
+      body,
+      notificationDetails,
+      //payload: 'item x',
+    );
   }
 }
+
+int _id = 0;

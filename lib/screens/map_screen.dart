@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
@@ -47,7 +48,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
 
-  late SharedPreferencesWithCache sharedPreferencesWithCache; 
   GoogleMapController? _mapController;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
@@ -100,9 +100,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   Future<void> _loadAllData() async {
     canVibrate = await Haptics.canVibrate();
-    sharedPreferencesWithCache = await SharedPreferencesWithCache.create(
-      cacheOptions: SharedPreferencesWithCacheOptions()
-    );
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     _loadingMessageNotifier.value = 'Contacting server...';
@@ -679,47 +676,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   bool _isFavorited(String stpid) => _favoriteStops.contains(stpid);
 
-  static const remindersKey = "bus_reminder";
-
-  Future<void> _addReminder(String stpid, String rtid) async {
-    assert(!rtid.contains("|"));
-    var activeReminders = sharedPreferencesWithCache.getStringList(remindersKey);
-    activeReminders ??= [];
-    activeReminders.add("$rtid|$stpid");
-    if (kDebugMode) {
-      debugPrint("reminders is now $activeReminders");
-    }
-    await sharedPreferencesWithCache.setStringList(remindersKey, activeReminders);
-  }
-
-  Future<void> _removeReminder(String stpid, String rtid) async {
-    assert(!rtid.contains("|"));
-    final activeReminders = sharedPreferencesWithCache.getStringList(remindersKey);
-    if (activeReminders == null) {
-      return;
-    }
-    if (activeReminders.contains("$rtid|$stpid")) {
-      activeReminders.remove("$rtid $stpid");
-      if (kDebugMode) {
-        debugPrint("reminders is now $activeReminders");
-      }
-      await sharedPreferencesWithCache.setStringList(remindersKey, activeReminders);
-    }
-  }
-
-  bool _isActiveReminder(String stpid, String rtid) {
-    final activeReminders = _activeReminders();
-    return activeReminders.contains((stpid: stpid, rtid: rtid));
-  }
-
-  Set<({String stpid, String rtid})> _activeReminders() {
-    var activeReminders = sharedPreferencesWithCache.getStringList(remindersKey);
-    activeReminders ??= [];
-    return activeReminders
-      .map((x) => x.split('|'))
-      .map((parts) => (stpid: parts[1], rtid: parts[0]))
-      .toSet();
-  }
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
@@ -1665,12 +1621,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               false,
             );
           },
-          routesWithActiveReminder: _activeReminders().where((x) => x.stpid == stopID).map((x) => x.rtid).toList(),
+          routesWithActiveReminder:
+            IncomingBusReminderService
+              .getActiveReminders()
+              .where((x) => x.stpid == stopID)
+              .map((x) => x.rtid)
+              .toList(),
           onToggleReminder: (stopID, routeID) async {
-            if (_isActiveReminder(stopID, routeID)) {
-              await _removeReminder(stopID, routeID);
+            if (IncomingBusReminderService.isActiveReminder(stopID, routeID)) {
+              await IncomingBusReminderService.removeReminder(stopID, routeID);
             } else {
-              await _addReminder(stopID, routeID);
+              await IncomingBusReminderService.addReminder(stopID, routeID);
             }
           },
         );

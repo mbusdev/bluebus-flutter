@@ -547,7 +547,7 @@ class RemindersButton extends StatelessWidget {
             controller.open();
           }
           NotificationService.requestPermission();
-          NotificationService.sendNotification();
+          //NotificationService.sendNotification();
         },
         child: Icon(Icons.notifications_none, size: 20)
       )
