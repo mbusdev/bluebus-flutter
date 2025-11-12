@@ -15,6 +15,8 @@ class StopSheet extends StatefulWidget {
   final Future<void> Function(String, String) onFavorite;
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
+  final List<String> routesWithActiveReminder;
+  final Future<void> Function(String, String) onToggleReminder;
 
   const StopSheet({
     Key? key,
@@ -22,7 +24,9 @@ class StopSheet extends StatefulWidget {
     required this.stopName,
     required this.onFavorite,
     required this.onUnFavorite,
-    required this.onGetDirections
+    required this.onGetDirections,
+    required this.routesWithActiveReminder,
+    required this.onToggleReminder,
   }) : super(key: key);
 
   @override
@@ -48,6 +52,7 @@ String format(String text) {
 class _StopSheetState extends State<StopSheet> {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
   bool? _isFavorited;
+  late List<String> _routesWithActiveReminder;  
 
   // for select bus stops with images
   late bool imageBusStop;
@@ -56,6 +61,7 @@ class _StopSheetState extends State<StopSheet> {
   @override
   void initState() {
     super.initState();
+    _routesWithActiveReminder = widget.routesWithActiveReminder;
     loadedStopData = fetchStopData(widget.stopID);
     imageBusStop = (widget.stopID == "C250") || (widget.stopID == "N406") ||
                    (widget.stopID == "N405") || (widget.stopID == "N550") ||
@@ -386,7 +392,7 @@ class _StopSheetState extends State<StopSheet> {
                                   
                                   SizedBox(height: 10,),
                                   
-                                  // two bottom buttons
+                                  // bottom buttons
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
@@ -452,14 +458,20 @@ class _StopSheetState extends State<StopSheet> {
                                             FontWeight.w600),
                                         ),
                                       ),
-
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          NotificationService.requestPermission();
-                                          NotificationService.sendNotification();
+                                      RemindersButton(
+                                        incomingBusRoutes: arrivingBuses.map((bus) => bus.id).toList(),
+                                        activeReminderRoutes: _routesWithActiveReminder,
+                                        onToggleReminder: (route) async {
+                                          await widget.onToggleReminder(widget.stopID, route);
+                                          setState(() {
+                                            if (_routesWithActiveReminder.contains(route)) {
+                                              _routesWithActiveReminder.remove(route);
+                                            } else {
+                                              _routesWithActiveReminder.add(route);
+                                            }
+                                          });
                                         },
-                                        child: Icon(Icons.notifications_none, size: 20)
-                                      )
+                                      ),
                                     ],
                                   ),
                                                   
@@ -488,6 +500,57 @@ class _StopSheetState extends State<StopSheet> {
           }
         ),
       ],
+    );
+  }
+}
+
+class RemindersButton extends StatelessWidget {
+  const RemindersButton({
+    super.key,
+    required this.activeReminderRoutes,
+    required this.incomingBusRoutes,
+    required this.onToggleReminder,
+  });
+
+  final List<String> activeReminderRoutes;
+  final List<String> incomingBusRoutes;
+  final Future<void> Function(String) onToggleReminder;
+  
+  @override
+  Widget build(BuildContext context) {
+    final routesList = [];
+    for (final route in incomingBusRoutes) {
+      if (!routesList.contains(route)) {
+        routesList.add(route);
+      }
+    }
+    for (final route in activeReminderRoutes) {
+      if (!routesList.contains(route)) {
+        routesList.add(route);
+      }
+    }
+    return MenuAnchor(
+      menuChildren: routesList
+        .map((route) => MenuItemButton(
+          onPressed: () => onToggleReminder(route),
+          trailingIcon: activeReminderRoutes.contains(route) ? Icon(Icons.notifications_none) : null,
+          child: Text(route),
+        ))
+        .toList(),
+      builder: (
+        BuildContext context, MenuController controller, Widget? child
+      ) => ElevatedButton(
+        onPressed: () {
+          if (controller.isOpen) {
+            controller.close();
+          } else {
+            controller.open();
+          }
+          NotificationService.requestPermission();
+          NotificationService.sendNotification();
+        },
+        child: Icon(Icons.notifications_none, size: 20)
+      )
     );
   }
 } 

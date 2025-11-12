@@ -11,6 +11,7 @@ import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -679,11 +680,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   bool _isFavorited(String stpid) => _favoriteStops.contains(stpid);
 
   static const remindersKey = "bus_reminder";
+
   Future<void> _addReminder(String stpid, String rtid) async {
     assert(!rtid.contains("|"));
     var activeReminders = sharedPreferencesWithCache.getStringList(remindersKey);
     activeReminders ??= [];
     activeReminders.add("$rtid|$stpid");
+    if (kDebugMode) {
+      debugPrint("reminders is now $activeReminders");
+    }
     await sharedPreferencesWithCache.setStringList(remindersKey, activeReminders);
   }
 
@@ -695,6 +700,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
     if (activeReminders.contains("$rtid|$stpid")) {
       activeReminders.remove("$rtid $stpid");
+      if (kDebugMode) {
+        debugPrint("reminders is now $activeReminders");
+      }
       await sharedPreferencesWithCache.setStringList(remindersKey, activeReminders);
     }
   }
@@ -1656,6 +1664,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               stopName,
               false,
             );
+          },
+          routesWithActiveReminder: _activeReminders().where((x) => x.stpid == stopID).map((x) => x.rtid).toList(),
+          onToggleReminder: (stopID, routeID) async {
+            if (_isActiveReminder(stopID, routeID)) {
+              await _removeReminder(stopID, routeID);
+            } else {
+              await _addReminder(stopID, routeID);
+            }
           },
         );
       },
