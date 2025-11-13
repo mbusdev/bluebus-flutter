@@ -67,8 +67,11 @@ const Map<String, Color> lightColors = {
   'primary': Colors.white,
   'opposite': Colors.black,
   'background': Colors.white,
+  
   'mapButtonPrimary': Color.fromARGB(204, 29, 23, 84), // 204 is 80% opacity
   'mapButtonSecondary': Color.fromARGB(204, 156, 196, 230),
+  'mapButtonIcon': Color.fromARGB(255, 229, 242, 255),
+  'mapButtonShadow': Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
 
   'highlighted': Color.fromARGB(255, 120, 192, 255),
   'dim': Color.fromARGB(255, 229, 242, 255),
@@ -80,8 +83,11 @@ const Map<String, Color> darkColors = {
   'primary': Colors.black,
   'opposite': Colors.white,
   'background': Color.fromARGB(255, 19, 34, 47),
+
   'mapButtonPrimary': Color.fromARGB(217, 229, 242, 255), // 217 is 85% opacity
   'mapButtonSecondary': Color.fromARGB(204, 106, 146, 181),
+  'mapButtonIcon': Color.fromARGB(255, 29, 23, 84),
+  'mapButtonShadow': Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
 
   'highlighted': Color.fromARGB(255, 45, 151, 243),
   'dim': Color.fromARGB(255, 33, 71, 105),

@@ -1963,11 +1963,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 ),
                             ],
                           )
+                          
                           // else, main buttons row
                           : Padding(
                               padding: const EdgeInsets.only(
-                                left: 15,
-                                right: 15,
+                                left: 25,
+                                right: 25,
                                 top: 15,
                               ),
                               child: Row(
@@ -1976,8 +1977,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 children: [
                                   // routes
                                   SizedBox(
-                                    width: 55,
-                                    height: 55,
+                                    width: 50,
+                                    height: 50,
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
@@ -1997,18 +1998,51 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         heroTag: 'routes_fab',
                                         child: Icon(
                                           Icons.directions_bus,
-                                          color: getColor(context, 'primary')
+                                          color: getColor(context, 'mapButtonIcon'),
+                                          size: 35,
                                         ),
                                       ),
                                     ),
                                   ),
             
                                   SizedBox(width: 15),
+
+                                  // search
+                                  Expanded( // stretch width
+                                    child: SizedBox(
+                                      height: 50,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          if (canVibrate && Platform.isIOS){
+                                            await Haptics.vibrate(HapticsType.light);
+                                          }
+                                          _showSearchSheet();
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                        icon: Icon(
+                                          Icons.search_sharp,
+                                          color: getColor(context, 'mapButtonIcon'),
+                                          size: 35,
+                                        ),
+                                        label: Text(
+                                          "where to?",
+                                          style: TextStyle(
+                                            color: getColor(context, 'mapButtonIcon').withAlpha(214),
+                                            fontSize: 22
+                                          )
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  SizedBox(width: 15),
             
                                   // favorites
                                   SizedBox(
-                                    width: 55,
-                                    height: 55,
+                                    width: 50,
+                                    height: 50,
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
@@ -2020,31 +2054,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         heroTag: 'favorites_fab',
                                         child: Icon(
                                           Icons.favorite,
-                                          color: getColor(context, 'primary')
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-            
-                                  Spacer(),
-            
-                                  // search
-                                  SizedBox(
-                                    width: 75,
-                                    height: 75,
-                                    child: FittedBox(
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-                                          _showSearchSheet();
-                                        },
-                                        heroTag: 'search_fab',
-                                        child: Icon(
-                                          Icons.search_sharp,
+                                          color: getColor(context, 'mapButtonIcon'),
                                           size: 35,
-                                          color: getColor(context, 'primary')
                                         ),
                                       ),
                                     ),
