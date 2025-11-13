@@ -1967,8 +1967,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           // else, main buttons row
                           : Padding(
                               padding: const EdgeInsets.only(
-                                left: 25,
-                                right: 25,
+                                left: 15,
+                                right: 15,
                                 top: 15,
                               ),
                               child: Row(
@@ -1980,28 +1980,48 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     width: 50,
                                     height: 50,
                                     child: FittedBox(
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-
-                                          // just in case
-                                          if (busProvider.routes.isEmpty){
-                                            await busProvider.loadRoutes();
-                                            _updateAvailableRoutes(busProvider.routes);
-                                            _cacheRouteOverlays(busProvider.routes);
-                                          }
-                                          
-                                          _showBusRoutesModal(busProvider.routes,);
-                                        },
-                                        heroTag: 'routes_fab',
-                                        child: Icon(
-                                          Icons.directions_bus,
-                                          color: getColor(context, 'mapButtonIcon'),
-                                          size: 35,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 10,
+                                              offset: Offset(0, 6)
+                                            )
+                                          ],
+                                          borderRadius: BorderRadius.circular(25)
                                         ),
-                                      ),
+                                        child: FloatingActionButton(
+                                          onPressed: () async {
+                                            if (canVibrate && Platform.isIOS){
+                                              await Haptics.vibrate(HapticsType.light);
+                                            }
+
+                                            // just in case
+                                            if (busProvider.routes.isEmpty){
+                                              await busProvider.loadRoutes();
+                                              _updateAvailableRoutes(busProvider.routes);
+                                              _cacheRouteOverlays(busProvider.routes);
+                                            }
+                                            
+                                            _showBusRoutesModal(busProvider.routes,);
+                                          },
+                                          heroTag: 'routes_fab',
+                                          elevation: 0, // handle shadow ourselves
+                                          child: Icon(
+                                            Icons.directions_bus,
+                                            color: getColor(context, 'mapButtonIcon'),
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                            size: 35,
+                                          ),
+                                        ),
+                                      )
                                     ),
                                   ),
             
@@ -2011,27 +2031,53 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   Expanded( // stretch width
                                     child: SizedBox(
                                       height: 50,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-                                          _showSearchSheet();
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          alignment: Alignment.centerLeft,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 10,
+                                              offset: Offset(0, 6)
+                                            )
+                                          ],
+                                          borderRadius: BorderRadius.circular(25)
                                         ),
-                                        icon: Icon(
-                                          Icons.search_sharp,
-                                          color: getColor(context, 'mapButtonIcon'),
-                                          size: 35,
-                                        ),
-                                        label: Text(
-                                          "where to?",
-                                          style: TextStyle(
-                                            color: getColor(context, 'mapButtonIcon').withAlpha(214),
-                                            fontSize: 22
-                                          )
+                                        child: ElevatedButton.icon(
+                                          onPressed: () async {
+                                            if (canVibrate && Platform.isIOS){
+                                              await Haptics.vibrate(HapticsType.light);
+                                            }
+                                            _showSearchSheet();
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            alignment: Alignment.centerLeft,
+                                          ),
+                                          icon: Icon(
+                                            Icons.search_sharp,
+                                            color: getColor(context, 'mapButtonIcon'),
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                            size: 35,
+                                          ),
+                                          label: Text(
+                                            "where to?",
+                                            style: TextStyle(
+                                              color: getColor(context, 'mapButtonIcon').withAlpha(214),
+                                              fontSize: 22,
+                                              shadows: [
+                                                Shadow(
+                                                  color: getColor(context, 'mapButtonShadow'),
+                                                  blurRadius: 4,
+                                                  offset: Offset(0, 2)
+                                                )
+                                              ],
+                                            )
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -2044,18 +2090,38 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     width: 50,
                                     height: 50,
                                     child: FittedBox(
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-                                          _showFavoritesSheet();
-                                        },
-                                        heroTag: 'favorites_fab',
-                                        child: Icon(
-                                          Icons.favorite,
-                                          color: getColor(context, 'mapButtonIcon'),
-                                          size: 35,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 10,
+                                              offset: Offset(0, 6)
+                                            )
+                                          ],
+                                          borderRadius: BorderRadius.circular(25)
+                                        ),
+                                        child: FloatingActionButton(
+                                          onPressed: () async {
+                                            if (canVibrate && Platform.isIOS){
+                                              await Haptics.vibrate(HapticsType.light);
+                                            }
+                                            _showFavoritesSheet();
+                                          },
+                                          heroTag: 'favorites_fab',
+                                          elevation: 0,
+                                          child: Icon(
+                                            Icons.favorite,
+                                            color: getColor(context, 'mapButtonIcon'),
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                            size: 35,
+                                          ),
                                         ),
                                       ),
                                     ),
