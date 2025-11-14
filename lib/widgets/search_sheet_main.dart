@@ -189,31 +189,49 @@ class LocationSearchBar extends HookWidget {
       children: [
         SizedBox(
           height: 50,
-          child: TextField(
-            textInputAction: TextInputAction.go,
-            autofocus: true,
-            controller: controller,
-            focusNode: focusNode,
-            decoration: decoration,
-            onChanged: (val) {
-              searchQuery.value = val;
-              showSuggestions.value = true;
-            },
-            onSubmitted: (val) async {
-              final idx = await ngramIndex;
-              final matches = ngramSearch(val, idx);
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: getColor(context, 'mapButtonShadow'),
+                  offset: const Offset(0, 1),
+                  blurRadius: 4,
+                  spreadRadius: 0,
+                ),
+              ],
+              borderRadius: BorderRadius.circular(56),
+            ),
+            child: TextField(
+              textAlignVertical: TextAlignVertical.center,
+              textInputAction: TextInputAction.go,
+              style:  TextStyle(
+                color: getColor(context, 'opposite').withAlpha(204),
+                fontSize: 22
+              ),
+              autofocus: true,
+              controller: controller,
+              focusNode: focusNode,
+              decoration: decoration,
+              onChanged: (val) {
+                searchQuery.value = val;
+                showSuggestions.value = true;
+              },
+              onSubmitted: (val) async {
+                final idx = await ngramIndex;
+                final matches = ngramSearch(val, idx);
 
-              if (matches.isNotEmpty) {
-                final selected = matches.first;
-                controller.text = selected.name;
-                onLocationSelected(
-                  selected,
-                  selected.isBusStop,
-                  selected.stopId ?? "",
-                );
-                showSuggestions.value = false;
-              }
-            },
+                if (matches.isNotEmpty) {
+                  final selected = matches.first;
+                  controller.text = selected.name;
+                  onLocationSelected(
+                    selected,
+                    selected.isBusStop,
+                    selected.stopId ?? "",
+                  );
+                  showSuggestions.value = false;
+                }
+              },
+            ),
           ),
         ),
 
@@ -288,7 +306,11 @@ class LocationSearchBar extends HookWidget {
                   );
                 },
                 separatorBuilder: (BuildContext context, int index) {
-                  return const Divider(height: 0);
+                  return Divider(
+                    height: 0,
+                    thickness: 2,
+                    color: getColor(context, 'dim'),
+                  );
                 },
               );
             } else {
@@ -380,7 +402,7 @@ class _SearchSheetState extends State<SearchSheet> {
           ),
 
           Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16),
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 10),
             child: LocationSearchBar(
               onLocationSelected: (location, isBusStop, stopID) {
                 Navigator.pop(context);
@@ -391,16 +413,39 @@ class _SearchSheetState extends State<SearchSheet> {
               decoration: InputDecoration(
                 fillColor: getColor(context, 'dim'),
                 filled: true,
-                hintText: 'Start typing...',
-                prefixIcon: Icon(Icons.search),
+                hintText: 'where to?',
+                hintStyle: TextStyle(
+                  color: getColor(context, 'opposite').withAlpha(204),
+                  fontSize: 22
+                ),
+                isCollapsed: true,
+                prefixIcon: Padding(
+                  padding: EdgeInsetsGeometry.only(left: 15),
+                  child: Icon(
+                    Icons.search,
+                    shadows: [
+                      Shadow(
+                        color: getColor(context, 'mapButtonShadow'),
+                        blurRadius: 4,
+                        offset: Offset(0, 2)
+                      )
+                    ],
+                    size: 35,
+                    color: getColor(context, 'opposite'),
+                  ),
+                ),
+                // prefixIconConstraints: BoxConstraints(
+                //   minWidth: 100,
+                //   minHeight: 100,
+                // ),
                 
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                  borderRadius: BorderRadius.all(Radius.circular(56.0)),
                   borderSide: BorderSide(color: Colors.transparent, width: 0),
                 ),
 
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                  borderRadius: BorderRadius.all(Radius.circular(56.0)),
                   borderSide: BorderSide(color: Colors.transparent, width: 0),
                 ),
               ),
