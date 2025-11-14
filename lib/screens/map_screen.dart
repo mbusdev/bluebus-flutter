@@ -30,6 +30,7 @@ import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
+import './settings.dart';
 //import 'dart:convert';
 
 class MaizeBusCore extends StatefulWidget {
@@ -1857,7 +1858,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             )
                           : Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16.5
+                                horizontal: 15.5
                               ),
                               child: Container(
                                 decoration: BoxDecoration(
@@ -1879,10 +1880,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     Container( // group maize and bus together on the left
                                       child: Row(children: [
                                         Text(
-                                          "maize",
+                                          'maize',
                                           style: TextStyle(
                                             color: maizeBusYellow,
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w800,
                                             fontSize: 30,
                                             shadows: [
                                               Shadow(
@@ -1894,10 +1895,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ),
                                         ),
                                         Text(
-                                          "bus",
+                                          'bus',
                                           style: TextStyle(
                                             color: maizeBusBlue,
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w800,
                                             fontSize: 30,
                                             shadows: [
                                               Shadow(
@@ -1924,7 +1925,16 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         borderRadius: BorderRadius.circular(25)
                                       ),
                                       child: FloatingActionButton.small(
-                                        onPressed: () { },
+                                        onPressed: () {
+                                          // switch to settings menu
+                                          // with the MaterialPagesRoute animation
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute<void>(
+                                              builder: (context) => Settings(),
+                                            ),
+                                          );
+                                        },
                                         heroTag: 'settings_fab',
                                         backgroundColor: getColor(context, 'mapButtonSecondary'),
                                         elevation: 0,
@@ -1956,23 +1966,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           ? Padding(
                             padding: const EdgeInsets.only(
                               left: 15,
-                              right: 16.5,
+                              right: 15.5,
                               top: 15,
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                // light/dark mode switch
-                                Switch(
-                                  value: themeProvider.theme == ThemeStyle.dark,
-                                  onChanged: (newVal) {
-                                    setState(() {
-                                      themeProvider.swap();
-                                    });
-                                  },
-                                ),
-
                                 // location button
                                 Container(
                                   decoration: BoxDecoration(

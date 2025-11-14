@@ -6,7 +6,6 @@ import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/route_color_service.dart';
-import 'package:bluebus/constants.dart';
 
 // This function initializes the Flutter app and runs the MainApp widget
 void main() async {
