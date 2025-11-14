@@ -90,10 +90,12 @@ class _SettingsState extends State<Settings> {
                           themeProvider.swap();
                         });
                       },
+                      activeThumbColor: getColor(context, 'opposite'),
+                      activeTrackColor: getColor(context, 'highlighted'),
                     ),
                   ],
                 )
-              )
+              ),
             ],
           ),
         )

@@ -1813,7 +1813,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     children: [
                       // if showing journey, show header
                       (_journeyOverlayActive)
-                          ? Container(
+                          ? DecoratedBox(
                               decoration: BoxDecoration(
                                 color: getColor(context, 'background'),
                                 borderRadius: BorderRadius.all(
@@ -1860,7 +1860,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 15.5
                               ),
-                              child: Container(
+                              child: DecoratedBox(
                                 decoration: BoxDecoration(
                                   // this shadow is a little scuffed,
                                   // it might be better to move this outside of SafeArea element.
@@ -1913,7 +1913,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
 
                                     // Settings button
-                                    Container(
+                                    DecoratedBox(
                                       decoration: BoxDecoration(
                                         boxShadow: [
                                           BoxShadow(
@@ -1973,7 +1973,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 // location button
-                                Container(
+                                DecoratedBox(
                                   decoration: BoxDecoration(
                                     boxShadow: [
                                       BoxShadow(
@@ -2093,7 +2093,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     width: 50,
                                     height: 50,
                                     child: FittedBox(
-                                      child: Container(
+                                      child: DecoratedBox(
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
@@ -2144,7 +2144,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   Expanded( // stretch width
                                     child: SizedBox(
                                       height: 50,
-                                      child: Container(
+                                      child: DecoratedBox(
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
@@ -2203,7 +2203,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     width: 50,
                                     height: 50,
                                     child: FittedBox(
-                                      child: Container(
+                                      child: DecoratedBox(
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
