@@ -1855,49 +1855,163 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 ],
                               ),
                             )
-                          : SizedBox.shrink(),
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.5
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  // this shadow is a little scuffed,
+                                  // it might be better to move this outside of SafeArea element.
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(100),
+                                      spreadRadius: 100,
+                                      blurRadius: 100,
+                                      offset: const Offset(0, -60)
+                                    )
+                                  ]
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Container( // group maize and bus together on the left
+                                      child: Row(children: [
+                                        Text(
+                                          "maize",
+                                          style: TextStyle(
+                                            color: maizeBusYellow,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 30,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 10,
+                                                offset: Offset(0, 4)
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                        Text(
+                                          "bus",
+                                          style: TextStyle(
+                                            color: maizeBusBlue,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 30,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 10,
+                                                offset: Offset(0, 4)
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      ],),
+                                    ),
+
+                                    // Settings button
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, 'mapButtonShadow'),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: FloatingActionButton.small(
+                                        onPressed: () { },
+                                        heroTag: 'settings_fab',
+                                        backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(56),
+                                        ),
+                                        child: Icon(
+                                          Icons.settings,
+                                          color: darkColors['mapButtonIcon'],
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              )
+                            ),
             
                       Spacer(),
                       
                       // temp row (might add settings button to it later)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 15,
-                          right: 15,
-                          top: 15,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // light/dark mode switch
-                            Switch(
-                              value: themeProvider.theme == ThemeStyle.dark,
-                              onChanged: (newVal) {
-                                setState(() {
-                                  themeProvider.swap();
-                                });
-                              },
+                      (!_journeyOverlayActive)
+                          ? Padding(
+                            padding: const EdgeInsets.only(
+                              left: 15,
+                              right: 16.5,
+                              top: 15,
                             ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // light/dark mode switch
+                                Switch(
+                                  value: themeProvider.theme == ThemeStyle.dark,
+                                  onChanged: (newVal) {
+                                    setState(() {
+                                      themeProvider.swap();
+                                    });
+                                  },
+                                ),
 
-                            // location button
-                            FloatingActionButton.small(
-                              onPressed: () {
-                                _centerOnLocation(true);
-                              },
-                              heroTag: 'location_fab',
-                              backgroundColor: getColor(context, 'mapButtonSecondary'),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(56),
-                              ),
-                              child: const Icon(
-                                Icons.my_location,
-                                color: Colors.black87,
-                              ),
+                                // location button
+                                Container(
+                                  decoration: BoxDecoration(
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: getColor(context, 'mapButtonShadow'),
+                                        blurRadius: 10,
+                                        offset: Offset(0, 6)
+                                      )
+                                    ],
+                                    borderRadius: BorderRadius.circular(25)
+                                  ),
+                                  child: FloatingActionButton.small(
+                                    onPressed: () {
+                                      _centerOnLocation(true);
+                                    },
+                                    heroTag: 'location_fab',
+                                    backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(56),
+                                    ),
+                                    child: Icon(
+                                      Icons.my_location,
+                                      color: darkColors['mapButtonIcon'],
+                                      shadows: [
+                                        Shadow(
+                                          color: getColor(context, 'mapButtonShadow'),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2)
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                          )
+                          : SizedBox.shrink(),
             
                       // if showing journey, show close and reopen button
                       (_journeyOverlayActive)
