@@ -183,13 +183,28 @@ class _BuildingSheetState extends State<BuildingSheet> {
                   Icons.directions, 
                   color: getColor(context, 'mapButtonIcon'),
                   size: 20,
+                  shadows: [
+                    Shadow(
+                      color: getColor(context, 'mapButtonShadow'),
+                      blurRadius: 4,
+                      offset: Offset(0, 2)
+                    )
+                  ],
                 ),
                 label: Text(
                   'Get Directions',
                   style: TextStyle(
                     color: getColor(context, 'primary'),
-                    fontSize: 16, fontWeight: 
-                    FontWeight.w600),
+                    fontSize: 16, 
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        color: getColor(context, 'mapButtonShadow'),
+                        blurRadius: 4,
+                        offset: Offset(0, 2)
+                      )
+                    ],
+                  ),
                 ), // The text on the right
               ),
       
@@ -207,13 +222,29 @@ class _BuildingSheetState extends State<BuildingSheet> {
                 icon: Icon(
                   Icons.warning_amber_rounded, 
                   color: getColor(context, 'opposite'),
-                  size: 20,), // The icon on the left
+                  size: 20,
+                  shadows: [
+                    Shadow(
+                      color: getColor(context, 'mapButtonShadow'),
+                      blurRadius: 4,
+                      offset: Offset(0, 2)
+                    )
+                  ],
+                ), // The icon on the left
                 label: Text(
                   'Report an Issue',
                   style: TextStyle(
                     color: getColor(context, 'opposite'), 
-                    fontSize: 16, fontWeight: 
-                    FontWeight.w600),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        color: getColor(context, 'mapButtonShadow'),
+                        blurRadius: 4,
+                        offset: Offset(0, 2)
+                      )
+                    ],
+                  ),
                 ), // The text on the right
               ),
       

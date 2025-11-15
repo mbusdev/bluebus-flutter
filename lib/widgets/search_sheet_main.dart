@@ -412,7 +412,14 @@ class _SearchSheetState extends State<SearchSheet> {
                 hintText: 'where to?',
                 hintStyle: TextStyle(
                   color: getColor(context, 'opposite').withAlpha(204),
-                  fontSize: 22
+                  fontSize: 22,
+                  shadows: [
+                    Shadow(
+                      color: getColor(context, 'mapButtonShadow'),
+                      blurRadius: 4,
+                      offset: Offset(0, 2)
+                    )
+                  ],
                 ),
                 isCollapsed: true,
                 prefixIcon: Padding(

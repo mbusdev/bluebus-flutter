@@ -405,13 +405,28 @@ class _StopSheetState extends State<StopSheet> {
                                           Icons.directions, 
                                           color: getColor(context, 'mapButtonIcon'),
                                           size: 20,
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
                                         ), 
                                         label: Text(
                                           'Get Directions',
                                           style: TextStyle(
                                             color: getColor(context, 'primary'),
-                                            fontSize: 16, fontWeight: 
-                                            FontWeight.w600),
+                                            fontSize: 16, 
+                                            fontWeight: FontWeight.w600,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                          ),
                                         ), 
                                       ),
                                             
@@ -442,13 +457,29 @@ class _StopSheetState extends State<StopSheet> {
                                         icon: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
                                           color: (_isFavorited ?? false)? Colors.red : getColor(context, 'opposite'),
-                                          size: 20,), 
+                                          size: 20,
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ), 
                                         label: Text(
                                           (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
                                           style: TextStyle(
                                             color: getColor(context, 'opposite'),
-                                            fontSize: 16, fontWeight: 
-                                            FontWeight.w600),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                          ),
                                         ),
                                       ),
                                                   
