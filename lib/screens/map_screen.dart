@@ -108,7 +108,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   Future<void> _loadAllData() async {
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
-    await theme.loadTheme();
+    theme.onSystemThemeUpdate(context);
+    await theme.loadTheme(); // load user theme data
 
     canVibrate = await Haptics.canVibrate();
 

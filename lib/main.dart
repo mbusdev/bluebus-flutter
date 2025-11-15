@@ -38,7 +38,7 @@ class MainApp extends StatelessWidget {
         // Remove the debug banner
         debugShowCheckedModeBanner: false,
         title: 'MaizeBus',
-        theme: themeDataMap[themeObj.theme],
+        theme: themeObj.getThemeData(),
 
         // Show onboarding on first run (terms acceptance). OnboardingDecider
         // will display the welcome + terms flow if needed, otherwise the map.

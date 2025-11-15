@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:bluebus/constants.dart';
@@ -64,11 +65,12 @@ class _SettingsState extends State<Settings> {
                 ),
                 textAlign: TextAlign.left,
               ),
+              
+              const SizedBox(height: 10),
 
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 5
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -82,7 +84,6 @@ class _SettingsState extends State<Settings> {
                         fontSize: 18,
                       ),
                     ),
-
                     Switch(
                       value: themeProvider.theme == ThemeStyle.dark,
                       onChanged: (newVal) {
@@ -95,6 +96,98 @@ class _SettingsState extends State<Settings> {
                     ),
                   ],
                 )
+              ),
+
+              const SizedBox(height: 20),
+              
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Theme',
+                      style: TextStyle(
+                        fontFamily: 'Urbanist',
+                        fontWeight: FontWeight.w400,
+                        fontSize: 18,
+                      ),
+                    ),
+                    
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: getColor(context, 'mapButtonShadow'),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1)
+                          ),
+                        ],
+                        borderRadius: BorderRadius.circular(56),
+                      ),
+                      child: DropdownMenu(
+                        inputDecorationTheme: InputDecorationTheme(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(56),
+                            borderSide: BorderSide.none
+                          ),
+                          fillColor: getColor(context, 'dim'),
+                          filled: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 20),
+                        ),
+                        initialSelection: themeProvider.theme,
+                        textStyle: TextStyle(
+                          color: getColor(context, 'opposite'),
+                          shadows: [
+                            Shadow(
+                              color: getColor(context, 'mapButtonShadow'),
+                              offset: const Offset(0, 2),
+                              blurRadius: 4
+                            ),
+                          ],
+                        ),
+                        dropdownMenuEntries: [
+                          DropdownMenuEntry(value: ThemeStyle.light, label: "light"),
+                          DropdownMenuEntry(value: ThemeStyle.dark, label: "dark"),
+                          DropdownMenuEntry(value: ThemeStyle.system, label: "system"),
+                        ],
+                        onSelected: (ThemeStyle? selected) {
+                          setState(() {
+                            themeProvider.setTheme(selected!);
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                )
+              ),
+              
+              const SizedBox(height: 20),
+
+              SegmentedButton(
+                style: SegmentedButton.styleFrom(
+                  padding: const EdgeInsets.all(0),
+                  // shadowColor: Colors.black
+                  selectedBackgroundColor: getColor(context, 'highlighted'),
+                  selectedForegroundColor: getColor(context, 'opposite'),
+                  backgroundColor: getColor(context, 'dim'),
+                  side: BorderSide.none
+                ),
+                expandedInsets: EdgeInsets.symmetric(horizontal: 10),
+                segments: [
+                  ButtonSegment(value: ThemeStyle.light, label: Text("light"), icon: Icon(Icons.sunny)),
+                  ButtonSegment(value: ThemeStyle.dark, label: Text("dark"), icon: Icon(Icons.circle)),
+                  ButtonSegment(value: ThemeStyle.system, label: Text("system"), icon: Icon(Icons.computer)),
+                ],
+                selected: <ThemeStyle>{themeProvider.theme},
+                onSelectionChanged: (Set<ThemeStyle> selection) {
+                  setState(() {
+                    themeProvider.setTheme(selection.first);
+                  });
+                },
               ),
             ],
           ),

@@ -430,10 +430,6 @@ class _SearchSheetState extends State<SearchSheet> {
                     color: getColor(context, 'opposite'),
                   ),
                 ),
-                // prefixIconConstraints: BoxConstraints(
-                //   minWidth: 100,
-                //   minHeight: 100,
-                // ),
                 
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(56.0)),
