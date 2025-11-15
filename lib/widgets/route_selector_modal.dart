@@ -109,7 +109,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         ),
                         color: isSelected ? getColor(context, 'highlighted') : getColor(context, 'dim'),
                         // Increase elevation when selected
-                        shadowColor: Colors.blue,
+                        elevation: 2,
+                        shadowColor: getColor(context, 'mapButtonShadow'),
                         child: Theme(
                           data: Theme.of(context).copyWith(
                             splashColor: Colors.transparent,
@@ -144,6 +145,13 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                shadows: [
+                                  Shadow(
+                                    color: getColor(context, 'mapButtonShadow'),
+                                    offset: const Offset(0, 2),
+                                    blurRadius: 4
+                                  ),
+                                ],
                               ),
                             ),
                             trailing: (isSelected)? SizedBox.shrink() : Icon(Icons.add),

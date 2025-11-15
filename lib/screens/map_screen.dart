@@ -1818,7 +1818,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               decoration: BoxDecoration(
                                 color: getColor(context, 'background'),
                                 borderRadius: BorderRadius.all(
-                                  Radius.circular(15),
+                                  Radius.circular(56),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -1842,7 +1842,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
+                                      horizontal: 15,
                                       vertical: 5,
                                     ),
                                     child: Text(
@@ -2018,63 +2018,115 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              ElevatedButton.icon(
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: getColor(context, 'mapButtonShadow'),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 6)
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(56)
+                                ),
+                                child: ElevatedButton.icon(
                                   onPressed: _showJourneySheetOnReopen,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
+                                    backgroundColor: getColor(context, 'mapButtonPrimary'),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(56),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
                                       vertical: 8,
                                     ),
-                                    elevation: 4,
+                                    elevation: 0,
                                   ),
-                                  icon: const Icon(
-                                    color: Colors.black,
+                                  icon: Icon(
+                                    color: getColor(context, 'mapButtonIcon'),
                                     Icons.keyboard_arrow_up,
                                     size: 18,
+                                    shadows: [
+                                      Shadow(
+                                        color: getColor(context, 'mapButtonShadow'),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
                                   ), // The icon on the left
-                                  label: const Text(
+                                  label: Text(
                                     'Steps',
                                     style: TextStyle(
-                                      color: Colors.black,
+                                      color: getColor(context, 'mapButtonIcon'),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                    ),
+                                      shadows: [
+                                        Shadow(
+                                          color: getColor(context, 'mapButtonShadow'),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2)
+                                        )
+                                      ],
+                                    ),                                    
                                   ), // The text on the right
+                                ),
                               ),
 
                               SizedBox(width: 20,),
 
-                              ElevatedButton.icon(
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: getColor(context, 'mapButtonShadow'),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 6)
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(56)
+                                ),
+                                child: ElevatedButton.icon(
                                   onPressed: _clearJourneyOverlays,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
+                                    backgroundColor: getColor(context, 'mapButtonSecondary'),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(56),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
                                       vertical: 8,
                                     ),
-                                    elevation: 4,
+                                    elevation: 0,
                                   ),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.close,
-                                    color: Colors.white,
+                                    color: darkColors['mapButtonIcon']!,
                                     size: 18,
+                                    shadows: [
+                                      Shadow(
+                                        color: getColor(context, 'mapButtonShadow'),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
                                   ), // The icon on the left
-                                  label: const Text(
+                                  label: Text(
                                     'Close',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: darkColors['mapButtonIcon']!,
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
+                                      shadows: [
+                                        Shadow(
+                                          color: getColor(context, 'mapButtonShadow'),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2)
+                                        )
+                                      ],
                                     ),
                                   ), // The text on the right
                                 ),
+                              ),
                             ],
                           )
                           
