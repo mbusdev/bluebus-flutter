@@ -306,11 +306,7 @@ class LocationSearchBar extends HookWidget {
                   );
                 },
                 separatorBuilder: (BuildContext context, int index) {
-                  return Divider(
-                    height: 0,
-                    thickness: 2,
-                    color: getColor(context, 'dim'),
-                  );
+                  return Divider(height: 0);
                 },
               );
             } else {

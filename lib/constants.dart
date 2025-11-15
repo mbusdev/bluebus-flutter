@@ -123,6 +123,11 @@ ThemeData lightMode = ThemeData(
     )
   ),
 
+  dividerTheme: DividerThemeData(
+    thickness: 2,
+    color: lightColors['dim'],
+  ),
+
   // set default text color
   textTheme: TextTheme(
     bodyMedium: TextStyle(
@@ -148,6 +153,11 @@ ThemeData darkMode = ThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: darkColors['mapButtonPrimary'],
     )
+  ),
+  
+  dividerTheme: DividerThemeData(
+    thickness: 2,
+    color: darkColors['dim'],
   ),
   
   // set default text color
