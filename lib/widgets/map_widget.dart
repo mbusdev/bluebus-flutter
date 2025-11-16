@@ -229,7 +229,7 @@ class _AndroidMapState extends State<AndroidMap>
       cameraTargetBounds: CameraTargetBounds(
         LatLngBounds(
           southwest: LatLng(42.217530, -83.809124), // Southern and Westernmost point
-          northeast: LatLng(42.328602, -83.685307), // Northern and Easternmost point
+          northeast: LatLng(42.328602, -83.668917), // Northern and Easternmost point
         )
       ),
       markers: curMarkers.union(widget.staticMarkers),
