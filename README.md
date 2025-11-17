@@ -18,6 +18,12 @@
      GOOGLE_MAPS_API_KEY="_yourkeyhere_"
      ```
 
+## **(WIP)** Firebase Setup (used for push notifications)
+
+1. Create a Firebase project
+2. Follow [[https://firebase.google.com/docs/flutter/setup]]
+3. (iOS) Do this [[https://firebase.google.com/docs/cloud-messaging/get-started?platform=flutter#upload-authentication-key]]
+
 ## Running the App (IOS)
 
 1. **Launch the iOS Simulator:**

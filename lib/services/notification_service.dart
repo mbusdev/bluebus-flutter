@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:bluebus/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -7,6 +10,11 @@ class NotificationService {
   static final _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   static Future<void> initPlugin() async {
+    Firebase.initializeApp(
+      name: "[DEFAULT]",
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // local notifications
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('appicon_no_bg');
     final DarwinInitializationSettings iosSettings =
@@ -23,10 +31,51 @@ class NotificationService {
     if ((initialized == null || !initialized) && kDebugMode) {
       debugPrint("Failed to initialize notifications!");
     }
+    // channel used by push notifications (to make sure it shows up)
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      "high_importance_channel",
+      "High Importance Notifications",
+      description: "Important Stuff",
+      importance: Importance.max,
+    );
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(channel);
   }
 
+  static bool listeningForFcmUpdates = false;
+
   static Future<void> requestPermission() async {
-    if (Platform.isIOS || Platform.isMacOS) {
+    final notificationSettings = await FirebaseMessaging.instance
+        .requestPermission();
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(alert: true);
+    final token = await FirebaseMessaging.instance.getToken();
+    print(
+      "========================================\nFCM Token Is\n====================================",
+    );
+    print("$token");
+
+    if (!listeningForFcmUpdates) {
+      listeningForFcmUpdates = true;
+      FirebaseMessaging.instance.onTokenRefresh
+          .listen((fcmToken) {
+            var i = 0;
+            while (i < 20) {
+              i++;
+              print("=======================================================");
+            }
+            print("The fcm token is now $fcmToken");
+            // TODO
+          })
+          .onError((err) {
+            // TODO
+          });
+    }
+
+    if (Platform.isIOS /*|| Platform.isMacOS*/ ) {
       await _notificationsPlugin
           .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin
