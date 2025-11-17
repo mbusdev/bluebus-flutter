@@ -174,7 +174,11 @@ class _SettingsState extends State<Settings> {
                   selectedBackgroundColor: getColor(context, 'highlighted'),
                   selectedForegroundColor: getColor(context, 'opposite'),
                   backgroundColor: getColor(context, 'dim'),
-                  side: BorderSide.none
+                  side: BorderSide(
+                    color: getColor(context, 'background'),
+                    width: 7,
+                    strokeAlign: BorderSide.strokeAlignOutside
+                  ),
                 ),
                 expandedInsets: EdgeInsets.symmetric(horizontal: 10),
                 segments: [
