@@ -56,8 +56,8 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void swap() {
-    _theme = _theme == ThemeStyle.dark ? ThemeStyle.light : ThemeStyle.dark;
+  void swap(BuildContext context) {
+    _theme = Theme.of(context).brightness == Brightness.dark ? ThemeStyle.light : ThemeStyle.dark;
     saveTheme();
     notifyListeners();
   }

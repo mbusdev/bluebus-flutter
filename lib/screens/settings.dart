@@ -85,10 +85,10 @@ class _SettingsState extends State<Settings> {
                       ),
                     ),
                     Switch(
-                      value: themeProvider.theme == ThemeStyle.dark,
+                      value: Theme.of(context).brightness == Brightness.dark,
                       onChanged: (newVal) {
                         setState(() {
-                          themeProvider.swap();
+                          themeProvider.swap(context);
                         });
                       },
                       activeThumbColor: getColor(context, 'opposite'),

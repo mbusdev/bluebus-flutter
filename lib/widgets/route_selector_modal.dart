@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/route_color_service.dart';
 import '../constants.dart';
 
@@ -25,11 +26,51 @@ class RouteSelectorModal extends StatefulWidget {
 // State for the route selector
 class _RouteSelectorModalState extends State<RouteSelectorModal> {
   late Set<String> tempSelectedRoutes;
+  late List<Map<String, String>> displayedRoutes; // with user-selected order
 
   @override
   void initState() {
     super.initState();
     tempSelectedRoutes = Set<String>.from(widget.initialSelectedRoutes);
+    displayedRoutes = List<Map<String, String>>.from(widget.availableRoutes); // set to default order
+    
+    // update displayedRoutes after loaded from user save data
+    _loadRouteOrder().then((order) {
+      if (order == null) return;
+
+      setState(() {
+        displayedRoutes.sort((a, b) {
+          return order.indexOf(a['id']!).compareTo(order.indexOf(b['id']!));
+        });
+      });
+    });
+  }
+
+  Future<List<String>?> _loadRouteOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('route_order');
+  }
+
+  Future<void> _saveRouteOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // get list of route IDs
+    List<String> order = displayedRoutes.map((e) => e['id']!).toList();
+    await prefs.setStringList('route_order', order);
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    setState(() {
+      // account for index when removing the route before inserting it
+      if (newIndex > oldIndex) --newIndex;
+
+      // reorder
+      final route = displayedRoutes.removeAt(oldIndex);
+      displayedRoutes.insert(newIndex, route);
+    });
+
+    // save to local data
+    _saveRouteOrder();
   }
 
   @override
@@ -65,44 +106,58 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
               ),
             ),
 
-            child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: widget.availableRoutes.length + 2,
-                  itemBuilder: (context, index) {
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // title
+                const Padding(
+                  padding: EdgeInsets.only(left: 20, top: 20, bottom: 4), 
+                  child: Text(
+                    'Select Routes',
+                    style: TextStyle(
+                      fontFamily: 'Urbanist',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 30,
+                    ),
+                  ),
+                ),
 
-                  // TITLE
-                  if (index == 0) {
-                    return const Padding(
-                      padding: EdgeInsets.only(left: 20, top: 20, bottom: 4), 
-                      child: Text(
-                        'Routes Selector',
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 30,
-                        ),
-                      ),
-                    );
+                // description
+                const Padding(
+                  padding: EdgeInsets.only(left: 20, bottom: 14, right: 20), 
+                  child: Text(
+                    'Choose which bus routes are displayed on the map. Long press a route to show only that one.',
+                    style: TextStyle(
+                      fontFamily: 'Urbanist',
+                      fontWeight: FontWeight.w400,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
 
-                  // SUBTITLE
-                  } else if (index == 1) {
-                    return const Padding(
-                      padding: EdgeInsets.only(left: 20, bottom: 14, right: 20), 
-                      child: Text(
-                        'Choose which bus routes are displayed on the map. Long press a route to show only that one.',
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 18,
-                        ),
-                      ),
-                    );
+                // routes list
+                Expanded(
+                  child: ReorderableListView.builder(
+                    scrollController: scrollController,
+                    itemCount: displayedRoutes.length,
+                    
+                    buildDefaultDragHandles: false,
+                    onReorder: _onReorder,
 
-                  // ACTUAL LIST
-                  } else {
-                      final route = widget.availableRoutes[index - 2]; // -2 to account for title and subtitle
+                    // how a route looks when it's being dragged
+                    proxyDecorator: (Widget child, int index, Animation<double> anim) {
+                      return Material(
+                        color: Colors.transparent,
+                        child: child,
+                      );
+                    },
+
+                    itemBuilder: (context, index) {
+                      final route = displayedRoutes[index];
                       final isSelected = tempSelectedRoutes.contains(route['id']);
+
                       return Card(
+                        key: ValueKey(route['id']!),
                         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.0),
@@ -154,7 +209,10 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 ],
                               ),
                             ),
-                            trailing: (isSelected)? SizedBox.shrink() : Icon(Icons.add),
+                            trailing: ReorderableDragStartListener(
+                              index: index,
+                              child: Icon(Icons.drag_handle),
+                            ),
                             onTap: () {
                               setState(() {
                                 if (isSelected) {
@@ -176,8 +234,10 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                           ),
                         ),
                       );
-                  }
-              },
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         }
