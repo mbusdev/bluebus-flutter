@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/providers/theme_provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 class Settings extends StatefulWidget {
@@ -176,14 +177,14 @@ class _SettingsState extends State<Settings> {
                   backgroundColor: getColor(context, 'dim'),
                   side: BorderSide(
                     color: getColor(context, 'background'),
-                    width: 7,
+                    width: 5,
                     strokeAlign: BorderSide.strokeAlignOutside
                   ),
                 ),
                 expandedInsets: EdgeInsets.symmetric(horizontal: 10),
                 segments: [
                   ButtonSegment(value: ThemeStyle.light, label: Text("light"), icon: Icon(Icons.sunny)),
-                  ButtonSegment(value: ThemeStyle.dark, label: Text("dark"), icon: Icon(Icons.circle)),
+                  ButtonSegment(value: ThemeStyle.dark, label: Text("dark"), icon: Icon(FontAwesomeIcons.solidMoon)),
                   ButtonSegment(value: ThemeStyle.system, label: Text("system"), icon: Icon(Icons.computer)),
                 ],
                 selected: <ThemeStyle>{themeProvider.theme},

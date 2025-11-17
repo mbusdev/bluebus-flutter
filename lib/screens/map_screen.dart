@@ -15,6 +15,7 @@ import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +49,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
 
   GoogleMapController? _mapController;
+  CameraPosition? _currentCameraPos;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
   Set<Polyline> _displayedPolylines = {};
@@ -870,6 +872,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+  }
+
+  void _onCameraMove(CameraPosition position) {
+    _currentCameraPos = position;
   }
 
   // Create a bus marker from a Bus model
@@ -1723,6 +1729,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
+  Future<void> _setMapToNorth() async {
+    // Animate the map camera to the user's location
+    if (_mapController != null && _currentCameraPos != null) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: _currentCameraPos!.target, // current position
+            zoom: _currentCameraPos!.zoom,
+            bearing: 0, // face north
+          )
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Only update bus markers when buses change
@@ -1737,12 +1758,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-
           //if (!Platform.isIOS){print("is androud");}
           return PopScope(
             // lets us prevent back button on map page
             canPop: false,
+            onPopInvokedWithResult: (didPop, result) { 
+              // when journey is showing and pop was attempted, clear journey
+              _clearJourneyOverlays();
+            },
             child: Stack(
               children: [
                 // underlying map layer (different ios and android)
@@ -1771,6 +1794,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     darkMapStyle: _darkMapStyle,
                     lightMapStyle: _lightMapStyle,
                     onMapCreated: _onMapCreated,
+                    onCameraMove: _onCameraMove,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: true,
@@ -1801,6 +1825,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         ? _displayedJourneyBusMarkers
                         : _displayedBusMarkers,
                     onMapCreated: _onMapCreated,
+                    onCameraMove: _onCameraMove,
                     //myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     //zoomControlsEnabled: true,
@@ -1971,8 +1996,41 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               top: 15,
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: getColor(context, 'mapButtonShadow'),
+                                        blurRadius: 10,
+                                        offset: Offset(0, 6)
+                                      )
+                                    ],
+                                    borderRadius: BorderRadius.circular(25)
+                                  ),
+                                  child: FloatingActionButton.small(
+                                    onPressed: _setMapToNorth,
+                                    heroTag: 'north_fab',
+                                    backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(56),
+                                    ),
+                                    child: Icon(
+                                      FontAwesomeIcons.compass,
+                                      color: darkColors['mapButtonIcon'],
+                                      shadows: [
+                                        Shadow(
+                                          color: getColor(context, 'mapButtonShadow'),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2)
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
                                 // location button
                                 DecoratedBox(
                                   decoration: BoxDecoration(
