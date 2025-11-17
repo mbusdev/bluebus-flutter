@@ -237,6 +237,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                     },
                   ),
                 ),
+
+                const SizedBox(height: 20),
               ],
             ),
           );
