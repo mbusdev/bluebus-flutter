@@ -1998,35 +1998,38 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: getColor(context, 'mapButtonShadow'),
-                                        blurRadius: 10,
-                                        offset: Offset(0, 6)
-                                      )
-                                    ],
-                                    borderRadius: BorderRadius.circular(25)
-                                  ),
-                                  child: FloatingActionButton.small(
-                                    onPressed: _setMapToNorth,
-                                    heroTag: 'north_fab',
-                                    backgroundColor: getColor(context, 'mapButtonSecondary'),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(56),
-                                    ),
-                                    child: Icon(
-                                      FontAwesomeIcons.compass,
-                                      color: darkColors['mapButtonIcon'],
-                                      shadows: [
-                                        Shadow(
+                                Visibility(
+                                  visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      boxShadow: [
+                                        BoxShadow(
                                           color: getColor(context, 'mapButtonShadow'),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2)
+                                          blurRadius: 10,
+                                          offset: Offset(0, 6)
                                         )
                                       ],
+                                      borderRadius: BorderRadius.circular(25)
+                                    ),
+                                    child: FloatingActionButton.small(
+                                      onPressed: _setMapToNorth,
+                                      heroTag: 'north_fab',
+                                      backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(56),
+                                      ),
+                                      child: Icon(
+                                        FontAwesomeIcons.compass,
+                                        color: darkColors['mapButtonIcon'],
+                                        shadows: [
+                                          Shadow(
+                                            color: getColor(context, 'mapButtonShadow'),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2)
+                                          )
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2199,7 +2202,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
             
                                 children: [
-                                  // routes
+                                  // favorites
                                   SizedBox(
                                     width: 50,
                                     height: 50,
@@ -2220,20 +2223,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             if (canVibrate && Platform.isIOS){
                                               await Haptics.vibrate(HapticsType.light);
                                             }
-
-                                            // just in case
-                                            if (busProvider.routes.isEmpty){
-                                              await busProvider.loadRoutes();
-                                              _updateAvailableRoutes(busProvider.routes);
-                                              _cacheRouteOverlays(busProvider.routes);
-                                            }
-                                            
-                                            _showBusRoutesModal(busProvider.routes,);
+                                            _showFavoritesSheet();
                                           },
-                                          heroTag: 'routes_fab',
-                                          elevation: 0, // handle shadow ourselves
+                                          heroTag: 'favorites_fab',
+                                          elevation: 0,
                                           child: Icon(
-                                            Icons.directions_bus,
+                                            Icons.favorite,
                                             color: getColor(context, 'mapButtonIcon'),
                                             shadows: [
                                               Shadow(
@@ -2245,7 +2240,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             size: 35,
                                           ),
                                         ),
-                                      )
+                                      ),
                                     ),
                                   ),
             
@@ -2308,8 +2303,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   ),
 
                                   SizedBox(width: 15),
-            
-                                  // favorites
+
+                                  // routes
                                   SizedBox(
                                     width: 50,
                                     height: 50,
@@ -2330,12 +2325,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             if (canVibrate && Platform.isIOS){
                                               await Haptics.vibrate(HapticsType.light);
                                             }
-                                            _showFavoritesSheet();
+
+                                            // just in case
+                                            if (busProvider.routes.isEmpty){
+                                              await busProvider.loadRoutes();
+                                              _updateAvailableRoutes(busProvider.routes);
+                                              _cacheRouteOverlays(busProvider.routes);
+                                            }
+                                            
+                                            _showBusRoutesModal(busProvider.routes,);
                                           },
-                                          heroTag: 'favorites_fab',
-                                          elevation: 0,
+                                          heroTag: 'routes_fab',
+                                          elevation: 0, // handle shadow ourselves
                                           child: Icon(
-                                            Icons.favorite,
+                                            Icons.directions_bus,
                                             color: getColor(context, 'mapButtonIcon'),
                                             shadows: [
                                               Shadow(
@@ -2347,7 +2350,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             size: 35,
                                           ),
                                         ),
-                                      ),
+                                      )
                                     ),
                                   ),
                                 ],
