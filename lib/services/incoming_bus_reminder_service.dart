@@ -87,7 +87,7 @@ class IncomingBusReminderService {
       return;
     }
     if (activeReminders.contains("$rtid|$stpid")) {
-      activeReminders.remove("$rtid $stpid");
+      activeReminders.remove("$rtid|$stpid");
       if (kDebugMode) {
         debugPrint("reminders is now $activeReminders");
       }
