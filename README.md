@@ -67,3 +67,7 @@ flutter run --dart-define=BACKEND_URL=http://localhost:3000/mbus/api/v3
 ```
 
 ---
+
+## Running the App With Backend (Android)
+
+The process is similar to iOS, but instead of defining the backend url with localhost, use `10.0.2.2`.
