@@ -2025,34 +2025,26 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       borderRadius: BorderRadius.circular(25)
                                     ),
                                     child: FloatingActionButton.small(
-                                      onPressed: () {
-                                        _setMapToNorth();
-                                        
-                                        // final x = showBottomSheet(
-                                        //   context: context,
-                                        //   enableDrag: true,
-                                        //   backgroundColor: Colors.black,
-                                        //   builder: (BuildContext context) {
-                                        //     return Text("Hello world");
-                                        //   }
-                                        // );
-                                      },
+                                      onPressed: _setMapToNorth,
                                       heroTag: 'north_fab',
                                       backgroundColor: getColor(context, 'mapButtonSecondary'),
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(56),
                                       ),
-                                      child: Icon(
-                                        FontAwesomeIcons.compass,
-                                        color: darkColors['mapButtonIcon'],
-                                        shadows: [
-                                          Shadow(
-                                            color: getColor(context, 'mapButtonShadow'),
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2)
-                                          )
-                                        ],
+                                      child: Transform.rotate(
+                                        angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
+                                        child: Icon(
+                                          FontAwesomeIcons.compass,
+                                          color: darkColors['mapButtonIcon'],
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
