@@ -89,6 +89,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Map<String, double>? _lastJourneyRequestOrigin;
   Map<String, double>? _lastJourneyRequestDest;
 
+  // store persistent bottom sheet controller
+  PersistentBottomSheetController? _bottomSheetController;
+
   // GoogleMaps styles
   String _darkMapStyle = "{}";
   String _lightMapStyle = "{}";
@@ -973,7 +976,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // Show red pin at the location
     _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
 
-    showBottomSheet(
+    _bottomSheetController = showBottomSheet(
       context: context,
       enableDrag: true,
       backgroundColor: Colors.transparent,
@@ -1007,7 +1010,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     String endLoc,
     bool dontUseLocation,
   ) {
-    showBottomSheet(
+    _bottomSheetController = showBottomSheet(
       context: context,
       enableDrag: true,
       backgroundColor: Colors.transparent,
@@ -1340,7 +1343,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
             points: [startLatLng, endLatLng],
             color: walkLineColor, // Walk line color
-            width: 6, // lind width
+            width: 6, // line width
             patterns: [
               PatternItem.dash(30), // Longer dashes
               PatternItem.gap(15), // Longer gaps
@@ -1730,7 +1733,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _setMapToNorth() async {
-    // Animate the map camera to the user's location
     if (_mapController != null && _currentCameraPos != null) {
       await _mapController!.animateCamera(
         CameraUpdate.newCameraPosition(
@@ -1758,13 +1760,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          //if (!Platform.isIOS){print("is androud");}
+          //if (!Platform.isIOS){print("is androud");} // I love androud
           return PopScope(
             // lets us prevent back button on map page
             canPop: false,
             onPopInvokedWithResult: (didPop, result) { 
               // when journey is showing and pop was attempted, clear journey
-              _clearJourneyOverlays();
+              if (_journeyOverlayActive) {
+                _clearJourneyOverlays();
+              }
+
+              // If showing a persistent bottom sheet, close it.
+              // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
+              if (_bottomSheetController != null) {
+                _bottomSheetController!.close();
+                _bottomSheetController = null;
+                _removeSearchLocationMarker();
+              }
             },
             child: Stack(
               children: [
@@ -1998,6 +2010,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                // face north button is only visible when not facing north
                                 Visibility(
                                   visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
                                   child: DecoratedBox(
@@ -2012,7 +2025,18 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       borderRadius: BorderRadius.circular(25)
                                     ),
                                     child: FloatingActionButton.small(
-                                      onPressed: _setMapToNorth,
+                                      onPressed: () {
+                                        _setMapToNorth();
+                                        
+                                        // final x = showBottomSheet(
+                                        //   context: context,
+                                        //   enableDrag: true,
+                                        //   backgroundColor: Colors.black,
+                                        //   builder: (BuildContext context) {
+                                        //     return Text("Hello world");
+                                        //   }
+                                        // );
+                                      },
                                       heroTag: 'north_fab',
                                       backgroundColor: getColor(context, 'mapButtonSecondary'),
                                       elevation: 0,
