@@ -106,8 +106,8 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
               snapSizes: const [0.9],
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: getColor(context, 'background'),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),

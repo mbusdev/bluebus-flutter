@@ -63,6 +63,96 @@ const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
 const Color maizeBusYellow = Color.fromARGB(255, 241, 194, 50);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
+const Map<String, Color> lightColors = {
+  'primary': Colors.white,
+  'opposite': Colors.black,
+  'background': Colors.white,
+  'mapButtonPrimary': Color.fromARGB(204, 29, 23, 84), // 204 is 80% opacity
+  'mapButtonSecondary': Color.fromARGB(204, 156, 196, 230),
+
+  'highlighted': Color.fromARGB(255, 120, 192, 255),
+  'dim': Color.fromARGB(255, 229, 242, 255),
+
+  'shadow': Color.fromARGB(95, 187, 187, 187)
+};
+
+const Map<String, Color> darkColors = {
+  'primary': Colors.black,
+  'opposite': Colors.white,
+  'background': Color.fromARGB(255, 19, 34, 47),
+  'mapButtonPrimary': Color.fromARGB(217, 229, 242, 255), // 217 is 85% opacity
+  'mapButtonSecondary': Color.fromARGB(204, 106, 146, 181),
+
+  'highlighted': Color.fromARGB(255, 45, 151, 243),
+  'dim': Color.fromARGB(255, 33, 71, 105),
+
+  'shadow': Color.fromARGB(95, 68, 68, 68)
+};
+
+bool isDarkMode(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark;
+}
+
+// Usage example: getColor(context, 'background')
+Color getColor(BuildContext context, String type) {
+  return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
+}
+
+// THEMES
+ThemeData lightMode = ThemeData(
+  brightness: Brightness.light,
+  fontFamily: 'Urbanist',
+
+  // Default button themes
+  floatingActionButtonTheme: FloatingActionButtonThemeData(
+    backgroundColor: lightColors['mapButtonPrimary'],
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(56),
+    ),
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: lightColors['mapButtonPrimary'],
+    )
+  ),
+
+  // set default text color
+  textTheme: TextTheme(
+    bodyMedium: TextStyle(
+      color: Colors.black,
+      fontFamily: 'Urbanist'
+    )
+  )
+);
+
+ThemeData darkMode = ThemeData(
+  brightness: Brightness.dark,
+  fontFamily: 'Urbanist',
+  
+  // Default button themes
+  floatingActionButtonTheme: FloatingActionButtonThemeData(
+    backgroundColor: darkColors['mapButtonPrimary'],
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(56),
+    ),
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: darkColors['mapButtonPrimary'],
+    )
+  ),
+  
+  // set default text color
+  textTheme: TextTheme(
+    bodyMedium: TextStyle(
+      color: Colors.white,
+      fontFamily: 'Urbanist'
+    )
+  )
+);
+
 //data types
 class Location {
   final String name;

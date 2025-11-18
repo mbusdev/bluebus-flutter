@@ -101,8 +101,8 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: getColor(context, 'background'),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -119,15 +119,15 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: getColor(context, 'background'),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Color.fromARGB(95, 187, 187, 187), 
+                        color: getColor(context, 'shadow'),
                         spreadRadius: 2, 
                         blurRadius: 6, 
                         offset: Offset(0, 3), 
@@ -176,7 +176,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 30,
                                   decoration: BoxDecoration(
-                                    color: Color.fromARGB(255, 235, 235, 235),
+                                    color: getColor(context, 'dim'),
                                     borderRadius: BorderRadius.all(Radius.circular(10)
                                     ),
                                   ),
@@ -236,7 +236,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 30,
                                   decoration: BoxDecoration(
-                                    color: Color.fromARGB(255, 235, 235, 235),
+                                    color: getColor(context, 'dim'),
                                     borderRadius: BorderRadius.all(Radius.circular(10)
                                     ),
                                   ),
@@ -267,7 +267,6 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                   child: Text(
                     "Options",
                     style: TextStyle(
-                      color: Colors.black,
                       fontFamily: 'Urbanist',
                       fontWeight: FontWeight.w700,
                       fontSize: 30,
@@ -277,7 +276,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
 
                 Padding(
                   padding: const EdgeInsets.only(top: 30, bottom: 40),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: getColor(context, 'opposite')
+                    )
+                  ),
                 )
               ],
             );

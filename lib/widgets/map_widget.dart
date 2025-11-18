@@ -4,23 +4,29 @@ import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import '../constants.dart';
 
 // iOS Map widget
 class MapWidget extends StatelessWidget {
   final LatLng initialCenter;
   final Set<Polyline> polylines;
   final Set<Marker> markers;
+  final String darkMapStyle;
+  final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
   final bool myLocationEnabled;
   final bool myLocationButtonEnabled;
   final bool zoomControlsEnabled;
   final bool mapToolbarEnabled;
-
+  
   const MapWidget({
     super.key,
     required this.initialCenter,
     required this.polylines,
     required this.markers,
+    required this.darkMapStyle,
+    required this.lightMapStyle,
     this.onMapCreated,
     this.myLocationEnabled = true,
     this.myLocationButtonEnabled = false,
@@ -48,6 +54,7 @@ class MapWidget extends StatelessWidget {
       mapToolbarEnabled: mapToolbarEnabled,
       polylines: polylines,
       markers: markers,
+      style: isDarkMode(context) ? darkMapStyle : lightMapStyle
     );
   }
 } 
@@ -59,6 +66,8 @@ class AndroidMap extends StatefulWidget {
   final Set<Polyline> polylines;
   final Set<Marker> dynamicMarkers;
   final Set<Marker> staticMarkers;
+  final String darkMapStyle;
+  final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
   final bool myLocationButtonEnabled;
   AndroidMap(
@@ -66,6 +75,8 @@ class AndroidMap extends StatefulWidget {
       required this.initialCenter,
       required this.dynamicMarkers,
       required this.staticMarkers,
+      required this.darkMapStyle,
+      required this.lightMapStyle,
       this.onMapCreated,
       this.polylines = const {},
       this.myLocationButtonEnabled = false,});
@@ -228,6 +239,7 @@ class _AndroidMapState extends State<AndroidMap>
       ),
       polylines: widget.polylines,
       onMapCreated: widget.onMapCreated,
+      style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle
     );
   }
 }

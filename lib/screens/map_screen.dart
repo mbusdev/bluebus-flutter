@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
@@ -85,6 +86,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Map<String, double>? _lastJourneyRequestOrigin;
   Map<String, double>? _lastJourneyRequestDest;
 
+  // GoogleMaps styles
+  String _darkMapStyle = "{}";
+  String _lightMapStyle = "{}";
+  
+  Future _loadMapStyles() async {
+    _darkMapStyle = await rootBundle.loadString('assets/maps_dark_style.json');
+    _lightMapStyle = await rootBundle.loadString('assets/maps_light_style.json');
+  }
+
   // this function is to load all the data on app launch and
   // still keep context
   @override
@@ -96,6 +106,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+    ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
+    await theme.loadTheme();
+
     canVibrate = await Haptics.canVibrate();
 
     final busProvider = Provider.of<BusProvider>(context, listen: false);
@@ -118,7 +131,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             title: Text(
               startupData!.updateTitle,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
@@ -127,7 +139,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             content: Text(
               startupData!.updateMessage,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 16,
@@ -146,7 +157,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             title: Text(
               startupData!.persistantMessageTitle,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
@@ -155,7 +165,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             content: Text(
               startupData.persistantMessage,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 16,
@@ -192,6 +201,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (_selectedRoutes.isNotEmpty) {
       _updateDisplayedRoutes();
     }
+
+    // load GoogleMaps styles
+    await _loadMapStyles();
 
     // Finally, get the initial bus locations and start the live updates.
     _loadingMessageNotifier.value = 'Loading bus positions...';
@@ -1043,7 +1055,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             }
           },
           onSelectJourney: (journey) {
-            _displayJourneyOnMap(journey);
+            _displayJourneyOnMap(journey, getColor(context, 'opposite'));
           },
           onResolved: (orig, dest) {
             // Cache resolved coordinates for virtual origin/destination resolution
@@ -1062,9 +1074,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return Container(
-          
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: getColor(context, 'background'),
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
@@ -1094,7 +1105,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Display a Journey on the map
-  void _displayJourneyOnMap(Journey journey) async {
+  void _displayJourneyOnMap(Journey journey, Color walkLineColor) async {
     currDisplayed = journey;
 
     // clear previous journey overlay
@@ -1320,7 +1331,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           final walkingPolyline = Polyline(
             polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
             points: [startLatLng, endLatLng],
-            color: Colors.black, // Walk line color
+            color: walkLineColor, // Walk line color
             width: 6, // lind width
             patterns: [
               PatternItem.dash(30), // Longer dashes
@@ -1724,6 +1735,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
+          ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
           //if (!Platform.isIOS){print("is androud");}
           return PopScope(
             // lets us prevent back button on map page
@@ -1753,6 +1766,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ? {_searchLocationMarker!}
                                     : {},
                               ),
+                    darkMapStyle: _darkMapStyle,
+                    lightMapStyle: _lightMapStyle,
                     onMapCreated: _onMapCreated,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
@@ -1778,6 +1793,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ? {_searchLocationMarker!}
                                     : {},
                               ),
+                    darkMapStyle: _darkMapStyle,
+                    lightMapStyle: _lightMapStyle,
                     dynamicMarkers: _journeyOverlayActive
                         ? _displayedJourneyBusMarkers
                         : _displayedBusMarkers,
@@ -1796,8 +1813,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       // if showing journey, show header
                       (_journeyOverlayActive)
                           ? Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: getColor(context, 'background'),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(15),
                                 ),
@@ -1829,7 +1846,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: Text(
                                       "Showing route on map",
                                       style: TextStyle(
-                                        color: Colors.black,
                                         fontFamily: 'Urbanist',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 18,
@@ -1851,20 +1867,26 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           top: 15,
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // light/dark mode switch
+                            Switch(
+                              value: themeProvider.theme == ThemeStyle.dark,
+                              onChanged: (newVal) {
+                                setState(() {
+                                  themeProvider.swap();
+                                });
+                              },
+                            ),
+
                             // location button
                             FloatingActionButton.small(
                               onPressed: () {
                                 _centerOnLocation(true);
                               },
                               heroTag: 'location_fab',
-                              backgroundColor: const ui.Color.fromARGB(
-                                176,
-                                255,
-                                255,
-                                255,
-                              ),
+                              backgroundColor: getColor(context, 'mapButtonSecondary'),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
@@ -1946,7 +1968,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               padding: const EdgeInsets.only(
                                 left: 15,
                                 right: 15,
-                                top: 10,
+                                top: 15,
                               ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -1973,13 +1995,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showBusRoutesModal(busProvider.routes,);
                                         },
                                         heroTag: 'routes_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.directions_bus,
-                                          color: Colors.white,
+                                          color: getColor(context, 'primary')
                                         ),
                                       ),
                                     ),
@@ -2000,13 +2018,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showFavoritesSheet();
                                         },
                                         heroTag: 'favorites_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.favorite,
-                                          color: Colors.white,
+                                          color: getColor(context, 'primary')
                                         ),
                                       ),
                                     ),
@@ -2027,14 +2041,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showSearchSheet();
                                         },
                                         heroTag: 'search_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.search_sharp,
                                           size: 35,
-                                          color: Colors.white,
+                                          color: getColor(context, 'primary')
                                         ),
                                       ),
                                     ),
@@ -2069,7 +2079,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const ui.Color.fromARGB(255, 228, 228, 228),
+                        color: isDarkMode(context) ? ui.Color.fromARGB(100, 228, 228, 228) : ui.Color.fromARGB(255, 228, 228, 228),
                         spreadRadius: 1,
                         blurRadius: 6,
                         offset: Offset(0, 5), // changes position of shadow
@@ -2092,7 +2102,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       Text(
                         "Loading",
                         style: TextStyle(
-                          color: Colors.black,
                           fontFamily: 'Urbanist',
                           fontWeight: FontWeight.w700,
                           fontSize: 20,
@@ -2117,7 +2126,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               return Text(
                                 message,
                                 style: TextStyle(
-                                  color: Colors.black,
                                   fontFamily: 'Urbanist',
                                   fontWeight: FontWeight.w400,
                                   fontSize: 18,

@@ -273,12 +273,12 @@ class LocationSearchBar extends HookWidget {
                         ? Icon(
                             Icons.hail,
                             size: 40,
-                            color: Color.fromARGB(150, 0, 0, 0),
+                            color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
                           )
                         : Icon(
                             Icons.business_rounded,
                             size: 40,
-                            color: Color.fromARGB(150, 0, 0, 0),
+                            color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
                           ),
                     onTap: () {
                       controller.text = loc.name;
@@ -327,8 +327,8 @@ class _SearchSheetState extends State<SearchSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: getColor(context, 'background'),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -344,7 +344,6 @@ class _SearchSheetState extends State<SearchSheet> {
                 const Text(
                   'Search',
                   style: TextStyle(
-                    color: Colors.black,
                     fontFamily: 'Urbanist',
                     fontWeight: FontWeight.w700,
                     fontSize: 30,
@@ -390,11 +389,11 @@ class _SearchSheetState extends State<SearchSheet> {
               controller: _searchController,
               focusNode: _searchFocusNode,
               decoration: InputDecoration(
-                fillColor: Color.fromARGB(255, 235, 235, 235),
+                fillColor: getColor(context, 'dim'),
                 filled: true,
                 hintText: 'Start typing...',
                 prefixIcon: Icon(Icons.search),
-
+                
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(20.0)),
                   borderSide: BorderSide(color: Colors.transparent, width: 0),
