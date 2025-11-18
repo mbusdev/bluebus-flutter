@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:bluebus/constants.dart';
 import 'package:bluebus/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
 
 class NotificationService {
   static final _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -52,6 +55,8 @@ class NotificationService {
         .requestPermission();
     await FirebaseMessaging.instance
         .setForegroundNotificationPresentationOptions(alert: true);
+    await FirebaseMessaging.instance
+        .getAPNSToken(); // ensure it exists for iOS to work
     final token = await FirebaseMessaging.instance.getToken();
     print(
       "========================================\nFCM Token Is\n====================================",
@@ -95,6 +100,16 @@ class NotificationService {
 
       await androidImplementation?.requestNotificationsPermission();
     }
+  }
+
+  static Future<void> sendPushNotification() async {
+    await FirebaseMessaging.instance.getAPNSToken();
+    final registrationToken = await FirebaseMessaging.instance.getToken();
+    await http.post(
+      Uri.parse('$BACKEND_URL/notifyMeLater'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': registrationToken}),
+    );
   }
 
   static Future<void> sendNotification(String? title, String? body) async {
