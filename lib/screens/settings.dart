@@ -18,7 +18,8 @@ class _SettingsState extends State<Settings> {
   Widget build(BuildContext context) {
     ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
-    // only a Scaffold here to allow the use of Switch within it
+    // only a Scaffold here to allow the use of Switch within it,
+    // this is because Switch is a Material object and needs to be within a Material element.
     // Otherwise, we could create our own decorated switch widget to use
     return Scaffold(
       backgroundColor: getColor(context, 'background'),

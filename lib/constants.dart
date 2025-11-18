@@ -95,16 +95,22 @@ const Map<String, Color> darkColors = {
   'shadow': Color.fromARGB(95, 68, 68, 68)
 };
 
+// returns true if the current theme is dark mode
 bool isDarkMode(BuildContext context) {
   return Theme.of(context).brightness == Brightness.dark;
 }
 
-// Usage example: getColor(context, 'background')
+// Gets the Color value of a color name, depending on the current theme
+// For example, to get the background color of a primary button on the map, use:
+// getColor(context, 'mapButtonPrimary')
+// This will change depending on the current theme
 Color getColor(BuildContext context, String type) {
   return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
 }
 
 // THEMES
+// These set default theme colors and styles for things such as text or buttons,
+// depending on whether it is light or dark mode.
 ThemeData lightMode = ThemeData(
   brightness: Brightness.light,
   fontFamily: 'Urbanist',

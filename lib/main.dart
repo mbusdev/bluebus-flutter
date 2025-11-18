@@ -33,12 +33,12 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
+    return Consumer<ThemeProvider>( // rebuilds when ThemeProvider changes
       builder: (context, themeObj, child) => MaterialApp(
         // Remove the debug banner
         debugShowCheckedModeBanner: false,
         title: 'MaizeBus',
-        theme: themeObj.getThemeData(),
+        theme: themeObj.getThemeData(), // gets ThemeData object of current theme
 
         // Show onboarding on first run (terms acceptance). OnboardingDecider
         // will display the welcome + terms flow if needed, otherwise the map.
