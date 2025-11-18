@@ -1066,7 +1066,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             }
           },
           onSelectJourney: (journey) {
-            _displayJourneyOnMap(journey, getColor(context, 'opposite'));
+            _displayJourneyOnMap(journey, getColor(context, ColorType.opposite));
           },
           onResolved: (orig, dest) {
             // Cache resolved coordinates for virtual origin/destination resolution
@@ -1086,7 +1086,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       builder: (BuildContext context) {
         return Container(
           decoration: BoxDecoration(
-            color: getColor(context, 'background'),
+            color: getColor(context, ColorType.background),
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
@@ -1853,7 +1853,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       (_journeyOverlayActive)
                           ? DecoratedBox(
                               decoration: BoxDecoration(
-                                color: getColor(context, 'background'),
+                                color: getColor(context, ColorType.background),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(56),
                                 ),
@@ -1925,7 +1925,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             fontSize: 30,
                                             shadows: [
                                               Shadow(
-                                                color: getColor(context, 'mapButtonShadow'),
+                                                color: getColor(context, ColorType.mapButtonShadow),
                                                 blurRadius: 10,
                                                 offset: Offset(0, 4)
                                               )
@@ -1940,7 +1940,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             fontSize: 30,
                                             shadows: [
                                               Shadow(
-                                                color: getColor(context, 'mapButtonShadow'),
+                                                color: getColor(context, ColorType.mapButtonShadow),
                                                 blurRadius: 10,
                                                 offset: Offset(0, 4)
                                               )
@@ -1955,7 +1955,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       decoration: BoxDecoration(
                                         boxShadow: [
                                           BoxShadow(
-                                            color: getColor(context, 'mapButtonShadow'),
+                                            color: getColor(context, ColorType.mapButtonShadow),
                                             blurRadius: 10,
                                             offset: Offset(0, 6)
                                           )
@@ -1974,17 +1974,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           );
                                         },
                                         heroTag: 'settings_fab',
-                                        backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                        backgroundColor: getColor(context, ColorType.mapButtonSecondary),
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(56),
                                         ),
                                         child: Icon(
                                           Icons.settings,
-                                          color: darkColors['mapButtonIcon'],
+                                          color: darkColors[ColorType.mapButtonIcon],
                                           shadows: [
                                             Shadow(
-                                              color: getColor(context, 'mapButtonShadow'),
+                                              color: getColor(context, ColorType.mapButtonShadow),
                                               blurRadius: 4,
                                               offset: Offset(0, 2)
                                             )
@@ -2017,7 +2017,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     decoration: BoxDecoration(
                                       boxShadow: [
                                         BoxShadow(
-                                          color: getColor(context, 'mapButtonShadow'),
+                                          color: getColor(context, ColorType.mapButtonShadow),
                                           blurRadius: 10,
                                           offset: Offset(0, 6)
                                         )
@@ -2027,7 +2027,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: FloatingActionButton.small(
                                       onPressed: _setMapToNorth,
                                       heroTag: 'north_fab',
-                                      backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                      backgroundColor: getColor(context, ColorType.mapButtonSecondary),
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(56),
@@ -2036,10 +2036,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
                                         child: Icon(
                                           FontAwesomeIcons.compass,
-                                          color: darkColors['mapButtonIcon'],
+                                          color: darkColors[ColorType.mapButtonIcon],
                                           shadows: [
                                             Shadow(
-                                              color: getColor(context, 'mapButtonShadow'),
+                                              color: getColor(context, ColorType.mapButtonShadow),
                                               blurRadius: 4,
                                               offset: Offset(0, 2)
                                             )
@@ -2055,7 +2055,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   decoration: BoxDecoration(
                                     boxShadow: [
                                       BoxShadow(
-                                        color: getColor(context, 'mapButtonShadow'),
+                                        color: getColor(context, ColorType.mapButtonShadow),
                                         blurRadius: 10,
                                         offset: Offset(0, 6)
                                       )
@@ -2067,17 +2067,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       _centerOnLocation(true);
                                     },
                                     heroTag: 'location_fab',
-                                    backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(56),
                                     ),
                                     child: Icon(
                                       Icons.my_location,
-                                      color: darkColors['mapButtonIcon'],
+                                      color: darkColors[ColorType.mapButtonIcon],
                                       shadows: [
                                         Shadow(
-                                          color: getColor(context, 'mapButtonShadow'),
+                                          color: getColor(context, ColorType.mapButtonShadow),
                                           blurRadius: 4,
                                           offset: Offset(0, 2)
                                         )
@@ -2099,7 +2099,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 decoration: BoxDecoration(
                                   boxShadow: [
                                     BoxShadow(
-                                      color: getColor(context, 'mapButtonShadow'),
+                                      color: getColor(context, ColorType.mapButtonShadow),
                                       blurRadius: 10,
                                       offset: Offset(0, 6)
                                     )
@@ -2109,7 +2109,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 child: ElevatedButton.icon(
                                   onPressed: _showJourneySheetOnReopen,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, 'mapButtonPrimary'),
+                                    backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(56),
                                     ),
@@ -2120,12 +2120,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     elevation: 0,
                                   ),
                                   icon: Icon(
-                                    color: getColor(context, 'mapButtonIcon'),
+                                    color: getColor(context, ColorType.mapButtonIcon),
                                     Icons.keyboard_arrow_up,
                                     size: 18,
                                     shadows: [
                                       Shadow(
-                                        color: getColor(context, 'mapButtonShadow'),
+                                        color: getColor(context, ColorType.mapButtonShadow),
                                         blurRadius: 4,
                                         offset: Offset(0, 2)
                                       )
@@ -2134,12 +2134,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   label: Text(
                                     'Steps',
                                     style: TextStyle(
-                                      color: getColor(context, 'mapButtonIcon'),
+                                      color: getColor(context, ColorType.mapButtonIcon),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                       shadows: [
                                         Shadow(
-                                          color: getColor(context, 'mapButtonShadow'),
+                                          color: getColor(context, ColorType.mapButtonShadow),
                                           blurRadius: 4,
                                           offset: Offset(0, 2)
                                         )
@@ -2155,7 +2155,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 decoration: BoxDecoration(
                                   boxShadow: [
                                     BoxShadow(
-                                      color: getColor(context, 'mapButtonShadow'),
+                                      color: getColor(context, ColorType.mapButtonShadow),
                                       blurRadius: 10,
                                       offset: Offset(0, 6)
                                     )
@@ -2165,7 +2165,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 child: ElevatedButton.icon(
                                   onPressed: _clearJourneyOverlays,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, 'mapButtonSecondary'),
+                                    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(56),
                                     ),
@@ -2177,11 +2177,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   ),
                                   icon: Icon(
                                     Icons.close,
-                                    color: darkColors['mapButtonIcon']!,
+                                    color: darkColors[ColorType.mapButtonIcon]!,
                                     size: 18,
                                     shadows: [
                                       Shadow(
-                                        color: getColor(context, 'mapButtonShadow'),
+                                        color: getColor(context, ColorType.mapButtonShadow),
                                         blurRadius: 4,
                                         offset: Offset(0, 2)
                                       )
@@ -2190,12 +2190,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   label: Text(
                                     'Close',
                                     style: TextStyle(
-                                      color: darkColors['mapButtonIcon']!,
+                                      color: darkColors[ColorType.mapButtonIcon]!,
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                       shadows: [
                                         Shadow(
-                                          color: getColor(context, 'mapButtonShadow'),
+                                          color: getColor(context, ColorType.mapButtonShadow),
                                           blurRadius: 4,
                                           offset: Offset(0, 2)
                                         )
@@ -2227,7 +2227,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
-                                              color: getColor(context, 'mapButtonShadow'),
+                                              color: getColor(context, ColorType.mapButtonShadow),
                                               blurRadius: 10,
                                               offset: Offset(0, 6)
                                             )
@@ -2245,10 +2245,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           elevation: 0,
                                           child: Icon(
                                             Icons.favorite,
-                                            color: getColor(context, 'mapButtonIcon'),
+                                            color: getColor(context, ColorType.mapButtonIcon),
                                             shadows: [
                                               Shadow(
-                                                color: getColor(context, 'mapButtonShadow'),
+                                                color: getColor(context, ColorType.mapButtonShadow),
                                                 blurRadius: 4,
                                                 offset: Offset(0, 2)
                                               )
@@ -2270,7 +2270,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
-                                              color: getColor(context, 'mapButtonShadow'),
+                                              color: getColor(context, ColorType.mapButtonShadow),
                                               blurRadius: 10,
                                               offset: Offset(0, 6)
                                             )
@@ -2289,10 +2289,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ),
                                           icon: Icon(
                                             Icons.search_sharp,
-                                            color: getColor(context, 'mapButtonIcon'),
+                                            color: getColor(context, ColorType.mapButtonIcon),
                                             shadows: [
                                               Shadow(
-                                                color: getColor(context, 'mapButtonShadow'),
+                                                color: getColor(context, ColorType.mapButtonShadow),
                                                 blurRadius: 4,
                                                 offset: Offset(0, 2)
                                               )
@@ -2302,11 +2302,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           label: Text(
                                             "where to?",
                                             style: TextStyle(
-                                              color: getColor(context, 'mapButtonIcon').withAlpha(214),
+                                              color: getColor(context, ColorType.mapButtonIcon).withAlpha(214),
                                               fontSize: 22,
                                               shadows: [
                                                 Shadow(
-                                                  color: getColor(context, 'mapButtonShadow'),
+                                                  color: getColor(context, ColorType.mapButtonShadow),
                                                   blurRadius: 4,
                                                   offset: Offset(0, 2)
                                                 )
@@ -2329,7 +2329,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         decoration: BoxDecoration(
                                           boxShadow: [
                                             BoxShadow(
-                                              color: getColor(context, 'mapButtonShadow'),
+                                              color: getColor(context, ColorType.mapButtonShadow),
                                               blurRadius: 10,
                                               offset: Offset(0, 6)
                                             )
@@ -2355,10 +2355,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           elevation: 0, // handle shadow ourselves
                                           child: Icon(
                                             Icons.directions_bus,
-                                            color: getColor(context, 'mapButtonIcon'),
+                                            color: getColor(context, ColorType.mapButtonIcon),
                                             shadows: [
                                               Shadow(
-                                                color: getColor(context, 'mapButtonShadow'),
+                                                color: getColor(context, ColorType.mapButtonShadow),
                                                 blurRadius: 4,
                                                 offset: Offset(0, 2)
                                               )

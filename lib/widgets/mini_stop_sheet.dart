@@ -53,11 +53,11 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: getColor(context, 'dim'),
+        color: getColor(context, ColorType.dim),
         borderRadius: BorderRadius.all(Radius.circular(15)),
         boxShadow: [
           BoxShadow(
-            color: getColor(context, 'shadow'),
+            color: getColor(context, ColorType.shadow),
             spreadRadius: 1.5, 
             blurRadius: 2, 
             offset: Offset(0, 3), 

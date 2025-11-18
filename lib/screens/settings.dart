@@ -22,7 +22,7 @@ class _SettingsState extends State<Settings> {
     // this is because Switch is a Material object and needs to be within a Material element.
     // Otherwise, we could create our own decorated switch widget to use
     return Scaffold(
-      backgroundColor: getColor(context, 'background'),
+      backgroundColor: getColor(context, ColorType.background),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(
@@ -93,8 +93,8 @@ class _SettingsState extends State<Settings> {
                           themeProvider.swap(context);
                         });
                       },
-                      activeThumbColor: getColor(context, 'opposite'),
-                      activeTrackColor: getColor(context, 'highlighted'),
+                      activeThumbColor: getColor(context, ColorType.opposite),
+                      activeTrackColor: getColor(context, ColorType.highlighted),
                     ),
                   ],
                 )
@@ -123,7 +123,7 @@ class _SettingsState extends State<Settings> {
                       decoration: BoxDecoration(
                         boxShadow: [
                           BoxShadow(
-                            color: getColor(context, 'mapButtonShadow'),
+                            color: getColor(context, ColorType.mapButtonShadow),
                             blurRadius: 4,
                             offset: const Offset(0, 1)
                           ),
@@ -136,16 +136,16 @@ class _SettingsState extends State<Settings> {
                             borderRadius: BorderRadius.circular(56),
                             borderSide: BorderSide.none
                           ),
-                          fillColor: getColor(context, 'dim'),
+                          fillColor: getColor(context, ColorType.dim),
                           filled: true,
                           contentPadding: EdgeInsets.symmetric(horizontal: 20),
                         ),
                         initialSelection: themeProvider.theme,
                         textStyle: TextStyle(
-                          color: getColor(context, 'opposite'),
+                          color: getColor(context, ColorType.opposite),
                           shadows: [
                             Shadow(
-                              color: getColor(context, 'mapButtonShadow'),
+                              color: getColor(context, ColorType.mapButtonShadow),
                               offset: const Offset(0, 2),
                               blurRadius: 4
                             ),
@@ -173,11 +173,11 @@ class _SettingsState extends State<Settings> {
                 style: SegmentedButton.styleFrom(
                   padding: const EdgeInsets.all(0),
                   // shadowColor: Colors.black
-                  selectedBackgroundColor: getColor(context, 'highlighted'),
-                  selectedForegroundColor: getColor(context, 'opposite'),
-                  backgroundColor: getColor(context, 'dim'),
+                  selectedBackgroundColor: getColor(context, ColorType.highlighted),
+                  selectedForegroundColor: getColor(context, ColorType.opposite),
+                  backgroundColor: getColor(context, ColorType.dim),
                   side: BorderSide(
-                    color: getColor(context, 'background'),
+                    color: getColor(context, ColorType.background),
                     width: 5,
                     strokeAlign: BorderSide.strokeAlignOutside
                   ),
