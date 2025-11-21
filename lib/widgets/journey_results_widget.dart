@@ -207,18 +207,10 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: getColor(context, 'shadow'),
-                  spreadRadius: 2,
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
-                ),
-              ],
             ),
 
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 20),
               child: Column(
                 children: [
                   Row(
@@ -254,22 +246,24 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                           },
                           child: Container(
                             alignment: Alignment.centerLeft,
-                            height: 30,
+                            height: 40,
                             decoration: BoxDecoration(
                               color: getColor(context, 'dim'),
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(10),
-                              ),
+                              borderRadius: BorderRadius.all(Radius.circular(20),),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: getColor(context, 'mapButtonShadow'),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2)
+                                )
+                              ],
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.only(
-                                left: 10,
-                                right: 10,
-                              ),
+                              padding: const EdgeInsets.only(left: 15, right: 15,),
                               child: Text(
                                 widget.start,
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w400,
                                   height: 0,
                                 ),
@@ -282,7 +276,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                     ],
                   ),
 
-                  SizedBox(height: 10),
+                  SizedBox(height: 13,),
 
                   Row(
                     children: [
@@ -317,22 +311,24 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                           },
                           child: Container(
                             alignment: Alignment.centerLeft,
-                            height: 30,
+                            height: 40,
                             decoration: BoxDecoration(
                               color: getColor(context, 'dim'),
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(10),
-                              ),
+                              borderRadius: BorderRadius.all(Radius.circular(20),),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: getColor(context, 'mapButtonShadow'),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2)
+                                )
+                              ],
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.only(
-                                left: 10,
-                                right: 10,
-                              ),
+                              padding: const EdgeInsets.only(left: 15, right: 15,),
                               child: Text(
                                 widget.end,
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w400,
                                   height: 0,
                                 ),

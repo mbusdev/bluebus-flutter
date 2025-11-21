@@ -394,23 +394,39 @@ class _StopSheetState extends State<StopSheet> {
                                           widget.onGetDirections();
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: maizeBusDarkBlue,
+                                          backgroundColor: getColor(context, 'mapButtonPrimary'),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(15),
+                                            borderRadius: BorderRadius.circular(30),
                                           ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                                           elevation: 4
                                         ),
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.directions, 
-                                          color: Colors.white,
-                                          size: 20,), 
-                                        label: const Text(
+                                          color: getColor(context, 'mapButtonIcon'),
+                                          size: 20,
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ), 
+                                        label: Text(
                                           'Get Directions',
                                           style: TextStyle(
-                                            color: Colors.white, 
-                                            fontSize: 16, fontWeight: 
-                                            FontWeight.w600),
+                                            color: getColor(context, 'primary'),
+                                            fontSize: 16, 
+                                            fontWeight: FontWeight.w600,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                          ),
                                         ), 
                                       ),
                                             
@@ -432,22 +448,38 @@ class _StopSheetState extends State<StopSheet> {
                                           });
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: Color.fromARGB(255, 235, 235, 235),
+                                          backgroundColor: getColor(context, 'dim'),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(15),
+                                            borderRadius: BorderRadius.circular(30),
                                           ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                                         ),
                                         icon: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorited ?? false)? Colors.red : Colors.black,
-                                          size: 20,), 
+                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, 'opposite'),
+                                          size: 20,
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, 'mapButtonShadow'),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ), 
                                         label: Text(
                                           (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
-                                          style: const TextStyle(
-                                            color: Colors.black, 
-                                            fontSize: 16, fontWeight: 
-                                            FontWeight.w600),
+                                          style: TextStyle(
+                                            color: getColor(context, 'opposite'),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, 'mapButtonShadow'),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                          ),
                                         ),
                                       ),
                                                   

@@ -15,6 +15,7 @@ class MapWidget extends StatelessWidget {
   final String darkMapStyle;
   final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
+  final void Function(CameraPosition)? onCameraMove;
   final bool myLocationEnabled;
   final bool myLocationButtonEnabled;
   final bool zoomControlsEnabled;
@@ -28,6 +29,7 @@ class MapWidget extends StatelessWidget {
     required this.darkMapStyle,
     required this.lightMapStyle,
     this.onMapCreated,
+    this.onCameraMove,
     this.myLocationEnabled = true,
     this.myLocationButtonEnabled = false,
     this.zoomControlsEnabled = true,
@@ -38,6 +40,7 @@ class MapWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GoogleMap(
       onMapCreated: onMapCreated,
+      onCameraMove: onCameraMove,
       initialCameraPosition: CameraPosition(
         target: initialCenter,
         zoom: 15.0,
@@ -69,6 +72,7 @@ class AndroidMap extends StatefulWidget {
   final String darkMapStyle;
   final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
+  final void Function(CameraPosition)? onCameraMove;
   final bool myLocationButtonEnabled;
   AndroidMap(
       {super.key,
@@ -78,6 +82,7 @@ class AndroidMap extends StatefulWidget {
       required this.darkMapStyle,
       required this.lightMapStyle,
       this.onMapCreated,
+      this.onCameraMove,
       this.polylines = const {},
       this.myLocationButtonEnabled = false,});
 
@@ -229,7 +234,7 @@ class _AndroidMapState extends State<AndroidMap>
       cameraTargetBounds: CameraTargetBounds(
         LatLngBounds(
           southwest: LatLng(42.217530, -83.809124), // Southern and Westernmost point
-          northeast: LatLng(42.328602, -83.685307), // Northern and Easternmost point
+          northeast: LatLng(42.328602, -83.668917), // Northern and Easternmost point
         )
       ),
       markers: curMarkers.union(widget.staticMarkers),
@@ -239,6 +244,7 @@ class _AndroidMapState extends State<AndroidMap>
       ),
       polylines: widget.polylines,
       onMapCreated: widget.onMapCreated,
+      onCameraMove: widget.onCameraMove,
       style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle
     );
   }

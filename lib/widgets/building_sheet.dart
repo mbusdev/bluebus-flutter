@@ -172,23 +172,39 @@ class _BuildingSheetState extends State<BuildingSheet> {
                   widget.onGetDirections(widget.building);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: maizeBusDarkBlue,
+                  backgroundColor: getColor(context, 'mapButtonPrimary'),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                   elevation: 4
                 ),
-                icon: const Icon(
+                icon:  Icon(
                   Icons.directions, 
-                  color: Colors.white,
-                  size: 20,), // The icon on the left
-                label: const Text(
+                  color: getColor(context, 'mapButtonIcon'),
+                  size: 20,
+                  shadows: [
+                    Shadow(
+                      color: getColor(context, 'mapButtonShadow'),
+                      blurRadius: 4,
+                      offset: Offset(0, 2)
+                    )
+                  ],
+                ),
+                label: Text(
                   'Get Directions',
                   style: TextStyle(
-                    color: Colors.white, 
-                    fontSize: 16, fontWeight: 
-                    FontWeight.w600),
+                    color: getColor(context, 'primary'),
+                    fontSize: 16, 
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        color: getColor(context, 'mapButtonShadow'),
+                        blurRadius: 4,
+                        offset: Offset(0, 2)
+                      )
+                    ],
+                  ),
                 ), // The text on the right
               ),
       
@@ -197,22 +213,38 @@ class _BuildingSheetState extends State<BuildingSheet> {
                   sendEmailWithSender(context, widget.building.name);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color.fromARGB(255, 235, 235, 235),
+                  backgroundColor: getColor(context, 'dim'),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                 ),
-                icon: const Icon(
+                icon: Icon(
                   Icons.warning_amber_rounded, 
-                  color: Colors.black,
-                  size: 20,), // The icon on the left
-                label: const Text(
+                  color: getColor(context, 'opposite'),
+                  size: 20,
+                  shadows: [
+                    Shadow(
+                      color: getColor(context, 'mapButtonShadow'),
+                      blurRadius: 4,
+                      offset: Offset(0, 2)
+                    )
+                  ],
+                ), // The icon on the left
+                label: Text(
                   'Report an Issue',
                   style: TextStyle(
-                    color: Colors.black, 
-                    fontSize: 16, fontWeight: 
-                    FontWeight.w600),
+                    color: getColor(context, 'opposite'), 
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        color: getColor(context, 'mapButtonShadow'),
+                        blurRadius: 4,
+                        offset: Offset(0, 2)
+                      )
+                    ],
+                  ),
                 ), // The text on the right
               ),
       

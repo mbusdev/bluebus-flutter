@@ -25,6 +25,13 @@ class _BusSheetState extends State<BusSheet> {
   late Bus currBus = BusRepository.getBus(widget.busID)!;
   late Future<List<BusStopWithPrediction>> futureBusStops;
   
+  static const Map<String, String> busFullnessMap = {
+    "FULL": "Mostly full",
+    "EMPTY": "Mostly empty",
+    "HALF_EMPTY": "Half full",
+    "N/A": "Fullness unavailable"
+  };
+  
   @override
   void initState() {
     super.initState();
@@ -83,14 +90,17 @@ class _BusSheetState extends State<BusSheet> {
                         fontSize: 30,
                       ),
                     ),
-                    Text(
-                      "Bus ${currBus.id}",
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          "Bus ${currBus.id} - ${busFullnessMap[currBus.fullness]}",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontFamily: 'Urbanist',
+                            fontSize: 20,
+                          ),
+                        ),
+                      ]
                     ),
                   ],
                 ),
