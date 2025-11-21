@@ -1540,36 +1540,54 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return BusSheet(
-          busID: busID,
-          onSelectStop: (name, id) {
-            LatLng? latLong = getLatLongFromStopID(id);
-            if (latLong != null) {
-              _showStopSheet(id, name, latLong.latitude, latLong.longitude);
-            } else {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Error'),
-                    content: const Text('Couldn\'t load stop.'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Dismiss the dialog
-                        },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            }
-          },
-        );
-      },
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+
+        child: DraggableScrollableSheet(
+
+        // Very hacky, I know. I couldn't find a better way to:
+        //    1. Have the contents of the BusSheet be scrollable
+        //    2. Have swiping down on the BusSheet close the modal, AND
+        //    3. Have clicking in the shaded area at the top close the modal
+        initialChildSize: 0.99,
+        minChildSize: 0.98, 
+        maxChildSize: 1.0,
+
+        builder: (BuildContext context, ScrollController scrollController) {
+          return BusSheet(
+            busID: busID,
+            scrollController: scrollController,
+            onSelectStop: (name, id) {
+              Navigator.pop(context); // Close the current modal
+              LatLng? latLong = getLatLongFromStopID(id);
+              if (latLong != null) {
+                _showStopSheet(id, name, latLong.latitude, latLong.longitude);
+              } else {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('Error'),
+                      content: const Text('Couldn\'t load stop.'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Dismiss the dialog
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+            },
+          );
+        },
+      )
+      )
     );
   }
 
@@ -1628,6 +1646,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           stopName: stopName,
           onFavorite: _addFavoriteStop,
           onUnFavorite: _removeFavoriteStop,
+          showBusSheet: (busId) {
+            // When someone clicks "See all stops for this bus" this callback runs
+            debugPrint("Got 'See all stops' click for Bus ${busId}");
+            Navigator.pop(context); // Close the current modal
+            _showBusSheet(busId);
+          },
           onGetDirections: () {
             Map<String, double>? start;
             Map<String, double>? end = {'lat': lat, 'lon': long};

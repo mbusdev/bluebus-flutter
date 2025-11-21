@@ -4,25 +4,30 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../models/bus.dart';
 import '../services/route_color_service.dart';
-import '../models/bus_stop.dart'; 
+import '../models/bus_stop.dart';
 import 'package:intl/intl.dart';
+import 'upcoming_stops_widget.dart';
 
 class BusSheet extends StatefulWidget {
   final String busID;
+  final ScrollController scrollController;
   final void Function(String name, String id) onSelectStop;
 
   const BusSheet({
     Key? key,
     required this.busID,
-    required this.onSelectStop
+    required this.onSelectStop,
+    required this.scrollController,
   }) : super(key: key);
 
   @override
-  State<BusSheet> createState() => _BusSheetState();
+  State<BusSheet> createState() {
+    return _BusSheetState();
+  }
 }
 
 class _BusSheetState extends State<BusSheet> {
-  late Bus currBus = BusRepository.getBus(widget.busID)!;
+  late Bus? currBus = BusRepository.getBus(widget.busID);
   late Future<List<BusStopWithPrediction>> futureBusStops;
   
   static const Map<String, String> busFullnessMap = {
@@ -40,6 +45,13 @@ class _BusSheetState extends State<BusSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // There was a really weird bug where _BusSheetState would get a busID that doesn't exist so currBus would be null.
+    // This accounts for that.
+    if (currBus == null) return Text("Bus not found");
+
+    final bus = currBus!;
+
+    debugPrint("    currBus is ${currBus?.routeId}");
     return Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
@@ -49,256 +61,100 @@ class _BusSheetState extends State<BusSheet> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // header
-            Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: currBus.routeColor, 
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    currBus.routeId,
-                    style: TextStyle(
-                      color: RouteColorService.getContrastingColor(currBus.routeId), 
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+        padding: const EdgeInsets.only(
+          left: 10,
+          top: 20,
+          right: 20,
+          bottom: 20,
+        ),
+        child: SingleChildScrollView(
+          controller: widget.scrollController,
+
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // header
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 10,
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
                 ),
-
-                SizedBox(width: 15,),
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      getPrettyRouteName(currBus.routeId),
-                      style: TextStyle(
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 30,
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: bus.routeColor,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        bus.routeId,
+                        style: TextStyle(
+                          color: RouteColorService.getContrastingColor(
+                            bus.routeId,
+                          ),
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    Row(
+
+                    SizedBox(width: 15),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Bus ${currBus.id} - ${busFullnessMap[currBus.fullness]}",
+                          getPrettyRouteName(bus.routeId),
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontFamily: 'Urbanist',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 30,
+                          ),
+                        ),
+                        Text(
+                          "Bus ${bus.id}",
                           style: TextStyle(
                             color: Colors.grey,
                             fontFamily: 'Urbanist',
+                            fontWeight: FontWeight.w700,
                             fontSize: 20,
                           ),
                         ),
-                      ]
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
 
-            SizedBox(height: 20,),
-            
-            // future data
-            FutureBuilder<List<BusStopWithPrediction>>(future: futureBusStops, 
-              builder: (context, snapshot) {
-                
-                String futureTime(String minutesInFuture){
-                  int min = int.parse(minutesInFuture);
-                  DateTime now = DateTime.now();
-                  DateTime futureTime = now.add(Duration(minutes: min));
-                  return DateFormat('hh:mm a').format(futureTime);
-                }
-              
-                if (snapshot.hasData) {
+              SizedBox(height: 20),
 
-                  // bus times aren't sorted for some reason
-                  snapshot.data!.sort((a, b) {
-                    // sorting function
-
-                    // edge cases
-                    if (a.prediction == "DUE"){
-                      return -1;
-                    }
-                    if (b.prediction == "DUE"){
-                      return 1;
-                    }
-
-                    int idA = int.parse(a.prediction);
-                    int idB = int.parse(b.prediction);
-                    return idA.compareTo(idB);
-                  });
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Next bus stops",
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 20,
-                        ),
-                      ),
-          
-                      SizedBox(height: 10,),
-
-                      // only show list with no data
-                      (snapshot.data!.length != 0)?
-                      ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(), 
-                          itemCount: (snapshot.data!.length > 6)? 6 : snapshot.data!.length,
-                          itemBuilder: (context, index) {
-                            BusStopWithPrediction stop = snapshot.data![index];
-                        
-                            return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.pop(context); 
-                                      widget.onSelectStop(stop.name, stop.id);
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: getColor(context, ColorType.dim),
-                                        borderRadius: BorderRadius.all(Radius.circular(15)),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.shadow),
-                                            spreadRadius: 1.5, 
-                                            blurRadius: 2, 
-                                            offset: Offset(0, 3), 
-                                          ),
-                                        ],
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(left: 15, right: 15, top: 9, bottom: 9),
-                                        child: Row(
-                                          children: [
-                                            
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    stop.name,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      fontFamily: 'Urbanist',
-                                                      fontWeight: FontWeight.w700,
-                                                      fontSize: 16,
-                                                    )
-                                                  ),
-                                    
-                                                  // add subtitle if not due
-                                                  (stop.prediction != "DUE")?
-                                                  Text(
-                                                    "Estimated: ${futureTime(stop.prediction)}",
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      fontFamily: 'Urbanist',
-                                                      fontWeight: FontWeight.w400,
-                                                      fontSize: 16,
-                                                    )
-                                                  ) : SizedBox.shrink()
-                                                ],
-                                              ),
-                                            ),
-                                            
-                                            SizedBox(width: 20, height: 0,),
-                                            
-                                            (stop.prediction != "DUE")?
-                                            Column(
-                                              children: [
-                                                Text(
-                                                  stop.prediction,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 20,
-                                                    height: 0
-                                                  )
-                                                ),
-                                                Text(
-                                                  "min",
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 14,
-                                                    height: 0
-                                                  )
-                                                )
-                                              ],
-                                            ) 
-                                            :
-                                            Column(
-                                              children: [
-                                                Text(
-                                                  "now",
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 20,
-                                                    height: 0
-                                                  )
-                                                ),
-                                              ],
-                                            ) 
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                        
-                                  SizedBox(height: 15,),
-                                ],
-                              );
-                          },
-                        ):
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: Text(
-                            "There don't appear to be any upcoming stops for this bus",
-                            style: TextStyle(
-                              fontStyle: FontStyle.italic,
-                              fontSize: 16,
-                              height: 0
-                            )
-                          ),
-                        )
-                    ],
-                  );
-                } 
-            
-                else if (snapshot.hasError) {
-                  return Text(
-                    "There doesn't seem to be any departure data for this bus",
-                    style: TextStyle(
-                      fontFamily: 'Urbanist',
-                      fontWeight: FontWeight.w400,
-                      fontSize: 20,
-                    ),
-                  );
-                }
-                
-                return Padding(
-                  padding: const EdgeInsets.only(top: 30, bottom: 40),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              },
-            ),
-          ],
+              UpcomingStopsWidget(
+                color: RouteColorService.getRouteColor(bus.routeId),
+                routeId: bus.routeId,
+                vehicleId: bus.id,
+                isExpanded: true,
+                shouldAnimate: false,
+                showAbridgedStops: false,
+                onBusStopClick: (String stopName, String stopId) {
+                  widget.onSelectStop(stopName, stopId);
+                },
+                childIfNoUpcomingStopsFound: Text(
+                  "It doesn't appear there are upcoming stops for this bus",
+                ),
+              ),
+            ],
+          ),
         ),
-      )
+      ),
     );
   }
-} 
+}

@@ -39,8 +39,9 @@ class BusWithPrediction {
   final String destination;
   final String prediction;
   final String direction;
+  String vehicleId = "none";
 
-  BusWithPrediction({required this.id, required this.destination, required this.prediction, required this.direction});
+  BusWithPrediction({required this.id, required this.destination, required this.prediction, required this.direction, required this.vehicleId});
 
   factory BusWithPrediction.fromJson(Map<String, dynamic> json) {
     return BusWithPrediction(
@@ -48,6 +49,7 @@ class BusWithPrediction {
       destination: json['des'] ?? '',
       prediction: json['prdctdn'] as String,
       direction: json['rtdir'] as String,
+      vehicleId: json['vid'] ?? 'none'
     );
   }
 } 

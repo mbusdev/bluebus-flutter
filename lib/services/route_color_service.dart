@@ -126,6 +126,14 @@ class RouteColorService {
     return _routeColors[routeId] ?? Colors.grey;
   }
 
+  static Color getDarkerRouteColor(String routeId) {
+    Color originalColor = getRouteColor(routeId);
+    // double newLuminance = originalColor.computeLuminance() * 1; // 50% of the original luminance
+    double newLuminance = 0.3;
+
+    return HSLColor.fromColor(originalColor).withLightness(newLuminance).toColor();
+  }
+
   // Get the image URL for a specific route
   static String? getRouteImageUrl(String routeId) {
     return _routeImages[routeId];
