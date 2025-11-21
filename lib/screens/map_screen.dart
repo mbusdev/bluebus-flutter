@@ -112,6 +112,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme(); // load user theme data
@@ -128,6 +129,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       await Future.delayed(Duration(seconds: 2));
       startupData = await _getStartupData();
     }
+
+    // moving this here fixes loading bug
+    await RouteColorService.initialize();
 
     if (!isCurrentVersionEqualOrHigher(startupData.version)) {
       showDialog(
