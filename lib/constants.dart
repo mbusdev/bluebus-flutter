@@ -63,36 +63,47 @@ const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
 const Color maizeBusYellow = Color.fromARGB(255, 241, 194, 50);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
-const Map<String, Color> lightColors = {
-  'primary': Colors.white,
-  'opposite': Colors.black,
-  'background': Colors.white,
+enum ColorType {
+  primary, opposite, background,
+
+  mapButtonPrimary, mapButtonSecondary,
+  mapButtonIcon, mapButtonShadow,
+
+  highlighted, dim,
+
+  shadow,
+}
+
+const Map<ColorType, Color> lightColors = {
+  ColorType.primary: Colors.white,
+  ColorType.opposite: Colors.black,
+  ColorType.background: Colors.white,
   
-  'mapButtonPrimary': Color.fromARGB(204, 29, 23, 84), // 204 is 80% opacity
-  'mapButtonSecondary': Color.fromARGB(204, 156, 196, 230),
-  'mapButtonIcon': Color.fromARGB(255, 229, 242, 255),
-  'mapButtonShadow': Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
+  ColorType.mapButtonPrimary: Color.fromARGB(204, 29, 23, 84), // 204 is 80% opacity
+  ColorType.mapButtonSecondary: Color.fromARGB(204, 156, 196, 230),
+  ColorType.mapButtonIcon: Color.fromARGB(255, 229, 242, 255),
+  ColorType.mapButtonShadow: Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
 
-  'highlighted': Color.fromARGB(255, 120, 192, 255),
-  'dim': Color.fromARGB(255, 229, 242, 255),
+  ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),
+  ColorType.dim: Color.fromARGB(255, 229, 242, 255),
 
-  'shadow': Color.fromARGB(95, 187, 187, 187)
+  ColorType.shadow: Color.fromARGB(95, 187, 187, 187)
 };
 
-const Map<String, Color> darkColors = {
-  'primary': Colors.black,
-  'opposite': Colors.white,
-  'background': Color.fromARGB(255, 19, 34, 47),
+const Map<ColorType, Color> darkColors = {
+  ColorType.primary: Colors.black,
+  ColorType.opposite: Colors.white,
+  ColorType.background: Color.fromARGB(255, 19, 34, 47),
 
-  'mapButtonPrimary': Color.fromARGB(204, 229, 242, 255),
-  'mapButtonSecondary': Color.fromARGB(204, 106, 146, 181),
-  'mapButtonIcon': Color.fromARGB(255, 29, 23, 84),
-  'mapButtonShadow': Color.fromARGB(77, 30, 89, 141), // 77 is 30% opacity
+  ColorType.mapButtonPrimary: Color.fromARGB(204, 229, 242, 255),
+  ColorType.mapButtonSecondary: Color.fromARGB(204, 106, 146, 181),
+  ColorType.mapButtonIcon: Color.fromARGB(255, 29, 23, 84),
+  ColorType.mapButtonShadow: Color.fromARGB(77, 30, 89, 141), // 77 is 30% opacity
 
-  'highlighted': Color.fromARGB(255, 45, 151, 243),
-  'dim': Color.fromARGB(255, 33, 71, 105),
+  ColorType.highlighted: Color.fromARGB(255, 45, 151, 243),
+  ColorType.dim: Color.fromARGB(255, 33, 71, 105),
 
-  'shadow': Color.fromARGB(95, 68, 68, 68)
+  ColorType.shadow: Color.fromARGB(95, 68, 68, 68)
 };
 
 // returns true if the current theme is dark mode
@@ -102,9 +113,10 @@ bool isDarkMode(BuildContext context) {
 
 // Gets the Color value of a color name, depending on the current theme
 // For example, to get the background color of a primary button on the map, use:
-// getColor(context, 'mapButtonPrimary')
-// This will change depending on the current theme
-Color getColor(BuildContext context, String type) {
+// getColor(context, ColorType.mapButtonPrimary)
+// This will change depending on the current theme.
+// All color types are in the ColorType enum.
+Color getColor(BuildContext context, ColorType type) {
   return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
 }
 
@@ -117,7 +129,7 @@ ThemeData lightMode = ThemeData(
 
   // Default button themes
   floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: lightColors['mapButtonPrimary'],
+    backgroundColor: lightColors[ColorType.mapButtonPrimary],
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(56),
     ),
@@ -125,13 +137,13 @@ ThemeData lightMode = ThemeData(
 
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
-      backgroundColor: lightColors['mapButtonPrimary'],
+      backgroundColor: lightColors[ColorType.mapButtonPrimary],
     )
   ),
 
   dividerTheme: DividerThemeData(
     thickness: 2,
-    color: lightColors['dim'],
+    color: lightColors[ColorType.dim],
   ),
 
   // set default text color
@@ -149,7 +161,7 @@ ThemeData darkMode = ThemeData(
   
   // Default button themes
   floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: darkColors['mapButtonPrimary'],
+    backgroundColor: darkColors[ColorType.mapButtonPrimary],
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(56),
     ),
@@ -157,13 +169,13 @@ ThemeData darkMode = ThemeData(
 
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
-      backgroundColor: darkColors['mapButtonPrimary'],
+      backgroundColor: darkColors[ColorType.mapButtonPrimary],
     )
   ),
   
   dividerTheme: DividerThemeData(
     thickness: 2,
-    color: darkColors['dim'],
+    color: darkColors[ColorType.dim],
   ),
   
   // set default text color

@@ -102,7 +102,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: getColor(context, 'background'),
+        color: getColor(context, ColorType.background),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -120,7 +120,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: getColor(context, 'background'),
+                    color: getColor(context, ColorType.background),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -168,11 +168,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: getColor(context, 'dim'),
+                                    color: getColor(context, ColorType.dim),
                                     borderRadius: BorderRadius.all(Radius.circular(20)),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: getColor(context, 'mapButtonShadow'),
+                                        color: getColor(context, ColorType.mapButtonShadow),
                                         blurRadius: 4,
                                         offset: Offset(0, 2)
                                       )
@@ -234,11 +234,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                   alignment: Alignment.centerLeft,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: getColor(context, 'dim'),
+                                    color: getColor(context, ColorType.dim),
                                     borderRadius: BorderRadius.all(Radius.circular(20)),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: getColor(context, 'mapButtonShadow'),
+                                        color: getColor(context, ColorType.mapButtonShadow),
                                         blurRadius: 4,
                                         offset: Offset(0, 2)
                                       )
@@ -282,7 +282,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                   padding: const EdgeInsets.only(top: 30, bottom: 40),
                   child: Center(
                     child: CircularProgressIndicator(
-                      color: getColor(context, 'opposite')
+                      color: getColor(context, ColorType.opposite)
                     )
                   ),
                 )

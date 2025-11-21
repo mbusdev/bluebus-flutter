@@ -122,7 +122,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           ),
           color: (_selectedIndex == idx)
               ? isDarkMode(context) ? Color.fromARGB(255, 25, 40, 60) : Color.fromARGB(255, 220, 235, 255)
-              : getColor(context, 'dim'),
+              : getColor(context, ColorType.dim),
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
@@ -202,7 +202,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: getColor(context, 'background'),
+              color: getColor(context, ColorType.background),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
@@ -248,11 +248,11 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: getColor(context, 'dim'),
+                              color: getColor(context, ColorType.dim),
                               borderRadius: BorderRadius.all(Radius.circular(20),),
                               boxShadow: [
                                 BoxShadow(
-                                  color: getColor(context, 'mapButtonShadow'),
+                                  color: getColor(context, ColorType.mapButtonShadow),
                                   blurRadius: 4,
                                   offset: Offset(0, 2)
                                 )
@@ -313,11 +313,11 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: getColor(context, 'dim'),
+                              color: getColor(context, ColorType.dim),
                               borderRadius: BorderRadius.all(Radius.circular(20),),
                               boxShadow: [
                                 BoxShadow(
-                                  color: getColor(context, 'mapButtonShadow'),
+                                  color: getColor(context, ColorType.mapButtonShadow),
                                   blurRadius: 4,
                                   offset: Offset(0, 2)
                                 )

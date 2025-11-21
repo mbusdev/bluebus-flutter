@@ -193,7 +193,7 @@ class LocationSearchBar extends HookWidget {
             decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
-                  color: getColor(context, 'mapButtonShadow'),
+                  color: getColor(context, ColorType.mapButtonShadow),
                   offset: const Offset(0, 1),
                   blurRadius: 4,
                   spreadRadius: 0,
@@ -205,7 +205,7 @@ class LocationSearchBar extends HookWidget {
               textAlignVertical: TextAlignVertical.center,
               textInputAction: TextInputAction.go,
               style:  TextStyle(
-                color: getColor(context, 'opposite').withAlpha(204),
+                color: getColor(context, ColorType.opposite).withAlpha(204),
                 fontSize: 22
               ),
               autofocus: true,
@@ -346,7 +346,7 @@ class _SearchSheetState extends State<SearchSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
-        color: getColor(context, 'background'),
+        color: getColor(context, ColorType.background),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -407,15 +407,15 @@ class _SearchSheetState extends State<SearchSheet> {
               controller: _searchController,
               focusNode: _searchFocusNode,
               decoration: InputDecoration(
-                fillColor: getColor(context, 'dim'),
+                fillColor: getColor(context, ColorType.dim),
                 filled: true,
                 hintText: 'where to?',
                 hintStyle: TextStyle(
-                  color: getColor(context, 'opposite').withAlpha(204),
+                  color: getColor(context, ColorType.opposite).withAlpha(204),
                   fontSize: 22,
                   shadows: [
                     Shadow(
-                      color: getColor(context, 'mapButtonShadow'),
+                      color: getColor(context, ColorType.mapButtonShadow),
                       blurRadius: 4,
                       offset: Offset(0, 2)
                     )
@@ -428,13 +428,13 @@ class _SearchSheetState extends State<SearchSheet> {
                     Icons.search,
                     shadows: [
                       Shadow(
-                        color: getColor(context, 'mapButtonShadow'),
+                        color: getColor(context, ColorType.mapButtonShadow),
                         blurRadius: 4,
                         offset: Offset(0, 2)
                       )
                     ],
                     size: 35,
-                    color: getColor(context, 'opposite'),
+                    color: getColor(context, ColorType.opposite),
                   ),
                 ),
                 

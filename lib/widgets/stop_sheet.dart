@@ -142,7 +142,7 @@ class _StopSheetState extends State<StopSheet> {
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: getColor(context, 'background'),
+                    color: getColor(context, ColorType.background),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -164,7 +164,7 @@ class _StopSheetState extends State<StopSheet> {
                             return LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [getColor(context, 'primary'), Colors.transparent],
+                              colors: [getColor(context, ColorType.primary), Colors.transparent],
                               stops: [0.7, 1.0],
                             ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
                           },
@@ -394,7 +394,7 @@ class _StopSheetState extends State<StopSheet> {
                                           widget.onGetDirections();
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: getColor(context, 'mapButtonPrimary'),
+                                          backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(30),
                                           ),
@@ -403,11 +403,11 @@ class _StopSheetState extends State<StopSheet> {
                                         ),
                                         icon: Icon(
                                           Icons.directions, 
-                                          color: getColor(context, 'mapButtonIcon'),
+                                          color: getColor(context, ColorType.mapButtonIcon),
                                           size: 20,
                                           shadows: [
                                             Shadow(
-                                              color: getColor(context, 'mapButtonShadow'),
+                                              color: getColor(context, ColorType.mapButtonShadow),
                                               blurRadius: 4,
                                               offset: Offset(0, 2)
                                             )
@@ -416,12 +416,12 @@ class _StopSheetState extends State<StopSheet> {
                                         label: Text(
                                           'Get Directions',
                                           style: TextStyle(
-                                            color: getColor(context, 'primary'),
+                                            color: getColor(context, ColorType.primary),
                                             fontSize: 16, 
                                             fontWeight: FontWeight.w600,
                                             shadows: [
                                               Shadow(
-                                                color: getColor(context, 'mapButtonShadow'),
+                                                color: getColor(context, ColorType.mapButtonShadow),
                                                 blurRadius: 4,
                                                 offset: Offset(0, 2)
                                               )
@@ -448,7 +448,7 @@ class _StopSheetState extends State<StopSheet> {
                                           });
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: getColor(context, 'dim'),
+                                          backgroundColor: getColor(context, ColorType.dim),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(30),
                                           ),
@@ -456,11 +456,11 @@ class _StopSheetState extends State<StopSheet> {
                                         ),
                                         icon: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, 'opposite'),
+                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.opposite),
                                           size: 20,
                                           shadows: [
                                             Shadow(
-                                              color: getColor(context, 'mapButtonShadow'),
+                                              color: getColor(context, ColorType.mapButtonShadow),
                                               blurRadius: 4,
                                               offset: Offset(0, 2)
                                             )
@@ -469,12 +469,12 @@ class _StopSheetState extends State<StopSheet> {
                                         label: Text(
                                           (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
                                           style: TextStyle(
-                                            color: getColor(context, 'opposite'),
+                                            color: getColor(context, ColorType.opposite),
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
                                             shadows: [
                                               Shadow(
-                                                color: getColor(context, 'mapButtonShadow'),
+                                                color: getColor(context, ColorType.mapButtonShadow),
                                                 blurRadius: 4,
                                                 offset: Offset(0, 2)
                                               )
