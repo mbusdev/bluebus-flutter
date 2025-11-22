@@ -529,29 +529,139 @@ class RemindersButton extends StatelessWidget {
         routesList.add(route);
       }
     }
-    return MenuAnchor(
-      menuChildren: routesList
-        .map((route) => MenuItemButton(
-          onPressed: () => onToggleReminder(route),
-          trailingIcon: activeReminderRoutes.contains(route) ? Icon(Icons.notifications_none) : null,
-          child: Text(route),
-        ))
-        .toList(),
-      builder: (
-        BuildContext context, MenuController controller, Widget? child
-      ) => ElevatedButton(
-        onPressed: () {
-          if (controller.isOpen) {
-            controller.close();
-          } else {
-            controller.open();
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 9),
+      child: MenuAnchor(
+        style: MenuStyle(
+          padding: WidgetStatePropertyAll(EdgeInsets.only(bottom: 18 + 5, top: 5)),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorderWithTail(cornerRadius: 20.0),
+          ),
+          alignment: Alignment(0, 1),
+          backgroundColor: WidgetStatePropertyAll(Colors.white),
+        ),
+        alignmentOffset: Offset(-29, 0),
+        menuChildren: routesList.map((route) {
+          var color = RouteColorService.getRouteColor(route);
+          if (!activeReminderRoutes.contains(route)) {
+            color = Color.from(
+              alpha: 0.5,
+              red: color.r,
+              green: color.g,
+              blue: color.b,
+            );
           }
-          NotificationService.requestPermission();
-          NotificationService.sendPushNotification();
-          //NotificationService.sendNotification();
-        },
-        child: Icon(Icons.notifications_none, size: 20)
-      )
+          return Padding(
+            padding: EdgeInsetsGeometry.symmetric(vertical: 5, horizontal: 9),
+            child: GestureDetector(
+              onTap: () {
+                onToggleReminder(route);
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  // color: RouteColorService.getRouteColor(route),
+                  color: color,
+                ),
+                alignment: Alignment.center,
+                child: MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(1.0)),
+                  child: Text(
+                    route,
+                    style: TextStyle(
+                      color: RouteColorService.getContrastingColor(route),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+        builder:
+            (BuildContext context, MenuController controller, Widget? child) =>
+                ElevatedButton(
+                  style: ButtonStyle(
+                    shape: WidgetStatePropertyAll(CircleBorder())
+                  ),
+                  onPressed: () {
+                    if (controller.isOpen) {
+                      controller.close();
+                    } else {
+                      controller.open();
+                    }
+                    NotificationService.requestPermission();
+                    NotificationService.sendPushNotification();
+                    //NotificationService.sendNotification();
+                  },
+                  child: Icon(Icons.notifications_none, size: 20),
+                ),
+      ),
     );
   }
-} 
+}
+
+class RoundedRectangleBorderWithTail extends OutlinedBorder {
+  const RoundedRectangleBorderWithTail({required this.cornerRadius});
+
+  final double cornerRadius;
+  
+  @override
+  OutlinedBorder copyWith({BorderSide? side}) {
+    // TODO: actually care about side
+    return this;
+  }
+
+  @override
+  Path getInnerPath(Rect rect, {ui.TextDirection? textDirection}) {
+    Path p = Path();
+    p.addRRect(
+      RRect.fromRectXY(
+        Rect.fromLTRB(rect.left, rect.top, rect.right, rect.bottom - 18),
+        cornerRadius,
+        cornerRadius
+      )
+    );
+    // tail
+    final ax = rect.left + rect.width / 2 - 9;
+    final ay = rect.bottom - 18;
+    p.moveTo(ax + 9, ay + 15);
+    p.cubicTo(
+      ax + 9, ay + 11.5,
+      ax + 5.25, ay + 0,
+      ax + 0, ay + 0
+    );
+    p.relativeLineTo(18, 0);
+    p.cubicTo(ax + 12.375, ay + 0, ax + 9, ay + 11.5, ax + 9, ay + 15);
+    p.close();
+    
+    return p;
+  }
+
+  @override
+  Path getOuterPath(Rect rect, {ui.TextDirection? textDirection}) {
+    return getInnerPath(rect, textDirection: textDirection);
+  }
+
+  @override
+  void paint(Canvas canvas, Rect rect, {ui.TextDirection? textDirection}) {
+    // do nothing since the reminders thing only needs drop shadow
+    // Paint paint = Paint();
+    // paint.style = PaintingStyle.stroke;
+    // paint.strokeWidth = 2;
+    // canvas.drawPath(getOuterPath(rect, textDirection: textDirection), paint);
+  }
+
+  @override
+  ShapeBorder scale(double t) {
+    return this;
+  }
+  
+}
