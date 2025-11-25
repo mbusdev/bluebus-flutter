@@ -1806,6 +1806,36 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     });
 
+    // set all padding
+    // first, getting all the padding values
+    final mediaQueryData = MediaQuery.of(context);
+    final double flutterSafeAreaTop = mediaQueryData.padding.top;
+    final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
+    final double flutterSafeAreaLeft = mediaQueryData.padding.left;
+    final double flutterSafeAreaRight = mediaQueryData.padding.right;
+    double padBottom = 0;
+    double padTop = 0;
+    double padLeftRight = 0;
+    // then, changing them based on phone
+    if(Platform.isIOS){
+      if(flutterSafeAreaBottom == 0){
+        // rectangle iphone
+        padBottom = 10;
+        padLeftRight = 10;
+        padTop = 20;
+      } else {
+        // round iphone
+        padBottom = 30;
+        padLeftRight = 30;
+        padTop = flutterSafeAreaTop;
+      }
+    } else {
+      // andoird
+      padBottom = 30;
+      padLeftRight = 30;
+      padTop = flutterSafeAreaTop;
+    }
+
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
@@ -1895,214 +1925,152 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     //mapToolbarEnabled: true,
                 ),
             
-                // Safe-Area (for UI)
-                SafeArea(
-                  // buttons
-                  child: Column(
-                    children: [
-                      // if showing journey, show header
-                      (_journeyOverlayActive)
-                          ? DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: getColor(context, ColorType.background),
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(56),
+                Column(
+                  children: [
+                    // if showing journey, show header
+                    (_journeyOverlayActive)
+                        ? DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: getColor(context, ColorType.background),
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(56),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ui.Color.fromARGB(39, 0, 0, 0),
+                                  spreadRadius: 1,
+                                  blurRadius: 2,
+                                  offset: Offset(
+                                    0,
+                                    3,
+                                  ), // changes position of shadow
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: ui.Color.fromARGB(39, 0, 0, 0),
-                                    spreadRadius: 1,
-                                    blurRadius: 2,
-                                    offset: Offset(
-                                      0,
-                                      3,
-                                    ), // changes position of shadow
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(width: 10),
-            
-                                  Icon(Icons.route),
-            
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 15,
-                                      vertical: 5,
-                                    ),
-                                    child: Text(
-                                      "Showing route on map",
-                                      style: TextStyle(
-                                        fontFamily: 'Urbanist',
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 15.5
-                              ),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  // this shadow is a little scuffed,
-                                  // it might be better to move this outside of SafeArea element.
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha(100),
-                                      spreadRadius: 100,
-                                      blurRadius: 100,
-                                      offset: const Offset(0, -60)
-                                    )
-                                  ]
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Container( // group maize and bus together on the left
-                                      child: Row(children: [
-                                        Text(
-                                          'maize',
-                                          style: TextStyle(
-                                            color: maizeBusYellow,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 30,
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 10,
-                                                offset: Offset(0, 4)
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          'bus',
-                                          style: TextStyle(
-                                            color: maizeBusBlue,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 30,
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 10,
-                                                offset: Offset(0, 4)
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                      ],),
-                                    ),
-
-                                    // Settings button
-                                    DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: FloatingActionButton.small(
-                                        onPressed: () {
-                                          // switch to settings menu
-                                          // with the MaterialPagesRoute animation
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute<void>(
-                                              builder: (context) => Settings(),
-                                            ),
-                                          );
-                                        },
-                                        heroTag: 'settings_fab',
-                                        backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: Icon(
-                                          Icons.settings,
-                                          color: darkColors[ColorType.mapButtonIcon],
-                                          shadows: [
-                                            Shadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
-                                            )
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              )
-                            ),
-            
-                      Spacer(),
-                      
-                      // temp row (might add settings button to it later)
-                      (!_journeyOverlayActive)
-                          ? Padding(
-                            padding: const EdgeInsets.only(
-                              left: 15,
-                              right: 15.5,
-                              top: 15,
+                              ],
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                // face north button is only visible when not facing north
-                                Visibility(
-                                  visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 10,
-                                          offset: Offset(0, 6)
-                                        )
-                                      ],
-                                      borderRadius: BorderRadius.circular(25)
+                                SizedBox(width: 10),
+                            
+                                Icon(Icons.route),
+                            
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 15,
+                                    vertical: 5,
+                                  ),
+                                  child: Text(
+                                    "Showing route on map",
+                                    style: TextStyle(
+                                      fontFamily: 'Urbanist',
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: 18,
                                     ),
-                                    child: FloatingActionButton.small(
-                                      onPressed: _setMapToNorth,
-                                      heroTag: 'north_fab',
-                                      backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(56),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          // not showing journey, show usual header
+                        : Padding(
+                            padding: EdgeInsets.only(
+                              top: padTop, left: padLeftRight, right: padLeftRight
+                            ),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.white.withAlpha(150),
+                                    spreadRadius: 50,
+                                    blurRadius: 50,
+                                  )
+                                ]
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container( // group maize and bus together on the left
+                                    child: Row(children: [
+                                      Text(
+                                        'maize',
+                                        style: TextStyle(
+                                          color: maizeBusYellow,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 30,
+                                        ),
                                       ),
-                                      child: Transform.rotate(
-                                        angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
-                                        child: Icon(
-                                          FontAwesomeIcons.compass,
-                                          color: darkColors[ColorType.mapButtonIcon],
-                                          shadows: [
-                                            Shadow(
+                                      Text(
+                                        'bus',
+                                        style: TextStyle(
+                                          color: maizeBusBlue,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 30,
+                                        ),
+                                      ),
+                                    ],),
+                                  ),
+                
+                                  SizedBox(
+                                    width: 45,
+                                    height: 45,
+                                    child: FittedBox(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
                                               color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
+                                              blurRadius: 10,
+                                              offset: Offset(0, 6)
                                             )
                                           ],
+                                          borderRadius: BorderRadius.circular(25)
+                                        ),
+                                        child: FloatingActionButton(
+                                          onPressed: () async {
+                                            // switch to settings menu
+                                            // with the MaterialPagesRoute animation
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute<void>(
+                                                builder: (context) => Settings(),
+                                              ),
+                                            );
+                                          },
+                                          heroTag: 'settings_fab',
+                                          elevation: 0,
+                                          child: Icon(
+                                            Icons.menu,
+                                            color: getColor(context, ColorType.mapButtonIcon),
+                                            size: 28,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-
-                                // location button
-                                DecoratedBox(
+                                ],
+                              )
+                            )
+                          ),
+                            
+                    Spacer(),
+                    
+                    // temp row (might add settings button to it later)
+                    (!_journeyOverlayActive)
+                        ? Padding(
+                          padding: const EdgeInsets.only(
+                            left: 15,
+                            right: 15.5,
+                            top: 15,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // face north button is only visible when not facing north
+                              Visibility(
+                                visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
+                                child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     boxShadow: [
                                       BoxShadow(
@@ -2114,323 +2082,323 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     borderRadius: BorderRadius.circular(25)
                                   ),
                                   child: FloatingActionButton.small(
-                                    onPressed: () {
-                                      _centerOnLocation(true);
-                                    },
-                                    heroTag: 'location_fab',
+                                    onPressed: _setMapToNorth,
+                                    heroTag: 'north_fab',
                                     backgroundColor: getColor(context, ColorType.mapButtonSecondary),
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(56),
                                     ),
-                                    child: Icon(
-                                      Icons.my_location,
-                                      color: darkColors[ColorType.mapButtonIcon],
-                                      shadows: [
-                                        Shadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2)
-                                        )
-                                      ],
+                                    child: Transform.rotate(
+                                      angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
+                                      child: Icon(
+                                        FontAwesomeIcons.compass,
+                                        color: darkColors[ColorType.mapButtonIcon],
+                                        shadows: [
+                                          Shadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2)
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                
+                              // location button
+                              //DecoratedBox(
+                              //  decoration: BoxDecoration(
+                              //    boxShadow: [
+                              //      BoxShadow(
+                              //        color: getColor(context, ColorType.mapButtonShadow),
+                              //        blurRadius: 10,
+                              //        offset: Offset(0, 6)
+                              //      )
+                              //    ],
+                              //    borderRadius: BorderRadius.circular(25)
+                              //  ),
+                              //  child: FloatingActionButton.small(
+                              //    onPressed: () {
+                              //      _centerOnLocation(true);
+                              //    },
+                              //    heroTag: 'location_fab',
+                              //    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                              //    elevation: 0,
+                              //    shape: RoundedRectangleBorder(
+                              //      borderRadius: BorderRadius.circular(56),
+                              //    ),
+                              //    child: Icon(
+                              //      Icons.my_location,
+                              //      color: darkColors[ColorType.mapButtonIcon],
+                              //      shadows: [
+                              //        Shadow(
+                              //          color: getColor(context, ColorType.mapButtonShadow),
+                              //          blurRadius: 4,
+                              //          offset: Offset(0, 2)
+                              //        )
+                              //      ],
+                              //    ),
+                              //  ),
+                              //),
+                            ],
+                          ),
+                        )
+                        : SizedBox.shrink(),
+                            
+                    // if showing journey, show close and reopen button
+                    (_journeyOverlayActive)
+                        ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: getColor(context, ColorType.mapButtonShadow),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 6)
+                                  )
+                                ],
+                                borderRadius: BorderRadius.circular(56)
+                              ),
+                              child: ElevatedButton.icon(
+                                onPressed: _showJourneySheetOnReopen,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(56),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                  elevation: 0,
+                                ),
+                                icon: Icon(
+                                  color: getColor(context, ColorType.mapButtonIcon),
+                                  Icons.keyboard_arrow_up,
+                                  size: 18,
+                                  shadows: [
+                                    Shadow(
+                                      color: getColor(context, ColorType.mapButtonShadow),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2)
+                                    )
+                                  ],
+                                ), // The icon on the left
+                                label: Text(
+                                  'Steps',
+                                  style: TextStyle(
+                                    color: getColor(context, ColorType.mapButtonIcon),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    shadows: [
+                                      Shadow(
+                                        color: getColor(context, ColorType.mapButtonShadow),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
+                                  ),                                    
+                                ), // The text on the right
+                              ),
+                            ),
+                
+                            SizedBox(width: 20,),
+                
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: getColor(context, ColorType.mapButtonShadow),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 6)
+                                  )
+                                ],
+                                borderRadius: BorderRadius.circular(56)
+                              ),
+                              child: ElevatedButton.icon(
+                                onPressed: _clearJourneyOverlays,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(56),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                  elevation: 0,
+                                ),
+                                icon: Icon(
+                                  Icons.close,
+                                  color: darkColors[ColorType.mapButtonIcon]!,
+                                  size: 18,
+                                  shadows: [
+                                    Shadow(
+                                      color: getColor(context, ColorType.mapButtonShadow),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2)
+                                    )
+                                  ],
+                                ), // The icon on the left
+                                label: Text(
+                                  'Close',
+                                  style: TextStyle(
+                                    color: darkColors[ColorType.mapButtonIcon]!,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    shadows: [
+                                      Shadow(
+                                        color: getColor(context, ColorType.mapButtonShadow),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
+                                  ),
+                                ), // The text on the right
+                              ),
+                            ),
+                          ],
+                        )
+                        
+                        // else, main buttons row
+                        : Padding(
+                            padding: EdgeInsets.only(bottom: padBottom, left: padLeftRight, right: padLeftRight),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                            
+                              children: [
+                                
+                                // routes
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: FittedBox(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: FloatingActionButton(
+                                        onPressed: () async {
+                                          if (canVibrate && Platform.isIOS){
+                                            await Haptics.vibrate(HapticsType.light);
+                                          }
+                
+                                          // just in case
+                                          if (busProvider.routes.isEmpty){
+                                            await busProvider.loadRoutes();
+                                            _updateAvailableRoutes(busProvider.routes);
+                                            _cacheRouteOverlays(busProvider.routes);
+                                          }
+                                          
+                                          _showBusRoutesModal(busProvider.routes,);
+                                        },
+                                        heroTag: 'routes_fab',
+                                        elevation: 0, // handle shadow ourselves
+                                        child: Icon(
+                                          Icons.directions_bus,
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 28,
+                                        ),
+                                      ),
+                                    )
+                                  ),
+                                ),
+                            
+                                SizedBox(width: 12),
+                
+                                // favorites
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: FittedBox(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: FloatingActionButton(
+                                        onPressed: () async {
+                                          if (canVibrate && Platform.isIOS){
+                                            await Haptics.vibrate(HapticsType.light);
+                                          }
+                                          _showFavoritesSheet();
+                                        },
+                                        heroTag: 'favorites_fab',
+                                        elevation: 0,
+                                        child: Icon(
+                                          Icons.favorite,
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 28,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                
+                                SizedBox(width: 12),
+                
+                                // search
+                                Expanded( // stretch width
+                                  child: SizedBox(
+                                    height: 45,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          if (canVibrate && Platform.isIOS){
+                                            await Haptics.vibrate(HapticsType.light);
+                                          }
+                                          _showSearchSheet();
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                        icon: Icon(
+                                          Icons.search_sharp,
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 28,
+                                        ),
+                                        label: Text(
+                                          "where to?",
+                                          style: TextStyle(
+                                            color: getColor(context, ColorType.mapButtonIcon).withAlpha(214),
+                                            fontSize: 18,
+                                          )
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          )
-                          : SizedBox.shrink(),
-            
-                      // if showing journey, show close and reopen button
-                      (_journeyOverlayActive)
-                          ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: getColor(context, ColorType.mapButtonShadow),
-                                      blurRadius: 10,
-                                      offset: Offset(0, 6)
-                                    )
-                                  ],
-                                  borderRadius: BorderRadius.circular(56)
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: _showJourneySheetOnReopen,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.mapButtonPrimary),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(56),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 8,
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  icon: Icon(
-                                    color: getColor(context, ColorType.mapButtonIcon),
-                                    Icons.keyboard_arrow_up,
-                                    size: 18,
-                                    shadows: [
-                                      Shadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2)
-                                      )
-                                    ],
-                                  ), // The icon on the left
-                                  label: Text(
-                                    'Steps',
-                                    style: TextStyle(
-                                      color: getColor(context, ColorType.mapButtonIcon),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      shadows: [
-                                        Shadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2)
-                                        )
-                                      ],
-                                    ),                                    
-                                  ), // The text on the right
-                                ),
-                              ),
-
-                              SizedBox(width: 20,),
-
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: getColor(context, ColorType.mapButtonShadow),
-                                      blurRadius: 10,
-                                      offset: Offset(0, 6)
-                                    )
-                                  ],
-                                  borderRadius: BorderRadius.circular(56)
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: _clearJourneyOverlays,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(56),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 8,
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  icon: Icon(
-                                    Icons.close,
-                                    color: darkColors[ColorType.mapButtonIcon]!,
-                                    size: 18,
-                                    shadows: [
-                                      Shadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2)
-                                      )
-                                    ],
-                                  ), // The icon on the left
-                                  label: Text(
-                                    'Close',
-                                    style: TextStyle(
-                                      color: darkColors[ColorType.mapButtonIcon]!,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      shadows: [
-                                        Shadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2)
-                                        )
-                                      ],
-                                    ),
-                                  ), // The text on the right
-                                ),
-                              ),
-                            ],
-                          )
-                          
-                          // else, main buttons row
-                          : Padding(
-                              padding: const EdgeInsets.only(
-                                left: 15,
-                                right: 15,
-                                top: 15,
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-            
-                                children: [
-                                  // favorites
-                                  SizedBox(
-                                    width: 50,
-                                    height: 50,
-                                    child: FittedBox(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 10,
-                                              offset: Offset(0, 6)
-                                            )
-                                          ],
-                                          borderRadius: BorderRadius.circular(25)
-                                        ),
-                                        child: FloatingActionButton(
-                                          onPressed: () async {
-                                            if (canVibrate && Platform.isIOS){
-                                              await Haptics.vibrate(HapticsType.light);
-                                            }
-                                            _showFavoritesSheet();
-                                          },
-                                          heroTag: 'favorites_fab',
-                                          elevation: 0,
-                                          child: Icon(
-                                            Icons.favorite,
-                                            color: getColor(context, ColorType.mapButtonIcon),
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2)
-                                              )
-                                            ],
-                                            size: 35,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-            
-                                  SizedBox(width: 15),
-
-                                  // search
-                                  Expanded( // stretch width
-                                    child: SizedBox(
-                                      height: 50,
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 10,
-                                              offset: Offset(0, 6)
-                                            )
-                                          ],
-                                          borderRadius: BorderRadius.circular(25)
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          onPressed: () async {
-                                            if (canVibrate && Platform.isIOS){
-                                              await Haptics.vibrate(HapticsType.light);
-                                            }
-                                            _showSearchSheet();
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            alignment: Alignment.centerLeft,
-                                          ),
-                                          icon: Icon(
-                                            Icons.search_sharp,
-                                            color: getColor(context, ColorType.mapButtonIcon),
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2)
-                                              )
-                                            ],
-                                            size: 35,
-                                          ),
-                                          label: Text(
-                                            "where to?",
-                                            style: TextStyle(
-                                              color: getColor(context, ColorType.mapButtonIcon).withAlpha(214),
-                                              fontSize: 22,
-                                              shadows: [
-                                                Shadow(
-                                                  color: getColor(context, ColorType.mapButtonShadow),
-                                                  blurRadius: 4,
-                                                  offset: Offset(0, 2)
-                                                )
-                                              ],
-                                            )
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  SizedBox(width: 15),
-
-                                  // routes
-                                  SizedBox(
-                                    width: 50,
-                                    height: 50,
-                                    child: FittedBox(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 10,
-                                              offset: Offset(0, 6)
-                                            )
-                                          ],
-                                          borderRadius: BorderRadius.circular(25)
-                                        ),
-                                        child: FloatingActionButton(
-                                          onPressed: () async {
-                                            if (canVibrate && Platform.isIOS){
-                                              await Haptics.vibrate(HapticsType.light);
-                                            }
-
-                                            // just in case
-                                            if (busProvider.routes.isEmpty){
-                                              await busProvider.loadRoutes();
-                                              _updateAvailableRoutes(busProvider.routes);
-                                              _cacheRouteOverlays(busProvider.routes);
-                                            }
-                                            
-                                            _showBusRoutesModal(busProvider.routes,);
-                                          },
-                                          heroTag: 'routes_fab',
-                                          elevation: 0, // handle shadow ourselves
-                                          child: Icon(
-                                            Icons.directions_bus,
-                                            color: getColor(context, ColorType.mapButtonIcon),
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2)
-                                              )
-                                            ],
-                                            size: 35,
-                                          ),
-                                        ),
-                                      )
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-            
-                      SizedBox(
-                        height: (MediaQuery.of(context).padding.bottom == 0.0)
-                            ? 10
-                            : 0,
-                      ),
-                    ],
-                  ),
+                          ),
+                  ],
                 ),
               ],
             ),
