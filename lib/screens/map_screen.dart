@@ -61,6 +61,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Buses relevant to the active journey (when overlay active)
   Set<Marker> _displayedJourneyBusMarkers = {};
   // Search location marker (red pin when viewing building/stop details)
+
+  Set<Marker> _allDisplayedStopMarkers = {};
+  // Union of _displayedStopMarkers, _displayedBusMarkers, _displayedJourneyMarkers,
+  //     and _searchLocationMarker. Stored here so build() has better performance
+
   Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
@@ -692,6 +697,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         }
       }
       _displayedStopMarkers = selectedStopMarkers;
+      _updateAllDisplayedMarkers();
     });
   }
 
@@ -720,6 +726,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     setState(() {
       _displayedPolylines = selectedPolylines;
       _displayedStopMarkers = selectedStopMarkers;
+      _updateAllDisplayedMarkers();
     });
     _updateDisplayedBuses(
       Provider.of<BusProvider>(context, listen: false).buses,
@@ -797,9 +804,22 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
 
+    
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
+      _updateAllDisplayedMarkers();
     });
+  }
+
+  void _updateAllDisplayedMarkers() {
+    _allDisplayedStopMarkers = _displayedStopMarkers
+      .union(_displayedBusMarkers)
+      .union(_displayedJourneyMarkers)
+      .union(
+        _searchLocationMarker != null
+            ? {_searchLocationMarker!}
+            : {},
+      );
   }
 
   /// Convert a Color to a BitmapDescriptor hue value
@@ -1405,7 +1425,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // Final debug check
     // Journey display complete (silently updated internal state)
 
-    setState(() {});
+    setState(() {
+      _updateAllDisplayedMarkers();
+    });
 
     // Trying to move camera to include the journey bounds
     if (_mapController != null && allPoints.isNotEmpty) {
@@ -1556,7 +1578,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         //    2. Have swiping down on the BusSheet close the modal, AND
         //    3. Have clicking in the shaded area at the top close the modal
         initialChildSize: 0.99,
-        minChildSize: 0.98, 
+        minChildSize: 0.9, 
         maxChildSize: 1.0,
 
         builder: (BuildContext context, ScrollController scrollController) {
@@ -1823,14 +1845,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ? {_searchLocationMarker!}
                                     : {},
                               )
-                        : _displayedStopMarkers
-                              .union(_displayedBusMarkers)
-                              .union(_displayedJourneyMarkers)
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              ),
+                        : _allDisplayedStopMarkers,
+                        // : _displayedStopMarkers
+                        //       .union(_displayedBusMarkers)
+                        //       .union(_displayedJourneyMarkers)
+                        //       .union(
+                        //         _searchLocationMarker != null
+                        //             ? {_searchLocationMarker!}
+                        //             : {},
+                        //       ),
                     darkMapStyle: _darkMapStyle,
                     lightMapStyle: _lightMapStyle,
                     onMapCreated: _onMapCreated,
