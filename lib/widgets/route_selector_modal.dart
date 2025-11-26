@@ -31,140 +31,15 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
     tempSelectedRoutes = Set<String>.from(widget.initialSelectedRoutes);
   }
 
-<<<<<<< HEAD
-=======
   // Function to show route info
   void _showRouteInfo(String routeId, String routeName) {
-    // Map route IDs to image file names
     String? imagePath = _getRouteImagePath(routeId);
     
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.all(10),
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height * 0.85,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                // Header with route name and close button
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          routeName,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'Urbanist',
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, size: 28),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: EdgeInsets.all(4),
-                      ),
-                    ],
-                  ),
-                ),
-                // Image container with zoom
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
-                      ),
-                      child: imagePath != null
-                          ? Stack(
-                              children: [
-                                InteractiveViewer(
-                                  panEnabled: true,
-                                  minScale: 0.5,
-                                  maxScale: 5.0,
-                                  child: Center(
-                                    child: Image.asset(
-                                      imagePath,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Center(
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(20.0),
-                                            child: Text(
-                                              'Map image not found for $routeName',
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(fontSize: 16),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                                // Zoom hint at bottom
-                                Positioned(
-                                  bottom: 10,
-                                  left: 0,
-                                  right: 0,
-                                  child: Center(
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        'Pinch to zoom • Drag to pan',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(20.0),
-                                child: Text(
-                                  'No map available for $routeName',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        return _RouteImageDialog(imagePath: imagePath, routeName: routeName);
       },
     );
   }
@@ -178,15 +53,11 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
     );
     
     final routeName = route['name'] ?? routeId;
-    
-    // Construct the image path: assets/routename Route.png
-    // This preserves dashes and matches your naming convention
     final imagePath = 'assets/$routeName Route.png';
     
     return imagePath;
   }
 
->>>>>>> a2329f0 (Added route maps for all bus routes)
   @override
   Widget build(BuildContext context) {
 
@@ -303,9 +174,6 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                               ),
                             ),
-<<<<<<< HEAD
-                            trailing: (isSelected)? SizedBox.shrink() : Icon(Icons.add),
-=======
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -322,12 +190,10 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                   padding: EdgeInsets.all(8),
                                   constraints: BoxConstraints(),
                                 ),
-                                // Add icon (only show when not selected)
                                 if (!isSelected)
                                   Icon(Icons.add),
                               ],
                             ),
->>>>>>> a2329f0 (Added route maps for all bus routes)
                             onTap: () {
                               setState(() {
                                 if (isSelected) {
@@ -357,8 +223,174 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
       ),
     );
   }
-<<<<<<< HEAD
-} 
-=======
 }
->>>>>>> a2329f0 (Added route maps for all bus routes)
+
+// Separate widget for the image dialog with fading hint
+class _RouteImageDialog extends StatefulWidget {
+  final String? imagePath;
+  final String routeName;
+
+  const _RouteImageDialog({
+    required this.imagePath,
+    required this.routeName,
+  });
+
+  @override
+  State<_RouteImageDialog> createState() => _RouteImageDialogState();
+}
+
+class _RouteImageDialogState extends State<_RouteImageDialog> {
+  bool _showHint = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Hide the hint after 2 seconds
+    Future.delayed(Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _showHint = false;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.all(10),
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height * 0.85,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            // Header with route name
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.routeName,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Urbanist',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Image container with zoom
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  child: widget.imagePath != null
+                      ? Stack(
+                          children: [
+                            InteractiveViewer(
+                              panEnabled: true,
+                              minScale: 0.5,
+                              maxScale: 5.0,
+                              child: Center(
+                                child: Image.asset(
+                                  widget.imagePath!,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(20.0),
+                                        child: Text(
+                                          'Map image not found for ${widget.routeName}',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            // Zoom hint at bottom center that fades
+                            Positioned(
+                              bottom: 15,
+                              left: 0,
+                              right: 0,
+                              child: AnimatedOpacity(
+                                opacity: _showHint ? 1.0 : 0.0,
+                                duration: Duration(milliseconds: 500),
+                                child: Center(
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.6),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      'Pinch to zoom • Drag to pan',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Back arrow at bottom left
+                            Positioned(
+                              bottom: 15,
+                              left: 15,
+                              child: IconButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.black.withValues(alpha: 0.6),
+                                  padding: EdgeInsets.all(12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Text(
+                              'No map available for ${widget.routeName}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

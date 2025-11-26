@@ -44,5 +44,6 @@ class BusRepository {
         return b;
       }
     }
+    return null;
   }
 } 

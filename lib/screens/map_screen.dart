@@ -125,7 +125,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               ),
             ),
             content: Text(
-              startupData!.updateMessage,
+              startupData.updateMessage,
               style: TextStyle(
                 color: Colors.black,
                 fontFamily: 'Urbanist',
@@ -383,6 +383,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     } catch (e) {
       return null;
     }
+    return null;
   }
 
   // Get minimum supported version from backend

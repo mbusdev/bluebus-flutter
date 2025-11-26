@@ -455,6 +455,7 @@ class _JourneyBodyState extends State<JourneyBody> {
         return convertSecondsToFormattedTime(st.arrivalTime);
       }
     }
+    return null;
   }
 
   @override
