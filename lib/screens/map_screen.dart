@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
@@ -84,6 +85,37 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // cache last directions request origin/dest coordinates (used for VIRTUAL_* stops)
   Map<String, double>? _lastJourneyRequestOrigin;
   Map<String, double>? _lastJourneyRequestDest;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isOffline = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupConnectivityMonitoring();
+  }
+
+  Future<void> _setupConnectivityMonitoring() async {
+    final connectivity = Connectivity();
+
+    _connectivitySubscription =
+        connectivity.onConnectivityChanged.listen((result) {
+      final offline =
+          result.isEmpty || result.every((r) => r == ConnectivityResult.none);
+      if (mounted && _isOffline != offline) {
+        setState(() {
+          _isOffline = offline;
+        });
+      }
+    });
+
+    final initial = await connectivity.checkConnectivity();
+    final initialOffline = initial == ConnectivityResult.none;
+    if (mounted && _isOffline != initialOffline) {
+      setState(() {
+        _isOffline = initialOffline;
+      });
+    }
+  }
 
   // this function is to load all the data on app launch and
   // still keep context
@@ -233,6 +265,44 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }).toList();
     }
     globalStopLocs = stopLocs;
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.red.shade600,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: ui.Color.fromARGB(48, 0, 0, 0),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.wifi_off_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'No internet. Some data may be stale.',
+            style: const TextStyle(
+              color: Colors.white,
+              fontFamily: 'Urbanist',
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -519,6 +589,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   @override
   void dispose() {
     _loadingMessageNotifier.dispose();
+    _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
     _mapController?.dispose();
     super.dispose();
@@ -1793,6 +1864,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   // buttons
                   child: Column(
                     children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: _isOffline
+                            ? Padding(
+                                key: const ValueKey('offline-banner'),
+                                padding: const EdgeInsets.only(top: 10),
+                                child: _buildOfflineBanner(),
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('offline-banner-hidden'),
+                              ),
+                      ),
                       // if showing journey, show header
                       (_journeyOverlayActive)
                           ? Container(
@@ -1959,7 +2044,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
+                                          if (canVibrate) {
                                             await Haptics.vibrate(HapticsType.light);
                                           }
 
@@ -1994,7 +2079,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
+                                          if (canVibrate) {
                                             await Haptics.vibrate(HapticsType.light);
                                           }
                                           _showFavoritesSheet();
@@ -2021,7 +2106,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     child: FittedBox(
                                       child: FloatingActionButton(
                                         onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
+                                          if (canVibrate) {
                                             await Haptics.vibrate(HapticsType.light);
                                           }
                                           _showSearchSheet();
