@@ -1981,7 +1981,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               decoration: BoxDecoration(
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.white.withAlpha(150),
+                                    color: isDarkMode(context) ? Colors.black.withAlpha(50) : Colors.white.withAlpha(100),
                                     spreadRadius: 50,
                                     blurRadius: 50,
                                   )
