@@ -18,187 +18,295 @@ class _SettingsState extends State<Settings> {
   Widget build(BuildContext context) {
     ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
+    const double heightBetween = 20;
+
     // only a Scaffold here to allow the use of Switch within it,
     // this is because Switch is a Material object and needs to be within a Material element.
     // Otherwise, we could create our own decorated switch widget to use
     return Scaffold(
       backgroundColor: getColor(context, ColorType.background),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(
-            left: 25,
-            right: 15,
-            top: 15
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Settings title and x button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // title 
-                  Text(
-                    'Settings',
-                    style: TextStyle(
-                      fontFamily: 'Urbanist',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 30,
-                    ),
-                  ),
-
-                  // close button
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close,),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                'Appearance',
-                style: TextStyle(
-                  fontFamily: 'Urbanist',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 24,
-                ),
-                textAlign: TextAlign.left,
-              ),
-              
-              const SizedBox(height: 10),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
-                child: Row(
+      body: SingleChildScrollView(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: 25,
+              right: 15,
+              top: 15
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Settings title and x button
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // title 
                     Text(
-                      'Dark mode',
+                      'Settings',
                       style: TextStyle(
                         fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w400,
-                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 30,
                       ),
                     ),
-                    Switch(
-                      value: Theme.of(context).brightness == Brightness.dark,
-                      onChanged: (newVal) {
-                        setState(() {
-                          themeProvider.swap(context);
-                        });
-                      },
-                      activeThumbColor: getColor(context, ColorType.opposite),
-                      activeTrackColor: getColor(context, ColorType.highlighted),
+        
+                    // close button
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close,),
                     ),
                   ],
-                )
-              ),
-
-              const SizedBox(height: 20),
-              
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Theme',
-                      style: TextStyle(
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w400,
-                        fontSize: 18,
-                      ),
-                    ),
-                    
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: getColor(context, ColorType.mapButtonShadow),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1)
-                          ),
-                        ],
-                        borderRadius: BorderRadius.circular(56),
-                      ),
-                      child: DropdownMenu(
-                        inputDecorationTheme: InputDecorationTheme(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(56),
-                            borderSide: BorderSide.none
-                          ),
-                          fillColor: getColor(context, ColorType.dim),
-                          filled: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 20),
+        
+                const SizedBox(height: 20),
+        
+                const Text(
+                  'Appearance',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+                
+                const SizedBox(height: 10),
+        
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Dark mode',
+                        style: TextStyle(
+                          fontFamily: 'Urbanist',
+                          fontWeight: FontWeight.w400,
+                          fontSize: 18,
                         ),
-                        initialSelection: themeProvider.theme,
-                        textStyle: TextStyle(
-                          color: getColor(context, ColorType.opposite),
-                          shadows: [
-                            Shadow(
-                              color: getColor(context, ColorType.mapButtonShadow),
-                              offset: const Offset(0, 2),
-                              blurRadius: 4
-                            ),
-                          ],
-                        ),
-                        dropdownMenuEntries: [
-                          DropdownMenuEntry(value: ThemeStyle.light, label: "light"),
-                          DropdownMenuEntry(value: ThemeStyle.dark, label: "dark"),
-                          DropdownMenuEntry(value: ThemeStyle.system, label: "system"),
-                        ],
-                        onSelected: (ThemeStyle? selected) {
+                      ),
+                      Switch(
+                        value: Theme.of(context).brightness == Brightness.dark,
+                        onChanged: (newVal) {
                           setState(() {
-                            themeProvider.setTheme(selected!);
+                            themeProvider.swap(context);
                           });
                         },
+                        activeThumbColor: getColor(context, ColorType.opposite),
+                        activeTrackColor: getColor(context, ColorType.highlighted),
                       ),
-                    ),
-                  ],
-                )
-              ),
-              
-              const SizedBox(height: 20),
-
-              SegmentedButton(
-                style: SegmentedButton.styleFrom(
-                  padding: const EdgeInsets.all(0),
-                  // shadowColor: Colors.black
-                  selectedBackgroundColor: getColor(context, ColorType.highlighted),
-                  selectedForegroundColor: getColor(context, ColorType.opposite),
-                  backgroundColor: getColor(context, ColorType.dim),
-                  side: BorderSide(
-                    color: getColor(context, ColorType.background),
-                    width: 5,
-                    strokeAlign: BorderSide.strokeAlignOutside
-                  ),
+                    ],
+                  )
                 ),
-                expandedInsets: EdgeInsets.symmetric(horizontal: 10),
-                segments: [
-                  ButtonSegment(value: ThemeStyle.light, label: Text("light"), icon: Icon(Icons.sunny)),
-                  ButtonSegment(value: ThemeStyle.dark, label: Text("dark"), icon: Icon(FontAwesomeIcons.solidMoon)),
-                  ButtonSegment(value: ThemeStyle.system, label: Text("system"), icon: Icon(Icons.computer)),
-                ],
-                selected: <ThemeStyle>{themeProvider.theme},
-                onSelectionChanged: (Set<ThemeStyle> selection) {
-                  setState(() {
-                    themeProvider.setTheme(selection.first);
-                  });
-                },
-              ),
-            ],
-          ),
-        )
+        
+                const SizedBox(height: 20),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Theme',
+                        style: TextStyle(
+                          fontFamily: 'Urbanist',
+                          fontWeight: FontWeight.w400,
+                          fontSize: 18,
+                        ),
+                      ),
+                      
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: getColor(context, ColorType.mapButtonShadow),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1)
+                            ),
+                          ],
+                          borderRadius: BorderRadius.circular(56),
+                        ),
+                        child: DropdownMenu(
+                          inputDecorationTheme: InputDecorationTheme(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(56),
+                              borderSide: BorderSide.none
+                            ),
+                            fillColor: getColor(context, ColorType.dim),
+                            filled: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 20),
+                          ),
+                          initialSelection: themeProvider.theme,
+                          textStyle: TextStyle(
+                            color: getColor(context, ColorType.opposite),
+                            shadows: [
+                              Shadow(
+                                color: getColor(context, ColorType.mapButtonShadow),
+                                offset: const Offset(0, 2),
+                                blurRadius: 4
+                              ),
+                            ],
+                          ),
+                          dropdownMenuEntries: [
+                            DropdownMenuEntry(value: ThemeStyle.light, label: "light"),
+                            DropdownMenuEntry(value: ThemeStyle.dark, label: "dark"),
+                            DropdownMenuEntry(value: ThemeStyle.system, label: "system"),
+                          ],
+                          onSelected: (ThemeStyle? selected) {
+                            setState(() {
+                              themeProvider.setTheme(selected!);
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  )
+                ),
+                
+                const SizedBox(height: 20),
+        
+                SegmentedButton(
+                  style: SegmentedButton.styleFrom(
+                    padding: const EdgeInsets.all(0),
+                    // shadowColor: Colors.black
+                    selectedBackgroundColor: getColor(context, ColorType.highlighted),
+                    selectedForegroundColor: getColor(context, ColorType.opposite),
+                    backgroundColor: getColor(context, ColorType.dim),
+                    side: BorderSide(
+                      color: getColor(context, ColorType.background),
+                      width: 5,
+                      strokeAlign: BorderSide.strokeAlignOutside
+                    ),
+                  ),
+                  expandedInsets: EdgeInsets.symmetric(horizontal: 10),
+                  segments: [
+                    ButtonSegment(value: ThemeStyle.light, label: Text("light"), icon: Icon(Icons.sunny)),
+                    ButtonSegment(value: ThemeStyle.dark, label: Text("dark"), icon: Icon(FontAwesomeIcons.solidMoon)),
+                    ButtonSegment(value: ThemeStyle.system, label: Text("system"), icon: Icon(Icons.computer)),
+                  ],
+                  selected: <ThemeStyle>{themeProvider.theme},
+                  onSelectionChanged: (Set<ThemeStyle> selection) {
+                    setState(() {
+                      themeProvider.setTheme(selection.first);
+                    });
+                  },
+                ),
+        
+                const SizedBox(height: 20),
+        
+                const Text(
+                  'Team',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+
+                const SizedBox(height: 15),
+                personShowcase(context, "Ishan Kumar", "Executive Director", "assets/portraits/ishan.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Harvey Kyllonen", "Frontend Lead", "assets/portraits/harvey.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Kate Anderson", "User Interface Lead", "assets/portraits/kate.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Andrew Yu", "Developer Operations Lead", "assets/portraits/andrew.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Ryan Lu", "Backend Lead", "assets/portraits/none.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Matthew Jia", "Developer - Dark Mode", "assets/portraits/matthew.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Isaac Wheeler", "Developer - Bus UI", "assets/portraits/issac.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Edward Zhang", "Developer - Notifications", "assets/portraits/edward.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Aravind Kandarpa", "Developer - City Busses", "assets/portraits/none.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Amanze Aguwa", "Developer - Ann Arbor Map Data", "assets/portraits/amanze.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Siddhant Bhirud", "Developer - Route Preview", "assets/portraits/sid.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Mason Shields", "Developer - Server Caching", "assets/portraits/mason.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Antonio Said", "Logo and Marketing", "assets/portraits/antonio.jpg"),
+              ],
+            ),
+          )
+        ),
       )
     );
   }
+}
+
+
+Widget personShowcase(BuildContext context, String name, String role, String filePath) {
+  double circleSize = 60.0;
+  double lineHeight = 1.2;
+  
+  return Row(
+    children: [
+      ClipOval(
+        child: Image.asset(
+          filePath,
+          width: circleSize,
+          height: circleSize,
+          fit: BoxFit.cover,
+        ),
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(
+              left: 17,
+            ),
+            child: Text(
+              name,
+              style: TextStyle(
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                height: lineHeight
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(
+              left: 17,
+            ),
+            child: Text(
+              role,
+              style: TextStyle(
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w400,
+                fontSize: 18,
+                color: getColor(context, ColorType.opposite),
+                height: lineHeight
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
 }

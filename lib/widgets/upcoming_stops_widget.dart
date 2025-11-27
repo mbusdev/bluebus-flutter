@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:flutter/material.dart';
 import '../models/bus_stop.dart';
@@ -18,16 +19,21 @@ final Map<String, String> KEY_STOPS = {
   "N406": "FXB Building", // FXB Outbound (Northbound)
   "N405": "FXB Building", // FXB Inbound (Southbound)
   "S003": "Crisler Center/Michigan Stadium", // Transportation Gate (Northbound)
-  "S002":
-      "Crisler Center/Michigan Stadium", // Crisler Center Lot SC-5 (Southbound)
+  "S002": "Crisler Center/Michigan Stadium", // Crisler Center Lot SC-5 (Southbound)
   "C206": "Oxford Housing", // Self-explanatory
   "M323": "Wall Street Parking Structure",
   "N422": "Northwood Fire Station", // "Top" of Northwood route
   "N437": "Northwood V",
 };
 
+// TODO: Make KEY_STOPS an API call!
+
 const Color UPCOMING_STOP_COLOR = Color.fromARGB(255, 85, 119, 130);
-const Color BIG_STOP_BORDER_COLOR = Color.fromARGB(255, 91, 96, 100);
+const Color BIG_STOP_BORDER_COLOR_LIGHTMODE = Color.fromARGB(255, 91, 96, 100);
+const Color BIG_STOP_BORDER_COLOR_DARKMODE = Color.fromARGB(255, 255, 255, 255);
+const Color BIG_STOP_FILL_COLOR_LIGHTMODE = Colors.white;
+// Color BIG_STOP_FILL_COLOR_DARKMODE = darkColors[ColorType.background] ?? Colors.black;
+const Color BIG_STOP_FILL_COLOR_DARKMODE = Color.fromARGB(255, 93, 112, 129);
 
 const int LINE_CONNECTED = 1;
 const int LINE_DISCONNECTED = 2;
@@ -46,12 +52,14 @@ class UpcomingStopIconPainter extends CustomPainter {
   int bottom_line_style = 1;
   bool is_big_dot = false;
   Color routeColor = UPCOMING_STOP_COLOR;
+  bool isDarkMode = false;
 
   UpcomingStopIconPainter(
     this.top_line_style,
     this.bottom_line_style,
     this.is_big_dot,
     this.routeColor,
+    this.isDarkMode,
   );
 
   Paint white_fill_paint = Paint()
@@ -63,13 +71,19 @@ class UpcomingStopIconPainter extends CustomPainter {
     ..strokeWidth = 2
     ..style = PaintingStyle.stroke;
 
-  Paint big_stop_stroke_paint = Paint()
-    ..color = BIG_STOP_BORDER_COLOR
+  @override
+  void paint(Canvas canvas, Size size) {
+
+    Paint big_stop_stroke_paint = Paint()
+    ..color = isDarkMode ? BIG_STOP_BORDER_COLOR_DARKMODE : BIG_STOP_BORDER_COLOR_LIGHTMODE
     ..strokeWidth = 3
     ..style = PaintingStyle.stroke;
 
-  @override
-  void paint(Canvas canvas, Size size) {
+    Paint big_stop_fill_paint = Paint()
+    ..color = isDarkMode ? BIG_STOP_FILL_COLOR_DARKMODE : BIG_STOP_FILL_COLOR_LIGHTMODE
+    ..style = PaintingStyle.fill;
+
+
     Paint fill_paint = Paint()
       ..color = routeColor
       ..strokeWidth = 2
@@ -134,7 +148,7 @@ class UpcomingStopIconPainter extends CustomPainter {
         width: dotWidth,
         height: dotWidth,
       ),
-      white_fill_paint,
+      is_big_dot ? big_stop_fill_paint : white_fill_paint,
     );
     canvas.drawOval(
       Rect.fromCenter(
@@ -288,13 +302,14 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
               lineBottomStyle,
               isKeyStop,
               widget.color,
+              isDarkMode(context)
             ),
           ),
           Expanded(
             child: Text(
               stopName,
               style: TextStyle(
-                fontSize: isKeyStop ? 20.0 : 14.0,
+                fontSize: isKeyStop ? 16.0 : 14.0,
                 fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
               ),
             ),

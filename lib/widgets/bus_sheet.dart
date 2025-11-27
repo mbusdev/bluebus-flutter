@@ -65,7 +65,7 @@ class _BusSheetState extends State<BusSheet> {
           left: 10,
           top: 20,
           right: 20,
-          bottom: 20,
+          bottom: 0,
         ),
         child: SingleChildScrollView(
           controller: widget.scrollController,
@@ -84,7 +84,7 @@ class _BusSheetState extends State<BusSheet> {
                 ),
                 child: Row(
                   children: [
-                    Container(
+                    Container( // Bus circular icon
                       width: 60,
                       height: 60,
                       decoration: BoxDecoration(
@@ -114,8 +114,7 @@ class _BusSheetState extends State<BusSheet> {
                         Text(
                           getPrettyRouteName(bus.routeId),
                           style: TextStyle(
-                            color: Colors.black,
-                            fontFamily: 'Urbanist',
+                             fontFamily: 'Urbanist',
                             fontWeight: FontWeight.w700,
                             fontSize: 30,
                           ),
@@ -151,6 +150,8 @@ class _BusSheetState extends State<BusSheet> {
                   "It doesn't appear there are upcoming stops for this bus",
                 ),
               ),
+
+              SizedBox(height: 10), // Extra padding on the bottom to look nicer
             ],
           ),
         ),

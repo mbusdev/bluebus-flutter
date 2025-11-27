@@ -60,7 +60,7 @@ String getPrettyRouteName(String code) {
 
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
-const Color maizeBusYellow = Color.fromARGB(255, 241, 194, 50);
+const Color maizeBusYellow = Color.fromARGB(255, 255, 203, 45);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {
@@ -79,9 +79,9 @@ const Map<ColorType, Color> lightColors = {
   ColorType.opposite: Colors.black,
   ColorType.background: Colors.white,
   
-  ColorType.mapButtonPrimary: Color.fromARGB(204, 29, 23, 84), // 204 is 80% opacity
+  ColorType.mapButtonPrimary: maizeBusBlue, 
   ColorType.mapButtonSecondary: Color.fromARGB(204, 156, 196, 230),
-  ColorType.mapButtonIcon: Color.fromARGB(255, 229, 242, 255),
+  ColorType.mapButtonIcon: Colors.white,
   ColorType.mapButtonShadow: Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
 
   ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),

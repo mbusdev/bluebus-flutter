@@ -61,96 +61,112 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
     // TODO: implement build
     // throw UnimplementedError();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
+    // return Padding(
+    //   padding: const EdgeInsets.symmetric(horizontal: 20),
+    //   child: 
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: RouteColorService.getRouteColor(widget.busId), 
-                  ),
-                  alignment: Alignment.center,
-                  child: MediaQuery(
-                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                    child: Text(
-                      widget.busId,
-                      style: TextStyle(
-                        color: RouteColorService.getContrastingColor(widget.busId), 
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1,
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              // behavior: HitTestBehavior.opaque, // Clicking anywhere on the bus opens the upcoming stops list
+              onTap: () {
+                setState(() {is_expanded = !is_expanded;});
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10 ),
+                child: Row(
+                children: [
+                  Container( // Circular icon on the left (with the bus code, e.g. "NW")
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: RouteColorService.getRouteColor(widget.busId), 
+                    ),
+                    alignment: Alignment.center,
+                    child: MediaQuery(
+                      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                      child: Text(
+                        widget.busId,
+                        style: TextStyle(
+                          color: RouteColorService.getContrastingColor(widget.busId), 
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
-                
-                SizedBox(width: 15,),
-                                        
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  
+                  SizedBox(width: 15,),
+                                          
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          getPrettyRouteName(widget.busId) + ": " + widget.vehicleId,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Urbanist',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          )
+                        ),
+                                          
+                        Text(
+                          (widget.busPrediction != "DUE")? "${format(widget.busDirection)}, est: ${futureTime(widget.busPrediction)}" : "within the next minute",
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Urbanist',
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16,
+                          )
+                        )
+                      ],
+                    ),
+                  ),
+                                          
+                  (widget.busPrediction != "DUE")?
+                  Column(
                     children: [
                       Text(
-                        getPrettyRouteName(widget.busId) + ": " + widget.vehicleId,
-                        overflow: TextOverflow.ellipsis,
+                        widget.busPrediction,
                         style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 20,
+                          height: 0
                         )
                       ),
-                                        
                       Text(
-                        (widget.busPrediction != "DUE")? "${format(widget.busDirection)}, est: ${futureTime(widget.busPrediction)}" : "within the next minute",
-                        overflow: TextOverflow.ellipsis,
+                        "min",
                         style: TextStyle(
-                          fontFamily: 'Urbanist',
                           fontWeight: FontWeight.w400,
-                          fontSize: 16,
+                          fontSize: 14,
+                          height: 0
                         )
                       )
                     ],
-                  ),
-                ),
-                                        
-                (widget.busPrediction != "DUE")?
-                Column(
-                  children: [
-                    Text(
-                      widget.busPrediction,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 20,
-                        height: 0
-                      )
-                    ),
-                    Text(
-                      "min",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14,
-                        height: 0
-                      )
-                    )
-                  ],
-                ) : SizedBox.shrink(),
+                  ) : SizedBox.shrink(),
 
-                IconButton(
-                  icon: is_expanded ? Icon(Icons.expand_less) : Icon(Icons.expand_more),
-                  onPressed: () {
-                    setState(() {is_expanded = !is_expanded;});
-                  },
-                )
-              ],
+                  // IconButton(
+                  //   icon: 
+                    is_expanded ? Icon(Icons.expand_less) : Icon(Icons.expand_more),
+                    // onPressed: () {
+                    //   setState(() {is_expanded = !is_expanded;});
+                    // },
+                  // )
+                ],
+              ),
             ),
-            UpcomingStopsWidget(
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+            child: UpcomingStopsWidget(
               color: RouteColorService.getRouteColor(widget.busId),
               routeId: widget.routeId, 
               vehicleId: widget.vehicleId,
@@ -165,10 +181,10 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                 child: Text("No upcoming stops found for this bus", style: TextStyle(fontStyle: FontStyle.italic),),
               ),),
 
-              
+    )
           ],
-        ),
-    );
+        );
+    // );
   }
 }
 
@@ -452,10 +468,16 @@ class _StopSheetState extends State<StopSheet> {
 
                                         },
                                         separatorBuilder: (context, index) {
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                                            child: Divider(),
+                                          return Divider(
+                                            height: 0,
+                                            indent: 20,
+                                            endIndent: 20,
+                                            thickness: 1
                                           );
+                                          // return Padding(
+                                          //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                                          //   child: Divider(),
+                                          // );
                                         },
                                       ),
                                   ),
