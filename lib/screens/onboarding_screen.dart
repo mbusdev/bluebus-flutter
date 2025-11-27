@@ -31,8 +31,7 @@ class _OnboardingDeciderState extends State<OnboardingDecider> {
 
   Future<void> _checkAccepted() async {
     final prefs = await SharedPreferences.getInstance();
-    // final accepted = prefs.getBool('accepted_terms') ?? false;
-    final accepted = false;
+    final accepted = prefs.getBool('accepted_terms') ?? false;
     setState(() {
       _accepted = accepted;
       _checking = false;
