@@ -3,10 +3,10 @@ import '../constants.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 
 
-void sendEmailWithSender(BuildContext context, String locName) async {
+void sendEmailWithSender(BuildContext context, String emailSubject, String emailBody) async {
   final Email email = Email(
-    body: 'write the issue here:',
-    subject: 'MaizeBus - Issue with $locName',
+    body: emailBody,
+    subject: emailSubject,
     recipients: ['ishaniik@umich.edu'],
     isHTML: false,
   );
@@ -210,7 +210,7 @@ class _BuildingSheetState extends State<BuildingSheet> {
       
               ElevatedButton.icon(
                 onPressed: () {
-                  sendEmailWithSender(context, widget.building.name);
+                  sendEmailWithSender(context, 'MaizeBus - Issue with $widget.building.name', 'write the issue here: ');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: getColor(context, ColorType.dim),

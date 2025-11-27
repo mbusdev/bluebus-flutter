@@ -31,7 +31,8 @@ class _OnboardingDeciderState extends State<OnboardingDecider> {
 
   Future<void> _checkAccepted() async {
     final prefs = await SharedPreferences.getInstance();
-    final accepted = prefs.getBool('accepted_terms') ?? false;
+    // final accepted = prefs.getBool('accepted_terms') ?? false;
+    final accepted = false;
     setState(() {
       _accepted = accepted;
       _checking = false;
@@ -127,19 +128,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Row(
                       children: [
                         SizedBox(
-                          width: 55,
-                          height: 55,
+                          width: 45,
+                          height: 45,
                           child: FittedBox(
                             child: FloatingActionButton(
                               elevation: 0,
                               onPressed: (){},
-                              backgroundColor: maizeBusDarkBlue,
+                              backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.directions_bus,
-                                color: Colors.white,
+                                color: getColor(context, ColorType.primary),
+                                size: 28
                               ),
                             ),
                           ),
@@ -160,19 +162,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Row(
                       children: [
                         SizedBox(
-                          width: 55,
-                          height: 55,
+                          width: 45,
+                          height: 45,
                           child: FittedBox(
                             child: FloatingActionButton(
                               elevation: 0,
                               onPressed: (){},
-                              backgroundColor: maizeBusDarkBlue,
+                              backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.favorite,
-                                color: Colors.white,
+                                color: getColor(context, ColorType.primary),
+                                size: 28
                               ),
                             ),
                           ),
@@ -193,20 +196,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Row(
                       children: [
                         SizedBox(
-                          width: 55,
-                          height: 55,
+                          width: 45,
+                          height: 45,
                           child: FittedBox(
                             child: FloatingActionButton(
                               elevation: 0,
                               onPressed: (){},
-                              backgroundColor: maizeBusDarkBlue,
+                              backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.search_sharp,
-                                size: 30,
-                                color: Colors.white,
+                                color: getColor(context, ColorType.primary),
+                                size: 28
                               ),
                             ),
                           ),
@@ -231,11 +234,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           curve: Curves.easeInOut,
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: maizeBusDarkBlue, // Sets the background color for all states
+                          backgroundColor: getColor(context, ColorType.mapButtonPrimary), // Sets the background color for all states
                           foregroundColor: Colors.white, // Sets the text/icon color
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 3),
                           child: const Text(
                             'Continue',
                             style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
@@ -314,7 +317,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       fillColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
                         if (states.contains(WidgetState.selected)) {
                           // The color when the checkbox is checked.
-                          return maizeBusDarkBlue;
+                          return getColor(context, ColorType.mapButtonPrimary);
                         }
                         // The color when the checkbox is unchecked.
                         return Colors.grey; 
@@ -334,7 +337,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     children: [
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: maizeBusDarkBlue, // Sets the background color for all states
+                          backgroundColor: getColor(context, ColorType.mapButtonPrimary), // Sets the background color for all states
                           foregroundColor: Colors.white, // Sets the text/icon color
                         ),
                         onPressed: _agreeChecked
