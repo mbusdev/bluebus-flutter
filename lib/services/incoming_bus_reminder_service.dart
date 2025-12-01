@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:bluebus/constants.dart';
-import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
-const _updateInterval = Duration(minutes: 1);
 const remindersKey = "bus_reminder";
 
 /// Key for registration token as known by backend
@@ -18,8 +16,6 @@ const serverTokenKey = "server_registration_token";
 class IncomingBusReminderService {
   static bool _started = false;
   static late SharedPreferencesWithCache userPrefs;
-  // static late Timer _timer;
-  // static Map<({String stpid, String rtid}), int> prevArrivalInfo = {};
 
   static Future<void> start() async {
     if (_started) {
@@ -38,52 +34,6 @@ class IncomingBusReminderService {
       // for someone who has denied notification
       await _completeSetup();
     }
-    // _timer = Timer.periodic(_updateInterval, (_) async {
-    //   if (kDebugMode) {
-    //     debugPrint("Doing reminder processing...");
-    //   }
-    //   try {
-    //     final reminders = getActiveReminders();
-    //     final stops = reminders.map((x) => x.stpid).toSet();
-    //     final incomingBusResults = Stream.fromFutures(
-    //       stops.map((stop) async {
-    //         return (stop, await fetchStopData(stop));
-    //       }),
-    //     );
-
-    //     final Map<({String stpid, String rtid}), int> currArrivalInfo = {};
-    //     await for (final (stop, (buses, _)) in incomingBusResults) {
-    //       for (final bus in buses) {
-    //         final event = (rtid: bus.id, stpid: stop);
-    //         final prediction = bus.prediction == 'DUE'
-    //             ? 0
-    //             : int.parse(bus.prediction);
-    //         if (currArrivalInfo[event] == null ||
-    //             currArrivalInfo[event]! > prediction) {
-    //           currArrivalInfo[event] = prediction;
-    //         }
-    //       }
-    //     }
-
-    //     for (final entry in currArrivalInfo.entries) {
-    //       if (entry.value <= reminderThreshold &&
-    //           (!prevArrivalInfo.containsKey(entry.key) ||
-    //               prevArrivalInfo[entry.key]! > reminderThreshold)) {
-    //         NotificationService.sendLocalNotification(
-    //           "Bus Alert",
-    //           "${entry.key.rtid} will be at ${entry.key.stpid}",
-    //         );
-    //         await Future.delayed(_notificationWaitTime);
-    //       }
-    //     }
-    //   } catch (e) {
-    //     print("Reminder processing failed with: $e");
-    //   }
-    //   if (kDebugMode) {
-    //     print("Reminder processing finished");
-    //   }
-    // });
-    // });
   }
 
   static Future<void> _completeSetup() async {
@@ -209,16 +159,3 @@ Future<bool> _swapToken({
   return res.statusCode == 200;
 }
 
-
-
-// Future<List<({String rtid, String stpid})>?> _fetchReminders(
-//   String token,
-// ) async {
-//   final res = await http.post(
-//     Uri.parse('$BACKEND_URL/reminder'),
-//     headers: {'Content-Type': 'application/json'},
-//     body: jsonEncode({'token': token}),
-//   );
-//   if (res.statusCode != 200) return null;
-//   return jsonDecode(res.body).reminders;
-// }
