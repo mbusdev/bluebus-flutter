@@ -1,23 +1,28 @@
-import 'dart:convert';
-import 'dart:io';
 
-import 'package:bluebus/constants.dart';
 import 'package:bluebus/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 
 class NotificationService {
-  static final _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  static final _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  static bool listeningForFcmUpdates = false;
+  static String? _registrationToken;
+  static Function(String)? _tokenChangeCallback;
 
+  /// This only starts the local notification plugin along with some other basic setup,
+  /// requestPermissions() should be called later to complete setup.
+  ///
+  /// e.g. call it asap if notifications were previously used, otherwise wait for
+  /// the user to trigger a feature that requires notifications
   static Future<void> initPlugin() async {
     Firebase.initializeApp(
       name: "[DEFAULT]",
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    // local notifications
+
+    // prepare local notifications
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('appicon_no_bg');
     final DarwinInitializationSettings iosSettings =
@@ -26,7 +31,7 @@ class NotificationService {
       android: androidSettings,
       iOS: iosSettings,
     );
-    final initialized = await _notificationsPlugin.initialize(
+    final initialized = await _localNotificationsPlugin.initialize(
       settings,
       onDidReceiveNotificationResponse: null,
       onDidReceiveBackgroundNotificationResponse: null,
@@ -34,21 +39,21 @@ class NotificationService {
     if ((initialized == null || !initialized) && kDebugMode) {
       debugPrint("Failed to initialize notifications!");
     }
+
+    // Push Notifications
     // channel used by push notifications (to make sure it shows up)
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       "high_importance_channel",
-      "High Importance Notifications",
-      description: "Important Stuff",
+      "Push Notifications",
+      description: "Used for reminders!",
       importance: Importance.max,
     );
-    await _notificationsPlugin
+    await _localNotificationsPlugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(channel);
   }
-
-  static bool listeningForFcmUpdates = false;
 
   static Future<void> requestPermission() async {
     final notificationSettings = await FirebaseMessaging.instance
@@ -57,82 +62,86 @@ class NotificationService {
         .setForegroundNotificationPresentationOptions(alert: true);
     await FirebaseMessaging.instance
         .getAPNSToken(); // ensure it exists for iOS to work
-    final token = await FirebaseMessaging.instance.getToken();
-    print(
-      "========================================\nFCM Token Is\n====================================",
-    );
-    print("$token");
+    _registrationToken = await FirebaseMessaging.instance.getToken();
+    print(_registrationToken);
 
     if (!listeningForFcmUpdates) {
       listeningForFcmUpdates = true;
       FirebaseMessaging.instance.onTokenRefresh
           .listen((fcmToken) {
-            var i = 0;
-            while (i < 20) {
-              i++;
-              print("=======================================================");
-            }
-            print("The fcm token is now $fcmToken");
-            // TODO
+            _registrationToken = fcmToken;
+            _tokenChangeCallback?.call(fcmToken);
           })
           .onError((err) {
-            // TODO
+            if (kDebugMode) {
+              debugPrint("fcm token refresh error: $err");
+            }
           });
     }
-
-    if (Platform.isIOS /*|| Platform.isMacOS*/ ) {
-      await _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin
-          >()
-          ?.requestPermissions(alert: true, badge: true, sound: true);
-      await _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            MacOSFlutterLocalNotificationsPlugin
-          >()
-          ?.requestPermissions(alert: true, badge: true, sound: true);
-    } else if (Platform.isAndroid) {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          _notificationsPlugin
-              .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin
-              >();
-
-      await androidImplementation?.requestNotificationsPermission();
-    }
   }
 
-  static Future<void> sendPushNotification() async {
-    await FirebaseMessaging.instance.getAPNSToken();
-    final registrationToken = await FirebaseMessaging.instance.getToken();
-    await http.post(
-      Uri.parse('$BACKEND_URL/notifyMeLater'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'token': registrationToken}),
-    );
+  static void setTokenChangeCallback(Function(String) callback) {
+    _tokenChangeCallback = callback;
   }
 
-  static Future<void> sendNotification(String? title, String? body) async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails(
-          'your channel id',
-          'your channel name',
-          channelDescription: 'your channel description',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
-          ticker: 'ticker',
-        );
-    const NotificationDetails notificationDetails = NotificationDetails(
-      android: androidNotificationDetails,
-    );
-    await _notificationsPlugin.show(
-      _id++,
-      title,
-      body,
-      notificationDetails,
-      //payload: 'item x',
-    );
+  /// This can only not be null if `requestPermission()` is called
+  static String? token() {
+    return _registrationToken;
   }
+
+  // if (Platform.isIOS /*|| Platform.isMacOS*/ ) {
+  //   await _localNotificationsPlugin
+  //       .resolvePlatformSpecificImplementation<
+  //         IOSFlutterLocalNotificationsPlugin
+  //       >()
+  //       ?.requestPermissions(alert: true, badge: true, sound: true);
+  //   await _localNotificationsPlugin
+  //       .resolvePlatformSpecificImplementation<
+  //         MacOSFlutterLocalNotificationsPlugin
+  //       >()
+  //       ?.requestPermissions(alert: true, badge: true, sound: true);
+  // } else if (Platform.isAndroid) {
+  //   final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+  //       _localNotificationsPlugin
+  //           .resolvePlatformSpecificImplementation<
+  //             AndroidFlutterLocalNotificationsPlugin
+  //           >();
+
+  //   await androidImplementation?.requestNotificationsPermission();
+  // }
+  // }
+
+  // static Future<void> sendTestPushNotification() async {
+  //   await FirebaseMessaging.instance.getAPNSToken();
+  //   final registrationToken = await FirebaseMessaging.instance.getToken();
+  //   await http.post(
+  //     Uri.parse('$BACKEND_URL/notifyMeLater'),
+  //     headers: {'Content-Type': 'application/json'},
+  //     body: jsonEncode({'token': registrationToken}),
+  //   );
+  // }
+
+  // static Future<void> sendLocalNotification(String? title, String? body) async {
+  //   const AndroidNotificationDetails androidNotificationDetails =
+  //       AndroidNotificationDetails(
+  //         'your channel id',
+  //         'your channel name',
+  //         channelDescription: 'your channel description',
+  //         importance: Importance.defaultImportance,
+  //         priority: Priority.defaultPriority,
+  //         ticker: 'ticker',
+  //       );
+  //   const NotificationDetails notificationDetails = NotificationDetails(
+  //     android: androidNotificationDetails,
+  //   );
+  //   await _localNotificationsPlugin.show(
+  //     _id++,
+  //     title,
+  //     body,
+  //     notificationDetails,
+  //     //payload: 'item x',
+  //   );
+  // }
 }
 
-int _id = 0;
+// int _id = 0;
