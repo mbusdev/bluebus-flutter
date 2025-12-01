@@ -17,7 +17,7 @@ class NotificationService {
   /// e.g. call it asap if notifications were previously used, otherwise wait for
   /// the user to trigger a feature that requires notifications
   static Future<void> initPlugin() async {
-    Firebase.initializeApp(
+    await Firebase.initializeApp(
       name: "[DEFAULT]",
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -60,8 +60,10 @@ class NotificationService {
         .requestPermission();
     await FirebaseMessaging.instance
         .setForegroundNotificationPresentationOptions(alert: true);
-    await FirebaseMessaging.instance
+    final apnsToken = await FirebaseMessaging.instance
         .getAPNSToken(); // ensure it exists for iOS to work
+      print("apns token:");
+      print(apnsToken);
     _registrationToken = await FirebaseMessaging.instance.getToken();
     print(_registrationToken);
 

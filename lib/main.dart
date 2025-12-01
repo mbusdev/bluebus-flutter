@@ -12,7 +12,7 @@ import 'services/route_color_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initPlugin();
-  IncomingBusReminderService.start();
+  await IncomingBusReminderService.start();
   await RouteColorService.initialize();
 
   runApp(
