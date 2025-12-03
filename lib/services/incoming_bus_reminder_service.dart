@@ -115,13 +115,17 @@ class IncomingBusReminderService {
   }
 }
 
+// const REMINDER_BACKEND_URL = BACKEND_URL;
+// const REMINDER_BACKEND_URL = "http://10.0.2.2:3000/mbus/api/v3";
+const REMINDER_BACKEND_URL = String.fromEnvironment("REMINDER_BACKEND_URL", defaultValue: BACKEND_URL);
+
 Future<bool> _setReminder({
   required String token,
   required String rtid,
   required String stpid,
 }) async {
   final res = await http.post(
-    Uri.parse('$BACKEND_URL/setReminder'),
+    Uri.parse('$REMINDER_BACKEND_URL/setReminder'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'token': token,
@@ -137,7 +141,7 @@ Future<bool> _unsetReminder({
   required String stpid,
 }) async {
   final res = await http.post(
-    Uri.parse('$BACKEND_URL/unsetReminder'),
+    Uri.parse('$REMINDER_BACKEND_URL/unsetReminder'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'token': token,
