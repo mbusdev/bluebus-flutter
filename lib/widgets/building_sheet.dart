@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 
@@ -209,9 +210,7 @@ class _BuildingSheetState extends State<BuildingSheet> {
               ),
       
               ElevatedButton.icon(
-                onPressed: () {
-                  sendEmailWithSender(context, 'MaizeBus - Issue with $widget.building.name', 'write the issue here: ');
-                },
+                onPressed: () => launchUrl(contactURL),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: getColor(context, ColorType.dim),
                   shape: RoundedRectangleBorder(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // UPDATE WHEN RELAUNCH
 final String currentVersion = '1.0.2';
@@ -57,6 +58,8 @@ String getPrettyRouteName(String code) {
   final name = fallback_code_to_name[code];
   return name != null ? name : code;
 }
+
+final Uri contactURL = Uri.parse('https://www.maizebus.com/#/contact/');
 
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
