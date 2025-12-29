@@ -200,13 +200,13 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                shadows: [
-                                  Shadow(
-                                    color: getColor(context, ColorType.mapButtonShadow),
-                                    offset: const Offset(0, 2),
-                                    blurRadius: 4
-                                  ),
-                                ],
+                                // shadows: [
+                                //   Shadow(
+                                //     color: getColor(context, ColorType.mapButtonShadow),
+                                //     offset: const Offset(0, 2),
+                                //     blurRadius: 4
+                                //   ),
+                                // ],
                               ),
                             ),
                             trailing: ReorderableDragStartListener(

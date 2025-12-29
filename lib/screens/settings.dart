@@ -5,6 +5,7 @@ import 'package:bluebus/constants.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -62,7 +63,7 @@ class _SettingsState extends State<Settings> {
                 const SizedBox(height: 20),
         
                 const Text(
-                  'Appearance',
+                  'Theme',
                   style: TextStyle(
                     fontFamily: 'Urbanist',
                     fontWeight: FontWeight.w600,
@@ -70,107 +71,8 @@ class _SettingsState extends State<Settings> {
                   ),
                   textAlign: TextAlign.left,
                 ),
-                
-                const SizedBox(height: 10),
-        
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Dark mode',
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 18,
-                        ),
-                      ),
-                      Switch(
-                        value: Theme.of(context).brightness == Brightness.dark,
-                        onChanged: (newVal) {
-                          setState(() {
-                            themeProvider.swap(context);
-                          });
-                        },
-                        activeThumbColor: getColor(context, ColorType.opposite),
-                        activeTrackColor: getColor(context, ColorType.highlighted),
-                      ),
-                    ],
-                  )
-                ),
-        
-                const SizedBox(height: 20),
-                
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Theme',
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 18,
-                        ),
-                      ),
-                      
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: getColor(context, ColorType.mapButtonShadow),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1)
-                            ),
-                          ],
-                          borderRadius: BorderRadius.circular(56),
-                        ),
-                        child: DropdownMenu(
-                          inputDecorationTheme: InputDecorationTheme(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(56),
-                              borderSide: BorderSide.none
-                            ),
-                            fillColor: getColor(context, ColorType.dim),
-                            filled: true,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 20),
-                          ),
-                          initialSelection: themeProvider.theme,
-                          textStyle: TextStyle(
-                            color: getColor(context, ColorType.opposite),
-                            shadows: [
-                              Shadow(
-                                color: getColor(context, ColorType.mapButtonShadow),
-                                offset: const Offset(0, 2),
-                                blurRadius: 4
-                              ),
-                            ],
-                          ),
-                          dropdownMenuEntries: [
-                            DropdownMenuEntry(value: ThemeStyle.light, label: "light"),
-                            DropdownMenuEntry(value: ThemeStyle.dark, label: "dark"),
-                            DropdownMenuEntry(value: ThemeStyle.system, label: "system"),
-                          ],
-                          onSelected: (ThemeStyle? selected) {
-                            setState(() {
-                              themeProvider.setTheme(selected!);
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  )
-                ),
-                
-                const SizedBox(height: 20),
+
+                const SizedBox(height: 15),
         
                 SegmentedButton(
                   style: SegmentedButton.styleFrom(
@@ -200,15 +102,50 @@ class _SettingsState extends State<Settings> {
                 ),
         
                 const SizedBox(height: 20),
-        
-                const Text(
-                  'Team',
-                  style: TextStyle(
-                    fontFamily: 'Urbanist',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 24,
-                  ),
-                  textAlign: TextAlign.left,
+                const Divider(),
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Team',
+                      style: TextStyle(
+                        fontFamily: 'Urbanist',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 24,
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    ElevatedButton.icon(
+                      onPressed: () => launchUrl(contactURL),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: getColor(context, ColorType.dim),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                        elevation: 0
+                      ),
+                      icon: Icon(
+                        Icons.email, 
+                        color: getColor(context, ColorType.opposite),
+                        size: 20,
+                      ), // The icon on the left
+                      label: Text(
+                        'Send Feedback',
+                        style: TextStyle(
+                          color: getColor(context, ColorType.opposite), 
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ), // The text on the right
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 15),
