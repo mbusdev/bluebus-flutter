@@ -16,7 +16,7 @@ class StopSheet extends StatefulWidget {
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
   final List<String> routesWithActiveReminder;
-  final Future<void> Function(String, String) onToggleReminder;
+  final Future<void> Function(String, String, int) onToggleReminder;
 
   const StopSheet({
     Key? key,
@@ -53,6 +53,8 @@ class _StopSheetState extends State<StopSheet> {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
   bool? _isFavorited;
   late List<String> _routesWithActiveReminder;  
+
+  int thresh = 5;
 
   // for select bus stops with images
   late bool imageBusStop;
@@ -391,7 +393,18 @@ class _StopSheetState extends State<StopSheet> {
                                   ),
                                   
                                   SizedBox(height: 10,),
-                                  
+
+                                  // debug testing ui
+                                  Slider(
+                                    value: thresh.toDouble(),
+                                    onChanged: (x) => setState(() {
+                                      thresh = x.round();
+                                    }),
+                                    min: 1.0,
+                                    max: 15.0,
+                                    divisions: 15,
+                                    label: thresh.toString(),
+                                  ),
                                   // bottom buttons
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -462,7 +475,7 @@ class _StopSheetState extends State<StopSheet> {
                                         incomingBusRoutes: arrivingBuses.map((bus) => bus.id).toList(),
                                         activeReminderRoutes: _routesWithActiveReminder,
                                         onToggleReminder: (route) async {
-                                          await widget.onToggleReminder(widget.stopID, route);
+                                          await widget.onToggleReminder(widget.stopID, route, thresh);
                                           setState(() {
                                             if (_routesWithActiveReminder.contains(route)) {
                                               _routesWithActiveReminder.remove(route);

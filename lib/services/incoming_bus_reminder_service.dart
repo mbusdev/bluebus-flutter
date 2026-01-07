@@ -67,18 +67,19 @@ class IncomingBusReminderService {
   static Future<void> _onTokenChange(String token) async {
     final serverToken = _serverToken();
     if (serverToken != null) {
-      if (!await _swapToken(oldTok: _serverToken()!, newTok: token)) {
-        print("swap token FAILED");
+      if (!await _swapToken(oldTok: _serverToken()!, newTok: token) &&
+          kDebugMode) {
+        debugPrint("swap token failed");
       }
     }
     _userPrefs.setString(serverTokenKey, token);
   }
 
-  static Future<void> addReminder(String stpid, String rtid) async {
+  static Future<void> addReminder(String stpid, String rtid, int thresh) async {
     await _completeSetup();
     final token = _serverToken();
     if (token == null) return;
-    if (!await _setReminder(token: token, rtid: rtid, stpid: stpid) &&
+    if (!await _setReminder(token: token, rtid: rtid, stpid: stpid, thresh: thresh) &&
         kDebugMode) {
       debugPrint("setting reminder failed");
     }
@@ -138,19 +139,25 @@ class IncomingBusReminderService {
 
 // const REMINDER_BACKEND_URL = BACKEND_URL;
 // const REMINDER_BACKEND_URL = "http://10.0.2.2:3000/mbus/api/v3";
-const REMINDER_BACKEND_URL = String.fromEnvironment("REMINDER_BACKEND_URL", defaultValue: BACKEND_URL);
+const REMINDER_BACKEND_URL = String.fromEnvironment(
+  "REMINDER_BACKEND_URL",
+  defaultValue: BACKEND_URL,
+);
 
 Future<bool> _setReminder({
   required String token,
   required String rtid,
   required String stpid,
+  required int thresh,
 }) async {
   final res = await http.post(
     Uri.parse('$REMINDER_BACKEND_URL/setReminder'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'token': token,
-      'event': {'rtid': rtid, 'stpid': stpid},
+      'rtid': rtid,
+      'stpid': stpid,
+      'thresh': thresh,
     }),
   );
   return res.statusCode == 200;
@@ -164,10 +171,7 @@ Future<bool> _unsetReminder({
   final res = await http.post(
     Uri.parse('$REMINDER_BACKEND_URL/unsetReminder'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'token': token,
-      'event': {'rtid': rtid, 'stpid': stpid},
-    }),
+    body: jsonEncode({'token': token, 'rtid': rtid, 'stpid': stpid}),
   );
   return res.statusCode == 200;
 }
