@@ -9,6 +9,9 @@ if (localPropertiesFile.exists()) {
 
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -20,6 +23,9 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// needed for flutter_local_notifications
+require(flutter.compileSdkVersion >= 35);
+
 android {
     namespace = "com.ishankumar.maizebus"
     compileSdk = flutter.compileSdkVersion
@@ -28,6 +34,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -63,6 +71,15 @@ android {
             }
         }
     }
+}
+
+dependencies {
+    // the following two might be needed if issues happen
+    // https://pub.dev/packages/flutter_local_notifications#-android-setup
+    // implementation("androidx.window:window:1.0.0")
+    // implementation("androidx.window:window-java:1.0.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
 }
 
 flutter {

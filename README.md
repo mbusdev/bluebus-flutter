@@ -18,6 +18,12 @@
      GOOGLE_MAPS_API_KEY="_yourkeyhere_"
      ```
 
+## **(WIP)** Firebase Setup (used for push notifications)
+
+1. Create a Firebase project
+2. Follow <https://firebase.google.com/docs/flutter/setup>
+3. (iOS) Do this <https://firebase.google.com/docs/cloud-messaging/get-started?platform=flutter#upload-authentication-key>
+
 ## Running the App (IOS)
 
 1. **Launch the iOS Simulator:**
@@ -61,3 +67,7 @@ flutter run --dart-define=BACKEND_URL=http://localhost:3000/mbus/api/v3
 ```
 
 ---
+
+## Running the App With Backend (Android)
+
+The process is similar to iOS, but instead of defining the backend url with localhost, use `10.0.2.2`.

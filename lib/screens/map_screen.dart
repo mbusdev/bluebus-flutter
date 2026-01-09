@@ -6,14 +6,17 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
+import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -123,7 +126,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     await theme.loadTheme(); // load user theme data
 
     canVibrate = await Haptics.canVibrate();
-
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     _loadingMessageNotifier.value = 'Contacting server...';
@@ -667,7 +669,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       _stopIcon ??
                       BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueAzure,
-                      ))
+                     ))
                 : (_stopIcon ??
                       BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueAzure,
@@ -702,6 +704,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   bool _isFavorited(String stpid) => _favoriteStops.contains(stpid);
+
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
@@ -1689,6 +1692,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               stopName,
               false,
             );
+          },
+          routesWithActiveReminder:
+            IncomingBusReminderService
+              .getActiveReminders()
+              .where((x) => x.stpid == stopID)
+              .map((x) => x.rtid)
+              .toList(),
+          onToggleReminder: (stopID, routeID) async {
+            if (IncomingBusReminderService.isActiveReminder(stopID, routeID)) {
+              await IncomingBusReminderService.removeReminder(stopID, routeID);
+            } else {
+              await IncomingBusReminderService.addReminder(stopID, routeID);
+            }
           },
         );
       },
