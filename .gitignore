@@ -14,6 +14,13 @@
 # api key
 gmap.xcconfig
 
+# Firebase related
+firebase.json
+google-services.json
+GoogleService-Info.plist
+# auto generated
+lib/firebase_options.dart
+
 # Flutter repo-specific
 /bin/cache/
 /bin/internal/bootstrap.bat
