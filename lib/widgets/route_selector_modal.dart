@@ -27,6 +27,11 @@ class RouteSelectorModal extends StatefulWidget {
 class _RouteSelectorModalState extends State<RouteSelectorModal> {
   late Set<String> tempSelectedRoutes;
   late List<Map<String, String>> displayedRoutes; // with user-selected order
+  final Map<String, GlobalKey> _itemKeys = {};
+  final GlobalKey _listKey = GlobalKey();
+  bool _isReordering = false;
+  int? _lastHoverIndex;
+  DateTime _lastHoverHaptic = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -60,6 +65,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   }
 
   void _onReorder(int oldIndex, int newIndex) {
+    _isReordering = false;
     setState(() {
       // account for index when removing the route before inserting it
       if (newIndex > oldIndex) --newIndex;
@@ -71,6 +77,49 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
     // save to local data
     _saveRouteOrder();
+  }
+
+  void _onDragHover(PointerMoveEvent event) async {
+    if (!_isReordering) return;
+    if (widget.canVibrate &&
+        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 60) { // hpatic rate or like cooldown
+      return;
+    }
+
+    final globalPos = event.position;
+    int? closestIndex;
+    double closestDistance = double.infinity;
+
+    for (int i = 0; i < displayedRoutes.length; i++) {
+      final key = _itemKeys[displayedRoutes[i]['id']];
+      final context = key?.currentContext;
+      if (context == null) continue;
+      final box = context.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached) continue;
+
+      final topLeft = box.localToGlobal(Offset.zero);
+      final size = box.size;
+      final centerY = topLeft.dy+size.height /2;
+      final dist = (globalPos.dy - centerY).abs();
+
+      if (dist < closestDistance) {
+        closestDistance = dist;
+        closestIndex = i;
+      }
+    }
+
+    if (closestIndex != null && closestIndex != _lastHoverIndex) {
+      _lastHoverIndex = closestIndex;
+      if (widget.canVibrate) {
+        _lastHoverHaptic = DateTime.now();
+        await Haptics.vibrate(HapticsType.light);
+      }
+    }
+  }
+
+  void _onDragEnd(PointerEvent event) {
+    _isReordering = false;
+    _lastHoverIndex = null;
   }
 
   @override
@@ -137,104 +186,117 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
                 // routes list
                 Expanded(
-                  child: ReorderableListView.builder(
-                    scrollController: scrollController,
-                    itemCount: displayedRoutes.length,
-                    
-                    buildDefaultDragHandles: false,
-                    onReorder: _onReorder,
+                  child: Listener(
+                    key: _listKey,
+                    behavior: HitTestBehavior.translucent,
+                    onPointerMove: _onDragHover,
+                    onPointerUp: _onDragEnd,
+                    onPointerCancel: _onDragEnd,
+                    child: ReorderableListView.builder(
+                      scrollController: scrollController,
+                      itemCount: displayedRoutes.length,
+                      
+                      buildDefaultDragHandles: false,
+                      onReorder: _onReorder,
 
-                    // how a route looks when it's being dragged
-                    proxyDecorator: (Widget child, int index, Animation<double> anim) {
-                      return Material(
-                        color: Colors.transparent,
-                        child: child,
-                      );
-                    },
+                      // how a route looks when it's being dragged
+                      proxyDecorator: (Widget child, int index, Animation<double> anim) {
+                        _isReordering = true;
+                        _lastHoverIndex = index;
+                        return Material(
+                          color: Colors.transparent,
+                          child: child,
+                        );
+                      },
 
-                    itemBuilder: (context, index) {
-                      final route = displayedRoutes[index];
-                      final isSelected = tempSelectedRoutes.contains(route['id']);
+                      itemBuilder: (context, index) {
+                        final route = displayedRoutes[index];
+                        final isSelected = tempSelectedRoutes.contains(route['id']);
+                        final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
 
-                      return Card(
-                        key: ValueKey(route['id']!),
-                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                        ),
-                        color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
-                        // Increase elevation when selected
-                        elevation: 2,
-                        shadowColor: getColor(context, ColorType.mapButtonShadow),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                          ),
-                          child: ListTile(
-                            leading: Container(
-                              width: 35,
-                              height: 35,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: RouteColorService.getRouteColor(route['id']!), 
+                        return KeyedSubtree(
+                          key: ValueKey(route['id']!),
+                          child: Card(
+                            key: key,
+                            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                            ),
+                            color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
+                            // Increase elevation when selected
+                            elevation: 2,
+                            shadowColor: getColor(context, ColorType.mapButtonShadow),
+                            child: Theme(
+                              data: Theme.of(context).copyWith(
+                                splashColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
                               ),
-                              alignment: Alignment.center,
-                              child: MediaQuery(
-                                // media query prevents text scaling
-                                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                child: Text(
-                                  route['id']!,
-                                  style: TextStyle(
-                                    color: RouteColorService.getContrastingColor(route['id']!), 
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -1,
+                              child: ListTile(
+                                leading: Container(
+                                  width: 35,
+                                  height: 35,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: RouteColorService.getRouteColor(route['id']!), 
                                   ),
-                                  textAlign: TextAlign.center,
+                                  alignment: Alignment.center,
+                                  child: MediaQuery(
+                                    // media query prevents text scaling
+                                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                    child: Text(
+                                      route['id']!,
+                                      style: TextStyle(
+                                        color: RouteColorService.getContrastingColor(route['id']!), 
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -1,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
                                 ),
+                                title: Text(
+                                  route['name'] ?? route['id']!,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                    shadows: [
+                                      Shadow(
+                                        color: getColor(context, ColorType.mapButtonShadow),
+                                        offset: const Offset(0, 2),
+                                        blurRadius: 4
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                trailing: ReorderableDragStartListener(
+                                  index: index,
+                                  child: Icon(Icons.drag_handle),
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    if (isSelected) {
+                                      tempSelectedRoutes.remove(route['id']!);
+                                    } else {
+                                      tempSelectedRoutes.add(route['id']!);
+                                    }
+                                  });
+                                },
+                                onLongPress: () async {
+                                  if (widget.canVibrate){
+                                    await Haptics.vibrate(HapticsType.soft);
+                                  }
+                                  setState(() {
+                                    tempSelectedRoutes.clear();
+                                    tempSelectedRoutes.add(route['id']!);
+                                  });
+                                },
                               ),
                             ),
-                            title: Text(
-                              route['name'] ?? route['id']!,
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                // shadows: [
-                                //   Shadow(
-                                //     color: getColor(context, ColorType.mapButtonShadow),
-                                //     offset: const Offset(0, 2),
-                                //     blurRadius: 4
-                                //   ),
-                                // ],
-                              ),
-                            ),
-                            trailing: ReorderableDragStartListener(
-                              index: index,
-                              child: Icon(Icons.drag_handle),
-                            ),
-                            onTap: () {
-                              setState(() {
-                                if (isSelected) {
-                                  tempSelectedRoutes.remove(route['id']!);
-                                } else {
-                                  tempSelectedRoutes.add(route['id']!);
-                                }
-                              });
-                            },
-                            onLongPress: () async {
-                              if (widget.canVibrate){
-                                await Haptics.vibrate(HapticsType.soft);
-                              }
-                              setState(() {
-                                tempSelectedRoutes.clear();
-                                tempSelectedRoutes.add(route['id']!);
-                              });
-                            },
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
 
