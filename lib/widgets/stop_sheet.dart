@@ -46,7 +46,7 @@ String futureTime(String minutesInFuture){
 }
 
 String format(String text) {
-  if (text == null || text.isEmpty) {
+  if (text.isEmpty) {
     return '';
   }
 
