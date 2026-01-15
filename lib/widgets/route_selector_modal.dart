@@ -384,7 +384,7 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: getColor(context, ColorType.background),
       insetPadding: EdgeInsets.all(10),
       child: SizedBox(
         width: MediaQuery.of(context).size.width,
@@ -396,7 +396,6 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -422,7 +421,7 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: getColor(context, ColorType.background),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(20),
                     bottomRight: Radius.circular(20),

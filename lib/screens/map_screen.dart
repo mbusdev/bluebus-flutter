@@ -2175,39 +2175,79 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       (!_journeyOverlayActive)
                           ? Padding(
                             padding: const EdgeInsets.only(
-                              left: 15,
-                              right: 15.5,
-                              top: 15,
+                              bottom: 20
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                // face north button is only visible when not facing north
-                                Visibility(
-                                  visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 10,
-                                          offset: Offset(0, 6)
-                                        )
-                                      ],
-                                      borderRadius: BorderRadius.circular(25)
-                                    ),
-                                    child: FloatingActionButton.small(
-                                      onPressed: _setMapToNorth,
-                                      heroTag: 'north_fab',
-                                      backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(56),
+                                Column(
+                                  children: [
+                                    // face north button is only visible when not facing north
+                                    Visibility(
+                                      visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                          borderRadius: BorderRadius.circular(25)
+                                        ),
+                                        child: FloatingActionButton.small(
+                                          onPressed: _setMapToNorth,
+                                          heroTag: 'north_fab',
+                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(56),
+                                          ),
+                                          child: Transform.rotate(
+                                            angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
+                                            child: Icon(
+                                              FontAwesomeIcons.compass,
+                                              color: darkColors[ColorType.mapButtonIcon],
+                                              shadows: [
+                                                Shadow(
+                                                  color: getColor(context, ColorType.mapButtonShadow),
+                                                  blurRadius: 4,
+                                                  offset: Offset(0, 2)
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                      child: Transform.rotate(
-                                        angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
+                                    ),
+
+                                    const SizedBox(height: 10,),
+                      
+                                    // location button
+                                    DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: FloatingActionButton.small(
+                                        onPressed: () {
+                                          _centerOnLocation(true);
+                                        },
+                                        heroTag: 'location_fab',
+                                        backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(56),
+                                        ),
                                         child: Icon(
-                                          FontAwesomeIcons.compass,
+                                          Icons.my_location,
                                           color: darkColors[ColorType.mapButtonIcon],
                                           shadows: [
                                             Shadow(
@@ -2219,44 +2259,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                  
-                                // location button
-                                //DecoratedBox(
-                                //  decoration: BoxDecoration(
-                                //    boxShadow: [
-                                //      BoxShadow(
-                                //        color: getColor(context, ColorType.mapButtonShadow),
-                                //        blurRadius: 10,
-                                //        offset: Offset(0, 6)
-                                //      )
-                                //    ],
-                                //    borderRadius: BorderRadius.circular(25)
-                                //  ),
-                                //  child: FloatingActionButton.small(
-                                //    onPressed: () {
-                                //      _centerOnLocation(true);
-                                //    },
-                                //    heroTag: 'location_fab',
-                                //    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                //    elevation: 0,
-                                //    shape: RoundedRectangleBorder(
-                                //      borderRadius: BorderRadius.circular(56),
-                                //    ),
-                                //    child: Icon(
-                                //      Icons.my_location,
-                                //      color: darkColors[ColorType.mapButtonIcon],
-                                //      shadows: [
-                                //        Shadow(
-                                //          color: getColor(context, ColorType.mapButtonShadow),
-                                //          blurRadius: 4,
-                                //          offset: Offset(0, 2)
-                                //        )
-                                //      ],
-                                //    ),
-                                //  ),
-                                //),
+                                  ],
+                                )
                               ],
                             ),
                           )
