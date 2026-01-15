@@ -120,11 +120,10 @@ class _BusSheetState extends State<BusSheet> {
                           ),
                         ),
                         Text(
-                          "Bus ${bus.id}",
+                          "Bus ${bus.id} - ${busFullnessMap[bus.fullness]}",
                           style: TextStyle(
                             color: Colors.grey,
                             fontFamily: 'Urbanist',
-                            fontWeight: FontWeight.w700,
                             fontSize: 20,
                           ),
                         ),
