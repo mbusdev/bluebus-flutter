@@ -6,8 +6,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // for busses
 Future<List<BusStopWithPrediction>> fetchNextBusStops(String busID) async {
-  final url = Uri.parse("$BACKEND_URL/getBusPredictions/$busID");
-  
+  Uri url;
+
+  if (int.tryParse(busID) != null) {
+    // busID is numeric, so it's a ride bus
+    url = Uri.parse("$BACKEND_URL/getRidePredictions/$busID");
+  } else {
+    // otherwise, it's a michigan bus
+    url = Uri.parse("$BACKEND_URL/getBusPredictions/$busID");
+  }
+
   final response = await http.get(url);
 
   if (response.statusCode == 200) {
@@ -26,7 +34,16 @@ Future<(List<BusWithPrediction>, bool)> fetchStopData(String stopID) async {
   final list = prefs.getStringList('favorite_stops') ?? <String>[];
   bool toReturn = list.contains(stopID);
 
-  final url = Uri.parse("$BACKEND_URL/getStopPredictions/$stopID");
+  Uri url;
+
+  if (int.tryParse(stopID) != null) {
+    // stopID is numeric, so it's a ride stop
+    url = Uri.parse("$BACKEND_URL/getRideStopPredictions/$stopID");
+  } else {
+    // otherwise, it's a michigan stop
+    url = Uri.parse("$BACKEND_URL/getStopPredictions/$stopID");
+  }
+
   final response = await http.get(url);
 
   if (response.statusCode == 200) {

@@ -83,6 +83,8 @@ class RouteColorService {
         }
       }
     }
+
+    return;
   }
 
   // Convert hex color string to Color object
@@ -105,6 +107,7 @@ class RouteColorService {
   }
 
   // Fallback to default colors if backend fails
+  // TODO: Update with actual default colors
   static void _setDefaultColors() {
     _routeColors = {
       'NW': Colors.blue,
