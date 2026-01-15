@@ -301,11 +301,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                   children: [
                                     // Info button
                                     IconButton(
-                                      icon: Icon(
-                                        Icons.info_outline,
-                                        color: Colors.grey.shade700,
-                                        size: 22,
-                                      ),
+                                      icon: Icon(Icons.info_outline, size: 22,),
                                       onPressed: () {
                                         _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
                                       },
