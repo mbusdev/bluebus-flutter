@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:bluebus/constants.dart';
+import 'package:bluebus/providers/bus_provider.dart';
+import 'package:bluebus/services/bus_repository.dart';
 import 'package:http/http.dart' as http;
 import '../models/bus_stop.dart'; 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,11 +10,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<List<BusStopWithPrediction>> fetchNextBusStops(String busID) async {
   Uri url;
 
-  if (int.tryParse(busID) != null) {
+  String? id = BusRepository.getBus(busID)?.routeId;
+
+  if (id != null && int.tryParse(id) != null) {
     // busID is numeric, so it's a ride bus
     url = Uri.parse("$BACKEND_URL/getRidePredictions/$busID");
   } else {
-    // otherwise, it's a michigan bus
+    // otherwise, it's a michigan bus 
+    // (or "id" was just null, so we fallback to michigan)
     url = Uri.parse("$BACKEND_URL/getBusPredictions/$busID");
   }
 

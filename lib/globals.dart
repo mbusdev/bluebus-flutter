@@ -20,7 +20,7 @@ String getStopNameFromID (String id){
 
 // helper function
 LatLng? getLatLongFromStopID (String id){
-
+  // TODO: use hashmap for faster lookup
   for (Location l in globalStopLocs){
     if (l.stopId == id){
       return (l.latlng);
