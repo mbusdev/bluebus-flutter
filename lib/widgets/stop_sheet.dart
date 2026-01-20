@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/services/notification_service.dart';
@@ -8,6 +10,7 @@ import '../services/route_color_service.dart';
 import '../models/bus_stop.dart'; 
 import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
+import 'upcoming_stops_widget.dart';
 
 class StopSheet extends StatefulWidget {
   final String stopID;
@@ -15,16 +18,18 @@ class StopSheet extends StatefulWidget {
   final Future<void> Function(String, String) onFavorite;
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
+  void Function(String) showBusSheet;
   final List<String> routesWithActiveReminder;
   final Future<void> Function(String, String, int) onToggleReminder;
 
-  const StopSheet({
+  StopSheet({
     Key? key,
     required this.stopID,
     required this.stopName,
     required this.onFavorite,
     required this.onUnFavorite,
     required this.onGetDirections,
+    required this.showBusSheet,
     required this.routesWithActiveReminder,
     required this.onToggleReminder,
   }) : super(key: key);
@@ -41,13 +46,176 @@ String futureTime(String minutesInFuture){
 }
 
 String format(String text) {
-  if (text == null || text.isEmpty) {
+  if (text.isEmpty) {
     return '';
   }
 
   // Capitalize the first character and lowercase the rest
   return text[0].toUpperCase() + text.substring(1).toLowerCase();
 }
+
+class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
+  bool is_expanded = false;
+
+  void initState() {
+    super.initState();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    // throw UnimplementedError();
+
+    // return Padding(
+    //   padding: const EdgeInsets.symmetric(horizontal: 20),
+    //   child: 
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              // behavior: HitTestBehavior.opaque, // Clicking anywhere on the bus opens the upcoming stops list
+              onTap: () {
+                setState(() {is_expanded = !is_expanded;});
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10 ),
+                child: Row(
+                children: [
+                  Container( // Circular icon on the left (with the bus code, e.g. "NW")
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: RouteColorService.getRouteColor(widget.busId), 
+                    ),
+                    alignment: Alignment.center,
+                    child: MediaQuery(
+                      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                      child: Text(
+                        widget.busId,
+                        style: TextStyle(
+                          color: RouteColorService.getContrastingColor(widget.busId), 
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(width: 15,),
+                                          
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          getPrettyRouteName(widget.busId) + ": " + widget.vehicleId,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Urbanist',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          )
+                        ),
+                                          
+                        Text(
+                          (widget.busPrediction != "DUE")? "${format(widget.busDirection)}, est: ${futureTime(widget.busPrediction)}" : "within the next minute",
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Urbanist',
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16,
+                          )
+                        )
+                      ],
+                    ),
+                  ),
+                                          
+                  (widget.busPrediction != "DUE")?
+                  Column(
+                    children: [
+                      Text(
+                        widget.busPrediction,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w400,
+                          fontSize: 20,
+                          height: 0
+                        )
+                      ),
+                      Text(
+                        "min",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w400,
+                          fontSize: 14,
+                          height: 0
+                        )
+                      )
+                    ],
+                  ) : SizedBox.shrink(),
+
+                  // IconButton(
+                  //   icon: 
+                    is_expanded ? Icon(Icons.expand_less) : Icon(Icons.expand_more),
+                    // onPressed: () {
+                    //   setState(() {is_expanded = !is_expanded;});
+                    // },
+                  // )
+                ],
+              ),
+            ),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+            child: UpcomingStopsWidget(
+              color: RouteColorService.getRouteColor(widget.busId),
+              routeId: widget.routeId, 
+              vehicleId: widget.vehicleId,
+              isExpanded: is_expanded,
+              shouldAnimate: true,
+              filterAfterPredictionTime: (widget.busPrediction == "DUE") ? 0 : int.parse(widget.busPrediction) - 5, // Minus five minutes to account for prediction time discrepancies
+              filterAfterStop: widget.stopId,
+              showSeeMoreButton: true,
+              showBusSheet: widget.showBusSheet,
+              childIfNoUpcomingStopsFound: Padding(
+                padding: EdgeInsets.only(left: 55),
+                child: Text("No upcoming stops found for this bus", style: TextStyle(fontStyle: FontStyle.italic),),
+              ),),
+
+    )
+          ],
+        );
+    // );
+  }
+}
+
+class ExpandableStopWidget extends StatefulWidget {
+  final String routeId;
+  final String vehicleId;
+  final String busId;
+  final String busPrediction;
+  final String busDirection;
+  final String stopId;
+  final Function(String) showBusSheet;
+
+  @override
+  State<StatefulWidget> createState() => _ExpandableStopWidgetState();
+
+  const ExpandableStopWidget({
+    required this.routeId,
+    required this.vehicleId,
+    required this.busId,
+    required this.busPrediction,
+    required this.busDirection,
+    required this.stopId,
+    required this.showBusSheet,
+  });
+}
+
 
 class _StopSheetState extends State<StopSheet> {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
@@ -131,7 +299,8 @@ class _StopSheetState extends State<StopSheet> {
         
               // edge case
               if(itemCount == 0){
-                initialSize = 0.4;
+                // initialSize = 0.4;
+                initialSize = 0.5;
               }
               
             } else {
@@ -150,8 +319,8 @@ class _StopSheetState extends State<StopSheet> {
               snapSizes: const [0.9], 
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: getColor(context, ColorType.background),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -173,7 +342,7 @@ class _StopSheetState extends State<StopSheet> {
                             return LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Colors.white, Colors.transparent],
+                              colors: [getColor(context, ColorType.primary), Colors.transparent],
                               stops: [0.7, 1.0],
                             ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
                           },
@@ -196,7 +365,6 @@ class _StopSheetState extends State<StopSheet> {
                                 // IF YOU CHANGE THIS STYLE make sure to change the estimate
                                 // function too (top of this file)
                                 style: TextStyle(
-                                  color: Colors.black,
                                   fontFamily: 'Urbanist',
                                   fontWeight: FontWeight.w700,
                                   fontSize: 30,
@@ -296,98 +464,29 @@ class _StopSheetState extends State<StopSheet> {
                                       itemCount: arrivingBuses.length,
                                       itemBuilder: (context, index) {
                                         BusWithPrediction bus = arrivingBuses[index];
-                                    
-                                        return Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                                Row(
-                                                  children: [
-                                                    Container(
-                                                      width: 40,
-                                                      height: 40,
-                                                      decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: RouteColorService.getRouteColor(bus.id), 
-                                                      ),
-                                                      alignment: Alignment.center,
-                                                      child: MediaQuery(
-                                                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                                        child: Text(
-                                                          bus.id,
-                                                          style: TextStyle(
-                                                            color: RouteColorService.getContrastingColor(bus.id), 
-                                                            fontSize: 20,
-                                                            fontWeight: FontWeight.w900,
-                                                            letterSpacing: -1,
-                                                          ),
-                                                          textAlign: TextAlign.center,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    
-                                                    SizedBox(width: 15,),
-                                                                            
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            getPrettyRouteName(bus.id),
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: TextStyle(
-                                                              fontFamily: 'Urbanist',
-                                                              fontWeight: FontWeight.w700,
-                                                              fontSize: 16,
-                                                            )
-                                                          ),
-                                                                            
-                                                          Text(
-                                                            (bus.prediction != "DUE")? "${format(bus.direction)}, est: ${futureTime(bus.prediction)}" : "within the next minute",
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: TextStyle(
-                                                              fontFamily: 'Urbanist',
-                                                              fontWeight: FontWeight.w400,
-                                                              fontSize: 16,
-                                                            )
-                                                          )
-                                                        ],
-                                                      ),
-                                                    ),
-                                                                            
-                                                    (bus.prediction != "DUE")?
-                                                    Column(
-                                                      children: [
-                                                        Text(
-                                                          bus.prediction,
-                                                          style: TextStyle(
-                                                            fontWeight: FontWeight.w400,
-                                                            fontSize: 20,
-                                                            height: 0
-                                                          )
-                                                        ),
-                                                        Text(
-                                                          "min",
-                                                          style: TextStyle(
-                                                            fontWeight: FontWeight.w400,
-                                                            fontSize: 14,
-                                                            height: 0
-                                                          )
-                                                        )
-                                                      ],
-                                                    ) : SizedBox.shrink()
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
+
+                                        return ExpandableStopWidget(
+                                          routeId: bus.id,
+                                          vehicleId: bus.vehicleId,
+                                          busId: bus.id,
+                                          busPrediction: bus.prediction,
+                                          busDirection: bus.direction,
+                                          stopId: widget.stopID,
+                                          showBusSheet: widget.showBusSheet
                                         );
+
                                         },
                                         separatorBuilder: (context, index) {
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                                            child: Divider(),
+                                          return Divider(
+                                            height: 0,
+                                            indent: 20,
+                                            endIndent: 20,
+                                            thickness: 1
                                           );
+                                          // return Padding(
+                                          //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                                          //   child: Divider(),
+                                          // );
                                         },
                                       ),
                                   ),
@@ -415,23 +514,39 @@ class _StopSheetState extends State<StopSheet> {
                                           widget.onGetDirections();
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: maizeBusDarkBlue,
+                                          backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(15),
+                                            borderRadius: BorderRadius.circular(30),
                                           ),
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          elevation: 4
+                                          //elevation: 4
                                         ),
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.directions, 
-                                          color: Colors.white,
-                                          size: 20,), 
-                                        label: const Text(
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 20,
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, ColorType.mapButtonShadow),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ), 
+                                        label: Text(
                                           'Get Directions',
                                           style: TextStyle(
-                                            color: Colors.white, 
-                                            fontSize: 16, fontWeight: 
-                                            FontWeight.w600),
+                                            color: getColor(context, ColorType.primary),
+                                            fontSize: 16, 
+                                            fontWeight: FontWeight.w600,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, ColorType.mapButtonShadow),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                          ),
                                         ), 
                                       ),
                                             
@@ -453,22 +568,38 @@ class _StopSheetState extends State<StopSheet> {
                                           });
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: Color.fromARGB(255, 235, 235, 235),
+                                          backgroundColor: getColor(context, ColorType.dim),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(15),
+                                            borderRadius: BorderRadius.circular(30),
                                           ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                                         ),
                                         icon: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorited ?? false)? Colors.red : Colors.black,
-                                          size: 20,), 
+                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.opposite),
+                                          size: 20,
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, ColorType.mapButtonShadow),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ), 
                                         label: Text(
                                           (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
-                                          style: const TextStyle(
-                                            color: Colors.black, 
-                                            fontSize: 16, fontWeight: 
-                                            FontWeight.w600),
+                                          style: TextStyle(
+                                            color: getColor(context, ColorType.opposite),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, ColorType.mapButtonShadow),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                          ),
                                         ),
                                       ),
                                       RemindersButton(

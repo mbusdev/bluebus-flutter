@@ -101,8 +101,8 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: getColor(context, ColorType.background),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -119,24 +119,16 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: getColor(context, ColorType.background),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color.fromARGB(95, 187, 187, 187), 
-                        spreadRadius: 2, 
-                        blurRadius: 6, 
-                        offset: Offset(0, 3), 
-                      ),
-                    ],
                   ),
 
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.only(left: 20, right: 20, top: 20),
                     child: Column(
                       children: [
                         Row(
@@ -174,18 +166,24 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                 },
                                 child: Container(
                                   alignment: Alignment.centerLeft,
-                                  height: 30,
+                                  height: 40,
                                   decoration: BoxDecoration(
-                                    color: Color.fromARGB(255, 235, 235, 235),
-                                    borderRadius: BorderRadius.all(Radius.circular(10)
-                                    ),
+                                    color: getColor(context, ColorType.dim),
+                                    borderRadius: BorderRadius.all(Radius.circular(20)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: getColor(context, ColorType.mapButtonShadow),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.only(left: 10, right: 10),
+                                    padding: const EdgeInsets.only(left: 15, right: 15),
                                     child: Text(
                                       widget.originName,
                                       style:  TextStyle(
-                                        fontSize: 18,
+                                        fontSize: 20,
                                         fontWeight: FontWeight.w400,
                                         height: 0
                                       ),
@@ -198,7 +196,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                           ],
                         ),
 
-                        SizedBox(height: 10,),
+                        SizedBox(height: 13,),
                     
                         Row(
                           children: [
@@ -234,18 +232,24 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                 },
                                 child: Container(
                                   alignment: Alignment.centerLeft,
-                                  height: 30,
+                                  height: 40,
                                   decoration: BoxDecoration(
-                                    color: Color.fromARGB(255, 235, 235, 235),
-                                    borderRadius: BorderRadius.all(Radius.circular(10)
-                                    ),
+                                    color: getColor(context, ColorType.dim),
+                                    borderRadius: BorderRadius.all(Radius.circular(20)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: getColor(context, ColorType.mapButtonShadow),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.only(left: 10, right: 10),
+                                    padding: const EdgeInsets.only(left: 15, right: 15),
                                     child: Text(
                                       widget.destName,
                                       style:  TextStyle(
-                                        fontSize: 18,
+                                        fontSize: 20,
                                         fontWeight: FontWeight.w400,
                                         height: 0
                                       ),
@@ -267,7 +271,6 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                   child: Text(
                     "Options",
                     style: TextStyle(
-                      color: Colors.black,
                       fontFamily: 'Urbanist',
                       fontWeight: FontWeight.w700,
                       fontSize: 30,
@@ -277,7 +280,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
 
                 Padding(
                   padding: const EdgeInsets.only(top: 30, bottom: 40),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: getColor(context, ColorType.opposite)
+                    )
+                  ),
                 )
               ],
             );

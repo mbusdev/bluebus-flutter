@@ -2,18 +2,18 @@
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
-import 'services/route_color_service.dart';
+import 'providers/theme_provider.dart';
 
 // This function initializes the Flutter app and runs the MainApp widget
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initPlugin();
   await IncomingBusReminderService.start();
-  await RouteColorService.initialize();
 
   runApp(
     MultiProvider(
@@ -21,6 +21,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => BusProvider(repository: BusRepository()),
         ),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider()
+        )
       ],
       child: const MainApp(),
     ),
@@ -34,20 +37,17 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      // Remove the debug banner
-      debugShowCheckedModeBanner: false,
-      title: 'MaizeBus',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        fontFamily: 'Urbanist',
-        scaffoldBackgroundColor: Colors.white,
-      ),
+    return Consumer<ThemeProvider>( // rebuilds when ThemeProvider changes
+      builder: (context, themeObj, child) => MaterialApp(
+        // Remove the debug banner
+        debugShowCheckedModeBanner: false,
+        title: 'MaizeBus',
+        theme: themeObj.getThemeData(), // gets ThemeData object of current theme
 
-      // Show onboarding on first run (terms acceptance). OnboardingDecider
-      // will display the welcome + terms flow if needed, otherwise the map.
-      home: const OnboardingDecider(),
+        // Show onboarding on first run (terms acceptance). OnboardingDecider
+        // will display the welcome + terms flow if needed, otherwise the map.
+        home: const OnboardingDecider(),
+      )
     );
   }
 }

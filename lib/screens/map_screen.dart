@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
@@ -17,10 +18,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
@@ -32,6 +35,7 @@ import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
+import './settings.dart';
 //import 'dart:convert';
 
 class MaizeBusCore extends StatefulWidget {
@@ -49,6 +53,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
 
   GoogleMapController? _mapController;
+  CameraPosition? _currentCameraPos;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
   Set<Polyline> _displayedPolylines = {};
@@ -60,6 +65,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Buses relevant to the active journey (when overlay active)
   Set<Marker> _displayedJourneyBusMarkers = {};
   // Search location marker (red pin when viewing building/stop details)
+
+  Set<Marker> _allDisplayedStopMarkers = {};
+  // Union of _displayedStopMarkers, _displayedBusMarkers, _displayedJourneyMarkers,
+  //     and _searchLocationMarker. Stored here so build() has better performance
+
   Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
@@ -87,6 +97,58 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // cache last directions request origin/dest coordinates (used for VIRTUAL_* stops)
   Map<String, double>? _lastJourneyRequestOrigin;
   Map<String, double>? _lastJourneyRequestDest;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isOffline = false;
+
+  // store persistent bottom sheet controller
+  PersistentBottomSheetController? _bottomSheetController;
+
+  // GoogleMaps styles
+  String _darkMapStyle = "{}";
+  String _lightMapStyle = "{}";
+  
+  Future _loadMapStyles() async {
+    _darkMapStyle = await rootBundle.loadString('assets/maps_dark_style.json');
+    _lightMapStyle = await rootBundle.loadString('assets/maps_light_style.json');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _setupConnectivityMonitoring();
+  }
+
+  Future<void> _setupConnectivityMonitoring() async {
+    final connectivity = Connectivity();
+
+    _connectivitySubscription =
+        connectivity.onConnectivityChanged.listen((results) {
+      final offline = _isOfflineResult(results);
+      if (mounted && _isOffline != offline) {
+        setState(() {
+          _isOffline = offline;
+        });
+      }
+    });
+
+    final initial = await connectivity.checkConnectivity();
+    final initialOffline = _isOfflineResult(initial);
+    if (mounted && _isOffline != initialOffline) {
+      setState(() {
+        _isOffline = initialOffline;
+      });
+    }
+  }
+
+  bool _isOfflineResult(dynamic result) {
+    final List<ConnectivityResult> results = switch (result) {
+      ConnectivityResult r => [r],
+      List<ConnectivityResult> r => r,
+      _ => const [],
+    };
+    if (results.isEmpty) return true;
+    return results.every((r) => r == ConnectivityResult.none);
+  }
 
   // this function is to load all the data on app launch and
   // still keep context
@@ -99,6 +161,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+
+    ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
+    theme.onSystemThemeUpdate(context);
+    await theme.loadTheme(); // load user theme data
+
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
@@ -111,6 +178,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       startupData = await _getStartupData();
     }
 
+    // moving this here fixes loading bug
+    await RouteColorService.initialize();
+
     if (!isCurrentVersionEqualOrHigher(startupData.version)) {
       showDialog(
         context: context,
@@ -120,16 +190,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             title: Text(
               startupData!.updateTitle,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
               ),
             ),
             content: Text(
-              startupData!.updateMessage,
+              startupData.updateMessage,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 16,
@@ -148,7 +216,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             title: Text(
               startupData!.persistantMessageTitle,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
@@ -157,7 +224,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             content: Text(
               startupData.persistantMessage,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 16,
@@ -194,6 +260,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (_selectedRoutes.isNotEmpty) {
       _updateDisplayedRoutes();
     }
+
+    // load GoogleMaps styles
+    await _loadMapStyles();
 
     // Finally, get the initial bus locations and start the live updates.
     _loadingMessageNotifier.value = 'Loading bus positions...';
@@ -235,6 +304,44 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }).toList();
     }
     globalStopLocs = stopLocs;
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.red.shade600,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: ui.Color.fromARGB(48, 0, 0, 0),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.wifi_off_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'No internet. Data may be inaccurate',
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Urbanist',
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -385,6 +492,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     } catch (e) {
       return null;
     }
+    return null;
   }
 
   // Get minimum supported version from backend
@@ -521,6 +629,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   @override
   void dispose() {
     _loadingMessageNotifier.dispose();
+    _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
     _mapController?.dispose();
     super.dispose();
@@ -671,6 +780,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         }
       }
       _displayedStopMarkers = selectedStopMarkers;
+      _updateAllDisplayedMarkers();
     });
   }
 
@@ -700,6 +810,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     setState(() {
       _displayedPolylines = selectedPolylines;
       _displayedStopMarkers = selectedStopMarkers;
+      _updateAllDisplayedMarkers();
     });
     _updateDisplayedBuses(
       Provider.of<BusProvider>(context, listen: false).buses,
@@ -777,9 +888,22 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
 
+    
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
+      _updateAllDisplayedMarkers();
     });
+  }
+
+  void _updateAllDisplayedMarkers() {
+    _allDisplayedStopMarkers = _displayedStopMarkers
+      .union(_displayedBusMarkers)
+      .union(_displayedJourneyMarkers)
+      .union(
+        _searchLocationMarker != null
+            ? {_searchLocationMarker!}
+            : {},
+      );
   }
 
   /// Convert a Color to a BitmapDescriptor hue value
@@ -859,6 +983,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+  }
+
+  void _onCameraMove(CameraPosition position) {
+    _currentCameraPos = position;
   }
 
   // Create a bus marker from a Bus model
@@ -956,7 +1084,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // Show red pin at the location
     _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
 
-    showBottomSheet(
+    _bottomSheetController = showBottomSheet(
       context: context,
       enableDrag: true,
       backgroundColor: Colors.transparent,
@@ -990,7 +1118,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     String endLoc,
     bool dontUseLocation,
   ) {
-    showBottomSheet(
+    _bottomSheetController = showBottomSheet(
       context: context,
       enableDrag: true,
       backgroundColor: Colors.transparent,
@@ -1046,7 +1174,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             }
           },
           onSelectJourney: (journey) {
-            _displayJourneyOnMap(journey);
+            _displayJourneyOnMap(journey, getColor(context, ColorType.opposite));
           },
           onResolved: (orig, dest) {
             // Cache resolved coordinates for virtual origin/destination resolution
@@ -1065,9 +1193,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return Container(
-          
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: getColor(context, ColorType.background),
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
@@ -1097,7 +1224,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Display a Journey on the map
-  void _displayJourneyOnMap(Journey journey) async {
+  void _displayJourneyOnMap(Journey journey, Color walkLineColor) async {
     currDisplayed = journey;
 
     // clear previous journey overlay
@@ -1323,8 +1450,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           final walkingPolyline = Polyline(
             polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
             points: [startLatLng, endLatLng],
-            color: Colors.black, // Walk line color
-            width: 6, // lind width
+            color: walkLineColor, // Walk line color
+            width: 6, // line width
             patterns: [
               PatternItem.dash(30), // Longer dashes
               PatternItem.gap(15), // Longer gaps
@@ -1382,7 +1509,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // Final debug check
     // Journey display complete (silently updated internal state)
 
-    setState(() {});
+    setState(() {
+      _updateAllDisplayedMarkers();
+    });
 
     // Trying to move camera to include the journey bounds
     if (_mapController != null && allPoints.isNotEmpty) {
@@ -1521,36 +1650,54 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return BusSheet(
-          busID: busID,
-          onSelectStop: (name, id) {
-            LatLng? latLong = getLatLongFromStopID(id);
-            if (latLong != null) {
-              _showStopSheet(id, name, latLong.latitude, latLong.longitude);
-            } else {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Error'),
-                    content: const Text('Couldn\'t load stop.'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Dismiss the dialog
-                        },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            }
-          },
-        );
-      },
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+
+        child: DraggableScrollableSheet(
+
+        // Very hacky, I know. I couldn't find a better way to:
+        //    1. Have the contents of the BusSheet be scrollable
+        //    2. Have swiping down on the BusSheet close the modal, AND
+        //    3. Have clicking in the shaded area at the top close the modal
+        initialChildSize: 0.99,
+        minChildSize: 0.9, 
+        maxChildSize: 1.0,
+
+        builder: (BuildContext context, ScrollController scrollController) {
+          return BusSheet(
+            busID: busID,
+            scrollController: scrollController,
+            onSelectStop: (name, id) {
+              Navigator.pop(context); // Close the current modal
+              LatLng? latLong = getLatLongFromStopID(id);
+              if (latLong != null) {
+                _showStopSheet(id, name, latLong.latitude, latLong.longitude);
+              } else {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('Error'),
+                      content: const Text('Couldn\'t load stop.'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Dismiss the dialog
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+            },
+          );
+        },
+      )
+      )
     );
   }
 
@@ -1609,6 +1756,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           stopName: stopName,
           onFavorite: _addFavoriteStop,
           onUnFavorite: _removeFavoriteStop,
+          showBusSheet: (busId) {
+            // When someone clicks "See all stops for this bus" this callback runs
+            debugPrint("Got 'See all stops' click for Bus ${busId}");
+            Navigator.pop(context); // Close the current modal
+            _showBusSheet(busId);
+          },
           onGetDirections: () {
             Map<String, double>? start;
             Map<String, double>? end = {'lat': lat, 'lon': long};
@@ -1726,6 +1879,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
+  Future<void> _setMapToNorth() async {
+    if (_mapController != null && _currentCameraPos != null) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: _currentCameraPos!.target, // current position
+            zoom: _currentCameraPos!.zoom,
+            bearing: 0, // face north
+          )
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Only update bus markers when buses change
@@ -1736,14 +1903,58 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     });
 
+    // set all padding
+    // first, getting all the padding values
+    final mediaQueryData = MediaQuery.of(context);
+    final double flutterSafeAreaTop = mediaQueryData.padding.top;
+    final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
+    final double flutterSafeAreaLeft = mediaQueryData.padding.left;
+    final double flutterSafeAreaRight = mediaQueryData.padding.right;
+    double padBottom = 0;
+    double padTop = 0;
+    double padLeftRight = 0;
+    // then, changing them based on phone
+    if(Platform.isIOS){
+      if(flutterSafeAreaBottom == 0){
+        // rectangle iphone
+        padBottom = 10;
+        padLeftRight = 10;
+        padTop = 20;
+      } else {
+        // round iphone
+        padBottom = 30;
+        padLeftRight = 30;
+        padTop = flutterSafeAreaTop;
+      }
+    } else {
+      // andoird
+      padBottom = 30;
+      padLeftRight = 30;
+      padTop = flutterSafeAreaTop;
+    }
+
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          //if (!Platform.isIOS){print("is androud");}
+          //if (!Platform.isIOS){print("is androud");} // I love androud
           return PopScope(
             // lets us prevent back button on map page
             canPop: false,
+            onPopInvokedWithResult: (didPop, result) { 
+              // when journey is showing and pop was attempted, clear journey
+              if (_journeyOverlayActive) {
+                _clearJourneyOverlays();
+              }
+
+              // If showing a persistent bottom sheet, close it.
+              // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
+              if (_bottomSheetController != null) {
+                _bottomSheetController!.close();
+                _bottomSheetController = null;
+                _removeSearchLocationMarker();
+              }
+            },
             child: Stack(
               children: [
                 // underlying map layer (different ios and android)
@@ -1761,15 +1972,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ? {_searchLocationMarker!}
                                     : {},
                               )
-                        : _displayedStopMarkers
-                              .union(_displayedBusMarkers)
-                              .union(_displayedJourneyMarkers)
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              ),
+                        : _allDisplayedStopMarkers,
+                        // : _displayedStopMarkers
+                        //       .union(_displayedBusMarkers)
+                        //       .union(_displayedJourneyMarkers)
+                        //       .union(
+                        //         _searchLocationMarker != null
+                        //             ? {_searchLocationMarker!}
+                        //             : {},
+                        //       ),
+                    darkMapStyle: _darkMapStyle,
+                    lightMapStyle: _lightMapStyle,
                     onMapCreated: _onMapCreated,
+                    onCameraMove: _onCameraMove,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: true,
@@ -1794,28 +2009,51 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ? {_searchLocationMarker!}
                                     : {},
                               ),
+                    darkMapStyle: _darkMapStyle,
+                    lightMapStyle: _lightMapStyle,
                     dynamicMarkers: _journeyOverlayActive
                         ? _displayedJourneyBusMarkers
                         : _displayedBusMarkers,
                     onMapCreated: _onMapCreated,
+                    onCameraMove: _onCameraMove,
                     //myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     //zoomControlsEnabled: true,
                     //mapToolbarEnabled: true,
                 ),
             
-                // Safe-Area (for UI)
-                SafeArea(
-                  // buttons
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: padTop, bottom: padBottom, left: padLeftRight, right: padLeftRight, 
+                  ),
                   child: Column(
                     children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: _isOffline
+                            ? Padding(
+                                key: const ValueKey('offline-banner'),
+                                padding: EdgeInsets.only(
+                                  top: padTop,
+                                  left: padLeftRight,
+                                  right: padLeftRight,
+                                  bottom: 10,
+                                ),
+                                child: _buildOfflineBanner(),
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('offline-banner-hidden'),
+                              ),
+                      ),
                       // if showing journey, show header
                       (_journeyOverlayActive)
-                          ? Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                          ? DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: getColor(context, ColorType.background),
                                 borderRadius: BorderRadius.all(
-                                  Radius.circular(15),
+                                  Radius.circular(56),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -1834,18 +2072,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   SizedBox(width: 10),
-            
+                              
                                   Icon(Icons.route),
-            
+                              
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
+                                      horizontal: 15,
                                       vertical: 5,
                                     ),
                                     child: Text(
                                       "Showing route on map",
                                       style: TextStyle(
-                                        color: Colors.black,
                                         fontFamily: 'Urbanist',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 18,
@@ -1855,130 +2092,325 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 ],
                               ),
                             )
-                          : SizedBox.shrink(),
-            
+                            // not showing journey, show usual header
+                          :DecoratedBox(
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDarkMode(context) ? Colors.black.withAlpha(50) : Colors.white.withAlpha(100),
+                                  spreadRadius: 50,
+                                  blurRadius: 50,
+                                )
+                              ]
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container( // group maize and bus together on the left
+                                  child: Row(children: [
+                                    Text(
+                                      'maize',
+                                      style: TextStyle(
+                                        color: maizeBusYellow,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 30,
+                                      ),
+                                    ),
+                                    Text(
+                                      'bus',
+                                      style: TextStyle(
+                                        color: maizeBusBlue,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 30,
+                                      ),
+                                    ),
+                                  ],),
+                                ),
+              
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: FittedBox(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: FloatingActionButton(
+                                        onPressed: () async {
+                                          // switch to settings menu
+                                          // with the MaterialPagesRoute animation
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute<void>(
+                                              builder: (context) => Settings(),
+                                            ),
+                                          );
+                                        },
+                                        heroTag: 'settings_fab',
+                                        elevation: 0,
+                                        child: Icon(
+                                          Icons.menu,
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 28,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          ),
+                       
                       Spacer(),
                       
                       // temp row (might add settings button to it later)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 15,
-                          right: 15,
-                          top: 15,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            // location button
-                            FloatingActionButton.small(
-                              onPressed: () {
-                                _centerOnLocation(true);
-                              },
-                              heroTag: 'location_fab',
-                              backgroundColor: const ui.Color.fromARGB(
-                                176,
-                                255,
-                                255,
-                                255,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(56),
-                              ),
-                              child: const Icon(
-                                Icons.my_location,
-                                color: Colors.black87,
-                              ),
+                      (!_journeyOverlayActive)
+                          ? Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: 20
                             ),
-                          ],
-                        ),
-                      ),
-            
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Column(
+                                  children: [
+                                    // face north button is only visible when not facing north
+                                    Visibility(
+                                      visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                          borderRadius: BorderRadius.circular(25)
+                                        ),
+                                        child: FloatingActionButton.small(
+                                          onPressed: _setMapToNorth,
+                                          heroTag: 'north_fab',
+                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(56),
+                                          ),
+                                          child: Transform.rotate(
+                                            angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
+                                            child: Icon(
+                                              FontAwesomeIcons.compass,
+                                              color: darkColors[ColorType.mapButtonIcon],
+                                              shadows: [
+                                                Shadow(
+                                                  color: getColor(context, ColorType.mapButtonShadow),
+                                                  blurRadius: 4,
+                                                  offset: Offset(0, 2)
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 10,),
+                      
+                                    // location button
+                                    DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: FloatingActionButton.small(
+                                        onPressed: () {
+                                          _centerOnLocation(true);
+                                        },
+                                        heroTag: 'location_fab',
+                                        backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(56),
+                                        ),
+                                        child: Icon(
+                                          Icons.my_location,
+                                          color: darkColors[ColorType.mapButtonIcon],
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, ColorType.mapButtonShadow),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            ),
+                          )
+                          : SizedBox.shrink(),
+                              
                       // if showing journey, show close and reopen button
                       (_journeyOverlayActive)
                           ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              ElevatedButton.icon(
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: getColor(context, ColorType.mapButtonShadow),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 6)
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(56)
+                                ),
+                                child: ElevatedButton.icon(
                                   onPressed: _showJourneySheetOnReopen,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
+                                    backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(56),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
                                       vertical: 8,
                                     ),
-                                    elevation: 4,
+                                    elevation: 0,
                                   ),
-                                  icon: const Icon(
-                                    color: Colors.black,
+                                  icon: Icon(
+                                    color: getColor(context, ColorType.mapButtonIcon),
                                     Icons.keyboard_arrow_up,
                                     size: 18,
+                                    shadows: [
+                                      Shadow(
+                                        color: getColor(context, ColorType.mapButtonShadow),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
                                   ), // The icon on the left
-                                  label: const Text(
+                                  label: Text(
                                     'Steps',
                                     style: TextStyle(
-                                      color: Colors.black,
+                                      color: getColor(context, ColorType.mapButtonIcon),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                    ),
+                                      shadows: [
+                                        Shadow(
+                                          color: getColor(context, ColorType.mapButtonShadow),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2)
+                                        )
+                                      ],
+                                    ),                                    
                                   ), // The text on the right
+                                ),
                               ),
-
+                  
                               SizedBox(width: 20,),
-
-                              ElevatedButton.icon(
+                  
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: getColor(context, ColorType.mapButtonShadow),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 6)
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(56)
+                                ),
+                                child: ElevatedButton.icon(
                                   onPressed: _clearJourneyOverlays,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
+                                    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(56),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
                                       vertical: 8,
                                     ),
-                                    elevation: 4,
+                                    elevation: 0,
                                   ),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.close,
-                                    color: Colors.white,
+                                    color: darkColors[ColorType.mapButtonIcon]!,
                                     size: 18,
+                                    shadows: [
+                                      Shadow(
+                                        color: getColor(context, ColorType.mapButtonShadow),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)
+                                      )
+                                    ],
                                   ), // The icon on the left
-                                  label: const Text(
+                                  label: Text(
                                     'Close',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: darkColors[ColorType.mapButtonIcon]!,
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
+                                      shadows: [
+                                        Shadow(
+                                          color: getColor(context, ColorType.mapButtonShadow),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2)
+                                        )
+                                      ],
                                     ),
                                   ), // The text on the right
                                 ),
+                              ),
                             ],
                           )
+                          
                           // else, main buttons row
-                          : Padding(
-                              padding: const EdgeInsets.only(
-                                left: 15,
-                                right: 15,
-                                top: 10,
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-            
-                                children: [
-                                  // routes
-                                  SizedBox(
-                                    width: 55,
-                                    height: 55,
-                                    child: FittedBox(
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                            
+                              children: [
+                                
+                                // routes
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: FittedBox(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
                                       child: FloatingActionButton(
                                         onPressed: () async {
                                           if (canVibrate && Platform.isIOS){
                                             await Haptics.vibrate(HapticsType.light);
                                           }
-
+                
                                           // just in case
                                           if (busProvider.routes.isEmpty){
                                             await busProvider.loadRoutes();
@@ -1989,25 +2421,35 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showBusRoutesModal(busProvider.routes,);
                                         },
                                         heroTag: 'routes_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        elevation: 0, // handle shadow ourselves
+                                        child: Icon(
                                           Icons.directions_bus,
-                                          color: Colors.white,
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 28,
                                         ),
                                       ),
-                                    ),
+                                    )
                                   ),
-            
-                                  SizedBox(width: 15),
-            
-                                  // favorites
-                                  SizedBox(
-                                    width: 55,
-                                    height: 55,
-                                    child: FittedBox(
+                                ),
+                            
+                                SizedBox(width: 12),
+                
+                                // favorites
+                                SizedBox(
+                                  width: 45,
+                                  height: 45,
+                                  child: FittedBox(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
                                       child: FloatingActionButton(
                                         onPressed: () async {
                                           if (canVibrate && Platform.isIOS){
@@ -2016,57 +2458,65 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _showFavoritesSheet();
                                         },
                                         heroTag: 'favorites_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: const Icon(
+                                        elevation: 0,
+                                        child: Icon(
                                           Icons.favorite,
-                                          color: Colors.white,
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 28,
                                         ),
                                       ),
                                     ),
                                   ),
-            
-                                  Spacer(),
-            
-                                  // search
-                                  SizedBox(
-                                    width: 75,
-                                    height: 75,
-                                    child: FittedBox(
-                                      child: FloatingActionButton(
+                                ),
+                
+                                SizedBox(width: 12),
+                
+                                // search
+                                Expanded( // stretch width
+                                  child: SizedBox(
+                                    height: 45,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            blurRadius: 10,
+                                            offset: Offset(0, 6)
+                                          )
+                                        ],
+                                        borderRadius: BorderRadius.circular(25)
+                                      ),
+                                      child: ElevatedButton.icon(
                                         onPressed: () async {
                                           if (canVibrate && Platform.isIOS){
                                             await Haptics.vibrate(HapticsType.light);
                                           }
                                           _showSearchSheet();
                                         },
-                                        heroTag: 'search_fab',
-                                        backgroundColor: maizeBusDarkBlue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
+                                        style: ElevatedButton.styleFrom(
+                                          alignment: Alignment.centerLeft,
                                         ),
-                                        child: const Icon(
+                                        icon: Icon(
                                           Icons.search_sharp,
-                                          size: 35,
-                                          color: Colors.white,
+                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          size: 28,
+                                        ),
+                                        label: Text(
+                                          "where to?",
+                                          style: TextStyle(
+                                            color: getColor(context, ColorType.mapButtonIcon).withAlpha(214),
+                                            fontSize: 18,
+                                          )
                                         ),
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-            
-                      SizedBox(
-                        height: (MediaQuery.of(context).padding.bottom == 0.0)
-                            ? 10
-                            : 0,
-                      ),
                     ],
                   ),
-                ),
+                )
               ],
             ),
           );
@@ -2085,7 +2535,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const ui.Color.fromARGB(255, 228, 228, 228),
+                        color: isDarkMode(context) ? ui.Color.fromARGB(100, 228, 228, 228) : ui.Color.fromARGB(255, 228, 228, 228),
                         spreadRadius: 1,
                         blurRadius: 6,
                         offset: Offset(0, 5), // changes position of shadow
@@ -2108,7 +2558,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       Text(
                         "Loading",
                         style: TextStyle(
-                          color: Colors.black,
                           fontFamily: 'Urbanist',
                           fontWeight: FontWeight.w700,
                           fontSize: 20,
@@ -2133,7 +2582,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               return Text(
                                 message,
                                 style: TextStyle(
-                                  color: Colors.black,
                                   fontFamily: 'Urbanist',
                                   fontWeight: FontWeight.w400,
                                   fontSize: 18,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // UPDATE WHEN RELAUNCH
 final String currentVersion = '1.0.2';
@@ -62,10 +63,136 @@ String getPrettyRouteName(String code) {
   return name != null ? name : code;
 }
 
+final Uri contactURL = Uri.parse('https://www.maizebus.com/#/contact/');
+
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
-const Color maizeBusYellow = Color.fromARGB(255, 241, 194, 50);
+const Color maizeBusYellow = Color.fromARGB(255, 255, 203, 45);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
+
+enum ColorType {
+  primary, opposite, background,
+
+  mapButtonPrimary, mapButtonSecondary,
+  mapButtonIcon, mapButtonShadow,
+
+  highlighted, dim,
+
+  shadow,
+}
+
+const Map<ColorType, Color> lightColors = {
+  ColorType.primary: Colors.white,
+  ColorType.opposite: Colors.black,
+  ColorType.background: Colors.white,
+  
+  ColorType.mapButtonPrimary: maizeBusBlue, 
+  ColorType.mapButtonSecondary: Color.fromARGB(204, 156, 196, 230),
+  ColorType.mapButtonIcon: Colors.white,
+  ColorType.mapButtonShadow: Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
+
+  ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),
+  ColorType.dim: Color.fromARGB(255, 229, 242, 255),
+
+  ColorType.shadow: Color.fromARGB(95, 187, 187, 187)
+};
+
+const Map<ColorType, Color> darkColors = {
+  ColorType.primary: Colors.black,
+  ColorType.opposite: Colors.white,
+  ColorType.background: Color.fromARGB(255, 19, 34, 47),
+
+  ColorType.mapButtonPrimary: Color.fromARGB(204, 229, 242, 255),
+  ColorType.mapButtonSecondary: Color.fromARGB(204, 106, 146, 181),
+  ColorType.mapButtonIcon: Color.fromARGB(255, 29, 23, 84),
+  ColorType.mapButtonShadow: Color.fromARGB(77, 30, 89, 141), // 77 is 30% opacity
+
+  ColorType.highlighted: Color.fromARGB(255, 45, 151, 243),
+  ColorType.dim: Color.fromARGB(255, 33, 71, 105),
+
+  ColorType.shadow: Color.fromARGB(95, 68, 68, 68)
+};
+
+// returns true if the current theme is dark mode
+bool isDarkMode(BuildContext context) {
+  return Theme.of(context).brightness == Brightness.dark;
+}
+
+// Gets the Color value of a color name, depending on the current theme
+// For example, to get the background color of a primary button on the map, use:
+// getColor(context, ColorType.mapButtonPrimary)
+// This will change depending on the current theme.
+// All color types are in the ColorType enum.
+Color getColor(BuildContext context, ColorType type) {
+  return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
+}
+
+// THEMES
+// These set default theme colors and styles for things such as text or buttons,
+// depending on whether it is light or dark mode.
+ThemeData lightMode = ThemeData(
+  brightness: Brightness.light,
+  fontFamily: 'Urbanist',
+
+  // Default button themes
+  floatingActionButtonTheme: FloatingActionButtonThemeData(
+    backgroundColor: lightColors[ColorType.mapButtonPrimary],
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(56),
+    ),
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: lightColors[ColorType.mapButtonPrimary],
+    )
+  ),
+
+  dividerTheme: DividerThemeData(
+    thickness: 2,
+    color: lightColors[ColorType.dim],
+  ),
+
+  // set default text color
+  textTheme: TextTheme(
+    bodyMedium: TextStyle(
+      color: Colors.black,
+      fontFamily: 'Urbanist'
+    )
+  )
+);
+
+ThemeData darkMode = ThemeData(
+  brightness: Brightness.dark,
+  fontFamily: 'Urbanist',
+  
+  // Default button themes
+  floatingActionButtonTheme: FloatingActionButtonThemeData(
+    backgroundColor: darkColors[ColorType.mapButtonPrimary],
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(56),
+    ),
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: darkColors[ColorType.mapButtonPrimary],
+    )
+  ),
+  
+  dividerTheme: DividerThemeData(
+    thickness: 2,
+    color: darkColors[ColorType.dim],
+  ),
+  
+  // set default text color
+  textTheme: TextTheme(
+    bodyMedium: TextStyle(
+      color: Colors.white,
+      fontFamily: 'Urbanist'
+    )
+  )
+);
 
 //data types
 class Location {

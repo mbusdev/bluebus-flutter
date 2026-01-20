@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 
 
-void sendEmailWithSender(BuildContext context, String locName) async {
+void sendEmailWithSender(BuildContext context, String emailSubject, String emailBody) async {
   final Email email = Email(
-    body: 'write the issue here:',
-    subject: 'MaizeBus - Issue with $locName',
+    body: emailBody,
+    subject: emailSubject,
     recipients: ['ishaniik@umich.edu'],
     isHTML: false,
   );
@@ -80,8 +81,8 @@ class _BuildingSheetState extends State<BuildingSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: getColor(context, ColorType.background),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -98,7 +99,6 @@ class _BuildingSheetState extends State<BuildingSheet> {
             child: Text(
               widget.building.name,
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w700,
                 fontSize: 40,
@@ -117,7 +117,6 @@ class _BuildingSheetState extends State<BuildingSheet> {
               children: [
                 Text("Building code: ",
                   style: TextStyle(
-                    color: Colors.black,
                     fontFamily: 'Urbanist',
                     fontWeight: FontWeight.w400,
                     fontSize: 20,
@@ -155,7 +154,6 @@ class _BuildingSheetState extends State<BuildingSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text("No building code",
               style: TextStyle(
-                color: Colors.black,
                 fontFamily: 'Urbanist',
                 fontWeight: FontWeight.w400,
                 fontSize: 20,
@@ -175,47 +173,77 @@ class _BuildingSheetState extends State<BuildingSheet> {
                   widget.onGetDirections(widget.building);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: maizeBusDarkBlue,
+                  backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                   elevation: 4
                 ),
-                icon: const Icon(
+                icon:  Icon(
                   Icons.directions, 
-                  color: Colors.white,
-                  size: 20,), // The icon on the left
-                label: const Text(
+                  color: getColor(context, ColorType.mapButtonIcon),
+                  size: 20,
+                  shadows: [
+                    Shadow(
+                      color: getColor(context, ColorType.mapButtonShadow),
+                      blurRadius: 4,
+                      offset: Offset(0, 2)
+                    )
+                  ],
+                ),
+                label: Text(
                   'Get Directions',
                   style: TextStyle(
-                    color: Colors.white, 
-                    fontSize: 16, fontWeight: 
-                    FontWeight.w600),
+                    color: getColor(context, ColorType.primary),
+                    fontSize: 16, 
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        color: getColor(context, ColorType.mapButtonShadow),
+                        blurRadius: 4,
+                        offset: Offset(0, 2)
+                      )
+                    ],
+                  ),
                 ), // The text on the right
               ),
       
               ElevatedButton.icon(
-                onPressed: () {
-                  sendEmailWithSender(context, widget.building.name);
-                },
+                onPressed: () => launchUrl(contactURL),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color.fromARGB(255, 235, 235, 235),
+                  backgroundColor: getColor(context, ColorType.dim),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                 ),
-                icon: const Icon(
+                icon: Icon(
                   Icons.warning_amber_rounded, 
-                  color: Colors.black,
-                  size: 20,), // The icon on the left
-                label: const Text(
+                  color: getColor(context, ColorType.opposite),
+                  size: 20,
+                  shadows: [
+                    Shadow(
+                      color: getColor(context, ColorType.mapButtonShadow),
+                      blurRadius: 4,
+                      offset: Offset(0, 2)
+                    )
+                  ],
+                ), // The icon on the left
+                label: Text(
                   'Report an Issue',
                   style: TextStyle(
-                    color: Colors.black, 
-                    fontSize: 16, fontWeight: 
-                    FontWeight.w600),
+                    color: getColor(context, ColorType.opposite), 
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        color: getColor(context, ColorType.mapButtonShadow),
+                        blurRadius: 4,
+                        offset: Offset(0, 2)
+                      )
+                    ],
+                  ),
                 ), // The text on the right
               ),
       

@@ -12,16 +12,19 @@ dependencies:
   google_maps_flutter: ^2.12.3
   geolocator: ^13.0.1
   http: ^1.4.0
-  provider: ^6.0.0
+  provider: ^6.1.5+1
   flutter_hooks: ^0.21.2
   shared_preferences: ^2.2.2
   intl: ^0.20.2 
   flutter_email_sender: ^7.0.0
   haptic_feedback: ^0.5.1+1
   flutter_launcher_icons: ^0.14.4
+  font_awesome_flutter: ^10.12.0
+  url_launcher: ^6.3.2
   flutter_local_notifications: ^19.5.0
   firebase_messaging: ^16.0.4
   firebase_core: ^4.2.1
+  connectivity_plus: ^6.0.3
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +58,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/portraits/
 
 flutter_launcher_icons:
   android: "launcher_icon"
