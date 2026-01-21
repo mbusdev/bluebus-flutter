@@ -50,8 +50,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   late Journey currDisplayed;
 
   Future<void>? _dataLoadingFuture;
-  final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
-
+  final _loadingMessageNotifier = ValueNotifier<Loadpoint>(Loadpoint("Initializing...", 0));
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
@@ -161,6 +160,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+    
 
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
@@ -169,7 +169,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
-    _loadingMessageNotifier.value = 'Contacting server...';
+    _loadingMessageNotifier.value = Loadpoint('Contacting server...', 1);
     StartupDataHolder? startupData = await _getStartupData();
 
     // keep trying to reach server. Can't start without this
@@ -251,7 +251,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ]);
 
     // actions that depend on the data loaded earlier
-    _loadingMessageNotifier.value = 'Loading bus images...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus images...', 2);
     await _loadRouteSpecificBusIcons();
     _updateAvailableRoutes(busProvider.routes);
     _cacheRouteOverlays(busProvider.routes);
@@ -265,14 +265,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     await _loadMapStyles();
 
     // Finally, get the initial bus locations and start the live updates.
-    _loadingMessageNotifier.value = 'Loading bus positions...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus positions...', 3);
     await busProvider.loadBuses();
 
-    _loadingMessageNotifier.value = 'Loading bus stops...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus stops...', 4);
     _loadStopsForLaunch();
 
-    _loadingMessageNotifier.value = 'Starting app...';
+    _loadingMessageNotifier.value = Loadpoint('Starting app...', 5);
     busProvider.startBusUpdates();
+    await Future.delayed(const Duration(milliseconds: 180)); 
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -1937,6 +1938,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
+          //
+          
           //if (!Platform.isIOS){print("is androud");} // I love androud
           return PopScope(
             // lets us prevent back button on map page
@@ -1946,7 +1949,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               if (_journeyOverlayActive) {
                 _clearJourneyOverlays();
               }
-
+ 
               // If showing a persistent bottom sheet, close it.
               // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
               if (_bottomSheetController != null) {
@@ -2522,83 +2525,161 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           );
         } else {
           // LOADING SCREEN
-          return Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                SizedBox(width: 30),
-
-                Container(
-                  height: 100,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDarkMode(context) ? ui.Color.fromARGB(100, 228, 228, 228) : ui.Color.fromARGB(255, 228, 228, 228),
-                        spreadRadius: 1,
-                        blurRadius: 6,
-                        offset: Offset(0, 5), // changes position of shadow
-                      ),
-                    ],
-                    image: DecorationImage(
-                      image: AssetImage('assets/appicon.png'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-
-                SizedBox(width: 30),
-
-                Expanded(
+          return Container(
+            color: getColor(context, ColorType.background),
+            
+            child: ValueListenableBuilder<Loadpoint>(
+              valueListenable: _loadingMessageNotifier,
+              builder: (context, loadpoint, child) {
+                return Center(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      Spacer(flex: 5),
+                      //bus!!!
+                      
+                      SizedBox(
+                        height: 180,
+                        child: Center(
+                          child: OverflowBox(
+                            maxWidth: MediaQuery.of(context).size.width+500,
+                            child: Stack(
+                              
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                //maizebus text
+                                Container(
+                                  alignment: Alignment.topCenter,
+                                  child: RichText(
+                                    text: TextSpan(
+                                      style: TextStyle(
+                                        color: maizeBusYellow,
+                                        fontFamily: 'Urbanist',
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 50,
+                                      ),
+                                      children: [
+                                        TextSpan(text: 'maize'),
+                                        TextSpan(
+                                          text: 'bus',
+                                          style: TextStyle(
+                                            color: maizeBusBlue
+                                          )
+                                        ),
+                                      ]
+                                    )
+                                  ),
+                                ),
+                                
+                                //grey road
+                                Container(
+                                  alignment: Alignment.bottomCenter,
+                                  
+                                  child: Container(
+                                    height: 40,
+                                    color: getColor(context, ColorType.secondary)
+                                  ),
+                                  
+                                ),
+                                
+                                //animated parts
+                                Container(
+                                  child: AnimatedPositioned(
+                                    duration: Duration(milliseconds: 250),
+                                    curve: Curves.easeInOut,
+                                    height: 180,
+                                    bottom: 0,
+                                    right: (MediaQuery.of(context).size.width+200) * (1-(loadpoint.step/5)),
+                                    child: Stack(
+                                      alignment: Alignment.bottomRight,
+                                      children: [
+                                        
+                                        //blender that greys-out maizebus
+                                        Container(
+
+                                          padding: EdgeInsets.only(right: 7),
+                                          alignment: Alignment.topLeft,
+                                          child: Container(
+                                            width: 50,
+                                            height: 50,
+                                            alignment: Alignment.topLeft,
+                                            child: OverflowBox(
+                                              maxWidth: MediaQuery.of(context).size.width+250,
+                                              maxHeight: 50,
+                                              alignment: Alignment.topLeft,
+                                              child: ClipPath(
+                                                clipper: TrapezoidClipReversed(),
+                                                child: Container(
+                                                  height: 50,
+                                                  width: MediaQuery.of(context).size.width+250,
+                                                  //color: Colors.red,
+                                                  decoration: BoxDecoration(
+                                                    color: getColor(context, ColorType.background),
+                                                    backgroundBlendMode: BlendMode.saturation, 
+                                                  ),
+                                                )
+                                              )
+                                            ),
+                                          )
+                                        ),
+
+
+                                        Container(
+                                          padding: EdgeInsets.only(right: 7),
+                                          alignment: Alignment.bottomRight,
+                                          child: ClipPath(
+                                            clipper: TrapezoidClip(),
+                                            child: Container(
+                                              height: 40,
+                                              width: MediaQuery.of(context).size.width+250,
+                                              color: maizeBusYellow
+                                            )
+                                          ),
+                                          
+                                        ),
+                                        Container(
+                                          height: 92,
+                                          padding: EdgeInsets.only(bottom: 12),
+                                          child: FittedBox(
+                                            fit: BoxFit.contain,
+                                            child: Image.asset('assets/bus_art.png')
+                                          )
+                                        ),
+
+                                      ],
+                                    )
+                                    
+                                  )
+                                )
+                                
+                              ]
+                            )
+                          )
+                          
+                        )
+                      ),
+
+                      Spacer(flex: 3),
+                      //"Starting app..."
                       Text(
-                        "Loading",
+                        loadpoint.message,
                         style: TextStyle(
                           fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 18,
                         ),
                       ),
-
-                      Row(
-                        children: [
-                          Container(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(
-                              color: const ui.Color.fromARGB(255, 11, 83, 148),
-                            ),
-                          ),
-
-                          SizedBox(width: 10),
-
-                          ValueListenableBuilder<String>(
-                            valueListenable: _loadingMessageNotifier,
-                            builder: (context, message, child) {
-                              return Text(
-                                message,
-                                style: TextStyle(
-                                  fontFamily: 'Urbanist',
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: 18,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                      Spacer(flex: 1)
+                      
+                      
                     ],
-                  ),
-                ),
-              ],
-            ),
+                  )
+                );
+          //using valuelistenable
+              }
+            )
           );
         }
-      },
+      }
     );
   }
 }
