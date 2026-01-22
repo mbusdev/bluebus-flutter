@@ -52,6 +52,18 @@ class BusProvider extends ChangeNotifier {
     repository.stopBusUpdates();
   }
 
+  // TODO: Add a checkForBus() method
+
+  bool containsBus(String searchBusId) {
+    
+    for (int i = 0; i < _buses.length; i++) {
+      // debugPrint("Checking ID "+searchBusId + " against "+_buses[i].id);
+      if (_buses[i].id == searchBusId) return true;
+    }
+    return false;
+  }
+
+
   @override
   void dispose() {
     repository.dispose();

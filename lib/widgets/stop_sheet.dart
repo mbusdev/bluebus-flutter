@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/services/notification_service.dart';
@@ -42,7 +43,7 @@ String futureTime(String minutesInFuture){
   int min = int.parse(minutesInFuture);
   DateTime now = DateTime.now();
   DateTime futureTime = now.add(Duration(minutes: min));
-  return DateFormat('hh:mm a').format(futureTime);
+  return DateFormat('h:mm a').format(futureTime);
 }
 
 String format(String text) {
@@ -83,9 +84,11 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10 ),
                 child: Row(
                 children: [
-                  Container( // Circular icon on the left (with the bus code, e.g. "NW")
+                  Stack(
+                    children:[
+                      Container( // Circular icon on the left (with the bus code, e.g. "NW")
                     width: 40,
-                    height: 40,
+                    height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: RouteColorService.getRouteColor(widget.busId), 
@@ -106,6 +109,68 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                     ),
                   ),
                   
+                  // Positioned.fill(
+                  //   child: Align(
+                  //     alignment: Alignment.bottomRight,
+                  //     child:
+                      
+                      
+                  //     // (widget.busProvider.containsBus(widget.vehicleId) ?
+                  //     //   Container(
+                  //     //     padding: EdgeInsets.all(3.0),
+                  //     //     decoration: BoxDecoration(
+                  //     //       // border: Border.all(
+                  //     //       //   color: getColor(context, ColorType.background),
+                  //     //       //   width: 2.0
+                  //     //       // ),
+                  //     //       borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                  //     //       //color: getColor(context, ColorType.opposite)//.withOpacity(0.5)
+                  //     //       // color: RouteColorService.getContrastingColor(widget.busId),
+                  //     //       color: getColor(context, ColorType.background),
+                  //     //     ),
+                  //     //     // child: Padding(
+                  //     //     //   padding: EdgeInsets.only(top: 25.0, left: 25.0),
+                  //     //       child: Icon(Icons.radio_button_checked, size: 12)
+                  //     //     // ),
+                  //     //     // child: Padding(
+                  //     //     //   padding: EdgeInsets.only(top: 1.0, bottom: 1.0, left: 2.0, right: 2.0),
+                  //     //     //   child: Row(
+                  //     //     //     children: [
+                  //     //     //       Icon(
+                  //     //     //         Icons.signal_cellular_alt, 
+                  //     //     //         //color: getColor(context, ColorType.primary),
+                  //     //     //         // color: getColor(context, ColorType.opposite),
+                  //     //     //         // color: RouteColorService.getRouteColor(widget.busId),
+                  //     //     //         color: getColor(context, ColorType.opposite),
+                  //     //     //         size: 12,
+                  //     //     //       ),
+                  //     //     //       Text(
+                  //     //     //         "Live",
+                  //     //     //         style: TextStyle(
+                  //     //     //           // color: getColor(context, ColorType.primary),
+                  //     //     //           // color: getColor(context, ColorType.opposite),
+                  //     //     //           // color: RouteColorService.getRouteColor(widget.busId),
+                  //     //     //           fontWeight: FontWeight.bold,
+                  //     //     //           fontSize: 10.0,
+                  //     //     //           color: getColor(context, ColorType.opposite),
+                  //     //     //         )
+                  //     //     //       ),
+                  //     //     //     ],
+                  //     //     //   )
+                  //     //     // )
+                  //     //   )
+                  //     //   : SizedBox.shrink()),
+                        
+                        
+                  //       )
+                  //   )
+
+                  
+                  
+                  ]
+                ),
+                  
+                  
                   SizedBox(width: 15,),
                                           
                   Expanded(
@@ -121,16 +186,72 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                             fontSize: 16,
                           )
                         ),
-                                          
-                        Text(
-                          (widget.busPrediction != "DUE")? "${format(widget.busDirection)}, est: ${futureTime(widget.busPrediction)}" : "within the next minute",
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Urbanist',
-                            fontWeight: FontWeight.w400,
-                            fontSize: 16,
-                          )
-                        )
+
+                        Row(children: [
+                          
+                          Text(
+                            (widget.busPrediction != "DUE")? "${futureTime(widget.busPrediction)}" : "within the next minute",
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Urbanist',
+                              fontWeight: FontWeight.w400,
+                              fontSize: 16,
+                            )
+                          ),
+
+                          Text(
+                            (widget.busProvider.containsBus(widget.vehicleId)) ? " • Live" : " • Estimated",
+                            style: TextStyle(
+                              // color: getColor(context, ColorType.primary),
+                              // color: getColor(context, ColorType.opposite),
+                              // color: RouteColorService.getRouteColor(widget.busId),
+                              // fontWeight: FontWeight.bold,
+                              fontSize: 16.0,
+                            )
+                          ),
+
+                        //                         (widget.busProvider.containsBus(widget.vehicleId) ?
+                        // Container(
+                        //   decoration: BoxDecoration(
+                        //     border: Border.all(
+                        //       color: getColor(context, ColorType.background),
+                        //       width: 2.0
+                        //     ),
+                        //     borderRadius: BorderRadius.all(Radius.circular(5.0)),
+                        //     //color: getColor(context, ColorType.opposite)//.withOpacity(0.5)
+                        //     color: getColor(context, ColorType.opposite).withOpacity(0.5),
+                        //   ),
+                        //   child: Padding(
+                        //     padding: EdgeInsets.only(top: 1.0, bottom: 1.0, left: 2.0, right: 2.0),
+                        //     child: Row(
+                        //       children: [
+                        //         Icon(
+                        //           Icons.signal_cellular_alt, 
+                        //           //color: getColor(context, ColorType.primary),
+                        //           // color: getColor(context, ColorType.opposite),
+                        //           // color: RouteColorService.getRouteColor(widget.busId),
+                        //           color: getColor(context, ColorType.background),
+                        //           size: 12,
+                        //         ),
+                        //         Text(
+                        //           "Live",
+                        //           style: TextStyle(
+                        //             // color: getColor(context, ColorType.primary),
+                        //             // color: getColor(context, ColorType.opposite),
+                        //             // color: RouteColorService.getRouteColor(widget.busId),
+                        //             fontWeight: FontWeight.bold,
+                        //             fontSize: 10.0,
+                        //           )
+                        //         ),
+                        //       ],
+                        //     )
+                        //   )
+                        // )
+                        // : SizedBox.shrink()),
+
+
+                        ],)               
+                        
                       ],
                     ),
                   ),
@@ -201,6 +322,7 @@ class ExpandableStopWidget extends StatefulWidget {
   final String busDirection;
   final String stopId;
   final Function(String) showBusSheet;
+  final BusProvider busProvider;
 
   @override
   State<StatefulWidget> createState() => _ExpandableStopWidgetState();
@@ -213,6 +335,7 @@ class ExpandableStopWidget extends StatefulWidget {
     required this.busDirection,
     required this.stopId,
     required this.showBusSheet,
+    required this.busProvider,
   });
 }
 
@@ -325,6 +448,10 @@ class _StopSheetState extends State<StopSheet> {
                     ),
                   ),
                   child: Column(
+                    children: [
+                      Expanded(child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       (imageBusStop)?
@@ -410,8 +537,8 @@ class _StopSheetState extends State<StopSheet> {
                       SizedBox(height: 20,),
                       
                       // future data
-                      Expanded(
-                        child: 
+                      // Expanded(
+                        // child: 
                           
                           (snapshot.connectionState == ConnectionState.waiting)? Center(child: const CircularProgressIndicator()) :
                           (snapshot.hasData)? Column(
@@ -456,9 +583,14 @@ class _StopSheetState extends State<StopSheet> {
                                   
                                   SizedBox(height: 10,),
                                                   
-                                  Expanded(
-                                    child: ListView.separated(
+                                  // Expanded(
+                                    // child: 
+                                    Column(
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [ListView.separated(
                                       controller: scrollController,
+                                      shrinkWrap: true,
+                                      physics: NeverScrollableScrollPhysics(),
                                       itemCount: arrivingBuses.length,
                                       itemBuilder: (context, index) {
                                         BusWithPrediction bus = arrivingBuses[index];
@@ -470,7 +602,8 @@ class _StopSheetState extends State<StopSheet> {
                                           busPrediction: bus.prediction,
                                           busDirection: bus.direction,
                                           stopId: widget.stopID,
-                                          showBusSheet: widget.showBusSheet
+                                          showBusSheet: widget.showBusSheet,
+                                          busProvider: widget.busProvider
                                         );
 
                                         },
@@ -487,11 +620,13 @@ class _StopSheetState extends State<StopSheet> {
                                           // );
                                         },
                                       ),
+                                      ]
                                   ),
+                                  // ),
                                   
                                   SizedBox(height: 10,),
                                   
-                                  // bottom buttons
+                                  // two bottom buttons
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [

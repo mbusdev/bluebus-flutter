@@ -1745,6 +1745,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _showStopSheet(String stopID, String stopName, double lat, double long) {
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isDismissible: true,
@@ -1762,6 +1764,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             Navigator.pop(context); // Close the current modal
             _showBusSheet(busId);
           },
+          busProvider: busProvider,
           onGetDirections: () {
             Map<String, double>? start;
             Map<String, double>? end = {'lat': lat, 'lon': long};
@@ -1957,6 +1960,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             },
             child: Stack(
               children: [
+
+
+
                 // underlying map layer (different ios and android)
                 Platform.isIOS?
                   MapWidget(

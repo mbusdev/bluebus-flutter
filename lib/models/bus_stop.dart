@@ -22,14 +22,16 @@ class BusStopWithPrediction {
   final String id;
   final String name;
   final String prediction;
+  final String busRouteCode;
 
-  BusStopWithPrediction({required this.id, required this.name, required this.prediction});
+  BusStopWithPrediction({required this.id, required this.name, required this.prediction, required this.busRouteCode});
 
   factory BusStopWithPrediction.fromJson(Map<String, dynamic> json) {
     return BusStopWithPrediction(
       id: json['stpid'] ?? '',
       name: json['stpnm'] ?? '',
       prediction: json['prdctdn'] as String,
+      busRouteCode: json['rt'] ?? ''
     );
   }
 } 

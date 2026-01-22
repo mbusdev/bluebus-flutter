@@ -1,7 +1,9 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/bus_info_service.dart';
+import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/material.dart';
 import '../models/bus_stop.dart';
 
@@ -38,6 +40,42 @@ const Color BIG_STOP_FILL_COLOR_DARKMODE = Color.fromARGB(255, 93, 112, 129);
 const int LINE_CONNECTED = 1;
 const int LINE_DISCONNECTED = 2;
 const int LINE_PARTIALLY_CONNECTED = 3;
+
+class UpcomingStopIconSwitchRoutePainter extends CustomPainter {
+  final BACKLINE_WIDTH =
+      0.375; // Width of the vertical line behind the stop circle
+  Color top_color;
+  Color bottom_color;
+
+  UpcomingStopIconSwitchRoutePainter(
+    this.top_color,
+    this.bottom_color
+  );
+
+  @override
+  void paint(Canvas canvas, Size size) {
+
+    Paint fill_paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [top_color, bottom_color]
+      ).createShader(Rect.fromLTWH(0,0,size.width,size.height));
+
+    canvas.drawRect(
+      Rect.fromLTWH(
+        (1.0 - BACKLINE_WIDTH) / 2 * size.width,
+        0,
+        size.width * BACKLINE_WIDTH,
+        size.height,
+      ),
+      fill_paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
 
 class UpcomingStopIconPainter extends CustomPainter {
   // This is a CustomPainter that generates the subway-style icons to the left
@@ -269,7 +307,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     });
   }
 
-  GestureDetector getUpcomingStopRow(
+  GestureDetector getUpcomingStopRow( // TODO: Add a lineTopColor and lineBottomColor attribute to the constructor and pass those in from the loop (so that it works when the bus color changes)
     int lineTopStyle,
     int lineBottomStyle,
     bool isKeyStop,
@@ -277,6 +315,8 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     String stopName,
     String stopId,
     Function(String, String)? onBusStopClick,
+    Color topColor,
+    Color bottomColor
   ) {
     // Builds a single line of the upcoming stops prediction. A single line includes
     //    * A stop icon (the subway-style icon to the left, with the back line)
@@ -301,7 +341,8 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
               lineTopStyle,
               lineBottomStyle,
               isKeyStop,
-              widget.color,
+              // widget.color,
+              topColor,
               isDarkMode(context)
             ),
           ),
@@ -322,6 +363,40 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
         ],
       ),
     );
+  }
+
+  Row getUpcomingStopRouteChangeDetectedRow( // TODO: Add a lineTopColor and lineBottomColor attribute to the constructor and pass those in from the loop (so that it works when the bus color changes)
+    String message,
+    Color topColor,
+    Color bottomColor
+  ) {
+    // Builds a special single line of the upcoming stops prediction, used for messages like "Bus changes to Commuter South". A single line includes
+
+    return Row(
+        children: [
+          CustomPaint(
+            size: Size(40, 40),
+            painter: UpcomingStopIconSwitchRoutePainter(
+              topColor,
+              bottomColor
+            ),
+          ),
+          Expanded(
+            child: Opacity(
+              opacity: 0.7,
+              child: Text(
+                message,
+                style: TextStyle(
+                  fontSize: 14.0,
+                  fontWeight: FontWeight.normal,
+                  fontStyle: FontStyle.italic
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          ),
+        ],
+      );
   }
 
   static const int DETAILED_STOPS_TO_SHOW = 4; // Number of detailed stops to show per bus
@@ -350,6 +425,8 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       numDetailedStopsToShow = nextBusStops.length;
     }
 
+    String lastStopRouteCode = "";
+
     // Sets up the array of detailed stops (shown at the top, connected with a solid line)
     for (int i = 0; i < numDetailedStopsToShow; i++) {
       BusStopWithPrediction upcomingStop = nextBusStops[i];
@@ -359,6 +436,17 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       if (KEY_STOPS.containsKey(upcomingStop.id)) {
         isKeyStop = true;
         stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
+      }
+
+      // Check if we need to add the "Bus changes route to ..." message
+      if (lastStopRouteCode != "" && lastStopRouteCode != upcomingStop.busRouteCode) {
+      //if (true) {
+        rowElements.add(
+          getUpcomingStopRouteChangeDetectedRow(
+            "Bus changes route to "+getPrettyRouteName(upcomingStop.busRouteCode),
+            RouteColorService.getRouteColor(lastStopRouteCode),
+            RouteColorService.getRouteColor(upcomingStop.busRouteCode))
+        );
       }
 
       rowElements.add(
@@ -374,8 +462,12 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
           stopName,
           upcomingStop.id,
           widget.onBusStopClick,
+          RouteColorService.getRouteColor(upcomingStop.busRouteCode),
+          RouteColorService.getRouteColor(upcomingStop.busRouteCode),
         ),
       );
+
+      lastStopRouteCode = upcomingStop.busRouteCode;
     }
 
     // Sets up array of additional key stops (shown below the detailed stops and connected
@@ -386,6 +478,16 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
         BusStopWithPrediction upcomingStop = additionalKeyStops[i];
         String stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
         bool isKeyStop = true; // All these stops are key stops
+
+        // if (lastStopRouteCode != "" && lastStopRouteCode != upcomingStop.busRouteCode) {
+        // //if (true) {
+        //   rowElements.add(
+        //     getUpcomingStopRouteChangeDetectedRow(
+        //       "Bus changes route to "+getPrettyRouteName(upcomingStop.busRouteCode),
+        //       RouteColorService.getRouteColor(lastStopRouteCode),
+        //       RouteColorService.getRouteColor(upcomingStop.busRouteCode))
+        //   );
+        // }
 
         rowElements.add(
           getUpcomingStopRow(
@@ -398,8 +500,12 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
             stopName,
             upcomingStop.id,
             widget.onBusStopClick,
+            RouteColorService.getRouteColor(upcomingStop.busRouteCode),
+            RouteColorService.getRouteColor(upcomingStop.busRouteCode),
           ),
         );
+
+        lastStopRouteCode = upcomingStop.busRouteCode;
       }
     }
 
