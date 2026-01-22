@@ -7,8 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
-const remindersKey = "bus_reminder";
-
 /// Key for registration token as known by backend
 /// i.e. what to call /reminders with
 const serverTokenKey = "server_registration_token";
@@ -25,30 +23,9 @@ class IncomingBusReminderService {
 
     _userPrefs = await SharedPreferencesWithCache.create(
       cacheOptions: SharedPreferencesWithCacheOptions(
-        allowList: {remindersKey, serverTokenKey},
+        allowList: {serverTokenKey},
       ),
     );
-    if (_serverToken() != null) {
-      // notifications were used before, sync with backend and complete setup
-
-      // TODO: make sure this won't lead to constant permission requests
-      // for someone who has denied notifications
-      await _completeSetup();
-      var staleReminders = await _staleReminders(
-        token: _serverToken()!,
-        currentReminders: getActiveReminders().toList(),
-      );
-      if (staleReminders == null) {
-        staleReminders = [];
-        print('Failed to get stale reminders!');
-      }
-      if (kDebugMode) {
-        debugPrint('Got stale reminders: $staleReminders');
-      }
-      for (final stale in staleReminders) {
-        removeReminderWithoutSyncing(stale.stpid, stale.rtid);
-      }
-    }
   }
 
   static Future<void> _completeSetup() async {
@@ -60,6 +37,9 @@ class IncomingBusReminderService {
     }
   }
 
+  /// the registration token that should be used when communicating with the backend
+  /// the swapping of this is handled by `_onTokenChange`
+  /// make sure `_completeSetup()` has been called
   static String? _serverToken() {
     return _userPrefs.getString(serverTokenKey);
   }
@@ -79,36 +59,16 @@ class IncomingBusReminderService {
     await _completeSetup();
     final token = _serverToken();
     if (token == null) return;
-    if (!await _setReminder(token: token, rtid: rtid, stpid: stpid, thresh: thresh) &&
+    if (!await _setReminder(
+          token: token,
+          rtid: rtid,
+          stpid: stpid,
+          thresh: thresh,
+        ) &&
         kDebugMode) {
       debugPrint("setting reminder failed");
     }
     assert(!rtid.contains("|"));
-    var activeReminders = _userPrefs.getStringList(remindersKey);
-    activeReminders ??= [];
-    activeReminders.add("$rtid|$stpid");
-    if (kDebugMode) {
-      debugPrint("reminders is now $activeReminders");
-    }
-    await _userPrefs.setStringList(remindersKey, activeReminders);
-  }
-
-  static Future<void> removeReminderWithoutSyncing(
-    String stpid,
-    String rtid,
-  ) async {
-    assert(!rtid.contains("|"));
-    final activeReminders = _userPrefs.getStringList(remindersKey);
-    if (activeReminders == null) {
-      return;
-    }
-    if (activeReminders.contains("$rtid|$stpid")) {
-      activeReminders.remove("$rtid|$stpid");
-      if (kDebugMode) {
-        debugPrint("reminders is now $activeReminders");
-      }
-      await _userPrefs.setStringList(remindersKey, activeReminders);
-    }
   }
 
   static Future<void> removeReminder(String stpid, String rtid) async {
@@ -119,21 +79,18 @@ class IncomingBusReminderService {
     if (!await _unsetReminder(token: token, stpid: stpid, rtid: rtid)) {
       debugPrint("unsetting reminder failed");
     }
-    await removeReminderWithoutSyncing(stpid, rtid);
   }
 
-  static bool isActiveReminder(String stpid, String rtid) {
-    final activeReminders = getActiveReminders();
-    return activeReminders.contains((stpid: stpid, rtid: rtid));
+  static Future<bool?> isActiveReminder(String stpid, String rtid) async {
+    final activeReminders = await getActiveReminders();
+    return activeReminders?.contains((stpid: stpid, rtid: rtid));
   }
 
-  static Set<({String stpid, String rtid})> getActiveReminders() {
-    var activeReminders = _userPrefs.getStringList(remindersKey);
-    activeReminders ??= [];
-    return activeReminders
-        .map((x) => x.split('|'))
-        .map((parts) => (stpid: parts[1], rtid: parts[0]))
-        .toSet();
+  static Future<List<({String stpid, String rtid})>?>
+  getActiveReminders() async {
+    final token = _serverToken();
+    if (token == null) return null;
+    return await _activeReminders(token: token);
   }
 }
 
@@ -143,6 +100,23 @@ const REMINDER_BACKEND_URL = String.fromEnvironment(
   "REMINDER_BACKEND_URL",
   defaultValue: BACKEND_URL,
 );
+
+Future<List<({String stpid, String rtid})>?> _activeReminders({
+  required String token,
+}) async {
+  final res = await http.get(
+    Uri.parse('$REMINDER_BACKEND_URL/activeReminders/$token'),
+  );
+  if (res.statusCode == 200) {
+    return (jsonDecode(res.body)['reminders'] as List)
+        .map((x) => (stpid: x['stpid'] as String, rtid: x['rtid'] as String))
+        .toList();
+  }
+  if (kDebugMode) {
+    debugPrint("_activeReminders failed");
+  }
+  return null;
+}
 
 Future<bool> _setReminder({
   required String token,

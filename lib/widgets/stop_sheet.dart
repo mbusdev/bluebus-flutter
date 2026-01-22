@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
+import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
@@ -19,8 +20,6 @@ class StopSheet extends StatefulWidget {
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
   void Function(String) showBusSheet;
-  final List<String> routesWithActiveReminder;
-  final Future<void> Function(String, String, int) onToggleReminder;
 
   StopSheet({
     Key? key,
@@ -30,8 +29,6 @@ class StopSheet extends StatefulWidget {
     required this.onUnFavorite,
     required this.onGetDirections,
     required this.showBusSheet,
-    required this.routesWithActiveReminder,
-    required this.onToggleReminder,
   }) : super(key: key);
 
   @override
@@ -220,7 +217,6 @@ class ExpandableStopWidget extends StatefulWidget {
 class _StopSheetState extends State<StopSheet> {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
   bool? _isFavorited;
-  late List<String> _routesWithActiveReminder;  
 
   int thresh = 5;
 
@@ -231,7 +227,6 @@ class _StopSheetState extends State<StopSheet> {
   @override
   void initState() {
     super.initState();
-    _routesWithActiveReminder = widget.routesWithActiveReminder;
     loadedStopData = fetchStopData(widget.stopID);
     imageBusStop = (widget.stopID == "C250") || (widget.stopID == "N406") ||
                    (widget.stopID == "N405") || (widget.stopID == "N550") ||
@@ -602,19 +597,30 @@ class _StopSheetState extends State<StopSheet> {
                                           ),
                                         ),
                                       ),
-                                      RemindersButton(
-                                        incomingBusRoutes: arrivingBuses.map((bus) => bus.id).toList(),
-                                        activeReminderRoutes: _routesWithActiveReminder,
-                                        onToggleReminder: (route) async {
-                                          await widget.onToggleReminder(widget.stopID, route, thresh);
-                                          setState(() {
-                                            if (_routesWithActiveReminder.contains(route)) {
-                                              _routesWithActiveReminder.remove(route);
-                                            } else {
-                                              _routesWithActiveReminder.add(route);
+
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) {
+                                              return Dialog(child: ReminderForm());
                                             }
-                                          });
+                                          );
+                                          // TODO
                                         },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: getColor(context, ColorType.dim),
+                                          shape: CircleBorder(),
+                                          shadowColor: Colors.black
+                                        ),
+                                        child: Icon(Icons.notifications_none,
+                                          shadows: [
+                                            Shadow(
+                                              color: getColor(context, ColorType.mapButtonShadow),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ])
                                       ),
                                     ],
                                   ),
@@ -648,164 +654,46 @@ class _StopSheetState extends State<StopSheet> {
   }
 }
 
-class RemindersButton extends StatelessWidget {
-  const RemindersButton({
-    super.key,
-    required this.activeReminderRoutes,
-    required this.incomingBusRoutes,
-    required this.onToggleReminder,
-  });
+class ReminderForm extends StatefulWidget {
+  const ReminderForm({super.key});
+  
+  @override
+  State<StatefulWidget> createState() {
+    // TODO: implement createState
+    return _ReminderFormState();
+  }
+  
+}
 
-  final List<String> activeReminderRoutes;
-  final List<String> incomingBusRoutes;
-  final Future<void> Function(String) onToggleReminder;
+class _ReminderFormState extends State<ReminderForm> {
+
+  Future<List<({ String stpid, String rtid })>?>? reminderInfoFuture;
   
   @override
   Widget build(BuildContext context) {
-    final routesList = [];
-    for (final route in incomingBusRoutes) {
-      if (!routesList.contains(route)) {
-        routesList.add(route);
-      }
-    }
-    for (final route in activeReminderRoutes) {
-      if (!routesList.contains(route)) {
-        routesList.add(route);
-      }
-    }
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 9),
-      child: MenuAnchor(
-        style: MenuStyle(
-          padding: WidgetStatePropertyAll(EdgeInsets.only(bottom: 18 + 5, top: 5)),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorderWithTail(cornerRadius: 20.0),
-          ),
-          alignment: Alignment(0, 1),
-          backgroundColor: WidgetStatePropertyAll(Colors.white),
-        ),
-        alignmentOffset: Offset(-29, 0),
-        menuChildren: routesList.map((route) {
-          var color = RouteColorService.getRouteColor(route);
-          if (!activeReminderRoutes.contains(route)) {
-            color = Color.from(
-              alpha: 0.5,
-              red: color.r,
-              green: color.g,
-              blue: color.b,
-            );
-          }
-          return Padding(
-            padding: EdgeInsetsGeometry.symmetric(vertical: 5, horizontal: 9),
-            child: GestureDetector(
-              onTap: () {
-                onToggleReminder(route);
-              },
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  // color: RouteColorService.getRouteColor(route),
-                  color: color,
-                ),
-                alignment: Alignment.center,
-                child: MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: TextScaler.linear(1.0)),
-                  child: Text(
-                    route,
-                    style: TextStyle(
-                      color: RouteColorService.getContrastingColor(route),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-        builder:
-            (BuildContext context, MenuController controller, Widget? child) =>
-                ElevatedButton(
-                  style: ButtonStyle(
-                    shape: WidgetStatePropertyAll(CircleBorder())
-                  ),
-                  onPressed: () {
-                    if (controller.isOpen) {
-                      controller.close();
-                    } else {
-                      controller.open();
-                    }
-                    NotificationService.requestPermission();
-                    // NotificationService.sendPushNotification();
-                    //NotificationService.sendNotification();
-                  },
-                  child: Icon(Icons.notifications_none, size: 20),
-                ),
-      ),
+    print("$reminderInfoFuture");
+    // TODO: implement build
+    return FutureBuilder(
+      future: reminderInfoFuture,
+      builder: (context, snapshot) {
+        // TODO: 30s timeout
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Center(child: Text("Loading"),);
+        }
+        final data = snapshot.data;
+        if (data == null) {
+          return Center(child: Text("Loading failed!"));
+        }
+        return Center(child: Text("$data"));
+      },
     );
+  }
+  
+  @override
+  void didChangeDependencies() {
+    // TODO: implement didChangeDependencies
+    super.didChangeDependencies();
+    reminderInfoFuture ??= IncomingBusReminderService.getActiveReminders();
   }
 }
 
-class RoundedRectangleBorderWithTail extends OutlinedBorder {
-  const RoundedRectangleBorderWithTail({required this.cornerRadius});
-
-  final double cornerRadius;
-  
-  @override
-  OutlinedBorder copyWith({BorderSide? side}) {
-    // TODO: actually care about side
-    return this;
-  }
-
-  @override
-  Path getInnerPath(Rect rect, {ui.TextDirection? textDirection}) {
-    Path p = Path();
-    p.addRRect(
-      RRect.fromRectXY(
-        Rect.fromLTRB(rect.left, rect.top, rect.right, rect.bottom - 18),
-        cornerRadius,
-        cornerRadius
-      )
-    );
-    // tail
-    final ax = rect.left + rect.width / 2 - 9;
-    final ay = rect.bottom - 18;
-    p.moveTo(ax + 9, ay + 15);
-    p.cubicTo(
-      ax + 9, ay + 11.5,
-      ax + 5.25, ay + 0,
-      ax + 0, ay + 0
-    );
-    p.relativeLineTo(18, 0);
-    p.cubicTo(ax + 12.375, ay + 0, ax + 9, ay + 11.5, ax + 9, ay + 15);
-    p.close();
-    
-    return p;
-  }
-
-  @override
-  Path getOuterPath(Rect rect, {ui.TextDirection? textDirection}) {
-    return getInnerPath(rect, textDirection: textDirection);
-  }
-
-  @override
-  void paint(Canvas canvas, Rect rect, {ui.TextDirection? textDirection}) {
-    // do nothing since the reminders thing only needs drop shadow
-    // Paint paint = Paint();
-    // paint.style = PaintingStyle.stroke;
-    // paint.strokeWidth = 2;
-    // canvas.drawPath(getOuterPath(rect, textDirection: textDirection), paint);
-  }
-
-  @override
-  ShapeBorder scale(double t) {
-    return this;
-  }
-  
-}

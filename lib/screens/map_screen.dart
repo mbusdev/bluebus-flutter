@@ -1774,19 +1774,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               false,
             );
           },
-          routesWithActiveReminder:
-            IncomingBusReminderService
-              .getActiveReminders()
-              .where((x) => x.stpid == stopID)
-              .map((x) => x.rtid)
-              .toList(),
-          onToggleReminder: (stopID, routeID, thresh) async {
-            if (IncomingBusReminderService.isActiveReminder(stopID, routeID)) {
-              await IncomingBusReminderService.removeReminder(stopID, routeID);
-            } else {
-              await IncomingBusReminderService.addReminder(stopID, routeID, thresh);
-            }
-          },
         );
       },
     ).then((_) {});
