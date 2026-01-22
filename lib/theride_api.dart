@@ -38,7 +38,7 @@ class RideAPI {
     if (response.statusCode != 200) throw Exception('Failed to load routes');
     final data = jsonDecode(response.body);
     final routes = <BusRouteLine>[];
-    final routeJson = data['rideRoutes'] as Map<String, dynamic>;
+    final routeJson = data['routes'] as Map<String, dynamic>;
 
     await RouteColorService.initialize();
 
