@@ -1,3 +1,4 @@
+import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:flutter/material.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -198,19 +199,6 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                   ),
                 ),
 
-                // description
-                const Padding(
-                  padding: EdgeInsets.only(left: 20, bottom: 14, right: 20), 
-                  child: Text(
-                    'Choose which bus routes are displayed on the map. Long press a route to show only that one.',
-                    style: TextStyle(
-                      fontFamily: 'Urbanist',
-                      fontWeight: FontWeight.w400,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-
                 // routes list
                 Expanded(
                   child: Listener(
@@ -344,8 +332,21 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                     ),
                   ),
                 ),
+                
+                SizedBox(height: 10),
 
-                const SizedBox(height: 20),
+                Center(
+                  child: MaizebusSlidingSegmentedControl(labels: ['University', 'The Ride'], onSelectionChanged: (int index) {
+                    setState(() {
+                    });
+                  },
+                  height: 40,
+                  width: 250
+                  ),
+                ),
+
+                SizedBox(height: 40),
+
               ],
             ),
           );
