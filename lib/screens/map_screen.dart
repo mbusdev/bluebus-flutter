@@ -11,6 +11,7 @@ import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
+import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/foundation.dart';
@@ -1937,11 +1938,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          //
           
           //if (!Platform.isIOS){print("is androud");} // I love androud
-          return PopScope(
+          //I also love androud
+        return AnimatedSwitcher(
+          duration: Duration(milliseconds: 200),
+          
+          child: (snapshot.connectionState == ConnectionState.done)
+          ? PopScope(
+            //for switch animation
+            key: ValueKey(1),
+
             // lets us prevent back button on map page
             canPop: false,
             onPopInvokedWithResult: (didPop, result) { 
@@ -1949,7 +1956,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               if (_journeyOverlayActive) {
                 _clearJourneyOverlays();
               }
- 
+
               // If showing a persistent bottom sheet, close it.
               // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
               if (_bottomSheetController != null) {
@@ -2171,7 +2178,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               ],
                             )
                           ),
-                       
+                      
                       Spacer(),
                       
                       // temp row (might add settings button to it later)
@@ -2522,163 +2529,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 )
               ],
             ),
-          );
-        } else {
-          // LOADING SCREEN
-          return Container(
+          )
+          : Container(
+            //for switch animation
+            key: ValueKey(0),
+
             color: getColor(context, ColorType.background),
             
             child: ValueListenableBuilder<Loadpoint>(
               valueListenable: _loadingMessageNotifier,
               builder: (context, loadpoint, child) {
-                return Center(
-                  child: Column(
-                    children: [
-                      Spacer(flex: 5),
-                      //bus!!!
-                      
-                      SizedBox(
-                        height: 180,
-                        child: Center(
-                          child: OverflowBox(
-                            maxWidth: MediaQuery.of(context).size.width+500,
-                            child: Stack(
-                              
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                //maizebus text
-                                Container(
-                                  alignment: Alignment.topCenter,
-                                  child: RichText(
-                                    text: TextSpan(
-                                      style: TextStyle(
-                                        color: maizeBusYellow,
-                                        fontFamily: 'Urbanist',
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 50,
-                                      ),
-                                      children: [
-                                        TextSpan(text: 'maize'),
-                                        TextSpan(
-                                          text: 'bus',
-                                          style: TextStyle(
-                                            color: maizeBusBlue
-                                          )
-                                        ),
-                                      ]
-                                    )
-                                  ),
-                                ),
-                                
-                                //grey road
-                                Container(
-                                  alignment: Alignment.bottomCenter,
-                                  
-                                  child: Container(
-                                    height: 40,
-                                    color: getColor(context, ColorType.secondary)
-                                  ),
-                                  
-                                ),
-                                
-                                //animated parts
-                                Container(
-                                  child: AnimatedPositioned(
-                                    duration: Duration(milliseconds: 250),
-                                    curve: Curves.easeInOut,
-                                    height: 180,
-                                    bottom: 0,
-                                    right: (MediaQuery.of(context).size.width+200) * (1-(loadpoint.step/5)),
-                                    child: Stack(
-                                      alignment: Alignment.bottomRight,
-                                      children: [
-                                        
-                                        //blender that greys-out maizebus
-                                        Container(
-
-                                          padding: EdgeInsets.only(right: 7),
-                                          alignment: Alignment.topLeft,
-                                          child: Container(
-                                            width: 50,
-                                            height: 50,
-                                            alignment: Alignment.topLeft,
-                                            child: OverflowBox(
-                                              maxWidth: MediaQuery.of(context).size.width+250,
-                                              maxHeight: 50,
-                                              alignment: Alignment.topLeft,
-                                              child: ClipPath(
-                                                clipper: TrapezoidClipReversed(),
-                                                child: Container(
-                                                  height: 50,
-                                                  width: MediaQuery.of(context).size.width+250,
-                                                  //color: Colors.red,
-                                                  decoration: BoxDecoration(
-                                                    color: getColor(context, ColorType.background),
-                                                    backgroundBlendMode: BlendMode.saturation, 
-                                                  ),
-                                                )
-                                              )
-                                            ),
-                                          )
-                                        ),
-
-
-                                        Container(
-                                          padding: EdgeInsets.only(right: 7),
-                                          alignment: Alignment.bottomRight,
-                                          child: ClipPath(
-                                            clipper: TrapezoidClip(),
-                                            child: Container(
-                                              height: 40,
-                                              width: MediaQuery.of(context).size.width+250,
-                                              color: maizeBusYellow
-                                            )
-                                          ),
-                                          
-                                        ),
-                                        Container(
-                                          height: 92,
-                                          padding: EdgeInsets.only(bottom: 12),
-                                          child: FittedBox(
-                                            fit: BoxFit.contain,
-                                            child: Image.asset('assets/bus_art.png')
-                                          )
-                                        ),
-
-                                      ],
-                                    )
-                                    
-                                  )
-                                )
-                                
-                              ]
-                            )
-                          )
-                          
-                        )
-                      ),
-
-                      Spacer(flex: 3),
-                      //"Starting app..."
-                      Text(
-                        loadpoint.message,
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 18,
-                        ),
-                      ),
-                      Spacer(flex: 1)
-                      
-                      
-                    ],
-                  )
-                );
-          //using valuelistenable
+                return LoadingScreen(loadpoint: loadpoint);
               }
             )
-          );
-        }
+          )
+          
+        );
+
       }
     );
   }
