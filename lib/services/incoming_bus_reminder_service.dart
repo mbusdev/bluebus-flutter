@@ -24,7 +24,7 @@ class AddReminder extends RemindersModification {
 
   @override
   Map<String, dynamic> encode() {
-    return {"action": "set", "stpid": stpid, "rtid": rtid, "thesh": thresh};
+    return {"action": "set", "stpid": stpid, "rtid": rtid, "thresh": thresh};
   }
 }
 
