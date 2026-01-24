@@ -691,13 +691,14 @@ class _ReminderFormState extends State<ReminderForm> {
         if (snapshot.connectionState != ConnectionState.done) {
           return Center(child: Text("Loading"),);
         }
-        final data = snapshot.data;
-        if (data == null) {
+        final dataForAllStops = snapshot.data;
+        if (dataForAllStops == null) {
           return Center(child: Text("Loading failed!"));
         }
+        final dataForThisStop = dataForAllStops.where((x) => x.stpid == widget.stpid);
         final routesToShow = widget.activeRoutes;
-        for (final reminder in data) {
-          if (reminder.stpid != widget.stpid || routesToShow.contains(reminder.rtid)) {
+        for (final reminder in dataForThisStop) {
+          if (routesToShow.contains(reminder.rtid)) {
             continue;
           }
           routesToShow.add(reminder.rtid);
@@ -708,7 +709,7 @@ class _ReminderFormState extends State<ReminderForm> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: routesToShow
                 .map((rtid) {
-                  final reminderCurrentlyActive = data.map((x) => x.rtid).contains(rtid);
+                  final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
                   return GestureDetector(
                     onTap: () {
                       setState(() {
@@ -741,7 +742,7 @@ class _ReminderFormState extends State<ReminderForm> {
               max: 15.0,
               divisions: 15 - 3 + 1,
             ),
-            Text("$data"),
+            Text("$dataForThisStop"),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -757,7 +758,7 @@ class _ReminderFormState extends State<ReminderForm> {
               onPressed: () async {
                                                 
                   final modifications = rtidsToChange.map((rtid) {
-                    final reminderCurrentlyActive = data.map((x) => x.rtid).contains(rtid);
+                    final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
                     if (reminderCurrentlyActive) {
                       return RemoveReminder(stpid: widget.stpid, rtid: rtid);
                     } else {
