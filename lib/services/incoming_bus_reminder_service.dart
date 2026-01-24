@@ -11,6 +11,34 @@ import 'package:http/http.dart' as http;
 /// i.e. what to call /reminders with
 const serverTokenKey = "server_registration_token";
 
+/// Used in the `modifyReminders` method of `IncomingBusReminderService`
+sealed class RemindersModification {
+  Map<String, dynamic> encode();
+}
+
+class AddReminder extends RemindersModification {
+  AddReminder({required this.stpid, required this.rtid, required this.thresh});
+
+  String stpid, rtid;
+  int thresh;
+
+  @override
+  Map<String, dynamic> encode() {
+    return {"action": "set", "stpid": stpid, "rtid": rtid, "thesh": thresh};
+  }
+}
+
+class RemoveReminder extends RemindersModification {
+  RemoveReminder({required this.stpid, required this.rtid});
+
+  String stpid, rtid;
+
+  @override
+  Map<String, dynamic> encode() {
+    return {"action": "unset", "stpid": stpid, "rtid": rtid};
+  }
+}
+
 class IncomingBusReminderService {
   static bool _started = false;
   static late SharedPreferencesWithCache _userPrefs;
@@ -81,6 +109,20 @@ class IncomingBusReminderService {
     }
   }
 
+  static Future<bool> modifyReminders(
+    List<RemindersModification> modifications,
+  ) async {
+    // TODO: avoid excessive setup work
+    await _completeSetup();
+    final token = _serverToken();
+    if (token == null) return false;
+    if (!await _modifyReminders(token: token, modifications: modifications)) {
+      debugPrint("modifying reminders failed");
+      return false;
+    }
+    return true;
+  }
+
   static Future<bool?> isActiveReminder(String stpid, String rtid) async {
     final activeReminders = await getActiveReminders();
     return activeReminders?.contains((stpid: stpid, rtid: rtid));
@@ -91,6 +133,13 @@ class IncomingBusReminderService {
     final token = _serverToken();
     if (token == null) return null;
     return await _activeReminders(token: token);
+  }
+
+  static Future<bool> sendTestNotification() async {
+    await _completeSetup();
+    final token = _serverToken();
+    if (token == null) return false;
+    return await _notifyMeLater(token: token);
   }
 }
 
@@ -104,18 +153,24 @@ const REMINDER_BACKEND_URL = String.fromEnvironment(
 Future<List<({String stpid, String rtid})>?> _activeReminders({
   required String token,
 }) async {
-  final res = await http.get(
-    Uri.parse('$REMINDER_BACKEND_URL/activeReminders/$token'),
+  final uri = Uri.parse(
+    '$REMINDER_BACKEND_URL/activeReminders/${Uri.encodeComponent(token)}',
   );
-  if (res.statusCode == 200) {
-    return (jsonDecode(res.body)['reminders'] as List)
-        .map((x) => (stpid: x['stpid'] as String, rtid: x['rtid'] as String))
-        .toList();
+  try {
+    final res = await http.get(uri);
+    if (res.statusCode == 200) {
+      return (jsonDecode(res.body)['reminders'] as List)
+          .map((x) => (stpid: x['stpid'] as String, rtid: x['rtid'] as String))
+          .toList();
+    }
+    if (kDebugMode) {
+      debugPrint("_activeReminders failed with status code ${res.statusCode}");
+    }
+    return null;
+  } catch (e) {
+    print("$e");
+    return null;
   }
-  if (kDebugMode) {
-    debugPrint("_activeReminders failed");
-  }
-  return null;
 }
 
 Future<bool> _setReminder({
@@ -124,17 +179,23 @@ Future<bool> _setReminder({
   required String stpid,
   required int thresh,
 }) async {
-  final res = await http.post(
-    Uri.parse('$REMINDER_BACKEND_URL/setReminder'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'token': token,
-      'rtid': rtid,
-      'stpid': stpid,
-      'thresh': thresh,
-    }),
-  );
-  return res.statusCode == 200;
+
+  try {
+    final res = await http.post(
+      Uri.parse('$REMINDER_BACKEND_URL/setReminder'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'token': token,
+        'rtid': rtid,
+        'stpid': stpid,
+        'thresh': thresh,
+      }),
+    );
+    return res.statusCode == 200;
+  } on Exception catch (e) {
+    print("$e");
+    return false;
+  }
 }
 
 Future<bool> _unsetReminder({
@@ -142,42 +203,38 @@ Future<bool> _unsetReminder({
   required String rtid,
   required String stpid,
 }) async {
-  final res = await http.post(
-    Uri.parse('$REMINDER_BACKEND_URL/unsetReminder'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'token': token, 'rtid': rtid, 'stpid': stpid}),
-  );
-  return res.statusCode == 200;
+  try {
+    final res = await http.post(
+      Uri.parse('$REMINDER_BACKEND_URL/unsetReminder'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': token, 'rtid': rtid, 'stpid': stpid}),
+    );
+    return res.statusCode == 200;
+  } on Exception catch (e) {
+    print("$e");
+    return false;
+  }
 }
 
-Future<List<({String stpid, String rtid})>?> _staleReminders({
+Future<bool> _modifyReminders({
   required String token,
-  required List<({String stpid, String rtid})> currentReminders,
+  required List<RemindersModification> modifications,
 }) async {
-  final res = await http.post(
-    Uri.parse('$REMINDER_BACKEND_URL/checkStaleness'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'token': token,
-      'reminders': currentReminders
-          .map((x) => {"stpid": x.stpid, "rtid": x.rtid})
-          .toList(),
-    }),
-  );
-  if (res.statusCode != 200) {
-    return null;
-  }
-  if (kDebugMode) {
-    debugPrint(res.body);
-  }
+  final uri = Uri.parse('$REMINDER_BACKEND_URL/modifyReminders');
   try {
-    final reminders = jsonDecode(res.body)['reminders'] as List;
-    return reminders
-        .map((x) => (stpid: x['stpid'] as String, rtid: x['rtid'] as String))
-        .toList();
+    final res = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "token": token,
+        "modifications": modifications.map((x) => x.encode()).toList(),
+      }),
+    );
+    print("got response $res");
+    return res.statusCode == 200;
   } catch (e) {
-    print('failed to parse response in _staleReminders: $e');
-    return null;
+    print("error: $e");
+    return false;
   }
 }
 
@@ -185,10 +242,29 @@ Future<bool> _swapToken({
   required String oldTok,
   required String newTok,
 }) async {
-  final res = await http.post(
-    Uri.parse('$BACKEND_URL/swapToken'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'oldTok': oldTok, 'newTok': newTok}),
-  );
-  return res.statusCode == 200;
+  try {
+    final res = await http.post(
+      Uri.parse('$REMINDER_BACKEND_URL/swapToken'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'oldTok': oldTok, 'newTok': newTok}),
+    );
+    return res.statusCode == 200;
+  } on Exception catch (e) {
+    print("$e");
+    return false;
+  }
+}
+
+Future<bool> _notifyMeLater({required String token}) async {
+  try {
+    final res = await http.post(
+      Uri.parse('$REMINDER_BACKEND_URL/notifyMeLater'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': token}),
+    );
+    return res.statusCode == 200;
+  } on Exception catch (e) {
+    print("$e");
+    return false;
+  }
 }

@@ -218,8 +218,6 @@ class _StopSheetState extends State<StopSheet> {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
   bool? _isFavorited;
 
-  int thresh = 5;
-
   // for select bus stops with images
   late bool imageBusStop;
   late String imagePath;
@@ -491,17 +489,6 @@ class _StopSheetState extends State<StopSheet> {
                                   
                                   SizedBox(height: 10,),
 
-                                  // debug testing ui
-                                  Slider(
-                                    value: thresh.toDouble(),
-                                    onChanged: (x) => setState(() {
-                                      thresh = x.round();
-                                    }),
-                                    min: 1.0,
-                                    max: 15.0,
-                                    divisions: 15,
-                                    label: thresh.toString(),
-                                  ),
                                   // bottom buttons
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -606,10 +593,22 @@ class _StopSheetState extends State<StopSheet> {
                                           showDialog(
                                             context: context,
                                             builder: (context) {
-                                              return Dialog(child: ReminderForm());
+                                              return Dialog(
+                                                constraints: BoxConstraints(
+                                                  minWidth: 0.0,
+                                                  minHeight: 0.0,
+                                                  maxHeight: MediaQuery.of(context).size.height * 0.4
+                                                ),
+                                                child: Center(
+                                                  child: ReminderForm(
+                                                    stpid: widget.stopID,
+                                                    activeRoutes: arrivingBuses
+                                                      .fold([], (xs, x) => xs.contains(x.id) ? xs : xs + [x.id]),
+                                                  ),
+                                                )
+                                              );
                                             }
                                           );
-                                          // TODO
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: getColor(context, ColorType.dim),
@@ -658,11 +657,18 @@ class _StopSheetState extends State<StopSheet> {
 }
 
 class ReminderForm extends StatefulWidget {
-  const ReminderForm({super.key});
+  const ReminderForm({
+    super.key,
+    required this.stpid,
+    required this.activeRoutes,
+  });
+
+  final String stpid;
+  // routes that show up in the stop sheet, in order of recency
+  final List<String> activeRoutes;
   
   @override
   State<StatefulWidget> createState() {
-    // TODO: implement createState
     return _ReminderFormState();
   }
   
@@ -671,10 +677,12 @@ class ReminderForm extends StatefulWidget {
 class _ReminderFormState extends State<ReminderForm> {
 
   Future<List<({ String stpid, String rtid })>?>? reminderInfoFuture;
+  /// ones that have been selected to be added / removed
+  Set<String> rtidsToChange = {};
+  int reminderThresh = 5;
   
   @override
   Widget build(BuildContext context) {
-    print("$reminderInfoFuture");
     // TODO: implement build
     return FutureBuilder(
       future: reminderInfoFuture,
@@ -687,7 +695,105 @@ class _ReminderFormState extends State<ReminderForm> {
         if (data == null) {
           return Center(child: Text("Loading failed!"));
         }
-        return Center(child: Text("$data"));
+        final routesToShow = widget.activeRoutes;
+        for (final reminder in data) {
+          if (reminder.stpid != widget.stpid || routesToShow.contains(reminder.rtid)) {
+            continue;
+          }
+          routesToShow.add(reminder.rtid);
+        }
+        return Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: routesToShow
+                .map((rtid) {
+                  final reminderCurrentlyActive = data.map((x) => x.rtid).contains(rtid);
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (rtidsToChange.contains(rtid)) {
+                          rtidsToChange.remove(rtid);
+                        } else {
+                          rtidsToChange.add(rtid);
+                        }
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        Text(rtid),
+                        Text(reminderCurrentlyActive ? "active" : "inactive"),
+                      ] + (rtidsToChange.contains(rtid) ? [Text("marked")] : [])
+                    ),
+                  );
+                })
+                .toList(),
+            ),
+            Slider(
+              value: reminderThresh.toDouble(),
+              label: reminderThresh.toString(),
+              onChanged: (x) {
+                setState(() {
+                  reminderThresh = x.toInt();
+                });
+              },
+              min: 3.0,
+              max: 15.0,
+              divisions: 15 - 3 + 1,
+            ),
+            Text("$data"),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(
+                "Cancel",
+                style: TextStyle(
+                  color: getColor(context, ColorType.primary)
+                ),
+              )
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                                                
+                  final modifications = rtidsToChange.map((rtid) {
+                    final reminderCurrentlyActive = data.map((x) => x.rtid).contains(rtid);
+                    if (reminderCurrentlyActive) {
+                      return RemoveReminder(stpid: widget.stpid, rtid: rtid);
+                    } else {
+                      return AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh);
+                    }
+                  }).toList();
+                  final succeeded = await IncomingBusReminderService.modifyReminders(modifications);
+                  if (!context.mounted) return;
+                  if (succeeded) {
+                    Navigator.pop(context);
+                  } else { // modification failed
+                    showDialog(context: context, builder: (context) => SimpleDialog(title: Text("Failed!")));
+                  }
+              },
+              child: Text(
+                "Update",
+                style: TextStyle(
+                  color: getColor(context, ColorType.primary)
+                ),
+              )
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (!await IncomingBusReminderService.sendTestNotification()) {
+                  print("test notification failed");
+                }
+              },
+              child: Text(
+                "Send Test Notification (takes about 10s)",
+                style: TextStyle(
+                  color: getColor(context, ColorType.primary)
+                ),
+              )
+            ),
+          ],
+        );
       },
     );
   }
@@ -699,4 +805,3 @@ class _ReminderFormState extends State<ReminderForm> {
     reminderInfoFuture ??= IncomingBusReminderService.getActiveReminders();
   }
 }
-
