@@ -282,6 +282,9 @@ class _StopSheetState extends State<StopSheet> {
             
             if (snapshot.hasData){
               arrivingBuses = snapshot.data!.$1;
+              arrivingBuses.sort(
+                (lhs, rhs) => (int.tryParse(lhs.prediction) ?? 0).compareTo(int.tryParse(rhs.prediction) ?? 0)
+              );
               if (_isFavorited == null) {
                 _isFavorited = snapshot.data!.$2;
               }
