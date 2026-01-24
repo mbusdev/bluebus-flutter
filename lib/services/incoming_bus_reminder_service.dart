@@ -130,6 +130,7 @@ class IncomingBusReminderService {
 
   static Future<List<({String stpid, String rtid})>?>
   getActiveReminders() async {
+    await _completeSetup();
     final token = _serverToken();
     if (token == null) return null;
     return await _activeReminders(token: token);
