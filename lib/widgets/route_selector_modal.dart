@@ -150,6 +150,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
     return imagePath;
   }
 
+  int _currentIndex = 0;
+
   @override
   Widget build(BuildContext context) {
 
@@ -172,6 +174,9 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
         snapSizes: const [0.9], 
 
         builder: (BuildContext context, ScrollController scrollController) {
+
+          // lets you control which page is shown (ride or michigan)
+          final PageController _pageController = PageController();
 
           return Container(
             height: MediaQuery.of(context).size.height * 0.8,
@@ -201,147 +206,183 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
                 // routes list
                 Expanded(
-                  child: Listener(
-                    key: _listKey,
-                    behavior: HitTestBehavior.translucent,
-                    onPointerMove: _onDragHover,
-                    onPointerUp: _onDragEnd,
-                    onPointerCancel: _onDragEnd,
-                    child: ReorderableListView.builder(
-                      scrollController: scrollController,
-                      itemCount: displayedRoutes.length,
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index){
+                      // When swiping pages, update the selector index
+                      setState(() {
+                        _currentIndex = index;
+                      });
+                    },
+                    
+                    children: [
+                      Listener(
+                        key: _listKey,
+                        behavior: HitTestBehavior.translucent,
+                        onPointerMove: _onDragHover,
+                        onPointerUp: _onDragEnd,
+                        onPointerCancel: _onDragEnd,
+                        child: ReorderableListView.builder(
+                          scrollController: scrollController,
+                          itemCount: displayedRoutes.length,
+                          
+                          buildDefaultDragHandles: false,
+                          onReorder: _onReorder,
                       
-                      buildDefaultDragHandles: false,
-                      onReorder: _onReorder,
-
-                      // how a route looks when it's being dragged
-                      proxyDecorator: (Widget child, int index, Animation<double> anim) {
-                        _isReordering = true;
-                        _lastHoverIndex = index;
-                        return Material(
-                          color: Colors.transparent,
-                          child: child,
-                        );
-                      },
-
-                      itemBuilder: (context, index) {
-                        final route = displayedRoutes[index];
-                        final isSelected = tempSelectedRoutes.contains(route['id']);
-                        final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
-
-                        return KeyedSubtree(
-                          key: ValueKey(route['id']!),
-                          child: Card(
-                            key: key,
-                            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                            color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
-                            // Increase elevation when selected
-                            elevation: 2,
-                            shadowColor: getColor(context, ColorType.mapButtonShadow),
-                            child: Theme(
-                              data: Theme.of(context).copyWith(
-                                splashColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                              ),
-                              child: ListTile(
-                                leading: Container(
-                                  width: 35,
-                                  height: 35,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: RouteColorService.getRouteColor(route['id']!), 
+                          // how a route looks when it's being dragged
+                          proxyDecorator: (Widget child, int index, Animation<double> anim) {
+                            _isReordering = true;
+                            _lastHoverIndex = index;
+                            return Material(
+                              color: Colors.transparent,
+                              child: child,
+                            );
+                          },
+                      
+                          itemBuilder: (context, index) {
+                            final route = displayedRoutes[index];
+                            final isSelected = tempSelectedRoutes.contains(route['id']);
+                            final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
+                      
+                            return KeyedSubtree(
+                              key: ValueKey(route['id']!),
+                              child: Card(
+                                key: key,
+                                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30.0),
+                                ),
+                                color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
+                                // Increase elevation when selected
+                                elevation: 2,
+                                shadowColor: getColor(context, ColorType.mapButtonShadow),
+                                child: Theme(
+                                  data: Theme.of(context).copyWith(
+                                    splashColor: Colors.transparent,
+                                    highlightColor: Colors.transparent,
                                   ),
-                                  alignment: Alignment.center,
-                                  child: MediaQuery(
-                                    // media query prevents text scaling
-                                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                    child: Text(
-                                      route['id']!,
+                                  child: ListTile(
+                                    leading: Container(
+                                      width: 35,
+                                      height: 35,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: RouteColorService.getRouteColor(route['id']!), 
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: MediaQuery(
+                                        // media query prevents text scaling
+                                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                        child: Text(
+                                          route['id']!,
+                                          style: TextStyle(
+                                            color: RouteColorService.getContrastingColor(route['id']!), 
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: -1,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      route['name'] ?? route['id']!,
                                       style: TextStyle(
-                                        color: RouteColorService.getContrastingColor(route['id']!), 
                                         fontSize: 17,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: -1,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                        shadows: [
+                                          Shadow(
+                                            color: getColor(context, ColorType.mapButtonShadow),
+                                            offset: const Offset(0, 2),
+                                            blurRadius: 4
+                                          ),
+                                        ],
                                       ),
-                                      textAlign: TextAlign.center,
                                     ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Info button
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.info_outline,
+                                            color: Colors.grey.shade700,
+                                            size: 22,
+                                          ),
+                                          onPressed: () {
+                                            _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
+                                          },
+                                          padding: EdgeInsets.all(8),
+                                          constraints: BoxConstraints(),
+                                        ),
+                                        ReorderableDragStartListener(
+                                          index: index,
+                                          child: Icon(Icons.drag_handle),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      setState(() {
+                                        if (isSelected) {
+                                          tempSelectedRoutes.remove(route['id']!);
+                                        } else {
+                                          tempSelectedRoutes.add(route['id']!);
+                                        }
+                                      });
+                                    },
+                                    onLongPress: () async {
+                                      if (widget.canVibrate){
+                                        await Haptics.vibrate(HapticsType.soft);
+                                      }
+                                      setState(() {
+                                        tempSelectedRoutes.clear();
+                                        tempSelectedRoutes.add(route['id']!);
+                                      });
+                                    },
                                   ),
                                 ),
-                                title: Text(
-                                  route['name'] ?? route['id']!,
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                    shadows: [
-                                      Shadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        offset: const Offset(0, 2),
-                                        blurRadius: 4
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Info button
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.info_outline,
-                                        color: Colors.grey.shade700,
-                                        size: 22,
-                                      ),
-                                      onPressed: () {
-                                        _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
-                                      },
-                                      padding: EdgeInsets.all(8),
-                                      constraints: BoxConstraints(),
-                                    ),
-                                    ReorderableDragStartListener(
-                                      index: index,
-                                      child: Icon(Icons.drag_handle),
-                                    ),
-                                  ],
-                                ),
-                                onTap: () {
-                                  setState(() {
-                                    if (isSelected) {
-                                      tempSelectedRoutes.remove(route['id']!);
-                                    } else {
-                                      tempSelectedRoutes.add(route['id']!);
-                                    }
-                                  });
-                                },
-                                onLongPress: () async {
-                                  if (widget.canVibrate){
-                                    await Haptics.vibrate(HapticsType.soft);
-                                  }
-                                  setState(() {
-                                    tempSelectedRoutes.clear();
-                                    tempSelectedRoutes.add(route['id']!);
-                                  });
-                                },
                               ),
-                            ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // The Ride page (empty for now)
+                      Center(
+                        child: Text(   
+                          'The Ride routes coming soon!',
+                          style: TextStyle(
+                            fontFamily: 'Urbanist',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                            color: Colors.grey,
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ]
                   ),
                 ),
                 
                 SizedBox(height: 10),
 
                 Center(
-                  child: MaizebusSlidingSegmentedControl(labels: ['University', 'The Ride'], onSelectionChanged: (int index) {
-                    setState(() {
-                    });
-                  },
-                  height: 40,
-                  width: 250
+                  child: MaizebusSlidingSegmentedControl(
+                    labels: ['University', 'The Ride'], 
+                    selectedIndex: _currentIndex,
+                    onSelectionChanged: (int index) {
+                      // first, set the new index
+                      setState(() {
+                        _currentIndex = index;
+                      });
+                      // then, animate the change
+                      _pageController.animateToPage(
+                        index,
+                        duration: Duration(milliseconds: 300),
+                        curve: Curves.ease,
+                      );
+                    },
+                    height: 40,
+                    width: 250
                   ),
                 ),
 

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-
 // custom widget that lets you select between multiple segments by sliding OR tapping and looks nice
 class MaizebusSlidingSegmentedControl extends StatefulWidget {
   final List<String> labels;
   final ValueChanged<int> onSelectionChanged;
-  final int initialIndex;
+  final int selectedIndex; 
   final Color backgroundColor;
   final Color thumbColor;
   final TextStyle? labelStyle;
@@ -13,17 +12,17 @@ class MaizebusSlidingSegmentedControl extends StatefulWidget {
   final double width;
 
   const MaizebusSlidingSegmentedControl({
-    Key? key,
+    super.key,
     required this.labels,
     required this.onSelectionChanged,
-    this.initialIndex = 0,
-    this.backgroundColor = const Color(0xFFE0E0E0), // Default grey
+    this.selectedIndex = 0,
+    this.backgroundColor = const Color(0xFFE0E0E0),
     this.thumbColor = Colors.white,
     this.labelStyle,
     this.selectedLabelStyle,
     this.height = 50,
     this.width = 300,
-  }) : super(key: key);
+  });
 
   @override
   State<MaizebusSlidingSegmentedControl> createState() =>
@@ -37,7 +36,19 @@ class _MaizebusSlidingSegmentedControlState
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialIndex;
+    _selectedIndex = widget.selectedIndex;
+  }
+
+  // This listens for changes from the parent (e.g., PageView swipe)
+  // so the widget can stay in sync with external state changes.
+  @override
+  void didUpdateWidget(covariant MaizebusSlidingSegmentedControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedIndex != oldWidget.selectedIndex) {
+      setState(() {
+        _selectedIndex = widget.selectedIndex;
+      });
+    }
   }
 
   @override
