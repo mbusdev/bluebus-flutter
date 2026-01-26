@@ -68,6 +68,7 @@ final Uri contactURL = Uri.parse('https://www.maizebus.com/#/contact/');
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
 const Color maizeBusYellow = Color.fromARGB(255, 255, 203, 45);
+const Color maizeBusBlueDarkMode = Color.fromARGB(255, 80, 150, 210);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {

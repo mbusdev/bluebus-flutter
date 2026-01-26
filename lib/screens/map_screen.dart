@@ -2120,7 +2120,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     Text(
                                       'bus',
                                       style: TextStyle(
-                                        color: maizeBusBlue,
+                                        color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,
                                         fontWeight: FontWeight.w800,
                                         fontSize: 30,
                                       ),
