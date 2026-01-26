@@ -676,7 +676,7 @@ class ReminderForm extends StatefulWidget {
 
 class _ReminderFormState extends State<ReminderForm> {
 
-  Future<List<({ String stpid, String rtid })>?>? reminderInfoFuture;
+  Future<List<({ String stpid, String rtid })>>? reminderInfoFuture;
   /// ones that have been selected to be added / removed
   Set<String> rtidsToChange = {};
   int reminderThresh = 5;
@@ -756,7 +756,6 @@ class _ReminderFormState extends State<ReminderForm> {
             ),
             ElevatedButton(
               onPressed: () async {
-                                                
                   final modifications = rtidsToChange.map((rtid) {
                     final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
                     if (reminderCurrentlyActive) {
@@ -765,12 +764,16 @@ class _ReminderFormState extends State<ReminderForm> {
                       return AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh);
                     }
                   }).toList();
-                  final succeeded = await IncomingBusReminderService.modifyReminders(modifications);
-                  if (!context.mounted) return;
-                  if (succeeded) {
+
+                  try {
+                    await IncomingBusReminderService.modifyReminders(modifications);                  
                     Navigator.pop(context);
-                  } else { // modification failed
-                    showDialog(context: context, builder: (context) => SimpleDialog(title: Text("Failed!")));
+                    if (!context.mounted) return;
+                  } on Exception catch (e) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => SimpleDialog(title: Text("Failed!\n${e.toString()}"))
+                    );
                   }
               },
               child: Text(
@@ -782,8 +785,10 @@ class _ReminderFormState extends State<ReminderForm> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (!await IncomingBusReminderService.sendTestNotification()) {
-                  print("test notification failed");
+                try {
+                  await IncomingBusReminderService.sendTestNotification();
+                } on Exception catch (e) {
+                  print("test notification failed: ${e.toString()}");
                 }
               },
               child: Text(
