@@ -5,6 +5,7 @@ import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../constants.dart';
 import '../models/bus.dart';
 import '../services/route_color_service.dart';
@@ -456,6 +457,7 @@ class _StopSheetState extends State<StopSheet> {
               maxChildSize: 0.9,
               snap: true,
               snapSizes: const [0.9],
+              // snapSizes: [initialSize, 0.9],
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
                   decoration: BoxDecoration(
@@ -585,319 +587,383 @@ class _StopSheetState extends State<StopSheet> {
 
                               SizedBox(height: 20),
 
-                              // future data
-                              // Expanded(
-                              // child:
-                              (snapshot.connectionState ==
-                                      ConnectionState.waiting)
-                                  ? Center(
-                                      child: const CircularProgressIndicator(),
-                                    )
-                                  : (snapshot.hasData)
-                                  ? Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        (arrivingBuses.length == 0)
-                                            ? Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 20,
-                                                    ),
-                                                child: Text(
-                                                  "There are currently no departing busses",
-                                                  style: TextStyle(
-                                                    fontFamily: 'Urbanist',
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 20,
-                                                  ),
-                                                ),
-                                              )
-                                            : Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 20,
-                                                    ),
-                                                child: Row(
-                                                  children: [
-                                                    Text(
-                                                      "Next bus departures",
-                                                      style: TextStyle(
-                                                        fontFamily: 'Urbanist',
-                                                        fontWeight:
-                                                            FontWeight.w400,
-                                                        fontSize: 20,
-                                                      ),
-                                                    ),
-
-                                                    SizedBox(width: 5),
-
-                                                    GestureDetector(
-                                                      onTap: () {
-                                                        _refreshData();
-                                                      },
-                                                      child: Icon(
-                                                        Icons.refresh,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-
-                                        SizedBox(height: 10),
-
-                                        // Expanded(
-                                        // child:
-                                        Column(
-                                          mainAxisSize: MainAxisSize.max,
-                                          children: [
-                                            ListView.separated(
-                                              controller: scrollController,
-                                              shrinkWrap: true,
-                                              physics:
-                                                  NeverScrollableScrollPhysics(),
-                                              itemCount: arrivingBuses.length,
-                                              itemBuilder: (context, index) {
-                                                BusWithPrediction bus =
-                                                    arrivingBuses[index];
-
-                                                return ExpandableStopWidget(
-                                                  routeId: bus.id,
-                                                  vehicleId: bus.vehicleId,
-                                                  busId: bus.id,
-                                                  busPrediction: bus.prediction,
-                                                  busDirection: bus.direction,
-                                                  stopId: widget.stopID,
-                                                  showBusSheet:
-                                                      widget.showBusSheet,
-                                                  busProvider:
-                                                      widget.busProvider,
-                                                );
-                                              },
-                                              separatorBuilder: (context, index) {
-                                                return Divider(
-                                                  height: 0,
-                                                  indent: 20,
-                                                  endIndent: 20,
-                                                  thickness: 1,
-                                                );
-                                                // return Padding(
-                                                //   padding: const EdgeInsets.symmetric(horizontal: 20),
-                                                //   child: Divider(),
-                                                // );
-                                              },
-                                            ),
-                                          ],
-                                        ),
-
-                                        // ),
-                                        SizedBox(height: 10),
-
-                                        // two bottom buttons
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceEvenly,
-                                          children: [
-                                            ElevatedButton.icon(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                widget.onGetDirections();
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: getColor(
-                                                  context,
-                                                  ColorType.mapButtonPrimary,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(30),
-                                                ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 5,
-                                                    ),
-                                                //elevation: 4
-                                              ),
-                                              icon: Icon(
-                                                Icons.directions,
-                                                color: getColor(
-                                                  context,
-                                                  ColorType.mapButtonIcon,
-                                                ),
-                                                size: 20,
-                                                shadows: [
-                                                  Shadow(
-                                                    color: getColor(
-                                                      context,
-                                                      ColorType.mapButtonShadow,
-                                                    ),
-                                                    blurRadius: 4,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              label: Text(
-                                                'Get Directions',
-                                                style: TextStyle(
-                                                  color: getColor(
-                                                    context,
-                                                    ColorType.primary,
-                                                  ),
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: getColor(
-                                                        context,
-                                                        ColorType
-                                                            .mapButtonShadow,
-                                                      ),
-                                                      blurRadius: 4,
-                                                      offset: Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-
-                                            ElevatedButton.icon(
-                                              onPressed: () {
-                                                // Read the current state
-                                                final bool currentStatus =
-                                                    _isFavorited ?? false;
-
-                                                // Call the appropriate function
-                                                if (currentStatus) {
-                                                  widget.onUnFavorite(
-                                                    widget.stopID,
-                                                    widget.stopName,
-                                                  );
-                                                } else {
-                                                  widget.onFavorite(
-                                                    widget.stopID,
-                                                    widget.stopName,
-                                                  );
-                                                }
-
-                                                // Update the UI immediately
-                                                setState(() {
-                                                  _isFavorited = !currentStatus;
-                                                });
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: getColor(
-                                                  context,
-                                                  ColorType.dim,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(30),
-                                                ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 15,
-                                                      vertical: 5,
-                                                    ),
-                                              ),
-                                              icon: Icon(
-                                                (_isFavorited ?? false)
-                                                    ? Icons.favorite
-                                                    : Icons.favorite_border,
-                                                color: (_isFavorited ?? false)
-                                                    ? Colors.red
-                                                    : getColor(
-                                                        context,
-                                                        ColorType.opposite,
-                                                      ),
-                                                size: 20,
-                                                shadows: [
-                                                  Shadow(
-                                                    color: getColor(
-                                                      context,
-                                                      ColorType.mapButtonShadow,
-                                                    ),
-                                                    blurRadius: 4,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              label: Text(
-                                                (_isFavorited ?? false)
-                                                    ? 'Remove Favorite'
-                                                    : 'Add to Favorites',
-                                                style: TextStyle(
-                                                  color: getColor(
-                                                    context,
-                                                    ColorType.opposite,
-                                                  ),
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: getColor(
-                                                        context,
-                                                        ColorType
-                                                            .mapButtonShadow,
-                                                      ),
-                                                      blurRadius: 4,
-                                                      offset: Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            RemindersButton(
-                                              incomingBusRoutes: arrivingBuses
-                                                  .map((bus) => bus.id)
-                                                  .toList(),
-                                              activeReminderRoutes:
-                                                  _routesWithActiveReminder,
-                                              onToggleReminder: (route) async {
-                                                await widget.onToggleReminder(
-                                                  widget.stopID,
-                                                  route,
-                                                );
-                                                setState(() {
-                                                  if (_routesWithActiveReminder
-                                                      .contains(route)) {
-                                                    _routesWithActiveReminder
-                                                        .remove(route);
-                                                  } else {
-                                                    _routesWithActiveReminder
-                                                        .add(route);
-                                                  }
-                                                });
-                                              },
-                                            ),
-                                          ],
-                                        ),
-
-                                        (MediaQuery.of(
-                                                  context,
-                                                ).padding.bottom ==
-                                                0.0)
-                                            ? SizedBox(height: 20)
-                                            : SizedBox(
-                                                height: MediaQuery.of(
-                                                  context,
-                                                ).padding.bottom,
-                                              ),
-                                      ],
-                                    )
-                                  : Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                      ),
-                                      child: Text(
-                                        "There doesn't seem to be any departure data for this stop",
+                              Material(
+                                color: Colors.transparent,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      SizedBox(width: 5),
+                                      Text(
+                                        "Next bus departures",
                                         style: TextStyle(
                                           fontFamily: 'Urbanist',
                                           fontWeight: FontWeight.w400,
                                           fontSize: 20,
                                         ),
                                       ),
-                                    ),
+                                      SizedBox(width: 5),
+                                      InkWell(
+                                        customBorder: CircleBorder(),
+                                        onTap: () {
+                                          _refreshData();
+                                        },
+                                        child: SizedBox(
+                                          width: 30,
+                                          height: 30,
+                                          child:
+                                              (snapshot.connectionState ==
+                                                  ConnectionState.waiting)
+                                              ? Align( // For some bizarre reason this is required to get the CircularProgressIndicator to conform to the size of the ConstrainedBox
+                                                  alignment: Alignment.center,
+                                                  child: ConstrainedBox(
+                                                    constraints:
+                                                        BoxConstraints.tightFor(
+                                                          width: 15,
+                                                          height: 15,
+                                                        ),
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          color: getColor(
+                                                            context,
+                                                            ColorType.opposite,
+                                                          ),
+                                                          strokeWidth: 2.5,
+                                                        ),
+                                                  ),
+                                                )
+                                              : Icon(Icons.refresh),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // future data
+                              // Expanded(
+                              // child:
+
+                              // (snapshot.connectionState ==
+                              //         ConnectionState.waiting)
+                              //     ? Center(
+                              //         child: const CircularProgressIndicator(),
+                              //       )
+                              //     :
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
+                                child:
+                                    (snapshot.connectionState ==
+                                        ConnectionState.waiting)
+                                    ? Center(child: const SizedBox())
+                                    : (snapshot.hasData)
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          (arrivingBuses.length == 0)
+                                              ?
+                                                // Padding(
+                                                //     padding:
+                                                //         const EdgeInsets.symmetric(
+                                                //           horizontal: 20,
+                                                //         ),
+                                                //     child:
+                                                Text(
+                                                  "There are currently no departing busses",
+                                                  style: TextStyle(
+                                                    fontFamily: 'Urbanist',
+                                                    fontWeight: FontWeight.w400,
+                                                    fontSize: 20,
+                                                  ),
+                                                )
+                                              // )
+                                              :
+                                                // Padding(
+                                                //     padding:
+                                                //         const EdgeInsets.symmetric(
+                                                //           horizontal: 20,
+                                                //         ),
+                                                //     child:
+                                                // ),
+                                                SizedBox(height: 10),
+
+                                          // Expanded(
+                                          // child:
+                                          Column(
+                                            mainAxisSize: MainAxisSize.max,
+                                            children: [
+                                              ListView.separated(
+                                                controller: scrollController,
+                                                shrinkWrap: true,
+                                                physics:
+                                                    NeverScrollableScrollPhysics(),
+                                                itemCount: arrivingBuses.length,
+                                                itemBuilder: (context, index) {
+                                                  BusWithPrediction bus =
+                                                      arrivingBuses[index];
+
+                                                  return AnimationConfiguration.staggeredList(
+                                                    position: index,
+                                                    duration: const Duration(milliseconds: 575),
+                                                    delay: const Duration(milliseconds: 100),
+                                                    child: FadeInAnimation(
+                                                      child: ExpandableStopWidget(
+                                                      routeId: bus.id,
+                                                      vehicleId: bus.vehicleId,
+                                                      busId: bus.id,
+                                                      busPrediction:
+                                                          bus.prediction,
+                                                      busDirection: bus.direction,
+                                                      stopId: widget.stopID,
+                                                      showBusSheet:
+                                                          widget.showBusSheet,
+                                                      busProvider:
+                                                          widget.busProvider,
+                                                    )
+                                                    )
+                                                    
+                                                    
+                                                  );
+                                                  
+                                                  
+                                                },
+                                                separatorBuilder: (context, index) {
+                                                  return Divider(
+                                                    height: 0,
+                                                    indent: 20,
+                                                    endIndent: 20,
+                                                    thickness: 1,
+                                                  );
+                                                  // return Padding(
+                                                  //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                                                  //   child: Divider(),
+                                                  // );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+
+                                          // ),
+                                          SizedBox(height: 10),
+
+                                          // two bottom buttons
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                  widget.onGetDirections();
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: getColor(
+                                                    context,
+                                                    ColorType.mapButtonPrimary,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          30,
+                                                        ),
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5,
+                                                      ),
+                                                  //elevation: 4
+                                                ),
+                                                icon: Icon(
+                                                  Icons.directions,
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.mapButtonIcon,
+                                                  ),
+                                                  size: 20,
+                                                  shadows: [
+                                                    Shadow(
+                                                      color: getColor(
+                                                        context,
+                                                        ColorType
+                                                            .mapButtonShadow,
+                                                      ),
+                                                      blurRadius: 4,
+                                                      offset: Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                label: Text(
+                                                  'Get Directions',
+                                                  style: TextStyle(
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType.primary,
+                                                    ),
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonShadow,
+                                                        ),
+                                                        blurRadius: 4,
+                                                        offset: Offset(0, 2),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  // Read the current state
+                                                  final bool currentStatus =
+                                                      _isFavorited ?? false;
+
+                                                  // Call the appropriate function
+                                                  if (currentStatus) {
+                                                    widget.onUnFavorite(
+                                                      widget.stopID,
+                                                      widget.stopName,
+                                                    );
+                                                  } else {
+                                                    widget.onFavorite(
+                                                      widget.stopID,
+                                                      widget.stopName,
+                                                    );
+                                                  }
+
+                                                  // Update the UI immediately
+                                                  setState(() {
+                                                    _isFavorited =
+                                                        !currentStatus;
+                                                  });
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: getColor(
+                                                    context,
+                                                    ColorType.dim,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          30,
+                                                        ),
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 15,
+                                                        vertical: 5,
+                                                      ),
+                                                ),
+                                                icon: Icon(
+                                                  (_isFavorited ?? false)
+                                                      ? Icons.favorite
+                                                      : Icons.favorite_border,
+                                                  color: (_isFavorited ?? false)
+                                                      ? Colors.red
+                                                      : getColor(
+                                                          context,
+                                                          ColorType.opposite,
+                                                        ),
+                                                  size: 20,
+                                                  shadows: [
+                                                    Shadow(
+                                                      color: getColor(
+                                                        context,
+                                                        ColorType
+                                                            .mapButtonShadow,
+                                                      ),
+                                                      blurRadius: 4,
+                                                      offset: Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                label: Text(
+                                                  (_isFavorited ?? false)
+                                                      ? 'Remove Favorite'
+                                                      : 'Add to Favorites',
+                                                  style: TextStyle(
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType.opposite,
+                                                    ),
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonShadow,
+                                                        ),
+                                                        blurRadius: 4,
+                                                        offset: Offset(0, 2),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              RemindersButton(
+                                                incomingBusRoutes: arrivingBuses
+                                                    .map((bus) => bus.id)
+                                                    .toList(),
+                                                activeReminderRoutes:
+                                                    _routesWithActiveReminder,
+                                                onToggleReminder: (route) async {
+                                                  await widget.onToggleReminder(
+                                                    widget.stopID,
+                                                    route,
+                                                  );
+                                                  setState(() {
+                                                    if (_routesWithActiveReminder
+                                                        .contains(route)) {
+                                                      _routesWithActiveReminder
+                                                          .remove(route);
+                                                    } else {
+                                                      _routesWithActiveReminder
+                                                          .add(route);
+                                                    }
+                                                  });
+                                                },
+                                              ),
+                                            ],
+                                          ),
+
+                                          (MediaQuery.of(
+                                                    context,
+                                                  ).padding.bottom ==
+                                                  0.0)
+                                              ? SizedBox(height: 20)
+                                              : SizedBox(
+                                                  height: MediaQuery.of(
+                                                    context,
+                                                  ).padding.bottom,
+                                                ),
+                                        ],
+                                      )
+                                    : Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                        ),
+                                        child: Text(
+                                          "There doesn't seem to be any departure data for this stop",
+                                          style: TextStyle(
+                                            fontFamily: 'Urbanist',
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      ),
+                              ),
                               // ),
                             ],
                           ),

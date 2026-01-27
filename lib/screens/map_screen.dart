@@ -694,6 +694,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           )),
                 consumeTapEvents: true,
                 onTap: () {
+                  try {
+                    Haptics.vibrate(HapticsType.light);
+                  } catch (e) { }
+                  
                   _showStopSheet(
                     stop.id,
                     stop.name,
@@ -848,6 +852,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
             onTap: () {
+              try {
+                Haptics.vibrate(HapticsType.light);
+              } catch (e) { }
               _showBusSheet(bus.id);
             },
           );
@@ -2473,6 +2480,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 
                                 SizedBox(width: 12),
                 
+                                
                                 // search
                                 Expanded( // stretch width
                                   child: SizedBox(

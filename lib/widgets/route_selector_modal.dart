@@ -65,6 +65,9 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   }
 
   void _onReorder(int oldIndex, int newIndex) {
+    try {
+      Haptics.vibrate(HapticsType.medium);
+    } catch (e) { } // Ignore errors if the device doesn't support haptics
     _isReordering = false;
     setState(() {
       // account for index when removing the route before inserting it
@@ -112,7 +115,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
       _lastHoverIndex = closestIndex;
       if (widget.canVibrate) {
         _lastHoverHaptic = DateTime.now();
-        await Haptics.vibrate(HapticsType.light);
+        await Haptics.vibrate(HapticsType.medium);
       }
     }
   }

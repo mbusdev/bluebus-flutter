@@ -132,10 +132,12 @@ class _AndroidMapState extends State<AndroidMap>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      // duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 10900)
     );
 
-    final curved = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    // final curved = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    final curved = CurvedAnimation(parent: _controller, curve: Curves.linear);
 
     curved.addListener(() {
       final now = _controller.lastElapsedDuration ?? Duration.zero;
