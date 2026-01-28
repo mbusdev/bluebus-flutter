@@ -1,4 +1,5 @@
 import 'package:bluebus/firebase_options.dart';
+import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -83,6 +84,8 @@ class NotificationService {
             // reminderNotif,
             null,
           );
+        } else {
+          IncomingBusReminderService.handlePushedMessage(message.data);
         }
       });
     }

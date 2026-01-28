@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/notification_service.dart';
+import 'package:flutter/semantics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,6 +14,7 @@ const serverTokenKey = "server_registration_token";
 class IncomingBusReminderService {
   static bool _started = false;
   static late SharedPreferencesWithCache _userPrefs;
+  static VoidCallback? onReminderStateChange;
 
   static Future<void> start() async {
     if (_started) {
@@ -25,6 +27,13 @@ class IncomingBusReminderService {
         allowList: {serverTokenKey},
       ),
     );
+  }
+
+  // called by the notificiation service when it receives a fcm message that isn't a notification
+  static void handlePushedMessage(dynamic msg) {
+    if (msg['kind'] as String == "reminderUpdate") {
+      onReminderStateChange?.call();
+    }
   }
 
   static Future<void> _completeSetup() async {

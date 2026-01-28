@@ -2155,7 +2155,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           ),
 
                       // reminder widget
-                      SizedBox(height: 8.0,),
+                      SizedBox(height: 30.0,),
                       ReminderWidgets(),
                        
                       Spacer(),
