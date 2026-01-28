@@ -8,6 +8,14 @@ import '../models/bus_stop.dart';
 import 'package:intl/intl.dart';
 import 'upcoming_stops_widget.dart';
 
+bool isNumber(String? s) {
+  if (s != null && int.tryParse(s) != null) {
+    // busID is numeric, so it's a ride bus
+    return true;
+  } 
+  return false;
+}
+
 class BusSheet extends StatefulWidget {
   final String busID;
   final ScrollController scrollController;
@@ -77,65 +85,8 @@ class _BusSheetState extends State<BusSheet> {
               // spacer
               SizedBox(height: 20),
 
-              // header
-              Padding(
-                padding: const EdgeInsets.only(
-                  left: 10,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                ),
-                child: Row(
-                  children: [
-                    Container( // Bus circular icon
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: bus.routeColor,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        bus.routeId,
-                        style: TextStyle(
-                          color: RouteColorService.getContrastingColor(
-                            bus.routeId,
-                          ),
-                          fontSize: 30,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-
-                    SizedBox(width: 15),
-
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          getPrettyRouteName(bus.routeId),
-                          style: TextStyle(
-                             fontFamily: 'Urbanist',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 30,
-                          ),
-                        ),
-                        Text(
-                          "Bus ${bus.id}",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontFamily: 'Urbanist',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // header (if the bus id is a number it's a ride bus)
+              isNumber(bus.routeId) ? theRideHeader(bus) : michiganBusHeader(bus),
 
               SizedBox(height: 20),
 
@@ -162,3 +113,145 @@ class _BusSheetState extends State<BusSheet> {
     );
   }
 }
+
+Widget michiganBusHeader(Bus bus) {
+  return Padding(
+    padding: const EdgeInsets.only(
+      left: 10,
+      right: 0,
+      top: 0,
+      bottom: 0,
+    ),
+    child: Row(
+      children: [
+        Container( // Bus circular icon
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: bus.routeColor,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            bus.routeId,
+            style: TextStyle(
+              color: RouteColorService.getContrastingColor(
+                bus.routeId,
+              ),
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+
+        SizedBox(width: 15),
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              getPrettyRouteName(bus.routeId),
+              style: TextStyle(
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w700,
+                fontSize: 30,
+              ),
+            ),
+            Text(
+              "Bus ${bus.id}",
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+
+Widget theRideHeader(Bus bus) {
+  return Padding(
+    padding: const EdgeInsets.only(
+      left: 10,
+      right: 0,
+      top: 0,
+      bottom: 0,
+    ),
+    child: Row(
+      children: [
+        Container( // Bus circular icon
+          width: 78,
+          height: 55,
+          decoration: BoxDecoration(
+            shape: BoxShape.rectangle,
+            borderRadius: BorderRadius.circular(39), // should be 27.5 (55 divided by 2) but 39 works too
+            color: bus.routeColor,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            bus.routeId,
+            style: TextStyle(
+              color: RouteColorService.getContrastingColor(
+                bus.routeId,
+              ),
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+
+        SizedBox(width: 15),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                getPrettyRouteName(bus.routeId),
+                style: TextStyle(
+                  fontFamily: 'Urbanist',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 30,
+                ),
+              ),
+              Row(
+                children: [
+                  ClipOval(
+                    child: Image.asset(
+                      "assets/rideIcon.png",
+                      width: 30,
+                      height: 30,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+          
+                  SizedBox(width: 8),
+          
+                  Text(
+                    "Bus ${bus.id}",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontFamily: 'Urbanist',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+

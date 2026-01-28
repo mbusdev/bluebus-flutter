@@ -495,11 +495,13 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                     highlightColor: Colors.transparent,
                                   ),
                                   child: ListTile(
+                                    minTileHeight: 40,
                                     leading: Container(
-                                      width: 35,
-                                      height: 35,
+                                      width: 40,
+                                      height: 30,
                                       decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
+                                        shape: BoxShape.rectangle,
+                                        borderRadius: BorderRadius.circular(15), 
                                         color: RouteColorService.getRouteColor(route['id']!), 
                                       ),
                                       alignment: Alignment.center,
@@ -532,27 +534,9 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                         ],
                                       ),
                                     ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Info button
-                                        IconButton(
-                                          icon: Icon(
-                                            Icons.info_outline,
-                                            color: Colors.grey.shade700,
-                                            size: 22,
-                                          ),
-                                          onPressed: () {
-                                            _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
-                                          },
-                                          padding: EdgeInsets.all(8),
-                                          constraints: BoxConstraints(),
-                                        ),
-                                        ReorderableDragStartListener(
-                                          index: index,
-                                          child: Icon(Icons.drag_handle),
-                                        ),
-                                      ],
+                                    trailing: ReorderableDragStartListener(
+                                      index: index,
+                                      child: Icon(Icons.drag_handle),
                                     ),
                                     onTap: () {
                                       setState(() {

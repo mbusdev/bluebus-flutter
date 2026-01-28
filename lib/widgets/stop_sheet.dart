@@ -12,6 +12,14 @@ import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
 import 'upcoming_stops_widget.dart';
 
+bool isRide(String? s) {
+  if (s != null && int.tryParse(s) != null) {
+    // busID is numeric, so it's a ride bus
+    return true;
+  } 
+  return false;
+}
+
 class StopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
@@ -84,12 +92,20 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                 child: Row(
                 children: [
                   Container( // Circular icon on the left (with the bus code, e.g. "NW")
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: RouteColorService.getRouteColor(widget.busId), 
-                    ),
+                    width: isRide(widget.busId) ? 45 : 40,
+                    height: isRide(widget.busId) ? 35 : 40, 
+                    decoration: isRide(widget.busId) ? 
+                      // ride icon
+                      BoxDecoration(
+                        shape: BoxShape.rectangle,
+                        borderRadius: BorderRadius.circular(20),
+                        color: RouteColorService.getRouteColor(widget.busId),
+                      ) :
+                      // michigan icon
+                      BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: RouteColorService.getRouteColor(widget.busId),
+                      ),
                     alignment: Alignment.center,
                     child: MediaQuery(
                       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
@@ -169,8 +185,8 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
             ),
         ),
       ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
             child: UpcomingStopsWidget(
               color: RouteColorService.getRouteColor(widget.busId),
               routeId: widget.routeId, 
@@ -184,12 +200,11 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
               childIfNoUpcomingStopsFound: Padding(
                 padding: EdgeInsets.only(left: 55),
                 child: Text("No upcoming stops found for this bus", style: TextStyle(fontStyle: FontStyle.italic),),
-              ),),
-
-    )
-          ],
-        );
-    // );
+              ),
+            ),
+          ),
+        ],
+      );
   }
 }
 
@@ -360,8 +375,6 @@ class _StopSheetState extends State<StopSheet> {
                             Expanded(
                               child: Text(
                                 widget.stopName,
-                                // IF YOU CHANGE THIS STYLE make sure to change the estimate
-                                // function too (top of this file)
                                 style: TextStyle(
                                   fontFamily: 'Urbanist',
                                   fontWeight: FontWeight.w700,
@@ -693,7 +706,6 @@ class RemindersButton extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  // color: RouteColorService.getRouteColor(route),
                   color: color,
                 ),
                 alignment: Alignment.center,
