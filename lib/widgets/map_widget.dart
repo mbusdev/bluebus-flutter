@@ -91,7 +91,7 @@ class AndroidMap extends StatefulWidget {
 }
 
 class _AndroidMapState extends State<AndroidMap>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   Set<Marker> curMarkers = {};
   Map<MarkerId, Marker> _startMarkers = {};
@@ -105,6 +105,8 @@ class _AndroidMapState extends State<AndroidMap>
   late final Duration _minFrameGap =
       Duration(milliseconds: (1000 / _targetFps).floor());
   Duration _lastPaint = Duration.zero;
+  int lastBusPositionsUpdateTimestamp = 0;
+  int secondToLastBusPositionsUpdateTimestamp = 0;
 
   double _shortestAngleDelta(double fromDeg, double toDeg) {
     double delta = (toDeg - fromDeg + 540) % 360 - 180;
@@ -123,6 +125,17 @@ class _AndroidMapState extends State<AndroidMap>
       return;
     }
 
+    if (lastBusPositionsUpdateTimestamp + 20 * 1000 < DateTime.now().millisecondsSinceEpoch ||
+        secondToLastBusPositionsUpdateTimestamp + 24 * 1000 < DateTime.now().millisecondsSinceEpoch) {
+      // If last bus positions update was more than 20s ago, don't try to stretch out the animation to make the buses feel "smooth"
+      debugPrint("Last two bus refreshes happened over 20sec ago, skipping smooth animation...");
+      _controller.duration = const Duration(milliseconds: 800);
+    } else {
+      _controller.duration = const Duration(milliseconds: 10900);
+    }
+    secondToLastBusPositionsUpdateTimestamp = lastBusPositionsUpdateTimestamp;
+    lastBusPositionsUpdateTimestamp = DateTime.now().millisecondsSinceEpoch;
+
     _lastPaint = Duration.zero;
     _controller.forward(from: 0);
   }
@@ -130,6 +143,7 @@ class _AndroidMapState extends State<AndroidMap>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = AnimationController(
       vsync: this,
       // duration: const Duration(milliseconds: 800),
@@ -206,8 +220,20 @@ class _AndroidMapState extends State<AndroidMap>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+
+    if (state == AppLifecycleState.resumed) {
+      // Refresh all bus locations as soon as app is resumed
+    }
+
+    // TODO: implement didChangeAppLifecycleState
+    super.didChangeAppLifecycleState(state);
   }
 
   @override

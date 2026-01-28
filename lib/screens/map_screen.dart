@@ -45,7 +45,7 @@ class MaizeBusCore extends StatefulWidget {
   State<MaizeBusCore> createState() => _MaizeBusCoreState();
 }
 
-class _MaizeBusCoreState extends State<MaizeBusCore> {
+class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver {
   late bool canVibrate;
   late Journey currDisplayed;
 
@@ -115,6 +115,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setupConnectivityMonitoring();
   }
 
@@ -631,8 +632,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _loadingMessageNotifier.dispose();
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
+    WidgetsBinding.instance.removeObserver(this);
     _mapController?.dispose();
     super.dispose();
+  }
+
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Force refresh the bus provider
+      final busProvider = Provider.of<BusProvider>(context, listen: false);
+      busProvider.forceBusUpdate();
+    }
   }
 
   void _updateAvailableRoutes(List<BusRouteLine> routes) {

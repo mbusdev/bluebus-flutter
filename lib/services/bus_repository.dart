@@ -32,6 +32,10 @@ class BusRepository {
     });
   }
 
+  // void forceBusUpdate(void Function(List<Bus>) onUpdate) {
+
+  // }
+
   void stopBusUpdates() {
     _busUpdateTimer?.cancel();
   }

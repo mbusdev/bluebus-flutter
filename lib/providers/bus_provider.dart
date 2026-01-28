@@ -48,6 +48,14 @@ class BusProvider extends ChangeNotifier {
     });
   }
 
+  void forceBusUpdate() { // Exactly the same as startBusUpdates--maybe merge these?
+    debugPrint("Forcing bus update...");
+    repository.startBusUpdates((buses) {
+      _buses = buses;
+      notifyListeners();
+    });
+  }
+
   void stopBusUpdates() {
     repository.stopBusUpdates();
   }
