@@ -29,12 +29,12 @@ double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   return angle;
 }
 
-class BlueBusApi {
+class RideAPI {
   static const String baseUrl = BACKEND_URL;
 
   // Fetch all routes and their polylines/stops
   static Future<List<BusRouteLine>> fetchRoutes() async {
-    final response = await http.get(Uri.parse('$baseUrl/getAllRoutes'));
+    final response = await http.get(Uri.parse('$baseUrl/getAllRideRoutes'));
     if (response.statusCode != 200) throw Exception('Failed to load routes');
     final data = jsonDecode(response.body);
     final routes = <BusRouteLine>[];
@@ -69,7 +69,7 @@ class BlueBusApi {
                 pointList[i - 1]['lat']?.toDouble() ?? 0,
                 pointList[i - 1]['lon']?.toDouble() ?? 0,
               );
-              stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
+              stops.add(BusStop.fromJson(point, routeId, stopRotation, true));
               
             } else {
               // use the next 2 points to calculate rotation
@@ -79,7 +79,7 @@ class BlueBusApi {
                 pointList[i + 2]['lat']?.toDouble() ?? 0,
                 pointList[i + 2]['lon']?.toDouble() ?? 0,
               );
-              stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
+              stops.add(BusStop.fromJson(point, routeId, stopRotation, true));
             }
 
           }
@@ -127,7 +127,7 @@ class BlueBusApi {
                   pointList[i - 1]['lat']?.toDouble() ?? 0,
                   pointList[i - 1]['lon']?.toDouble() ?? 0,
                 );
-                detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
+                detourStops.add(BusStop.fromJson(point, routeId, stopRotation, true));
                 
               } else {
                 // use the next 2 points to calculate rotation
@@ -137,7 +137,7 @@ class BlueBusApi {
                   pointList[i + 2]['lat']?.toDouble() ?? 0,
                   pointList[i + 2]['lon']?.toDouble() ?? 0,
                 );
-                detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
+                detourStops.add(BusStop.fromJson(point, routeId, stopRotation, true));
               }
             }
           }
@@ -160,7 +160,7 @@ class BlueBusApi {
   // Fetch all buses and their positions
   static Future<List<Bus>> fetchBuses() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/getVehiclePositions'));
+      final response = await http.get(Uri.parse('$baseUrl/getRidePositions'));
       if (response.statusCode != 200) throw Exception('Failed to load buses');
       final data = jsonDecode(response.body);
       final buses = <Bus>[];

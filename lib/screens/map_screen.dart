@@ -38,6 +38,22 @@ import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
 
+Future<BitmapDescriptor> resizeImage(ByteData image) async {
+  // Load and resize stop icon
+  final stopBytes = image;
+  final stopCodec = await ui.instantiateImageCodec(
+    stopBytes.buffer.asUint8List(),
+    targetWidth: 65,
+    targetHeight: 65,
+  );
+  final stopFrame = await stopCodec.getNextFrame();
+  final stopData = await stopFrame.image.toByteData(
+    format: ui.ImageByteFormat.png,
+  );
+  return BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
+
+}
+
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
 
@@ -78,7 +94,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Custom marker icons
   BitmapDescriptor? _busIcon;
   BitmapDescriptor? _stopIcon;
+  BitmapDescriptor? _rideStopIcon;
+  BitmapDescriptor? _mixedStopIcon;
   BitmapDescriptor? _favStopIcon;
+  BitmapDescriptor? _favRideStopIcon;
+  BitmapDescriptor? _favMixedStopIcon;
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -277,32 +297,53 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // need this to make sure that the stop names exist in the cache
   Future<void> _loadStopsForLaunch() async {
-    final stopResponse = await http.get(
-      Uri.parse(BACKEND_URL + '/getAllStops'),
-    );
-    List<Location> stopLocs = [];
-    if (stopResponse.statusCode == 200 &&
-        stopResponse.body.trim().isNotEmpty &&
-        stopResponse.body.trim() != '{}') {
-      final stopList = jsonDecode(stopResponse.body) as List<dynamic>;
-      stopLocs = stopList.map((stop) {
-        final name = stop['name'] as String;
-        final aliases = [
-          name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
-        ];
-        final stopId = stop['stpid'] as String?;
-        final lat = stop['lat'] as double?;
-        final lon = stop['lon'] as double?;
-        return Location(
-          name,
-          (stopId != null) ? stopId : "",
-          aliases,
-          true,
-          stopId: stopId,
-          latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
-        );
-      }).toList();
+    // LOADS BOTH STOP TYPES
+    final uriStops = Uri.parse(BACKEND_URL + '/getAllStops');
+    final uriRideStops = Uri.parse(BACKEND_URL + '/getAllRideStops');
+
+    // Calling in parallel
+    final responses = await Future.wait([
+      http.get(uriStops),
+      http.get(uriRideStops),
+    ]);
+
+    // Helper function to parse a response into a List<Location>
+    // This prevents copying/pasting the parsing logic.
+    List<Location> parseLocations(http.Response response) {
+      if (response.statusCode == 200 &&
+          response.body.trim().isNotEmpty &&
+          response.body.trim() != '{}') {
+        
+        final stopList = jsonDecode(response.body) as List<dynamic>;
+        
+        return stopList.map((stop) {
+          final name = stop['name'] as String;
+          final aliases = [
+            name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
+          ];
+          final stopId = stop['stpid'] as String?;
+          final lat = stop['lat'] as double?;
+          final lon = stop['lon'] as double?;
+          
+          return Location(
+            name,
+            (stopId != null) ? stopId : "",
+            aliases,
+            true,
+            stopId: stopId,
+            latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
+          );
+        }).toList();
+      }
+      return []; // Return empty list if call failed or body is empty
     }
+
+    // parse both and merge
+    List<Location> stopLocs = [
+      ...parseLocations(responses[0]),
+      ...parseLocations(responses[1]),
+    ];
+
     globalStopLocs = stopLocs;
   }
 
@@ -346,39 +387,25 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   Future<void> _loadCustomMarkers() async {
     try {
-      // Load and resize stop icon
-      final stopBytes = await rootBundle.load('assets/bus_stop.png');
-      final stopCodec = await ui.instantiateImageCodec(
-        stopBytes.buffer.asUint8List(),
-        targetWidth: 70,
-        targetHeight: 70,
+      // Load stop icons
+      _stopIcon = await resizeImage(  
+        await rootBundle.load('assets/busStop.png'),
       );
-      final stopFrame = await stopCodec.getNextFrame();
-      final stopData = await stopFrame.image.toByteData(
-        format: ui.ImageByteFormat.png,
+      _rideStopIcon = await resizeImage(
+        await rootBundle.load('assets/busStopRide.png'),
       );
-      _stopIcon = BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
-
-      // Load favorite stop icon
-      try {
-        final favBytes = await rootBundle.load('assets/fav_stop.png');
-        final favCodec = await ui.instantiateImageCodec(
-          favBytes.buffer.asUint8List(),
-          targetWidth: 70,
-          targetHeight: 70,
-        );
-        final favFrame = await favCodec.getNextFrame();
-        final favData = await favFrame.image.toByteData(
-          format: ui.ImageByteFormat.png,
-        );
-        if (favData != null) {
-          _favStopIcon = BitmapDescriptor.fromBytes(
-            favData.buffer.asUint8List(),
-          );
-        }
-      } catch (_) {
-        _favStopIcon = null;
-      }
+      _mixedStopIcon = await resizeImage(
+        await rootBundle.load('assets/busStopMixed.png'),
+      );
+      _favStopIcon = await resizeImage(
+        await rootBundle.load('assets/favbusStop.png'),
+      );
+      _favRideStopIcon = await resizeImage(
+        await rootBundle.load('assets/favbusStopRide.png'),
+      );
+      _favMixedStopIcon = await resizeImage(
+        await rootBundle.load('assets/favbusStopMixed.png'),
+      );
 
       // Load route specific bus icons
       await _loadRouteSpecificBusIcons();
@@ -390,6 +417,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     } catch (e) {
       // Fallback to default markers if custom loading fails
       _stopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
+      _rideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
+      _mixedStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
+      _favStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
+      _favRideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
+      _favMixedStopIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueAzure,
       );
     }
@@ -682,13 +724,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               (stop) => Marker(
                 markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
                 position: stop.location,
+                flat: true,
                 icon: _favoriteStops.contains(stop.id)
-                    ? (_favStopIcon ??
-                          _stopIcon ??
+                    ? (stop.isRide? 
+                        _favRideStopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          ) : 
+                        _favStopIcon ??
                           BitmapDescriptor.defaultMarkerWithHue(
                             BitmapDescriptor.hueAzure,
                           ))
-                    : (_stopIcon ??
+                    : (stop.isRide?
+                        _rideStopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          ) :
+                        _stopIcon ??
                           BitmapDescriptor.defaultMarkerWithHue(
                             BitmapDescriptor.hueAzure,
                           )),
@@ -701,6 +753,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     stop.location.longitude,
                   );
                 },
+                rotation: stop.rotation,
+                anchor: Offset(0.5, 0.5),
               ),
             )
             .toSet();
@@ -743,6 +797,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       final updated = markers.map((m) {
         if (m.markerId.value.startsWith('stop_${stpid}_')) {
           return Marker(
+            flat: true,
             markerId: m.markerId,
             position: m.position,
             icon: favored
@@ -841,6 +896,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           }
 
           return Marker(
+            flat: true,
             markerId: MarkerId('bus_${bus.id}'),
             consumeTapEvents: true,
             position: bus.position,
@@ -875,6 +931,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
           _displayedJourneyBusMarkers.add(
             Marker(
+              flat: true,
               markerId: MarkerId('journey_bus_${bus.id}'),
               consumeTapEvents: true,
               position: bus.position,
@@ -998,6 +1055,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         _busIcon ??
         BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
     return Marker(
+      flat: true,
       markerId: MarkerId('bus_${bus.id}'),
       consumeTapEvents: true,
       position: bus.position,
@@ -1300,6 +1358,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             // add stop markers at endpoints of the segment (boarding/getting off)
             _displayedJourneyMarkers.addAll([
               Marker(
+                flat: true,
                 markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),
                 position: bestSegment.first,
                 icon:
@@ -1309,6 +1368,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     ),
               ),
               Marker(
+                flat: true,
                 markerId: MarkerId(
                   'journey_stop_${leg.destinationID}_$legIndex',
                 ),
@@ -1339,6 +1399,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 allPoints.add(latlng);
                 _displayedJourneyMarkers.add(
                   Marker(
+                    flat: true,
                     markerId: MarkerId('journey_stop_${st.stop}_$legIndex'),
                     position: latlng,
                     icon:
@@ -1465,6 +1526,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           if (legIndex == journey.legs.length - 1) {
             _displayedJourneyMarkers.add(
               Marker(
+                flat: true,
                 markerId: MarkerId(
                   'journey_final_destination_${journey.hashCode}',
                 ),
@@ -1480,6 +1542,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           if (legIndex == 0) {
             _displayedJourneyMarkers.add(
               Marker(
+                flat: true,
                 markerId: MarkerId('journey_start_${journey.hashCode}'),
                 position: startLatLng,
                 icon: BitmapDescriptor.defaultMarkerWithHue(

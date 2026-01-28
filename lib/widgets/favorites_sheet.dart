@@ -1,3 +1,4 @@
+import 'package:bluebus/theride_api.dart';
 import 'package:bluebus/widgets/mini_stop_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,6 +56,22 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
         .catchError((_) {
           // ignore errors building names
         });
+
+    // same for ride
+    RideAPI.fetchRoutes()
+        .then((routes) {
+          final map = <String, String>{};
+          for (final r in routes) {
+            for (final s in r.stops) {
+              if (!map.containsKey(s.id)) map[s.id] = s.name;
+            }
+          }
+          setState(() => _stopIdToName.addAll(map));
+        })
+        .catchError((_) {
+          // ignore errors building names
+        });
+
   }
 
   Future<List<String>> _loadFavoriteStopIds() async {

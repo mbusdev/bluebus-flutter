@@ -83,6 +83,8 @@ class RouteColorService {
         }
       }
     }
+
+    return;
   }
 
   // Convert hex color string to Color object
@@ -105,6 +107,7 @@ class RouteColorService {
   }
 
   // Fallback to default colors if backend fails
+  // TODO: Update with actual default colors
   static void _setDefaultColors() {
     _routeColors = {
       'NW': Colors.blue,
@@ -166,11 +169,10 @@ class RouteColorService {
     return _routeColors.containsKey(routeId);
   }
 
-  // Get a contrasting color for text/icons on the route color
+  // DISABLED THIS FUNCTION
+  // always returns white
   static Color getContrastingColor(String routeId) {
-    final routeColor = getRouteColor(routeId);
-    final luminance = routeColor.computeLuminance();
-    return luminance > 0.5 ? Colors.black : Colors.white;
+    return Colors.white;
   }
 
   // Refresh data from backend
