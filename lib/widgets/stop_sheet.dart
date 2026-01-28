@@ -676,7 +676,7 @@ class ReminderForm extends StatefulWidget {
 
 class _ReminderFormState extends State<ReminderForm> {
 
-  Future<List<({ String stpid, String rtid })>>? reminderInfoFuture;
+  Future<List<({ String stpid, String rtid, int? eta })>>? reminderInfoFuture;
   /// ones that have been selected to be added / removed
   Set<String> rtidsToChange = {};
   int reminderThresh = 5;

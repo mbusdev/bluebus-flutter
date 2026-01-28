@@ -61,8 +61,6 @@ class NotificationService {
     final notificationSettings = await FirebaseMessaging.instance
         .requestPermission();
     // notificationSettings.authorizationStatus ...
-    // await FirebaseMessaging.instance
-    //     .setForegroundNotificationPresentationOptions(alert: true);
     final apnsToken = await FirebaseMessaging.instance
         .getAPNSToken(); // ensure it exists for iOS to work
     _registrationToken = await FirebaseMessaging.instance.getToken();

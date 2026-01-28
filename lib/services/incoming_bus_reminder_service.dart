@@ -82,11 +82,20 @@ class IncomingBusReminderService {
     return activeReminders.contains((stpid: stpid, rtid: rtid));
   }
 
-  static Future<List<({String stpid, String rtid})>>
+  static Future<List<({String stpid, String rtid, int? eta})>>
   getActiveReminders() async {
     await _completeSetup();
     final token = _serverToken();
     if (token == null) throw Exception("missing token");
+    return await _activeReminders(token: token);
+  }
+
+  // avoid calling _completeSetup(), should in theory return an empty list instead of asking for
+  // permission when permission hasn't yet been granted
+  static Future<List<({String stpid, String rtid, int? eta})>>
+  getActiveRemindersNoSetup() async {
+    final token = _serverToken();
+    if (token == null) return [];
     return await _activeReminders(token: token);
   }
 
@@ -105,7 +114,7 @@ const REMINDER_BACKEND_URL = String.fromEnvironment(
   defaultValue: BACKEND_URL,
 );
 
-Future<List<({String stpid, String rtid})>> _activeReminders({
+Future<List<({String stpid, String rtid, int? eta})>> _activeReminders({
   required String token,
 }) async {
   final uri = Uri.parse(
@@ -114,7 +123,13 @@ Future<List<({String stpid, String rtid})>> _activeReminders({
   final res = await http.get(uri);
   if (res.statusCode == 200) {
     return (jsonDecode(res.body)['reminders'] as List)
-        .map((x) => (stpid: x['stpid'] as String, rtid: x['rtid'] as String))
+        .map(
+          (x) => (
+            stpid: x['stpid'] as String,
+            rtid: x['rtid'] as String,
+            eta: x['eta'] as int?,
+          ),
+        )
         .toList();
   }
   throw Exception(res.body);
