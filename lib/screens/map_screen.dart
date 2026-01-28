@@ -724,6 +724,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               (stop) => Marker(
                 markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
                 position: stop.location,
+                flat: true,
                 icon: _favoriteStops.contains(stop.id)
                     ? (stop.isRide? 
                         _favRideStopIcon ??
@@ -796,6 +797,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       final updated = markers.map((m) {
         if (m.markerId.value.startsWith('stop_${stpid}_')) {
           return Marker(
+            flat: true,
             markerId: m.markerId,
             position: m.position,
             icon: favored
@@ -894,6 +896,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           }
 
           return Marker(
+            flat: true,
             markerId: MarkerId('bus_${bus.id}'),
             consumeTapEvents: true,
             position: bus.position,
@@ -928,6 +931,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
           _displayedJourneyBusMarkers.add(
             Marker(
+              flat: true,
               markerId: MarkerId('journey_bus_${bus.id}'),
               consumeTapEvents: true,
               position: bus.position,
@@ -1051,6 +1055,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         _busIcon ??
         BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
     return Marker(
+      flat: true,
       markerId: MarkerId('bus_${bus.id}'),
       consumeTapEvents: true,
       position: bus.position,
@@ -1353,6 +1358,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             // add stop markers at endpoints of the segment (boarding/getting off)
             _displayedJourneyMarkers.addAll([
               Marker(
+                flat: true,
                 markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),
                 position: bestSegment.first,
                 icon:
@@ -1362,6 +1368,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     ),
               ),
               Marker(
+                flat: true,
                 markerId: MarkerId(
                   'journey_stop_${leg.destinationID}_$legIndex',
                 ),
@@ -1392,6 +1399,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 allPoints.add(latlng);
                 _displayedJourneyMarkers.add(
                   Marker(
+                    flat: true,
                     markerId: MarkerId('journey_stop_${st.stop}_$legIndex'),
                     position: latlng,
                     icon:
@@ -1518,6 +1526,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           if (legIndex == journey.legs.length - 1) {
             _displayedJourneyMarkers.add(
               Marker(
+                flat: true,
                 markerId: MarkerId(
                   'journey_final_destination_${journey.hashCode}',
                 ),
@@ -1533,6 +1542,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           if (legIndex == 0) {
             _displayedJourneyMarkers.add(
               Marker(
+                flat: true,
                 markerId: MarkerId('journey_start_${journey.hashCode}'),
                 position: startLatLng,
                 icon: BitmapDescriptor.defaultMarkerWithHue(

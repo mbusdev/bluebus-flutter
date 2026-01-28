@@ -63,7 +63,7 @@ class _BusSheetState extends State<BusSheet> {
       child: Padding(
         padding: const EdgeInsets.only(
           left: 10,
-          top: 20,
+          top: 0,
           right: 20,
           bottom: 0,
         ),
@@ -74,6 +74,9 @@ class _BusSheetState extends State<BusSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // spacer
+              SizedBox(height: 20),
+
               // header
               Padding(
                 padding: const EdgeInsets.only(
