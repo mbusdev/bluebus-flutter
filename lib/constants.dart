@@ -72,7 +72,7 @@ const Color maizeBusBlueDarkMode = Color.fromARGB(255, 80, 150, 210);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {
-  primary, opposite, background,
+  primary, secondary, opposite, background,
 
   mapButtonPrimary, mapButtonSecondary,
   mapButtonIcon, mapButtonShadow,
@@ -84,6 +84,7 @@ enum ColorType {
 
 const Map<ColorType, Color> lightColors = {
   ColorType.primary: Colors.white,
+  ColorType.secondary: Color.fromARGB(255, 226, 231, 236),
   ColorType.opposite: Colors.black,
   ColorType.background: Colors.white,
   
@@ -100,6 +101,7 @@ const Map<ColorType, Color> lightColors = {
 
 const Map<ColorType, Color> darkColors = {
   ColorType.primary: Colors.black,
+  ColorType.secondary: Color.fromARGB(255, 40, 54, 72),
   ColorType.opposite: Colors.white,
   ColorType.background: Color.fromARGB(255, 19, 34, 47),
 
@@ -126,6 +128,40 @@ bool isDarkMode(BuildContext context) {
 // All color types are in the ColorType enum.
 Color getColor(BuildContext context, ColorType type) {
   return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
+}
+
+//Clipping path for the loading screen.
+//the path has the bottom right corner replaced with a diagonal edge.
+class TrapezoidClip extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(size.width, 0); 
+    path.lineTo(size.width - size.height, size.height); 
+    path.lineTo(0, size.height);
+    path.close(); 
+    return path; 
+  }
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) {
+    return false; 
+  }
+}
+class TrapezoidClipReversed extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.moveTo(size.width, 0); 
+    path.lineTo(size.width, size.height); 
+    path.lineTo(0, size.height);
+    path.lineTo(size.height, 0);
+    path.close(); 
+    return path; 
+  }
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) {
+    return false; 
+  }
 }
 
 // THEMES
@@ -223,4 +259,10 @@ class StartupDataHolder {
   String persistantMessageTitle;
   String persistantMessage;
   StartupDataHolder(this.version, this.updateTitle, this.updateMessage, this.persistantMessageTitle, this.persistantMessage);
+}
+
+class Loadpoint {
+  final String message;
+  final int step;
+  Loadpoint(this.message, this.step);
 }

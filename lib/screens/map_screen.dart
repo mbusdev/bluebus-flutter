@@ -11,6 +11,7 @@ import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
+import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/foundation.dart';
@@ -66,8 +67,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   late Journey currDisplayed;
 
   Future<void>? _dataLoadingFuture;
-  final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
-
+  final _loadingMessageNotifier = ValueNotifier<Loadpoint>(Loadpoint("Initializing...", 0));
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
@@ -181,6 +181,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+    
 
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
@@ -189,7 +190,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
-    _loadingMessageNotifier.value = 'Contacting server...';
+    _loadingMessageNotifier.value = Loadpoint('Contacting server...', 1);
     StartupDataHolder? startupData = await _getStartupData();
 
     // keep trying to reach server. Can't start without this
@@ -271,7 +272,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ]);
 
     // actions that depend on the data loaded earlier
-    _loadingMessageNotifier.value = 'Loading bus images...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus images...', 2);
     await _loadRouteSpecificBusIcons();
     _updateAvailableRoutes(busProvider.routes);
     _cacheRouteOverlays(busProvider.routes);
@@ -285,14 +286,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     await _loadMapStyles();
 
     // Finally, get the initial bus locations and start the live updates.
-    _loadingMessageNotifier.value = 'Loading bus positions...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus positions...', 3);
     await busProvider.loadBuses();
 
-    _loadingMessageNotifier.value = 'Loading bus stops...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus stops...', 4);
     _loadStopsForLaunch();
 
-    _loadingMessageNotifier.value = 'Starting app...';
+    _loadingMessageNotifier.value = Loadpoint('Starting app...', 5);
     busProvider.startBusUpdates();
+    await Future.delayed(const Duration(milliseconds: 180)); 
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -1999,9 +2001,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
+          
           //if (!Platform.isIOS){print("is androud");} // I love androud
-          return PopScope(
+          //I also love androud
+        return AnimatedSwitcher(
+          duration: Duration(milliseconds: 200),
+          
+          child: (snapshot.connectionState == ConnectionState.done)
+          ? PopScope(
+            //for switch animation
+            key: ValueKey(1),
+
             // lets us prevent back button on map page
             canPop: false,
             onPopInvokedWithResult: (didPop, result) { 
@@ -2231,7 +2241,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               ],
                             )
                           ),
-                       
+                      
                       Spacer(),
                       
                       // temp row (might add settings button to it later)
@@ -2582,86 +2592,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 )
               ],
             ),
-          );
-        } else {
-          // LOADING SCREEN
-          return Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                SizedBox(width: 30),
+          )
+          : Container(
+            //for switch animation
+            key: ValueKey(0),
 
-                Container(
-                  height: 100,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDarkMode(context) ? ui.Color.fromARGB(100, 228, 228, 228) : ui.Color.fromARGB(255, 228, 228, 228),
-                        spreadRadius: 1,
-                        blurRadius: 6,
-                        offset: Offset(0, 5), // changes position of shadow
-                      ),
-                    ],
-                    image: DecorationImage(
-                      image: AssetImage('assets/appicon.png'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+            color: getColor(context, ColorType.background),
+            
+            child: ValueListenableBuilder<Loadpoint>(
+              valueListenable: _loadingMessageNotifier,
+              builder: (context, loadpoint, child) {
+                return LoadingScreen(loadpoint: loadpoint);
+              }
+            )
+          )
+          
+        );
 
-                SizedBox(width: 30),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Loading",
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20,
-                        ),
-                      ),
-
-                      Row(
-                        children: [
-                          Container(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(
-                              color: const ui.Color.fromARGB(255, 11, 83, 148),
-                            ),
-                          ),
-
-                          SizedBox(width: 10),
-
-                          ValueListenableBuilder<String>(
-                            valueListenable: _loadingMessageNotifier,
-                            builder: (context, message, child) {
-                              return Text(
-                                message,
-                                style: TextStyle(
-                                  fontFamily: 'Urbanist',
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: 18,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-      },
+      }
     );
   }
 }
