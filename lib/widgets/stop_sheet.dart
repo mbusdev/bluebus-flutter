@@ -705,8 +705,7 @@ class _ReminderFormState extends State<ReminderForm> {
 
         final dataForThisStop = dataForAllStops.where((x) => x.stpid == widget.stpid);
         
-        //final routesToShow = widget.activeRoutes;
-        final routesToShow = ["BB", "CS", "CSX", "NW", "DD", "OS", "NX", "CN"];
+        final routesToShow = widget.activeRoutes;
 
         for (final reminder in dataForThisStop) {
           rtidsToChange.add(reminder.rtid);
