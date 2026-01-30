@@ -693,7 +693,10 @@ class _ReminderFormState extends State<ReminderForm> {
         }
         final dataForAllStops = snapshot.data;
         if (dataForAllStops == null) {
-          return Center(child: Text("Loading failed!"));
+          return Center(child: Column(children: [
+            Text("Loading failed!"),
+            Text("Error: ${snapshot.error}"),
+          ]));
         }
         final dataForThisStop = dataForAllStops.where((x) => x.stpid == widget.stpid);
         final routesToShow = widget.activeRoutes;
