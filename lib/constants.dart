@@ -35,7 +35,7 @@ bool isCurrentVersionEqualOrHigher(String otherVersion) {
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'https://www.efeakinci.host/mbus/api/v3');
 //const String BACKEND_URL = String.fromEnvironment("BACKEND_URL", defaultValue: "http://10.0.2.2:3000/mbus/api/v3/");
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://35.3.198.105:3000/mbus/api/v3');
-const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000/mbus/api/v3/');
+const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://35.2.102.249:3000/mbus/api/v3/');
 
 List<Map<String, String>> globalAvailableRoutes = [];
 

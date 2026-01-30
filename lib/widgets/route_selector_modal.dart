@@ -213,7 +213,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
       _lastHoverIndex = closestIndex;
       if (widget.canVibrate) {
         _lastHoverHaptic = DateTime.now();
-        await Haptics.vibrate(HapticsType.light);
+        await Haptics.vibrate(HapticsType.medium);
       }
     }
   }

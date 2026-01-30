@@ -748,6 +748,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           )),
                 consumeTapEvents: true,
                 onTap: () {
+                  try {
+                    Haptics.vibrate(HapticsType.light);
+                  } catch (e) { }
+                  
                   _showStopSheet(
                     stop.id,
                     stop.name,
@@ -906,6 +910,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
             onTap: () {
+              try {
+                Haptics.vibrate(HapticsType.light);
+              } catch (e) { }
               _showBusSheet(bus.id);
             },
           );
@@ -1810,6 +1817,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _showStopSheet(String stopID, String stopName, double lat, double long) {
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isDismissible: true,
@@ -1827,6 +1836,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             Navigator.pop(context); // Close the current modal
             _showBusSheet(busId);
           },
+          busProvider: busProvider,
           onGetDirections: () {
             Map<String, double>? start;
             Map<String, double>? end = {'lat': lat, 'lon': long};
@@ -2030,6 +2040,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             },
             child: Stack(
               children: [
+
+
+
                 // underlying map layer (different ios and android)
                 Platform.isIOS?
                   MapWidget(
@@ -2544,6 +2557,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 
                                 SizedBox(width: 12),
                 
+                                
                                 // search
                                 Expanded( // stretch width
                                   child: SizedBox(
