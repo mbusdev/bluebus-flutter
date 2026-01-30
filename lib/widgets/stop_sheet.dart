@@ -683,7 +683,8 @@ class _ReminderFormState extends State<ReminderForm> {
   /// new reminders to be set
   Set<String> rtidsToChange = {};
   int reminderThresh = 5;
-  
+  String? rtidToRemove;
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -691,37 +692,38 @@ class _ReminderFormState extends State<ReminderForm> {
       future: reminderInfoFuture,
       builder: (context, snapshot) {
         // TODO: 30s timeout
+
         if (snapshot.connectionState != ConnectionState.done) {
           return Center(child: Text("Loading"),);
         }
+        
         final dataForAllStops = snapshot.data;
         if (dataForAllStops == null) {
           return Center(child: Text("Loading failed!"));
         }
+        
+
         final dataForThisStop = dataForAllStops.where((x) => x.stpid == widget.stpid);
-        final routesToShow = widget.activeRoutes;
+        
+        //final routesToShow = widget.activeRoutes;
+        final routesToShow = ["BB", "CS", "CSX", "NW", "DD", "OS", "NX", "CN"];
+
         for (final reminder in dataForThisStop) {
+          rtidsToChange.add(reminder.rtid);
           if (routesToShow.contains(reminder.rtid)) {
             continue;
           }
+
           routesToShow.add(reminder.rtid);
+          
+          
+          print(reminder.rtid);
         }
-        for(final rtid in routesToShow) {
-          if (dataForThisStop.map((x) => x.rtid).contains(rtid)) {
-            if (!rtidsToChange.contains(rtid)) {
-              rtidsToChange.add(rtid);
-            }
-            
-          }
+
+        if (rtidToRemove != null) {
+          rtidsToChange.remove(rtidToRemove);
         }
-        int count = 0;
-        for (final rtid in rtidsToChange) {
-          print(rtid);
-          count++;
-        }
-        if(count == 0) {
-          print("no routes");
-        }
+        rtidToRemove = null;
         
 
         return Column(
@@ -766,11 +768,15 @@ class _ReminderFormState extends State<ReminderForm> {
                       ),
                     ],
                   ),
-                  Row( //icons
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 10,
+                  Wrap( //icons
+                    alignment: WrapAlignment.center,
+                    //mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 0,
+                    runSpacing: 0,
+
+
+
                     children: routesToShow.map((rtid) {
-                      final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
                       return Stack(
                         
                         children: [
@@ -778,7 +784,8 @@ class _ReminderFormState extends State<ReminderForm> {
                             
                             children: [
                               SizedBox(
-                                height: 10
+                                height: 10,
+                                width: 60,
                               ),
                               Container(
                                 width: 40,
@@ -818,7 +825,7 @@ class _ReminderFormState extends State<ReminderForm> {
                             onTap: () {
                               setState(() {
                                 if (rtidsToChange.contains(rtid)) {
-                                  rtidsToChange.remove(rtid);
+                                  rtidToRemove = rtid;
                                 } else {
                                   rtidsToChange.add(rtid);
                                 }
@@ -827,7 +834,7 @@ class _ReminderFormState extends State<ReminderForm> {
                             child: Container(
                               height: 100,
                               width: 48,
-                              color: Color.fromARGB(100, 100, 100, 200)
+                              color: Colors.transparent
                             )
                           )
                         ]
@@ -884,107 +891,8 @@ class _ReminderFormState extends State<ReminderForm> {
                     
                     //divisions: 9,
                   ),
-
-                  
-                  /*
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: routesToShow.map((rtid) {
-                        final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              if (rtidsToChange.contains(rtid)) {
-                                rtidsToChange.remove(rtid);
-                              } else {
-                                rtidsToChange.add(rtid);
-                              }
-                            });
-                          },
-                          child: Column(
-                            children: [
-                              Text(rtid),
-                              Text(reminderCurrentlyActive ? "active" : "inactive"),
-                            ] + (rtidsToChange.contains(rtid) ? [Text("marked")] : [])
-                          ),
-                        );
-                      })
-                      .toList(),
-                  ),
-                  Slider(
-                    value: reminderThresh.toDouble(),
-                    label: reminderThresh.toString(),
-                    onChanged: (x) {
-                      setState(() {
-                        reminderThresh = x.toInt();
-                      });
-                    },
-                    min: 3.0,
-                    max: 15.0,
-                    divisions: 15 - 3 + 1,
-                  ),
-                  Text("$dataForThisStop"),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      "Cancel",
-                      style: TextStyle(
-                        color: getColor(context, ColorType.primary)
-                      ),
-                    )
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                        final modifications = rtidsToChange.map((rtid) {
-                          final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
-                          if (reminderCurrentlyActive) {
-                            return RemoveReminder(stpid: widget.stpid, rtid: rtid);
-                          } else {
-                            return AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh);
-                          }
-                        }).toList();
-
-                        try {
-                          await IncomingBusReminderService.modifyReminders(modifications);                  
-                          Navigator.pop(context);
-                          if (!context.mounted) return;
-                        } on Exception catch (e) {
-                          showDialog(
-                            context: context,
-                            
-                            builder: (context) => SimpleDialog(
-                              title: Text("Failed!\n${e.toString()}"))
-                          );
-                        }
-                    },
-                    child: Text(
-                      "Update",
-                      style: TextStyle(
-                        color: getColor(context, ColorType.primary)
-                      ),
-                    )
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        await IncomingBusReminderService.sendTestNotification();
-                      } on Exception catch (e) {
-                        print("test notification failed: ${e.toString()}");
-                      }
-                    },
-                    child: Text(
-                      "Send Test Notification (takes about 10s)",
-                      style: TextStyle(
-                        color: getColor(context, ColorType.primary)
-                      ),
-                    )
-                  ),
-                */
                 ],
               )
-              
             ),
             Padding(
               padding: EdgeInsetsGeometry.only(
@@ -998,27 +906,33 @@ class _ReminderFormState extends State<ReminderForm> {
                     child: ElevatedButton(
                       onPressed: () async {
                           
-                          final modifications = rtidsToChange.map((rtid) {
-                            final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
-                            if (reminderCurrentlyActive) {
-                              return RemoveReminder(stpid: widget.stpid, rtid: rtid);
-                            } else {
-                              return AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh);
-                            }
-                          }).toList();
+                        List<RemindersModification> modifications = [];
+                        for (String rtid in routesToShow) {
+                          final bool alreadyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
+                          final bool pressed = rtidsToChange.contains(rtid);
 
-                          try {
-                            await IncomingBusReminderService.modifyReminders(modifications);                  
-                            Navigator.pop(context);
-                            if (!context.mounted) return;
-                          } on Exception catch (e) {
-                            showDialog(
-                              context: context,
-                              
-                              builder: (context) => SimpleDialog(
-                                title: Text("Failed!\n${e.toString()}"))
-                            );
+                          if (alreadyActive) {
+                            modifications.add(RemoveReminder(stpid: widget.stpid, rtid: rtid));
                           }
+                          if (pressed) {
+                            modifications.add(AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh));
+                          }
+                        }
+
+                        try {
+                          await IncomingBusReminderService.modifyReminders(modifications);                  
+                          Navigator.pop(context);
+                          if (!context.mounted) return;
+                        } on Exception catch (e) {
+                          showDialog(
+                            context: context,
+                            
+                            builder: (context) => SimpleDialog(
+                              
+                              title: Text("Failed!\n${e.toString()}")),
+                              
+                          );
+                        }
                       },
                       child: Text(
                         "Update",
