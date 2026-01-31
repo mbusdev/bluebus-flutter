@@ -1,5 +1,5 @@
-
 import 'package:bluebus/firebase_options.dart';
+import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -7,7 +7,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
   static final _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  static bool listeningForFcmUpdates = false;
+  static bool _listeningForFcmUpdates = false;
+  static bool _listeningForForegroundMessages = false;
   static String? _registrationToken;
   static Function(String)? _tokenChangeCallback;
 
@@ -55,20 +56,42 @@ class NotificationService {
         ?.createNotificationChannel(channel);
   }
 
+  // Currently this function must be called even if permission is already granted,
+  // as it sets up some important listeners
   static Future<void> requestPermission() async {
     final notificationSettings = await FirebaseMessaging.instance
         .requestPermission();
-    await FirebaseMessaging.instance
-        .setForegroundNotificationPresentationOptions(alert: true);
+    // notificationSettings.authorizationStatus ...
     final apnsToken = await FirebaseMessaging.instance
         .getAPNSToken(); // ensure it exists for iOS to work
-      print("apns token:");
-      print(apnsToken);
     _registrationToken = await FirebaseMessaging.instance.getToken();
-    print(_registrationToken);
+    if (kDebugMode) {
+      debugPrint("apns token:");
+      debugPrint(apnsToken);
+      debugPrint(_registrationToken);
+    }
 
-    if (!listeningForFcmUpdates) {
-      listeningForFcmUpdates = true;
+    if (!_listeningForForegroundMessages) {
+      _listeningForForegroundMessages = true;
+      print("Now listening for onMessage");
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print("MESSAGE!");
+        debugPrint("Got a message: $message");
+        if (message.notification != null) {
+          NotificationService.sendLocalNotification(
+            message.notification?.title,
+            message.notification?.body,
+            // reminderNotif,
+            null,
+          );
+        } else {
+          IncomingBusReminderService.handlePushedMessage(message.data);
+        }
+      });
+    }
+
+    if (!_listeningForFcmUpdates) {
+      _listeningForFcmUpdates = true;
       FirebaseMessaging.instance.onTokenRefresh
           .listen((fcmToken) {
             _registrationToken = fcmToken;
@@ -123,27 +146,33 @@ class NotificationService {
   //   );
   // }
 
-  // static Future<void> sendLocalNotification(String? title, String? body) async {
-  //   const AndroidNotificationDetails androidNotificationDetails =
-  //       AndroidNotificationDetails(
-  //         'your channel id',
-  //         'your channel name',
-  //         channelDescription: 'your channel description',
-  //         importance: Importance.defaultImportance,
-  //         priority: Priority.defaultPriority,
-  //         ticker: 'ticker',
-  //       );
-  //   const NotificationDetails notificationDetails = NotificationDetails(
-  //     android: androidNotificationDetails,
-  //   );
-  //   await _localNotificationsPlugin.show(
-  //     _id++,
-  //     title,
-  //     body,
-  //     notificationDetails,
-  //     //payload: 'item x',
-  //   );
-  // }
+  static Future<void> sendLocalNotification(
+    String? title,
+    String? body,
+    int? id,
+  ) async {
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails(
+          'local-notifications',
+          'Local Notifications',
+          channelDescription:
+              'Used when reminders trigger while the app is in the foreground',
+          importance: Importance.max,
+          priority: Priority.max,
+          // ticker: 'ticker',
+        );
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidNotificationDetails,
+    );
+    await _localNotificationsPlugin.show(
+      id ?? _id++,
+      title,
+      body,
+      notificationDetails,
+      //payload: 'item x',
+    );
+  }
 }
 
-// int _id = 0;
+const int reminderNotif = 0;
+int _id = 1000;

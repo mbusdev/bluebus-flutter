@@ -1,0 +1,139 @@
+import 'package:bluebus/constants.dart';
+import 'package:bluebus/globals.dart';
+import 'package:bluebus/services/incoming_bus_reminder_service.dart';
+import 'package:bluebus/widgets/route_icon.dart';
+import 'package:flutter/material.dart';
+
+class ReminderWidgets extends StatefulWidget {
+  const ReminderWidgets({super.key});
+
+  @override
+  State<StatefulWidget> createState() {
+    return _ReminderWidgetsState();
+  }
+}
+
+class _ReminderWidgetsState extends State<ReminderWidgets> {
+  // the future is refreshed when the app resumes or when a data message is pushed
+  Future<List<({String stpid, String rtid, int? eta})>>? dataFuture;
+  late final AppLifecycleListener lifecycleListener;
+
+  @override
+  void dispose() {
+    super.dispose();
+    lifecycleListener.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    IncomingBusReminderService.onReminderStateChange = () {
+      setState(() {
+        _resetDataFuture();
+      });
+    };
+    lifecycleListener = AppLifecycleListener(onResume: () {
+      setState(() {
+        _resetDataFuture();  
+      });
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // mock data
+    // dataFuture ??= Future.value([
+    //   (stpid: "C250", rtid: "BB", eta: null),
+    //   (stpid: "C250", rtid: "BB", eta: 6),
+    //   (stpid: "C250", rtid: "BB", eta: 1),
+    // ]);
+    if (dataFuture == null) {
+      _resetDataFuture();
+    }
+    dataFuture ??= IncomingBusReminderService.getActiveRemindersNoSetup();
+  }
+
+  void _resetDataFuture() {
+    dataFuture = IncomingBusReminderService.getActiveRemindersNoSetup();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: dataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return SizedBox.shrink();
+        }
+        if (!snapshot.hasData) {
+          print("${snapshot.error}");
+          return Placeholder();
+        }
+        final reminders = snapshot.data!;
+        reminders.sort((lhs, rhs) => (lhs.eta ?? -1).compareTo(rhs.eta ?? -1));
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 10.0,
+          children: reminders
+              .map(
+                (r) => ReminderWidget(
+                  rtid: r.rtid,
+                  stopName: getStopNameFromID(r.stpid),
+                  eta: r.eta,
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class ReminderWidget extends StatelessWidget {
+  const ReminderWidget({
+    super.key,
+    required this.rtid,
+    required this.stopName,
+    required this.eta,
+  });
+
+  final String rtid;
+  final String stopName;
+  final int? eta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(30)),
+        color: maizeBusBlue,
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 20.0,
+            offset: Offset(0, 8),
+            color: getColor(context, ColorType.mapButtonShadow),
+          ),
+        ],
+      ),
+      padding: EdgeInsetsDirectional.all(15),
+      child: Row(
+        spacing: 10,
+        children: [
+          RouteIcon.medium(rtid, type: RouteIconType.normalWithWhiteBorder),
+          Expanded(
+            child: Text(
+              stopName,
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+          Text(
+            eta != null ? eta.toString() + "\nmin" : "--\nmin",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,23 +1,21 @@
-import 'dart:io' show Platform, isIOS;
+import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
-import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
+import 'package:bluebus/widgets/reminder_widgets.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -1849,19 +1847,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               false,
             );
           },
-          routesWithActiveReminder:
-            IncomingBusReminderService
-              .getActiveReminders()
-              .where((x) => x.stpid == stopID)
-              .map((x) => x.rtid)
-              .toList(),
-          onToggleReminder: (stopID, routeID) async {
-            if (IncomingBusReminderService.isActiveReminder(stopID, routeID)) {
-              await IncomingBusReminderService.removeReminder(stopID, routeID);
-            } else {
-              await IncomingBusReminderService.addReminder(stopID, routeID);
-            }
-          },
         );
       },
     ).then((_) {});
@@ -2254,7 +2239,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               ],
                             )
                           ),
-                      
+
+                      // reminder widget
+                      SizedBox(height: 30.0,),
+                      ReminderWidgets(),
+                       
                       Spacer(),
                       
                       // temp row (might add settings button to it later)
