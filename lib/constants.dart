@@ -30,7 +30,7 @@ bool isCurrentVersionEqualOrHigher(String otherVersion) {
 // const String BACKEND_URL = 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3'; 
 const String BACKEND_URL = String.fromEnvironment(
   'BACKEND_URL',
-  defaultValue: 'http://147.224.166.223:3000/mbus/api/v3'
+  defaultValue: 'https://busapi.maizebus.com/mbus/api/v3'
 );
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'https://www.efeakinci.host/mbus/api/v3');
 //const String BACKEND_URL = String.fromEnvironment("BACKEND_URL", defaultValue: "http://10.0.2.2:3000/mbus/api/v3/");
