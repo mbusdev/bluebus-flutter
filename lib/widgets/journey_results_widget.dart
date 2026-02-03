@@ -1,4 +1,5 @@
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/widgets/upcoming_stops_widget.dart';
 import 'package:flutter/material.dart';
 import '../models/journey.dart';
 import '../constants.dart';
@@ -424,6 +425,19 @@ class _JourneyBodyState extends State<JourneyBody> {
     return (false, []);
   }
 
+  List<Location> intermediaryLocations(String orgId, String desId, int legId) {
+    (bool, List<String>) intermediary_stop_data = intermediaryBusStops(orgId, desId, legId);
+
+    List<Location> outputLocations = [];
+
+    for (String stopId in intermediary_stop_data.$2) {
+      Location? loc = getLocationFromID(stopId);
+      if (loc != null) outputLocations.add(loc);
+    }
+
+    return outputLocations;
+  }
+
   // utc secs after midnight -> michigan time
   String convertSecondsToFormattedTime(int secondsFromMidnightUtc) {
     final now = DateTime.now().toUtc();
@@ -562,175 +576,186 @@ class _JourneyBodyState extends State<JourneyBody> {
 
                         SizedBox(height: 5,),
 
-                        // if expanded show full list, otherwise dont lol
-                        leg.expanded
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // list all the intermediary bus stops
-                                  ...intermediaryBusStops(
-                                    leg.originID,
-                                    leg.destinationID,
-                                    index,
-                                  ).$2.map((id) {
-                                    // get index of this stop
-                                    // TODO: I don't like running this function thrice, but like what's a clean way to do it?
-                                    int indexId = intermediaryBusStops(
-                                      leg.originID,
-                                      leg.destinationID,
-                                      index,
-                                    ).$2.indexOf(id);
-                                    int len = intermediaryBusStops(
-                                      leg.originID,
-                                      leg.destinationID,
-                                      index,
-                                    ).$2.length;
+                        UpcomingStopsWidget(
+                          color: RouteColorService.getRouteColor(leg.rt!),
+                          routeId: leg.rt!,
+                          vehicleId: null,
+                          stopsToDisplayOverride: intermediaryLocations(leg.originID, leg.destinationID, index),
+                          isExpanded: true,
+                          showSeeMoreButton: false,
+                          showAbridgedStops: false,
+                          routeCodeOverride: leg.rt,
+                          childIfNoUpcomingStopsFound: Text("No stops found")),
 
-                                    return Padding(
-                                      // conditional padding (to separate get on and get off stops)
-                                      padding: (indexId == 0)
-                                          ? EdgeInsets.only(bottom: 7)
-                                          : (indexId == len - 1)
-                                          ? EdgeInsets.only(top: 7)
-                                          : EdgeInsets.zero,
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // conditional icon
-                                          (indexId == 0)
-                                              ? Icon(Icons.login)
-                                              : (indexId == len - 1)
-                                              ? Icon(Icons.logout)
-                                              : Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 5,
-                                                        left: 7,
-                                                        right: 7,
-                                                      ),
-                                                  child: Icon(
-                                                    Icons.fiber_manual_record,
-                                                    size: 10,
-                                                    color: isDarkMode(context) ? Color.fromARGB(50, 250, 250, 250) : Color.fromARGB(50, 0, 0, 0),
-                                                  ),
-                                                ),
+                        // // if expanded show full list, otherwise dont lol
+                        // leg.expanded
+                        //     ? Column(
+                        //         crossAxisAlignment: CrossAxisAlignment.start,
+                        //         children: [
+                        //           // list all the intermediary bus stops
+                        //           ...intermediaryBusStops(
+                        //             leg.originID,
+                        //             leg.destinationID,
+                        //             index,
+                        //           ).$2.map((id) {
+                        //             // get index of this stop
+                        //             // TODO: I don't like running this function thrice, but like what's a clean way to do it?
+                        //             int indexId = intermediaryBusStops(
+                        //               leg.originID,
+                        //               leg.destinationID,
+                        //               index,
+                        //             ).$2.indexOf(id);
+                        //             int len = intermediaryBusStops(
+                        //               leg.originID,
+                        //               leg.destinationID,
+                        //               index,
+                        //             ).$2.length;
 
-                                          SizedBox(width: 10),
+                        //             return Padding(
+                        //               // conditional padding (to separate get on and get off stops)
+                        //               padding: (indexId == 0)
+                        //                   ? EdgeInsets.only(bottom: 7)
+                        //                   : (indexId == len - 1)
+                        //                   ? EdgeInsets.only(top: 7)
+                        //                   : EdgeInsets.zero,
+                        //               child: Row(
+                        //                 crossAxisAlignment:
+                        //                     CrossAxisAlignment.start,
+                        //                 children: [
+                        //                   // conditional icon
+                        //                   (indexId == 0)
+                        //                       ? Icon(Icons.login)
+                        //                       : (indexId == len - 1)
+                        //                       ? Icon(Icons.logout)
+                        //                       : Padding(
+                        //                           padding:
+                        //                               const EdgeInsets.only(
+                        //                                 top: 5,
+                        //                                 left: 7,
+                        //                                 right: 7,
+                        //                               ),
+                        //                           child: Icon(
+                        //                             Icons.fiber_manual_record,
+                        //                             size: 10,
+                        //                             color: isDarkMode(context) ? Color.fromARGB(50, 250, 250, 250) : Color.fromARGB(50, 0, 0, 0),
+                        //                           ),
+                        //                         ),
 
-                                          // conditional size and padding for text
-                                          ((indexId == 0) ||
-                                                  (indexId == len - 1))
-                                              ? Expanded(
-                                                  child: Text(
-                                                    getStopNameFromID(id),
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w400,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Expanded(
-                                                  child: Text(
-                                                    getStopNameFromID(id),
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w400,
-                                                    ),
-                                                  ),
-                                                ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
+                        //                   SizedBox(width: 10),
 
-                                  SizedBox(height: 10),
+                        //                   // conditional size and padding for text
+                        //                   ((indexId == 0) ||
+                        //                           (indexId == len - 1))
+                        //                       ? Expanded(
+                        //                           child: Text(
+                        //                             getStopNameFromID(id),
+                        //                             style: TextStyle(
+                        //                               fontSize: 16,
+                        //                               fontWeight:
+                        //                                   FontWeight.w400,
+                        //                             ),
+                        //                           ),
+                        //                         )
+                        //                       : Expanded(
+                        //                           child: Text(
+                        //                             getStopNameFromID(id),
+                        //                             style: TextStyle(
+                        //                               fontSize: 14,
+                        //                               fontWeight:
+                        //                                   FontWeight.w400,
+                        //                             ),
+                        //                           ),
+                        //                         ),
+                        //                 ],
+                        //               ),
+                        //             );
+                        //           }),
 
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        leg.expanded = false;
-                                      });
-                                    },
-                                    child: Text(
-                                      "hide",
-                                      style: TextStyle(
-                                        decoration: TextDecoration.underline,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400,
-                                        color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            :
-                              // leg not expanded
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(Icons.login),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          getStopNameFromID(leg.originID),
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                        //           SizedBox(height: 10),
 
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        leg.expanded = true;
-                                      });
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(
-                                        top: 5,
-                                        bottom: 5,
-                                      ),
-                                      child: Text(
-                                        "show intermediate",
-                                        style: TextStyle(
-                                          decoration: TextDecoration.underline,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w400,
-                                          color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                        //           GestureDetector(
+                        //             onTap: () {
+                        //               setState(() {
+                        //                 leg.expanded = false;
+                        //               });
+                        //             },
+                        //             child: Text(
+                        //               "hide",
+                        //               style: TextStyle(
+                        //                 decoration: TextDecoration.underline,
+                        //                 fontSize: 16,
+                        //                 fontWeight: FontWeight.w400,
+                        //                 color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
+                        //               ),
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       )
+                        //     :
+                        //       // leg not expanded
+                        //       Column(
+                        //         crossAxisAlignment: CrossAxisAlignment.start,
+                        //         children: [
+                        //           Row(
+                        //             crossAxisAlignment:
+                        //                 CrossAxisAlignment.start,
+                        //             children: [
+                        //               Icon(Icons.login),
+                        //               SizedBox(width: 10),
+                        //               Expanded(
+                        //                 child: Text(
+                        //                   getStopNameFromID(leg.originID),
+                        //                   style: TextStyle(
+                        //                     fontSize: 16,
+                        //                     fontWeight: FontWeight.w400,
+                        //                   ),
+                        //                 ),
+                        //               ),
+                        //             ],
+                        //           ),
 
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(Icons.logout),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          getStopNameFromID(leg.destinationID),
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                        //           GestureDetector(
+                        //             onTap: () {
+                        //               setState(() {
+                        //                 leg.expanded = true;
+                        //               });
+                        //             },
+                        //             child: Padding(
+                        //               padding: const EdgeInsets.only(
+                        //                 top: 5,
+                        //                 bottom: 5,
+                        //               ),
+                        //               child: Text(
+                        //                 "show intermediate",
+                        //                 style: TextStyle(
+                        //                   decoration: TextDecoration.underline,
+                        //                   fontSize: 16,
+                        //                   fontWeight: FontWeight.w400,
+                        //                   color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
+                        //                 ),
+                        //               ),
+                        //             ),
+                        //           ),
+
+                        //           Row(
+                        //             crossAxisAlignment:
+                        //                 CrossAxisAlignment.start,
+                        //             children: [
+                        //               Icon(Icons.logout),
+                        //               SizedBox(width: 10),
+                        //               Expanded(
+                        //                 child: Text(
+                        //                   getStopNameFromID(leg.destinationID),
+                        //                   style: TextStyle(
+                        //                     fontSize: 16,
+                        //                     fontWeight: FontWeight.w400,
+                        //                   ),
+                        //                 ),
+                        //               ),
+                        //             ],
+                        //           ),
+                        //         ],
+                        //       ),
                       ],
                     ),
                   ),

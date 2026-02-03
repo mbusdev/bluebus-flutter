@@ -27,3 +27,12 @@ LatLng? getLatLongFromStopID (String id){
     }
   }
 }
+
+Location? getLocationFromID (String id) {
+  // TODO: use hashmap for faster lookup
+  for (Location l in globalStopLocs){
+    if (l.stopId == id){
+      return l;
+    }
+  }
+}
