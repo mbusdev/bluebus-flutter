@@ -11,6 +11,7 @@ class BusRepository {
   static List<Bus> _buses = [];
   Timer? _busUpdateTimer;
   final Duration busUpdateInterval;
+  int busDataVersion = 0; // Used to prevent duplicates--i.e. whatever calls BusProvider can figure out if BusProvider has new data to give it by keeping its own copy of busDataVersion and checking to see if it has been incremented.
 
   BusRepository({this.busUpdateInterval = const Duration(seconds: 5)});
 
@@ -21,6 +22,7 @@ class BusRepository {
 
   Future<List<Bus>> fetchBuses() async {
     _buses = await BlueBusApi.fetchBuses();
+    busDataVersion++;
     return _buses;
   }
 

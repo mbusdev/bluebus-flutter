@@ -2,7 +2,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/material.dart';
 
 class Bus {
-  final String id;
+  final String id; // Vehicle ID
   final LatLng position;
   final String routeId;
   final double heading;
