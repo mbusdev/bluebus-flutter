@@ -320,7 +320,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                       "Please make sure you have location permissions enabled in settings before trying to get directions"
                     : (journeyload.error is NotInAnnArborError)?
                       "Please make sure you are in Ann Arbor before trying to get on-campus bus directions"
-                    : "Some other error was thrown. If this continues to persist, contact ishaniik@umich.edu",
+                    : "Error details: ${journeyload.error}",
                     textAlign: TextAlign.left,
                     style: const TextStyle(
                       fontSize: 18,

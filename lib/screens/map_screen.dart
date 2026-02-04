@@ -1514,10 +1514,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
         // Check if we have both coordinates before creating walking polyline
         if (startLatLng != null && endLatLng != null) {
+          List<LatLng> pts = [];
+          if (leg.pathCoords != null && leg.pathCoords!.isNotEmpty) {
+            pts = leg.pathCoords!;
+          } else {
+            pts = [startLatLng, endLatLng];
+          }
+
           // Create a dotted line for walking segments
           final walkingPolyline = Polyline(
             polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
-            points: [startLatLng, endLatLng],
+            points: pts,
             color: walkLineColor, // Walk line color
             width: 6, // line width
             patterns: [

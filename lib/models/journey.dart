@@ -1,3 +1,5 @@
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 class Journey {
   final List<Leg> legs;
   final int departureTime;
@@ -17,7 +19,7 @@ class Journey {
 class Leg {
   final String origin;
   final String destination;
-  final int duration;
+  final double duration;
   final int startTime;
   final int endTime;
   final List<StopTime>? stopTimes;
@@ -25,6 +27,7 @@ class Leg {
   final String? rt;
   final String originID;
   final String destinationID;
+  final List<LatLng>? pathCoords;
 
   Leg({
     required this.origin,
@@ -36,14 +39,15 @@ class Leg {
     this.trip,
     this.rt,
     required this.originID,
-    required this.destinationID
+    required this.destinationID,
+    this.pathCoords,
   });
 
   factory Leg.fromJson(Map<String, dynamic> json) {
     return Leg(
       origin: json['origin'] ?? '',
       destination: json['destination'] ?? '',
-      duration: json['duration'] ?? 0,
+      duration: (json['duration'] as num).toDouble(),
       startTime: json['startTime'] ?? 0,
       endTime: json['endTime'] ?? 0,
       stopTimes: json['stopTimes'] != null
@@ -52,7 +56,16 @@ class Leg {
       trip: json['trip'] != null ? Trip.fromJson(json['trip']) : null,
       rt: json['rt'],
       originID: json['origin_id'] ?? '',
-      destinationID: json['destination_id'] ?? ''
+      destinationID: json['destination_id'] ?? '',
+      pathCoords: json['path_coords'] != null? 
+          // adding full walking path from json
+          (json['path_coords'] as List).map((e) {
+              return LatLng(
+                (e['lat'] as num).toDouble(),
+                (e['lon'] as num).toDouble(),
+              );
+            }).toList()
+          : null,
     );
   }
 }
