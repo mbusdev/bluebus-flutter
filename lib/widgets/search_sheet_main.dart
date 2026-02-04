@@ -372,6 +372,7 @@ class _SearchSheetState extends State<SearchSheet> {
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
+        boxShadow: [SheetBoxShadow]
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

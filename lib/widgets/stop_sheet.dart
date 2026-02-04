@@ -91,7 +91,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
               });
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
                   Container( // Circular icon on the left (with the bus code, e.g. "NW")
@@ -132,9 +132,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          getPrettyRouteName(widget.busId) +
-                              ": " +
-                              widget.vehicleId,
+                          getPrettyRouteName(widget.busId),
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontFamily: 'Urbanist',
@@ -339,7 +337,10 @@ class _StopSheetState extends State<StopSheet> {
               }
             }
 
-            double initialSize = 0.9;
+            double initialSize = 0.6;
+            if (imageBusStop) {
+              initialSize = 0.8;
+            }
 
             if (snapshot.hasData) {
               final itemCount = arrivingBuses.length;
@@ -362,16 +363,20 @@ class _StopSheetState extends State<StopSheet> {
               minChildSize: 0.0, // leave at 0.0 to allow full dismissal
               maxChildSize: 0.9,
               snap: true,
-              snapSizes: const [0.9],
-              // snapSizes: [initialSize, 0.9],
+              // snapSizes: const [0.9],
+              snapSizes: initialSize != 0.9 ? [initialSize, 0.9] : [0.9],
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: getColor(context, ColorType.background),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
+                    boxShadow: [
+                      SheetBoxShadow
+                    ]
                   ),
                   child: Column(
                     children: [
@@ -551,7 +556,7 @@ class _StopSheetState extends State<StopSheet> {
                               // main page
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
+                                  horizontal: 0,
                                 ),
                                 child:
                                     (snapshot.connectionState ==
@@ -564,14 +569,20 @@ class _StopSheetState extends State<StopSheet> {
                                       children: [
                                         (arrivingBuses.length == 0)
                                             ?
-                                              Text(
-                                                "There are currently no departing busses",
-                                                style: TextStyle(
-                                                  fontFamily: 'Urbanist',
-                                                  fontWeight: FontWeight.w400,
-                                                  fontSize: 20,
-                                                ),
+                                              FittedBox(
+                                                fit: BoxFit.fill,
+                                                alignment: Alignment.center,
+                                                child: Text(
+                                                  "There are currently no departing buses",
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontFamily: 'Urbanist',
+                                                    fontWeight: FontWeight.w400,
+                                                    fontSize: 20,
+                                                  ),
+                                                )
                                               )
+                                              
                                             :
                                               SizedBox(height: 10),
 
@@ -594,19 +605,19 @@ class _StopSheetState extends State<StopSheet> {
                                                   delay: const Duration(milliseconds: 100),
                                                   child: FadeInAnimation(
                                                     child: ExpandableStopWidget(
-                                                    routeId: bus.id,
-                                                    vehicleId: bus.vehicleId,
-                                                    busId: bus.id,
-                                                    busPrediction:
-                                                        bus.prediction,
-                                                    busDirection: bus.direction,
-                                                    stopId: widget.stopID,
-                                                    showBusSheet:
-                                                        widget.showBusSheet,
-                                                    busProvider:
-                                                        widget.busProvider,
-                                                  )
-                                                  )
+                                                      routeId: bus.id,
+                                                      vehicleId: bus.vehicleId,
+                                                      busId: bus.id,
+                                                      busPrediction:
+                                                          bus.prediction,
+                                                      busDirection: bus.direction,
+                                                      stopId: widget.stopID,
+                                                      showBusSheet:
+                                                          widget.showBusSheet,
+                                                      busProvider:
+                                                          widget.busProvider,
+                                                    )
+                                                  ) 
                                                   
                                                   
                                                 );
@@ -645,7 +656,14 @@ class _StopSheetState extends State<StopSheet> {
                                   
                               SizedBox(height: 10,),
 
-                              // bottom buttons
+                              
+                            ],
+                          )
+                        ),
+                      ),
+
+                      SizedBox(height: 5),
+                      // bottom buttons
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
@@ -675,7 +693,7 @@ class _StopSheetState extends State<StopSheet> {
                                       ],
                                     ), 
                                     label: Text(
-                                      'Get Directions',
+                                      'Directions',
                                       style: TextStyle(
                                         color: getColor(context, ColorType.primary),
                                         fontSize: 16, 
@@ -769,26 +787,30 @@ class _StopSheetState extends State<StopSheet> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: getColor(context, ColorType.dim),
                                       shape: CircleBorder(),
-                                      shadowColor: Colors.black
+                                      shadowColor: Colors.black,
+                                          padding: EdgeInsets.zero,
+                                          minimumSize: Size(0,0), // Also remove minimum size constraints
+                                          fixedSize: Size(40,40),
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Remove tap target padding
                                     ),
-                                    child: Icon(Icons.notifications_none,
+                                    child: Icon(
+                                      Icons.notifications_none,
+                                      color: getColor(context, ColorType.opposite),
+                                      size: 20.0,
                                       shadows: [
                                         Shadow(
                                           color: getColor(context, ColorType.mapButtonShadow),
                                           blurRadius: 4,
                                           offset: Offset(0, 2)
                                         )
-                                      ])
+                                      ]
+                                      )
                                   ),
                                 ],
                               ),
                                               
                               (MediaQuery.of(context).padding.bottom == 0.0)?
                               SizedBox(height: 20,) : SizedBox(height: MediaQuery.of(context).padding.bottom,)
-                            ],
-                          )
-                        ),
-                      )
                     ],
                   ),
                 );

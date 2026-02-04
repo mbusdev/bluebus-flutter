@@ -129,6 +129,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
+                    boxShadow: [SheetBoxShadow]
                   ),
                   child: Column(
                     children: [

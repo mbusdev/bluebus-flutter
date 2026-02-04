@@ -3,6 +3,7 @@ import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/bus_repository.dart';
@@ -37,16 +38,21 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>( // rebuilds when ThemeProvider changes
-      builder: (context, themeObj, child) => MaterialApp(
-        // Remove the debug banner
-        debugShowCheckedModeBanner: false,
-        title: 'MaizeBus',
-        theme: themeObj.getThemeData(), // gets ThemeData object of current theme
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Consumer<ThemeProvider>( // rebuilds when ThemeProvider changes
+        builder: (context, themeObj, child) => MaterialApp(
+          // Remove the debug banner
+          debugShowCheckedModeBanner: false,
+          title: 'MaizeBus',
+          theme: themeObj.getThemeData(), // gets ThemeData object of current theme
 
-        // Show onboarding on first run (terms acceptance). OnboardingDecider
-        // will display the welcome + terms flow if needed, otherwise the map.
-        home: const OnboardingDecider(),
+          // Show onboarding on first run (terms acceptance). OnboardingDecider
+          // will display the welcome + terms flow if needed, otherwise the map.
+          home: const OnboardingDecider(),
+        )
       )
     );
   }

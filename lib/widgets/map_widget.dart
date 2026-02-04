@@ -102,7 +102,7 @@ class _AndroidMapState extends State<AndroidMap>
   int? mapId;
   GoogleMapController? _gController;
   bool? _lastIsDark;
-  static const int _targetFps = 15;
+  static const int _targetFps = 8;
   late final Duration _minFrameGap =
       Duration(milliseconds: (1000 / _targetFps).floor());
   Duration _lastPaint = Duration.zero;

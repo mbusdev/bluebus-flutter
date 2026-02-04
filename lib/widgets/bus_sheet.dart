@@ -67,6 +67,9 @@ class _BusSheetState extends State<BusSheet> {
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
+        boxShadow: [
+          SheetBoxShadow
+        ]
       ),
       child: Padding(
         padding: const EdgeInsets.only(

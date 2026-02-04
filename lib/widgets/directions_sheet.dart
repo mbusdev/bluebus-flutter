@@ -107,6 +107,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
+        boxShadow: [SheetBoxShadow]
       ),
       child: FutureBuilder(
         future: _listOfJourneys,

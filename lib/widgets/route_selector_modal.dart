@@ -286,6 +286,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
+              boxShadow: [SheetBoxShadow]
             ),
 
             child: Column(

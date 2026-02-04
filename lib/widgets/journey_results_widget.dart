@@ -208,6 +208,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
+              boxShadow: [SheetBoxShadow]
             ),
 
             child: Padding(

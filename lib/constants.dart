@@ -266,3 +266,13 @@ class Loadpoint {
   final int step;
   Loadpoint(this.message, this.step);
 }
+
+const SheetBoxShadow = BoxShadow(
+  color: Color.fromRGBO(0, 0, 0, 0.2),
+  offset: const Offset(
+    0.0,
+    0.0,
+  ),
+  blurRadius: 100.0,
+  spreadRadius: 40.0,
+);
