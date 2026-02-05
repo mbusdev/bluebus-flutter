@@ -26,7 +26,7 @@ int getSecondsAfterMidnightUtc() {
 class LegToDisplay {
   final String origin;
   final String destination;
-  final int duration;
+  final double duration;
   final int startTime;
   final int endTime;
   final List<StopTime>? stopTimes;
