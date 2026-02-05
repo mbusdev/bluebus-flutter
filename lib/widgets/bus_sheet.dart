@@ -63,7 +63,7 @@ class _BusSheetState extends State<BusSheet> {
     return Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
@@ -86,7 +86,7 @@ class _BusSheetState extends State<BusSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // spacer
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // header (if the bus id is a number it's a ride bus)
               isNumber(bus.routeId) ? theRideHeader(bus) : michiganBusHeader(bus),
@@ -103,9 +103,11 @@ class _BusSheetState extends State<BusSheet> {
                 onBusStopClick: (String stopName, String stopId) {
                   widget.onSelectStop(stopName, stopId);
                 },
-                childIfNoUpcomingStopsFound: Text(
-                  "It doesn't appear there are upcoming stops for this bus",
-                ),
+                childIfNoUpcomingStopsFound: const Text(
+                    "It doesn't appear there are upcoming stops for this bus",
+                    style: TextStyle(fontSize: 20.0),
+                    textAlign: TextAlign.center,
+                  )
               ),
 
               SizedBox(height: 10), // Extra padding on the bottom to look nicer

@@ -38,7 +38,7 @@ class MapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GoogleMap(
+    return RepaintBoundary(child: GoogleMap(
       onMapCreated: onMapCreated,
       onCameraMove: onCameraMove,
       initialCameraPosition: CameraPosition(
@@ -59,7 +59,7 @@ class MapWidget extends StatelessWidget {
       polylines: polylines,
       markers: markers,
       style: isDarkMode(context) ? darkMapStyle : lightMapStyle
-    );
+    ));
   }
 } 
 
@@ -103,6 +103,8 @@ class _AndroidMapState extends State<AndroidMap>
   GoogleMapController? _gController;
   bool? _lastIsDark;
   static const int _targetFps = 8;
+  // static const int _animationDurationMs = 10900;
+  static const int _animationDurationMs = 100;
   late final Duration _minFrameGap =
       Duration(milliseconds: (1000 / _targetFps).floor());
   Duration _lastPaint = Duration.zero;
@@ -134,7 +136,7 @@ class _AndroidMapState extends State<AndroidMap>
     _controller = AnimationController(
       vsync: this,
       // duration: const Duration(milliseconds: 800),
-      duration: const Duration(milliseconds: 10900)
+      duration: const Duration(milliseconds: _animationDurationMs)
     );
 
     // final curved = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
@@ -228,7 +230,8 @@ class _AndroidMapState extends State<AndroidMap>
 
   @override
   Widget build(BuildContext context) {
-    return GoogleMap(
+    
+    return RepaintBoundary(child: GoogleMap(
       compassEnabled: false,
       myLocationEnabled: true,
       mapToolbarEnabled: false,
@@ -250,6 +253,6 @@ class _AndroidMapState extends State<AndroidMap>
       onMapCreated: widget.onMapCreated,
       onCameraMove: widget.onCameraMove,
       style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle
-    );
+    ));
   }
 }

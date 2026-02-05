@@ -26,6 +26,16 @@ final Map<String, String> KEY_STOPS = {
   "M323": "Wall Street Parking Structure",
   "N422": "Northwood Fire Station", // "Top" of Northwood route
   "N437": "Northwood V",
+
+  // Blake transit center stops
+  "140": "Blake Transit Center",
+  "137": "Blake Transit Center",
+  "138": "Blake Transit Center",
+  "145": "Blake Transit Center",
+  "1150": "Blake Transit Center",
+  "142": "Blake Transit Center",
+
+  // TODO: Add other important stops for buses
 };
 
 // TODO: Make KEY_STOPS an API call!
@@ -375,7 +385,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       child: Row(
         children: [
           CustomPaint(
-            size: Size(40, 40),
+            size: const Size(40, 40),
             painter: UpcomingStopIconPainter(
               lineTopStyle,
               lineBottomStyle,
@@ -397,8 +407,8 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
           (stop.prediction != null) ? Text(predictionText, style: TextStyle(fontSize: 16.0)) : SizedBox.shrink(),
 
           (onBusStopClick != null)
-              ? Icon(Icons.chevron_right, color: Colors.grey, size: 20)
-              : SizedBox.shrink(),
+              ? const Icon(Icons.chevron_right, color: Colors.grey, size: 20)
+              : const SizedBox.shrink(),
         ],
       ),
     );
@@ -414,7 +424,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     return Row(
         children: [
           CustomPaint(
-            size: Size(40, 40),
+            size: const Size(40, 40),
             painter: UpcomingStopIconSwitchRoutePainter(
               topColor,
               bottomColor
@@ -425,7 +435,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
               opacity: 0.7,
               child: Text(
                 message,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14.0,
                   fontWeight: FontWeight.normal,
                   fontStyle: FontStyle.italic
@@ -437,6 +447,8 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
         ],
       );
   }
+
+  // NEXT STEPS TODO: Add key stops to TheRide!
 
   static const int DETAILED_STOPS_TO_SHOW = 4; // Number of detailed stops to show per bus
       // (Detailed stops are shown at the beginning and are connected with a solid line.)
@@ -539,7 +551,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
 
     if (widget.shouldAnimate) {
       return AnimatedSize(
-        duration: Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         child: Container(
           width: double.infinity,
@@ -550,16 +562,16 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
                     ...rowElements,
                     (widget.showSeeMoreButton && !isLoading)
                         ? (TextButton(
-                            child: Text("See all stops for this bus"),
+                            child: const Text("See all stops for this bus"),
                             onPressed: () {
                               widget.showBusSheet?.call(widget.vehicleId!);
                             },
                           ))
-                        : SizedBox.shrink(),
+                        : const SizedBox.shrink(),
                   ],
                 )
               : isLoading
-              ? SizedBox.shrink()
+              ? const SizedBox.shrink()
               : widget.childIfNoUpcomingStopsFound,
         ),
       );
@@ -567,7 +579,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       return (rowElements.length > 0)
           ? Column(children: rowElements)
           : isLoading
-          ? SizedBox.shrink()
+          ? const SizedBox.shrink()
           : widget.childIfNoUpcomingStopsFound;
     }
   }
