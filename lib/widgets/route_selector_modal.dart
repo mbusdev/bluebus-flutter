@@ -276,7 +276,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
         builder: (BuildContext context, ScrollController scrollController) {
 
           // lets you control which page is shown (ride or michigan)
-          final PageController _pageController = PageController();
+          final PageController pageController = PageController();
 
           return Container(
             height: MediaQuery.of(context).size.height * 0.8,
@@ -289,7 +289,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
             ),
 
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // title
                 const Padding(
@@ -304,294 +304,297 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                   ),
                 ),
 
-                // routes list
                 Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: (index){
-                      // When swiping pages, update the selector index
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                    },
-                    
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      // MICHIGAN ROUTES PAGE
-                      Listener(
-                        key: _listKey,
-                        behavior: HitTestBehavior.translucent,
-                        onPointerMove: _onDraggingMichiganRoute,
-                        onPointerUp: _onDragEnd,
-                        onPointerCancel: _onDragEnd,
-                        child: ReorderableListView.builder(
-                          scrollController: scrollController,
-                          itemCount: michiganRoutes.length,
-                          
-                          buildDefaultDragHandles: false,
-                          onReorder: _onMichiganReorder,
-                      
-                          // how a route looks when it's being dragged
-                          proxyDecorator: (Widget child, int index, Animation<double> anim) {
-                            _isReordering = true;
-                            _lastHoverIndex = index;
-                            return Material(
-                              color: Colors.transparent,
-                              child: child,
-                            );
+                      // routes list
+                      Positioned.fill(
+                        child: PageView(
+                          controller: pageController,
+                          onPageChanged: (index){
+                            // When swiping pages, update the selector index
+                            setState(() {
+                              _currentIndex = index;
+                            });
                           },
-                      
-                          itemBuilder: (context, index) {
-                            final route = michiganRoutes[index];
-                            final isSelected = tempSelectedRoutes.contains(route['id']);
-                            final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
-                      
-                            return KeyedSubtree(
-                              key: ValueKey(route['id']!),
-                              child: Card(
-                                key: key,
-                                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30.0),
-                                ),
-                                color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
-                                // Increase elevation when selected
-                                elevation: 2,
-                                shadowColor: getColor(context, ColorType.mapButtonShadow),
-                                child: Theme(
-                                  data: Theme.of(context).copyWith(
-                                    splashColor: Colors.transparent,
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                  child: ListTile(
-                                    leading: Container(
-                                      width: 35,
-                                      height: 35,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: RouteColorService.getRouteColor(route['id']!), 
+                          
+                          children: [
+                            // MICHIGAN ROUTES PAGE
+                            Listener(
+                              key: _listKey,
+                              behavior: HitTestBehavior.translucent,
+                              onPointerMove: _onDraggingMichiganRoute,
+                              onPointerUp: _onDragEnd,
+                              onPointerCancel: _onDragEnd,
+                              child: ReorderableListView.builder(
+                                scrollController: scrollController,
+                                itemCount: michiganRoutes.length,
+                                
+                                buildDefaultDragHandles: false,
+                                onReorder: _onMichiganReorder,
+                            
+                                // how a route looks when it's being dragged
+                                proxyDecorator: (Widget child, int index, Animation<double> anim) {
+                                  _isReordering = true;
+                                  _lastHoverIndex = index;
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: child,
+                                  );
+                                },
+                            
+                                itemBuilder: (context, index) {
+                                  final route = michiganRoutes[index];
+                                  final isSelected = tempSelectedRoutes.contains(route['id']);
+                                  final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
+                            
+                                  return KeyedSubtree(
+                                    key: ValueKey(route['id']!),
+                                    child: Card(
+                                      key: key,
+                                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30.0),
                                       ),
-                                      alignment: Alignment.center,
-                                      child: MediaQuery(
-                                        // media query prevents text scaling
-                                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                        child: Text(
-                                          route['id']!,
-                                          style: TextStyle(
-                                            color: RouteColorService.getContrastingColor(route['id']!), 
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: -1,
-                                          ),
-                                          textAlign: TextAlign.center,
+                                      color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
+                                      // Increase elevation when selected
+                                      elevation: 2,
+                                      shadowColor: getColor(context, ColorType.mapButtonShadow),
+                                      child: Theme(
+                                        data: Theme.of(context).copyWith(
+                                          splashColor: Colors.transparent,
+                                          highlightColor: Colors.transparent,
                                         ),
-                                      ),
-                                    ),
-                                    title: Text(
-                                      route['name'] ?? route['id']!,
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                        shadows: [
-                                          Shadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            offset: const Offset(0, 2),
-                                            blurRadius: 4
+                                        child: ListTile(
+                                          leading: Container(
+                                            width: 35,
+                                            height: 35,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: RouteColorService.getRouteColor(route['id']!), 
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: MediaQuery(
+                                              // media query prevents text scaling
+                                              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                              child: Text(
+                                                route['id']!,
+                                                style: TextStyle(
+                                                  color: RouteColorService.getContrastingColor(route['id']!), 
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: -1,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Info button
-                                        IconButton(
-                                          icon: Icon(
-                                            Icons.info_outline,
-                                            color: Colors.grey.shade700,
-                                            size: 22,
+                                          title: Text(
+                                            route['name'] ?? route['id']!,
+                                            style: TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                              shadows: [
+                                                Shadow(
+                                                  color: getColor(context, ColorType.mapButtonShadow),
+                                                  offset: const Offset(0, 2),
+                                                  blurRadius: 4
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                          onPressed: () {
-                                            _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              // Info button
+                                              IconButton(
+                                                icon: Icon(
+                                                  Icons.info_outline,
+                                                  color: Colors.grey.shade700,
+                                                  size: 22,
+                                                ),
+                                                onPressed: () {
+                                                  _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
+                                                },
+                                                padding: EdgeInsets.all(8),
+                                                constraints: BoxConstraints(),
+                                              ),
+                                              ReorderableDragStartListener(
+                                                index: index,
+                                                child: Icon(Icons.drag_handle),
+                                              ),
+                                            ],
+                                          ),
+                                          onTap: () {
+                                            setState(() {
+                                              if (isSelected) {
+                                                tempSelectedRoutes.remove(route['id']!);
+                                              } else {
+                                                tempSelectedRoutes.add(route['id']!);
+                                              }
+                                            });
                                           },
-                                          padding: EdgeInsets.all(8),
-                                          constraints: BoxConstraints(),
+                                          onLongPress: () async {
+                                            if (widget.canVibrate){
+                                              await Haptics.vibrate(HapticsType.soft);
+                                            }
+                                            setState(() {
+                                              tempSelectedRoutes.clear();
+                                              tempSelectedRoutes.add(route['id']!);
+                                            });
+                                          },
                                         ),
-                                        ReorderableDragStartListener(
-                                          index: index,
-                                          child: Icon(Icons.drag_handle),
-                                        ),
-                                      ],
+                                      ),
                                     ),
-                                    onTap: () {
-                                      setState(() {
-                                        if (isSelected) {
-                                          tempSelectedRoutes.remove(route['id']!);
-                                        } else {
-                                          tempSelectedRoutes.add(route['id']!);
-                                        }
-                                      });
-                                    },
-                                    onLongPress: () async {
-                                      if (widget.canVibrate){
-                                        await Haptics.vibrate(HapticsType.soft);
-                                      }
-                                      setState(() {
-                                        tempSelectedRoutes.clear();
-                                        tempSelectedRoutes.add(route['id']!);
-                                      });
-                                    },
-                                  ),
-                                ),
+                                  );
+                                },
                               ),
-                            );
-                          },
+                            ),
+
+                            // RIDE ROUTES PAGE
+                            Listener(
+                              key: _rideListKey,
+                              behavior: HitTestBehavior.translucent,
+                              onPointerMove: _onDraggingRideRoute,
+                              onPointerUp: _onDragEnd,
+                              onPointerCancel: _onDragEnd,
+                              child: ReorderableListView.builder(
+                                scrollController: scrollController,
+                                itemCount: rideRoutes.length,
+                                
+                                buildDefaultDragHandles: false,
+                                onReorder: _onRideReorder,
+                            
+                                // how a route looks when it's being dragged
+                                proxyDecorator: (Widget child, int index, Animation<double> anim) {
+                                  _isReordering = true;
+                                  _lastHoverIndex = index;
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: child,
+                                  );
+                                },
+                            
+                                itemBuilder: (context, index) {
+                                  final route = rideRoutes[index];
+                                  final isSelected = tempSelectedRoutes.contains(route['id']);
+                                  final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
+                            
+                                  return KeyedSubtree(
+                                    key: ValueKey(route['id']!),
+                                    child: Card(
+                                      key: key,
+                                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30.0),
+                                      ),
+                                      color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
+                                      // Increase elevation when selected
+                                      elevation: 2,
+                                      shadowColor: getColor(context, ColorType.mapButtonShadow),
+                                      child: Theme(
+                                        data: Theme.of(context).copyWith(
+                                          splashColor: Colors.transparent,
+                                          highlightColor: Colors.transparent,
+                                        ),
+                                        child: ListTile(
+                                          minTileHeight: 40,
+                                          leading: Container(
+                                            width: 40,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.rectangle,
+                                              borderRadius: BorderRadius.circular(15), 
+                                              color: RouteColorService.getRouteColor(route['id']!), 
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: MediaQuery(
+                                              // media query prevents text scaling
+                                              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                              child: Text(
+                                                route['id']!,
+                                                style: TextStyle(
+                                                  color: RouteColorService.getContrastingColor(route['id']!), 
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: -1,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          ),
+                                          title: Text(
+                                            route['name'] ?? route['id']!,
+                                            style: TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                              shadows: [
+                                                Shadow(
+                                                  color: getColor(context, ColorType.mapButtonShadow),
+                                                  offset: const Offset(0, 2),
+                                                  blurRadius: 4
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          trailing: ReorderableDragStartListener(
+                                            index: index,
+                                            child: Icon(Icons.drag_handle),
+                                          ),
+                                          onTap: () {
+                                            setState(() {
+                                              if (isSelected) {
+                                                tempSelectedRoutes.remove(route['id']!);
+                                              } else {
+                                                tempSelectedRoutes.add(route['id']!);
+                                              }
+                                            });
+                                          },
+                                          onLongPress: () async {
+                                            if (widget.canVibrate){
+                                              await Haptics.vibrate(HapticsType.soft);
+                                            }
+                                            setState(() {
+                                              tempSelectedRoutes.clear();
+                                              tempSelectedRoutes.add(route['id']!);
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ]
                         ),
                       ),
-
-                      // RIDE ROUTES PAGE
-                      Listener(
-                        key: _rideListKey,
-                        behavior: HitTestBehavior.translucent,
-                        onPointerMove: _onDraggingRideRoute,
-                        onPointerUp: _onDragEnd,
-                        onPointerCancel: _onDragEnd,
-                        child: ReorderableListView.builder(
-                          scrollController: scrollController,
-                          itemCount: rideRoutes.length,
-                          
-                          buildDefaultDragHandles: false,
-                          onReorder: _onRideReorder,
                       
-                          // how a route looks when it's being dragged
-                          proxyDecorator: (Widget child, int index, Animation<double> anim) {
-                            _isReordering = true;
-                            _lastHoverIndex = index;
-                            return Material(
-                              color: Colors.transparent,
-                              child: child,
+                      Positioned(
+                        bottom: 40,
+                        child: MaizebusSlidingSegmentedControl(
+                          labels: ['University', 'The Ride'], 
+                          selectedIndex: _currentIndex,
+                          onSelectionChanged: (int index) {
+                            // first, set the new index
+                            setState(() {
+                              _currentIndex = index;
+                            });
+                            // then, animate the change
+                            pageController.animateToPage(
+                              index,
+                              duration: Duration(milliseconds: 300),
+                              curve: Curves.ease,
                             );
                           },
-                      
-                          itemBuilder: (context, index) {
-                            final route = rideRoutes[index];
-                            final isSelected = tempSelectedRoutes.contains(route['id']);
-                            final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
-                      
-                            return KeyedSubtree(
-                              key: ValueKey(route['id']!),
-                              child: Card(
-                                key: key,
-                                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30.0),
-                                ),
-                                color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
-                                // Increase elevation when selected
-                                elevation: 2,
-                                shadowColor: getColor(context, ColorType.mapButtonShadow),
-                                child: Theme(
-                                  data: Theme.of(context).copyWith(
-                                    splashColor: Colors.transparent,
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                  child: ListTile(
-                                    minTileHeight: 40,
-                                    leading: Container(
-                                      width: 40,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.rectangle,
-                                        borderRadius: BorderRadius.circular(15), 
-                                        color: RouteColorService.getRouteColor(route['id']!), 
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: MediaQuery(
-                                        // media query prevents text scaling
-                                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                        child: Text(
-                                          route['id']!,
-                                          style: TextStyle(
-                                            color: RouteColorService.getContrastingColor(route['id']!), 
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: -1,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(
-                                      route['name'] ?? route['id']!,
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                        shadows: [
-                                          Shadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            offset: const Offset(0, 2),
-                                            blurRadius: 4
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    trailing: ReorderableDragStartListener(
-                                      index: index,
-                                      child: Icon(Icons.drag_handle),
-                                    ),
-                                    onTap: () {
-                                      setState(() {
-                                        if (isSelected) {
-                                          tempSelectedRoutes.remove(route['id']!);
-                                        } else {
-                                          tempSelectedRoutes.add(route['id']!);
-                                        }
-                                      });
-                                    },
-                                    onLongPress: () async {
-                                      if (widget.canVibrate){
-                                        await Haptics.vibrate(HapticsType.soft);
-                                      }
-                                      setState(() {
-                                        tempSelectedRoutes.clear();
-                                        tempSelectedRoutes.add(route['id']!);
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                          height: 40,
+                          width: 250
                         ),
-                      ),
-                    ]
+                      )
+                    ],
                   ),
                 ),
-                
-                SizedBox(height: 10),
-
-                Center(
-                  child: MaizebusSlidingSegmentedControl(
-                    labels: ['University', 'The Ride'], 
-                    selectedIndex: _currentIndex,
-                    onSelectionChanged: (int index) {
-                      // first, set the new index
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                      // then, animate the change
-                      _pageController.animateToPage(
-                        index,
-                        duration: Duration(milliseconds: 300),
-                        curve: Curves.ease,
-                      );
-                    },
-                    height: 40,
-                    width: 250
-                  ),
-                ),
-
-                SizedBox(height: 40),
-
               ],
             ),
           );
