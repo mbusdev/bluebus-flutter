@@ -72,7 +72,7 @@ const Color maizeBusBlueDarkMode = Color.fromARGB(255, 80, 150, 210);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {
-  primary, secondary, opposite, background,
+  primary, secondary, opposite, background, grayed,
 
   mapButtonPrimary, mapButtonSecondary,
   mapButtonIcon, mapButtonShadow,
@@ -87,6 +87,7 @@ const Map<ColorType, Color> lightColors = {
   ColorType.secondary: Color.fromARGB(255, 226, 231, 236),
   ColorType.opposite: Colors.black,
   ColorType.background: Colors.white,
+  ColorType.grayed: Color.fromARGB(255, 224, 224, 224),
   
   ColorType.mapButtonPrimary: maizeBusBlue, 
   ColorType.mapButtonSecondary: Color.fromARGB(204, 156, 196, 230),
@@ -104,6 +105,7 @@ const Map<ColorType, Color> darkColors = {
   ColorType.secondary: Color.fromARGB(255, 40, 54, 72),
   ColorType.opposite: Colors.white,
   ColorType.background: Color.fromARGB(255, 19, 34, 47),
+  ColorType.grayed: Color.fromARGB(255, 5, 19, 32),
 
   ColorType.mapButtonPrimary: Color.fromARGB(204, 229, 242, 255),
   ColorType.mapButtonSecondary: Color.fromARGB(204, 106, 146, 181),
