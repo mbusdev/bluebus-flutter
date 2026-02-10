@@ -1035,7 +1035,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // check if user location is within viewport bounds
     LatLngBounds? viewportBounds = await _mapController?.getVisibleRegion();
     if (viewportBounds != null) {
-      Position? pos = await _getUserLocation();
+      Position? pos = await _getUserLocation(showError: false);
       if (pos != null) {
         _userLocVisible = !viewportBounds.contains(
           LatLng(pos.latitude, pos.longitude)
@@ -1850,11 +1850,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ).then((_) {});
   }
 
-  Future<Position?> _getUserLocation() async {
+  Future<Position?> _getUserLocation({bool showError = false}) async {
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        if (!showError) { return null; }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Location services are disabled'),
@@ -1867,6 +1868,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // Check and request location permissions if needed
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        if (!showError) { return null; }
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1880,6 +1882,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
 
       if (permission == LocationPermission.deniedForever) {
+        if (!showError) { return null; }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Location permissions are denied. Please enable them in settings'),
