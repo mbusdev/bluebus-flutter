@@ -1028,6 +1028,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onCameraMove(CameraPosition position) async {
     _currentCameraPos = position;
+    
   }
 
   void _onCameraIdle() async {
