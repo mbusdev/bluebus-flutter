@@ -18,7 +18,7 @@ class MaizebusSlidingSegmentedControl extends StatefulWidget {
     required this.onSelectionChanged,
     this.selectedIndex = 0,
     this.backgroundColor = ColorType.grayed,
-    this.thumbColor = ColorType.background,
+    this.thumbColor = ColorType.sliderButton,
     this.labelStyle,
     this.selectedLabelStyle,
     this.height = 50,

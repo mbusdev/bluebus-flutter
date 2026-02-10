@@ -71,14 +71,15 @@ const Color maizeBusBlueDarkMode = Color.fromARGB(255, 80, 150, 210);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {
-  primary, secondary, opposite, background, grayed,
+  primary, secondary, opposite, background,
 
   mapButtonPrimary, mapButtonSecondary,
   mapButtonIcon, mapButtonShadow,
 
   highlighted, dim,
-
   shadow,
+  
+  grayed, sliderButton,
 }
 
 const Map<ColorType, Color> lightColors = {
@@ -86,7 +87,6 @@ const Map<ColorType, Color> lightColors = {
   ColorType.secondary: Color.fromARGB(255, 226, 231, 236),
   ColorType.opposite: Colors.black,
   ColorType.background: Colors.white,
-  ColorType.grayed: Color.fromARGB(255, 224, 224, 224),
   
   ColorType.mapButtonPrimary: maizeBusBlue, 
   ColorType.mapButtonSecondary: Color.fromARGB(204, 156, 196, 230),
@@ -96,7 +96,10 @@ const Map<ColorType, Color> lightColors = {
   ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),
   ColorType.dim: Color.fromARGB(255, 229, 242, 255),
 
-  ColorType.shadow: Color.fromARGB(95, 187, 187, 187)
+  ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
+  
+  ColorType.grayed: Color.fromARGB(255, 224, 224, 224),
+  ColorType.sliderButton: Colors.white,
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -104,7 +107,6 @@ const Map<ColorType, Color> darkColors = {
   ColorType.secondary: Color.fromARGB(255, 40, 54, 72),
   ColorType.opposite: Colors.white,
   ColorType.background: Color.fromARGB(255, 19, 34, 47),
-  ColorType.grayed: Color.fromARGB(255, 5, 19, 32),
 
   ColorType.mapButtonPrimary: Color.fromARGB(204, 229, 242, 255),
   ColorType.mapButtonSecondary: Color.fromARGB(204, 106, 146, 181),
@@ -114,7 +116,10 @@ const Map<ColorType, Color> darkColors = {
   ColorType.highlighted: Color.fromARGB(255, 45, 151, 243),
   ColorType.dim: Color.fromARGB(255, 33, 71, 105),
 
-  ColorType.shadow: Color.fromARGB(95, 68, 68, 68)
+  ColorType.shadow: Color.fromARGB(95, 68, 68, 68),
+  
+  ColorType.grayed: Color.fromARGB(255, 5, 19, 32),
+  ColorType.sliderButton: Color.fromARGB(255, 33, 71, 105),
 };
 
 // returns true if the current theme is dark mode
