@@ -44,7 +44,7 @@ class MainApp extends StatelessWidget {
       ),
       child: Consumer<ThemeProvider>( // rebuilds when ThemeProvider changes
         builder: (context, themeObj, child) => MaterialApp(
-          showPerformanceOverlay: true,
+          //showPerformanceOverlay: true,
           // Remove the debug banner
           debugShowCheckedModeBanner: false,
           title: 'MaizeBus',
