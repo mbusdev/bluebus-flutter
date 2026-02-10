@@ -266,7 +266,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
       // draggable scroll sheet is a widget that allows the modal to close when its scrolled all the way up
       child: DraggableScrollableSheet(
-        initialChildSize: 0.8,
+        initialChildSize: 0.9,
         minChildSize: 0.0, // leave at 0.0 to allow full dismissal
         maxChildSize: 0.9, 
         expand: false, 
@@ -279,7 +279,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
           final PageController pageController = PageController();
 
           return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
+            height: MediaQuery.of(context).size.height * 0.9,
             decoration: BoxDecoration(
               color: getColor(context, ColorType.background),
               borderRadius: BorderRadius.only(
@@ -350,22 +350,23 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                           
                                 return KeyedSubtree(
                                   key: ValueKey(route['id']!),
-                                  child: Card(
+                                  child: Container(
                                     key: key,
                                     margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30.0),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
+                                      borderRadius: BorderRadius.circular(60),
+                                      boxShadow: [
+                                        getInfoCardShadow(context)
+                                      ],
                                     ),
-                                    color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
-                                    // Increase elevation when selected
-                                    elevation: 2,
-                                    shadowColor: getColor(context, ColorType.mapButtonShadow),
                                     child: Theme(
                                       data: Theme.of(context).copyWith(
                                         splashColor: Colors.transparent,
                                         highlightColor: Colors.transparent,
                                       ),
                                       child: ListTile(
+                                        contentPadding: EdgeInsets.only(left: 10, right: 16), 
                                         leading: Container(
                                           width: 35,
                                           height: 35,
@@ -394,13 +395,6 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                           style: TextStyle(
                                             fontSize: 17,
                                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                offset: const Offset(0, 2),
-                                                blurRadius: 4
-                                              ),
-                                            ],
                                           ),
                                         ),
                                         trailing: Row(
@@ -482,22 +476,23 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                           
                                 return KeyedSubtree(
                                   key: ValueKey(route['id']!),
-                                  child: Card(
+                                  child: Container(
                                     key: key,
                                     margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30.0),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        getInfoCardShadow(context)
+                                      ],
                                     ),
-                                    color: isSelected ? getColor(context, ColorType.highlighted) : getColor(context, ColorType.dim),
-                                    // Increase elevation when selected
-                                    elevation: 2,
-                                    shadowColor: getColor(context, ColorType.mapButtonShadow),
                                     child: Theme(
                                       data: Theme.of(context).copyWith(
                                         splashColor: Colors.transparent,
                                         highlightColor: Colors.transparent,
                                       ),
                                       child: ListTile(
+                                        contentPadding: EdgeInsets.only(left: 8, right: 16), 
                                         minTileHeight: 40,
                                         leading: Container(
                                           width: 40,
@@ -528,13 +523,6 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                           style: TextStyle(
                                             fontSize: 17,
                                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                offset: const Offset(0, 2),
-                                                blurRadius: 4
-                                              ),
-                                            ],
                                           ),
                                         ),
                                         trailing: ReorderableDragStartListener(

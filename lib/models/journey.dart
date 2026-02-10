@@ -10,8 +10,8 @@ class Journey {
   factory Journey.fromJson(Map<String, dynamic> json) {
     return Journey(
       legs: (json['legs'] as List).map((e) => Leg.fromJson(e)).toList(),
-      departureTime: json['departureTime'] ?? 0,
-      arrivalTime: json['arrivalTime'] ?? 0,
+      departureTime: (json['departureTime'] as num?)?.toInt() ?? 0,
+      arrivalTime: (json['arrivalTime'] as num?)?.toInt() ?? 0,
     );
   }
 }

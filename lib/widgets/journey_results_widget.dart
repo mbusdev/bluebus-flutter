@@ -116,14 +116,17 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           });
           widget.onSelectJourney?.call(journey);
         },
-        child: Card(
+        child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              getInfoCardShadow(context)
+            ],
+            color: (_selectedIndex == idx)
+              ? getColor(context, ColorType.infoCardHighlighted)
+              : getColor(context, ColorType.infoCardColor),
           ),
-          color: (_selectedIndex == idx)
-              ? isDarkMode(context) ? Color.fromARGB(255, 25, 40, 60) : Color.fromARGB(255, 220, 235, 255)
-              : getColor(context, ColorType.dim),
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
@@ -208,7 +211,6 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
-              boxShadow: [SheetBoxShadow]
             ),
 
             child: Padding(
@@ -585,176 +587,6 @@ class _JourneyBodyState extends State<JourneyBody> {
                           showAbridgedStops: false,
                           routeCodeOverride: leg.rt,
                           childIfNoUpcomingStopsFound: Text("No stops found")),
-
-                        // // if expanded show full list, otherwise dont lol
-                        // leg.expanded
-                        //     ? Column(
-                        //         crossAxisAlignment: CrossAxisAlignment.start,
-                        //         children: [
-                        //           // list all the intermediary bus stops
-                        //           ...intermediaryBusStops(
-                        //             leg.originID,
-                        //             leg.destinationID,
-                        //             index,
-                        //           ).$2.map((id) {
-                        //             // get index of this stop
-                        //             // TODO: I don't like running this function thrice, but like what's a clean way to do it?
-                        //             int indexId = intermediaryBusStops(
-                        //               leg.originID,
-                        //               leg.destinationID,
-                        //               index,
-                        //             ).$2.indexOf(id);
-                        //             int len = intermediaryBusStops(
-                        //               leg.originID,
-                        //               leg.destinationID,
-                        //               index,
-                        //             ).$2.length;
-
-                        //             return Padding(
-                        //               // conditional padding (to separate get on and get off stops)
-                        //               padding: (indexId == 0)
-                        //                   ? EdgeInsets.only(bottom: 7)
-                        //                   : (indexId == len - 1)
-                        //                   ? EdgeInsets.only(top: 7)
-                        //                   : EdgeInsets.zero,
-                        //               child: Row(
-                        //                 crossAxisAlignment:
-                        //                     CrossAxisAlignment.start,
-                        //                 children: [
-                        //                   // conditional icon
-                        //                   (indexId == 0)
-                        //                       ? Icon(Icons.login)
-                        //                       : (indexId == len - 1)
-                        //                       ? Icon(Icons.logout)
-                        //                       : Padding(
-                        //                           padding:
-                        //                               const EdgeInsets.only(
-                        //                                 top: 5,
-                        //                                 left: 7,
-                        //                                 right: 7,
-                        //                               ),
-                        //                           child: Icon(
-                        //                             Icons.fiber_manual_record,
-                        //                             size: 10,
-                        //                             color: isDarkMode(context) ? Color.fromARGB(50, 250, 250, 250) : Color.fromARGB(50, 0, 0, 0),
-                        //                           ),
-                        //                         ),
-
-                        //                   SizedBox(width: 10),
-
-                        //                   // conditional size and padding for text
-                        //                   ((indexId == 0) ||
-                        //                           (indexId == len - 1))
-                        //                       ? Expanded(
-                        //                           child: Text(
-                        //                             getStopNameFromID(id),
-                        //                             style: TextStyle(
-                        //                               fontSize: 16,
-                        //                               fontWeight:
-                        //                                   FontWeight.w400,
-                        //                             ),
-                        //                           ),
-                        //                         )
-                        //                       : Expanded(
-                        //                           child: Text(
-                        //                             getStopNameFromID(id),
-                        //                             style: TextStyle(
-                        //                               fontSize: 14,
-                        //                               fontWeight:
-                        //                                   FontWeight.w400,
-                        //                             ),
-                        //                           ),
-                        //                         ),
-                        //                 ],
-                        //               ),
-                        //             );
-                        //           }),
-
-                        //           SizedBox(height: 10),
-
-                        //           GestureDetector(
-                        //             onTap: () {
-                        //               setState(() {
-                        //                 leg.expanded = false;
-                        //               });
-                        //             },
-                        //             child: Text(
-                        //               "hide",
-                        //               style: TextStyle(
-                        //                 decoration: TextDecoration.underline,
-                        //                 fontSize: 16,
-                        //                 fontWeight: FontWeight.w400,
-                        //                 color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
-                        //               ),
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       )
-                        //     :
-                        //       // leg not expanded
-                        //       Column(
-                        //         crossAxisAlignment: CrossAxisAlignment.start,
-                        //         children: [
-                        //           Row(
-                        //             crossAxisAlignment:
-                        //                 CrossAxisAlignment.start,
-                        //             children: [
-                        //               Icon(Icons.login),
-                        //               SizedBox(width: 10),
-                        //               Expanded(
-                        //                 child: Text(
-                        //                   getStopNameFromID(leg.originID),
-                        //                   style: TextStyle(
-                        //                     fontSize: 16,
-                        //                     fontWeight: FontWeight.w400,
-                        //                   ),
-                        //                 ),
-                        //               ),
-                        //             ],
-                        //           ),
-
-                        //           GestureDetector(
-                        //             onTap: () {
-                        //               setState(() {
-                        //                 leg.expanded = true;
-                        //               });
-                        //             },
-                        //             child: Padding(
-                        //               padding: const EdgeInsets.only(
-                        //                 top: 5,
-                        //                 bottom: 5,
-                        //               ),
-                        //               child: Text(
-                        //                 "show intermediate",
-                        //                 style: TextStyle(
-                        //                   decoration: TextDecoration.underline,
-                        //                   fontSize: 16,
-                        //                   fontWeight: FontWeight.w400,
-                        //                   color: isDarkMode(context) ? Color.fromARGB(255, 150, 150, 255) : Color.fromARGB(255, 0, 0, 255),
-                        //                 ),
-                        //               ),
-                        //             ),
-                        //           ),
-
-                        //           Row(
-                        //             crossAxisAlignment:
-                        //                 CrossAxisAlignment.start,
-                        //             children: [
-                        //               Icon(Icons.logout),
-                        //               SizedBox(width: 10),
-                        //               Expanded(
-                        //                 child: Text(
-                        //                   getStopNameFromID(leg.destinationID),
-                        //                   style: TextStyle(
-                        //                     fontSize: 16,
-                        //                     fontWeight: FontWeight.w400,
-                        //                   ),
-                        //                 ),
-                        //               ),
-                        //             ],
-                        //           ),
-                        //         ],
-                        //       ),
                       ],
                     ),
                   ),

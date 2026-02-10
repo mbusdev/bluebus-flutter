@@ -80,6 +80,9 @@ enum ColorType {
   shadow,
   
   grayed, sliderButton,
+
+  // info card colors (in route selector, favorites sheet, etc.)
+  infoCardColor, infoCardHighlighted,
 }
 
 const Map<ColorType, Color> lightColors = {
@@ -89,7 +92,7 @@ const Map<ColorType, Color> lightColors = {
   ColorType.background: Colors.white,
   
   ColorType.mapButtonPrimary: maizeBusBlue, 
-  ColorType.mapButtonSecondary: Color.fromARGB(204, 156, 196, 230),
+  ColorType.mapButtonSecondary: Color.fromARGB(190, 255, 255, 255),
   ColorType.mapButtonIcon: Colors.white,
   ColorType.mapButtonShadow: Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
 
@@ -100,6 +103,9 @@ const Map<ColorType, Color> lightColors = {
   
   ColorType.grayed: Color.fromARGB(255, 224, 224, 224),
   ColorType.sliderButton: Colors.white,
+
+  ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255), 
+  ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),  
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -108,9 +114,9 @@ const Map<ColorType, Color> darkColors = {
   ColorType.opposite: Colors.white,
   ColorType.background: Color.fromARGB(255, 19, 34, 47),
 
-  ColorType.mapButtonPrimary: Color.fromARGB(204, 229, 242, 255),
-  ColorType.mapButtonSecondary: Color.fromARGB(204, 106, 146, 181),
-  ColorType.mapButtonIcon: Color.fromARGB(255, 29, 23, 84),
+  ColorType.mapButtonPrimary: Color.fromARGB(255, 255, 255, 255),
+  ColorType.mapButtonSecondary: Color.fromARGB(190, 11, 83, 148),
+  ColorType.mapButtonIcon: maizeBusBlue,
   ColorType.mapButtonShadow: Color.fromARGB(77, 30, 89, 141), // 77 is 30% opacity
 
   ColorType.highlighted: Color.fromARGB(255, 45, 151, 243),
@@ -120,6 +126,9 @@ const Map<ColorType, Color> darkColors = {
   
   ColorType.grayed: Color.fromARGB(255, 5, 19, 32),
   ColorType.sliderButton: Color.fromARGB(255, 33, 71, 105),
+
+  ColorType.infoCardColor: Color.fromARGB(255, 19, 34, 47),
+  ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),
 };
 
 // returns true if the current theme is dark mode
@@ -134,6 +143,24 @@ bool isDarkMode(BuildContext context) {
 // All color types are in the ColorType enum.
 Color getColor(BuildContext context, ColorType type) {
   return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
+}
+
+BoxShadow infoCardShadowLight = BoxShadow(
+  color: Color.fromARGB(80, 38, 114, 181),
+  blurRadius: 3,
+  spreadRadius: 1,
+  offset: Offset(0, 3),
+);
+
+BoxShadow infoCardShadowDark = BoxShadow(
+  color: Color.fromARGB(91, 0, 0, 0),
+  blurRadius: 5,
+  offset: Offset(0, 3),
+);
+
+// Gets the correct shadow depending on 
+BoxShadow getInfoCardShadow(BuildContext context) {
+  return isDarkMode(context) ? infoCardShadowDark : infoCardShadowLight;
 }
 
 //Clipping path for the loading screen.

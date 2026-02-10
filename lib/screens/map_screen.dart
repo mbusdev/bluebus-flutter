@@ -2293,14 +2293,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
                                             child: Icon(
                                               FontAwesomeIcons.compass,
-                                              color: darkColors[ColorType.mapButtonIcon],
-                                              shadows: [
-                                                Shadow(
-                                                  color: getColor(context, ColorType.mapButtonShadow),
-                                                  blurRadius: 4,
-                                                  offset: Offset(0, 2)
-                                                )
-                                              ],
+                                              color: getColor(context, ColorType.mapButtonPrimary),
                                             ),
                                           ),
                                         ),
@@ -2337,14 +2330,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ),
                                           child: Icon(
                                             Icons.my_location,
-                                            color: darkColors[ColorType.mapButtonIcon],
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2)
-                                              )
-                                            ],
+                                            color: getColor(context, ColorType.mapButtonPrimary),
                                           ),
                                         ),
                                       ),
@@ -2389,13 +2375,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     color: getColor(context, ColorType.mapButtonIcon),
                                     Icons.keyboard_arrow_up,
                                     size: 18,
-                                    shadows: [
-                                      Shadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2)
-                                      )
-                                    ],
                                   ), // The icon on the left
                                   label: Text(
                                     'Steps',
@@ -2403,13 +2382,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       color: getColor(context, ColorType.mapButtonIcon),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                      shadows: [
-                                        Shadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2)
-                                        )
-                                      ],
                                     ),                                    
                                   ), // The text on the right
                                 ),
