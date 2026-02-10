@@ -1,3 +1,4 @@
+import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +32,7 @@ class _SettingsState extends State<Settings> {
           child: Padding(
             padding: const EdgeInsets.only(
               left: 25,
-              right: 15,
+              right: 25,
               top: 15
             ),
             child: Column(
@@ -73,32 +74,27 @@ class _SettingsState extends State<Settings> {
                 ),
 
                 const SizedBox(height: 15),
-        
-                SegmentedButton(
-                  style: SegmentedButton.styleFrom(
-                    padding: const EdgeInsets.all(0),
-                    // shadowColor: Colors.black
-                    selectedBackgroundColor: getColor(context, ColorType.highlighted),
-                    selectedForegroundColor: getColor(context, ColorType.opposite),
-                    backgroundColor: getColor(context, ColorType.dim),
-                    side: BorderSide(
-                      color: getColor(context, ColorType.background),
-                      width: 5,
-                      strokeAlign: BorderSide.strokeAlignOutside
-                    ),
-                  ),
-                  expandedInsets: EdgeInsets.symmetric(horizontal: 10),
-                  segments: [
-                    ButtonSegment(value: ThemeStyle.light, label: Text("light"), icon: Icon(Icons.sunny)),
-                    ButtonSegment(value: ThemeStyle.dark, label: Text("dark"), icon: Icon(FontAwesomeIcons.solidMoon)),
-                    ButtonSegment(value: ThemeStyle.system, label: Text("system"), icon: Icon(Icons.computer)),
-                  ],
-                  selected: <ThemeStyle>{themeProvider.theme},
-                  onSelectionChanged: (Set<ThemeStyle> selection) {
-                    setState(() {
-                      themeProvider.setTheme(selection.first);
-                    });
-                  },
+
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return MaizebusSlidingSegmentedControl(
+                      labels: ["Light", "Dark", "System"], 
+                      height: 40,
+                      width: constraints.maxWidth,
+                      selectedIndex: themeProvider.theme == ThemeStyle.light ? 0 : themeProvider.theme == ThemeStyle.dark ? 1 : 2,
+                      onSelectionChanged: (int index) {
+                        setState(() {
+                          if(index == 0) {
+                            themeProvider.setTheme(ThemeStyle.light);
+                          } else if(index == 1) {
+                            themeProvider.setTheme(ThemeStyle.dark);
+                          } else {
+                            themeProvider.setTheme(ThemeStyle.system);
+                          }
+                        });
+                      }
+                    );
+                  }
                 ),
         
                 const SizedBox(height: 20),
@@ -149,43 +145,40 @@ class _SettingsState extends State<Settings> {
                 ),
 
                 const SizedBox(height: 15),
-                personShowcase(context, "Ishan Kumar", "Executive Director", "assets/portraits/ishan.jpg"),
+                personShowcase(context, "Ishan Kumar", "Executive Director", "assets/portraits/ishan.jpg", cropHeightOffset: -0.1),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Andrew Yu", "Developer Operations Lead", "assets/portraits/andrew.jpg", cropHeightOffset: -0.2),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Kate Anderson", "User Interface Lead", "assets/portraits/kate.jpg", cropHeightOffset: -0.1),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Harvey Kyllonen", "Frontend Lead", "assets/portraits/harvey.jpg"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Kate Anderson", "User Interface Lead", "assets/portraits/kate.jpg"),
+                personShowcase(context, "Isaac Wheeler", "Developer - Flow and UI", "assets/portraits/issac.jpg", cropHeightOffset: -0.2),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Andrew Yu", "Developer Operations Lead", "assets/portraits/andrew.jpg"),
+                personShowcase(context, "Matthew Jia", "Developer - Dark Mode and UI", "assets/portraits/matthew.jpg"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Ryan Lu", "Backend Lead", "assets/portraits/none.jpg"),
-
-                const SizedBox(height: heightBetween),
-                personShowcase(context, "Matthew Jia", "Developer - Dark Mode", "assets/portraits/matthew.jpg"),
-
-                const SizedBox(height: heightBetween),
-                personShowcase(context, "Isaac Wheeler", "Developer - Bus UI", "assets/portraits/issac.jpg"),
-
-                const SizedBox(height: heightBetween),
-                personShowcase(context, "Edward Zhang", "Developer - Notifications", "assets/portraits/edward.jpg"),
-
-                const SizedBox(height: heightBetween),
-                personShowcase(context, "Aravind Kandarpa", "Developer - City Busses", "assets/portraits/none.jpg"),
-
-                const SizedBox(height: heightBetween),
-                personShowcase(context, "Amanze Aguwa", "Developer - Ann Arbor Map Data", "assets/portraits/amanze.jpg"),
+                personShowcase(context, "Edward Zhang", "Developer - Notifications", "assets/portraits/edward.jpg", cropHeightOffset: -0.2),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Siddhant Bhirud", "Developer - Route Preview", "assets/portraits/sid.jpg"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Mason Shields", "Developer - Server Caching", "assets/portraits/mason.jpg"),
+                personShowcase(context, "Antonio Said", "Bus Graphics and Marketing", "assets/portraits/antonio.jpg", cropHeightOffset: -0.2),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Antonio Said", "Logo and Marketing", "assets/portraits/antonio.jpg"),
+                personShowcase(context, "Ryan Lu", "Backend Lead", "assets/portraits/none.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Aravind Kandarpa", "Developer - City Busses Backend", "assets/portraits/none.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Evan Huang", "Developer - Movable Routes", "assets/portraits/none.jpg"),
               ],
             ),
           )
@@ -196,8 +189,8 @@ class _SettingsState extends State<Settings> {
 }
 
 
-Widget personShowcase(BuildContext context, String name, String role, String filePath) {
-  double circleSize = 60.0;
+Widget personShowcase(BuildContext context, String name, String role, String filePath, {double cropHeightOffset = 0.0}) {
+  double circleSize = 55.0;
   double lineHeight = 1.2;
   
   return Row(
@@ -208,41 +201,45 @@ Widget personShowcase(BuildContext context, String name, String role, String fil
           width: circleSize,
           height: circleSize,
           fit: BoxFit.cover,
+          alignment: Alignment(0.0, cropHeightOffset),
         ),
       ),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 17,
-            ),
-            child: Text(
-              name,
-              style: TextStyle(
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-                height: lineHeight
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 15,
+              ),
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontFamily: 'Urbanist',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  height: lineHeight
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 17,
-            ),
-            child: Text(
-              role,
-              style: TextStyle(
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w400,
-                fontSize: 18,
-                color: getColor(context, ColorType.opposite),
-                height: lineHeight
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 15,
+              ),
+              child: Text(
+                role,
+                style: TextStyle(
+                  fontFamily: 'Urbanist',
+                  fontWeight: FontWeight.w400,
+                  fontSize: 18,
+                  color: getColor(context, ColorType.opposite),
+                  height: lineHeight,
+                  overflow: TextOverflow.ellipsis
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ],
   );
