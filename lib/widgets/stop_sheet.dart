@@ -559,22 +559,18 @@ class _StopSheetState extends State<StopSheet> {
                                   : (snapshot.hasData)
                                   ? Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                          CrossAxisAlignment.center,
                                       children: [
                                         (arrivingBuses.length == 0)
                                             ?
-                                              FittedBox(
-                                                fit: BoxFit.fill,
-                                                alignment: Alignment.center,
-                                                child: Text(
-                                                  "There are currently no departing buses",
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontFamily: 'Urbanist',
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 20,
-                                                  ),
-                                                )
+                                              Text(
+                                                "There are currently no departing buses",
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontFamily: 'Urbanist',
+                                                  fontWeight: FontWeight.w400,
+                                                  fontSize: 20,
+                                                ),
                                               )
                                               
                                             :
