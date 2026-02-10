@@ -1,11 +1,12 @@
+import 'package:bluebus/constants.dart';
 import 'package:flutter/material.dart';
 // custom widget that lets you select between multiple segments by sliding OR tapping and looks nice
 class MaizebusSlidingSegmentedControl extends StatefulWidget {
   final List<String> labels;
   final ValueChanged<int> onSelectionChanged;
   final int selectedIndex; 
-  final Color backgroundColor;
-  final Color thumbColor;
+  final ColorType backgroundColor;
+  final ColorType thumbColor;
   final TextStyle? labelStyle;
   final TextStyle? selectedLabelStyle;
   final double height;
@@ -16,8 +17,8 @@ class MaizebusSlidingSegmentedControl extends StatefulWidget {
     required this.labels,
     required this.onSelectionChanged,
     this.selectedIndex = 0,
-    this.backgroundColor = const Color(0xFFE0E0E0),
-    this.thumbColor = Colors.white,
+    this.backgroundColor = ColorType.grayed,
+    this.thumbColor = ColorType.background,
     this.labelStyle,
     this.selectedLabelStyle,
     this.height = 50,
@@ -57,7 +58,7 @@ class _MaizebusSlidingSegmentedControlState
       height: widget.height,
       width: widget.width,
       decoration: BoxDecoration(
-        color: widget.backgroundColor,
+        color: getColor(context, widget.backgroundColor),
         borderRadius: BorderRadius.circular(25),
       ),
       child: LayoutBuilder(
@@ -92,7 +93,7 @@ class _MaizebusSlidingSegmentedControlState
                     height: 40,
                     margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                     decoration: BoxDecoration(
-                      color: widget.thumbColor,
+                      color: getColor(context, widget.thumbColor),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -117,9 +118,9 @@ class _MaizebusSlidingSegmentedControlState
                           duration: const Duration(milliseconds: 200),
                           style: isSelected
                               ? (widget.selectedLabelStyle ??
-                                  const TextStyle(
+                                  TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.black,
+                                    color: getColor(context, ColorType.opposite),
                                     fontSize: 14,
                                   ))
                               : (widget.labelStyle ??
