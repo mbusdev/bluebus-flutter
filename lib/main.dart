@@ -2,7 +2,6 @@
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'screens/onboarding_screen.dart';

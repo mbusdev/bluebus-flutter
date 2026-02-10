@@ -59,8 +59,10 @@ class NotificationService {
   // Currently this function must be called even if permission is already granted,
   // as it sets up some important listeners
   static Future<void> requestPermission() async {
-    final notificationSettings = await FirebaseMessaging.instance
-        .requestPermission();
+    // todo: add back in if needed
+    //final notificationSettings = await FirebaseMessaging.instance
+    //    .requestPermission();
+
     // notificationSettings.authorizationStatus ...
     final apnsToken = await FirebaseMessaging.instance
         .getAPNSToken(); // ensure it exists for iOS to work

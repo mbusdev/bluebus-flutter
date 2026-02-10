@@ -3,7 +3,6 @@ import 'package:bluebus/widgets/mini_stop_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../bluebus_api.dart';
-import 'package:bluebus/services/bus_info_service.dart';
 import '../constants.dart';
 import 'package:intl/intl.dart';
 

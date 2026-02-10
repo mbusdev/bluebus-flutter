@@ -457,8 +457,6 @@ class _JourneyBodyState extends State<JourneyBody> {
     String orgID,
     int legID,
   ) {
-    bool foundStart = false;
-
     // todo: add check for .trip being null
     for (StopTime st in widget.journey.legs[legID].trip!.stopTimes) {
       if (st.stop == orgID) {

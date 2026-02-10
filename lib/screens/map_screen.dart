@@ -87,16 +87,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
-  Map<String, String> _routeIdToName = {};
 
   // Custom marker icons
   BitmapDescriptor? _busIcon;
   BitmapDescriptor? _stopIcon;
   BitmapDescriptor? _rideStopIcon;
-  BitmapDescriptor? _mixedStopIcon;
   BitmapDescriptor? _favStopIcon;
   BitmapDescriptor? _favRideStopIcon;
-  BitmapDescriptor? _favMixedStopIcon;
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -394,17 +391,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       _rideStopIcon = await resizeImage(
         await rootBundle.load('assets/busStopRide.png'),
       );
-      _mixedStopIcon = await resizeImage(
-        await rootBundle.load('assets/busStopMixed.png'),
-      );
       _favStopIcon = await resizeImage(
         await rootBundle.load('assets/favbusStop.png'),
       );
       _favRideStopIcon = await resizeImage(
         await rootBundle.load('assets/favbusStopRide.png'),
-      );
-      _favMixedStopIcon = await resizeImage(
-        await rootBundle.load('assets/favbusStopMixed.png'),
       );
 
       // Load route specific bus icons
@@ -422,16 +413,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       _rideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueAzure,
       );
-      _mixedStopIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueAzure,
-      );
       _favStopIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueAzure,
       );
       _favRideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueAzure,
-      );
-      _favMixedStopIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueAzure,
       );
     }
@@ -695,7 +680,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
     setState(() {
-      _routeIdToName = routeIdToName;
       _availableRoutes = routeIdToName.entries
           .map((e) => {'id': e.key, 'name': e.value})
           .toList();
@@ -842,8 +826,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       _updateAllDisplayedMarkers();
     });
   }
-
-  bool _isFavorited(String stpid) => _favoriteStops.contains(stpid);
 
 
   void _updateDisplayedRoutes() {
@@ -1005,12 +987,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _refreshRouteBusIcons() {
     _routeBusIcons.clear();
     _loadRouteSpecificBusIcons();
-  }
-
-  // Force refresh route specific bus icons
-  Future<void> _forceRefreshRouteBusIcons() async {
-    _routeBusIcons.clear();
-    await _loadRouteSpecificBusIcons();
   }
 
   // Check if a route has specific bus icon loaded
@@ -1975,8 +1951,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final mediaQueryData = MediaQuery.of(context);
     final double flutterSafeAreaTop = mediaQueryData.padding.top;
     final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
-    final double flutterSafeAreaLeft = mediaQueryData.padding.left;
-    final double flutterSafeAreaRight = mediaQueryData.padding.right;
     double padBottom = 0;
     double padTop = 0;
     double padLeftRight = 0;

@@ -1,18 +1,12 @@
-import 'dart:math';
-
 import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
-import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
-import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../constants.dart';
-import '../models/bus.dart';
 import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui' as ui;
 import 'upcoming_stops_widget.dart';
 
 bool isRide(String? s) {
@@ -29,7 +23,7 @@ class StopSheet extends StatefulWidget {
   final Future<void> Function(String, String) onFavorite;
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
-  void Function(String) showBusSheet;
+  final void Function(String) showBusSheet;
   final BusProvider busProvider;
 
   StopSheet({

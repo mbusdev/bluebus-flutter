@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
-import '../constants.dart'; 
 import 'package:intl/intl.dart';
                           
 String futureTime(String minutesInFuture){

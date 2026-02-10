@@ -5,7 +5,6 @@ import '../constants.dart';
 import '../models/bus.dart';
 import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
-import 'package:intl/intl.dart';
 import 'upcoming_stops_widget.dart';
 
 bool isNumber(String? s) {
@@ -37,13 +36,6 @@ class BusSheet extends StatefulWidget {
 class _BusSheetState extends State<BusSheet> {
   late Bus? currBus = BusRepository.getBus(widget.busID);
   late Future<List<BusStopWithPrediction>> futureBusStops;
-  
-  static const Map<String, String> busFullnessMap = {
-    "FULL": "Mostly full",
-    "EMPTY": "Mostly empty",
-    "HALF_EMPTY": "Half full",
-    "N/A": "Fullness unavailable"
-  };
   
   @override
   void initState() {

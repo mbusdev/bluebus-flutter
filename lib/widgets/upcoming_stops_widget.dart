@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/bus_info_service.dart';
@@ -487,10 +486,10 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       DisplayBusStop upcomingStop = nextBusStops[i];
 
       bool isKeyStop = false;
-      String stopName = upcomingStop.name;
+      //String stopName = upcomingStop.name;
       if (KEY_STOPS.containsKey(upcomingStop.id)) {
         isKeyStop = true;
-        stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
+        //stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
       }
 
       // Check if we need to add the "Bus changes route to ..." message
@@ -528,7 +527,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       // These key stops are only shown if the detailed stops were abridged
       for (int i = 0; i < additionalKeyStops.length; i++) {
         DisplayBusStop upcomingStop = additionalKeyStops[i];
-        String stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
+        //String stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
         bool isKeyStop = true; // All these stops are key stops
 
         rowElements.add(
@@ -590,16 +589,16 @@ class UpcomingStopsWidget extends StatefulWidget {
   final String routeId;
   final String? vehicleId;
   final bool isExpanded;
-  bool shouldAnimate = true;
-  bool showAbridgedStops = true;
-  int filterAfterPredictionTime = 0;
-  String filterAfterStop = "";
-  bool showSeeMoreButton = false;
-  Function(String)? showBusSheet;
-  Function(String, String)? onBusStopClick;
-  Widget childIfNoUpcomingStopsFound;
-  List<Location>? stopsToDisplayOverride;
-  String? routeCodeOverride;
+  final bool shouldAnimate;
+  final bool showAbridgedStops;
+  final int filterAfterPredictionTime;
+  final String filterAfterStop;
+  final bool showSeeMoreButton;
+  final Function(String)? showBusSheet;
+  final Function(String, String)? onBusStopClick;
+  final Widget childIfNoUpcomingStopsFound;
+  final List<Location>? stopsToDisplayOverride;
+  final String? routeCodeOverride;
 
   @override
   State<StatefulWidget> createState() => _UpcomingStopsWidgetState();

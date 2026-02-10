@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import '../constants.dart';
 
 // iOS Map widget
@@ -100,8 +96,6 @@ class _AndroidMapState extends State<AndroidMap>
   bool _hasPending = false;
   Set<Marker>? _pendingDynamicMarkers;
   int? mapId;
-  GoogleMapController? _gController;
-  bool? _lastIsDark;
   static const int _targetFps = 8;
   // static const int _animationDurationMs = 10900;
   static const int _animationDurationMs = 100;

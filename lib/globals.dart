@@ -26,6 +26,8 @@ LatLng? getLatLongFromStopID (String id){
       return (l.latlng);
     }
   }
+
+  return null;
 }
 
 Location? getLocationFromID (String id) {
@@ -35,4 +37,6 @@ Location? getLocationFromID (String id) {
       return l;
     }
   }
+
+  return null;
 }

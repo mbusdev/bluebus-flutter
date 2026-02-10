@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:bluebus/constants.dart';
-import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:http/http.dart' as http;
 import '../models/bus_stop.dart'; 

@@ -2,7 +2,6 @@ import 'package:bluebus/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'map_screen.dart';
-import '../constants.dart';
 
 // Terms & Privacy text
 const String TERMS_AND_CONDITIONS =
@@ -84,7 +83,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(
         child: PageView(
