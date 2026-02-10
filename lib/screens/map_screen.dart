@@ -68,6 +68,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(Loadpoint("Initializing...", 0));
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
+  bool? _userLocVisible;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
   Set<Polyline> _displayedPolylines = {};
@@ -1025,8 +1026,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _mapController = controller;
   }
 
-  void _onCameraMove(CameraPosition position) {
+  void _onCameraMove(CameraPosition position) async {
     _currentCameraPos = position;
+    
+    // check if user location is within viewport bounds
+    LatLngBounds? viewportBounds = await _mapController?.getVisibleRegion();
+    if (viewportBounds != null) {
+      Position? pos = await _getUserLocation();
+      if (pos != null) {
+        _userLocVisible = !viewportBounds.contains(
+          LatLng(pos.latitude, pos.longitude)
+        );
+      }
+    }
   }
 
   // Create a bus marker from a Bus model
@@ -1835,11 +1847,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ).then((_) {});
   }
 
-  Future<void> _centerOnLocation(
-    bool userLocation, [
-    double lat = 0,
-    double long = 0,
-  ]) async {
+  Future<Position?> _getUserLocation() async {
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -1850,7 +1858,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             backgroundColor: Colors.red,
           ),
         );
-        return;
+        return null;
       }
 
       // Check and request location permissions if needed
@@ -1864,7 +1872,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               backgroundColor: Colors.red,
             ),
           );
-          return;
+          return null;
         }
       }
 
@@ -1875,48 +1883,60 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             backgroundColor: Colors.red,
           ),
         );
-        return;
+        return null;
       }
-
-      // at first create a default position. User location can overwrite later if needed
-      Position position = Position(
-        longitude: long,
-        latitude: lat,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        headingAccuracy: 0,
-        speed: 0,
-        speedAccuracy: 0,
+      
+      return await Geolocator.getCurrentPosition().timeout(
+        Duration(seconds: 5),
+        onTimeout: () {
+          throw Exception("Location request timed out.");
+        },
       );
 
-      if (userLocation) {
-        position = await Geolocator.getCurrentPosition().timeout(
-          Duration(seconds: 5),
-          onTimeout: () {
-            throw Exception("Location request timed out.");
-          },
-        );
-      }
-
-      // Animate the map camera to the user's location
-      if (_mapController != null) {
-        await _mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: LatLng(position.latitude, position.longitude),
-              zoom: userLocation ? 15.0 : 17.0,
-            ),
-          ),
-        );
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error getting location: $e'),
           backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    return null;
+  }
+
+  Future<void> _centerOnLocation(
+    bool userLocation, [
+    double lat = 0,
+    double long = 0,
+  ]) async {
+    // at first create a default position. User location can overwrite later if needed
+    Position position = Position(
+      longitude: long,
+      latitude: lat,
+      timestamp: DateTime.now(),
+      accuracy: 0,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
+
+    if (userLocation) {
+      Position? pos = await _getUserLocation();
+      if (pos != null) position = pos;
+    }
+
+    // Animate the map camera to the user's location
+    if (_mapController != null) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(position.latitude, position.longitude),
+            zoom: userLocation ? 15.0 : 17.0,
+          ),
         ),
       );
     }
@@ -2237,6 +2257,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 Column(
+                                  spacing: 10,
                                   children: [
                                     // face north button is only visible when not facing north
                                     Visibility(
@@ -2277,41 +2298,42 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         ),
                                       ),
                                     ),
-
-                                    const SizedBox(height: 10,),
                       
                                     // location button
-                                    DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: FloatingActionButton.small(
-                                        onPressed: () {
-                                          _centerOnLocation(true);
-                                        },
-                                        heroTag: 'location_fab',
-                                        backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(56),
-                                        ),
-                                        child: Icon(
-                                          Icons.my_location,
-                                          color: darkColors[ColorType.mapButtonIcon],
-                                          shadows: [
-                                            Shadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
+                                    Visibility(
+                                      visible: _userLocVisible == null || _userLocVisible!,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
                                               blurRadius: 4,
                                               offset: Offset(0, 2)
                                             )
                                           ],
+                                          borderRadius: BorderRadius.circular(25)
+                                        ),
+                                        child: FloatingActionButton.small(
+                                          onPressed: () {
+                                            _centerOnLocation(true);
+                                          },
+                                          heroTag: 'location_fab',
+                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(56),
+                                          ),
+                                          child: Icon(
+                                            Icons.my_location,
+                                            color: darkColors[ColorType.mapButtonIcon],
+                                            shadows: [
+                                              Shadow(
+                                                color: getColor(context, ColorType.mapButtonShadow),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2)
+                                              )
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
