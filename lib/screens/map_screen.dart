@@ -1850,7 +1850,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ).then((_) {});
   }
 
-  Future<Position?> _getUserLocation({bool showError = true}) async {
+  Future<Position?> _getUserLocation({bool showError = false}) async {
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
