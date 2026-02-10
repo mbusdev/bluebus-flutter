@@ -11,6 +11,7 @@ class MapWidget extends StatelessWidget {
   final String darkMapStyle;
   final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
+  final void Function()? onCameraIdle;
   final void Function(CameraPosition)? onCameraMove;
   final bool myLocationEnabled;
   final bool myLocationButtonEnabled;
@@ -25,6 +26,7 @@ class MapWidget extends StatelessWidget {
     required this.darkMapStyle,
     required this.lightMapStyle,
     this.onMapCreated,
+    this.onCameraIdle,
     this.onCameraMove,
     this.myLocationEnabled = true,
     this.myLocationButtonEnabled = false,
@@ -36,6 +38,7 @@ class MapWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(child: GoogleMap(
       onMapCreated: onMapCreated,
+      onCameraIdle: onCameraIdle,
       onCameraMove: onCameraMove,
       initialCameraPosition: CameraPosition(
         target: initialCenter,
@@ -69,6 +72,7 @@ class AndroidMap extends StatefulWidget {
   final String darkMapStyle;
   final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
+  final void Function()? onCameraIdle;
   final void Function(CameraPosition)? onCameraMove;
   final bool myLocationButtonEnabled;
   AndroidMap(
@@ -79,6 +83,7 @@ class AndroidMap extends StatefulWidget {
       required this.darkMapStyle,
       required this.lightMapStyle,
       this.onMapCreated,
+      this.onCameraIdle,
       this.onCameraMove,
       this.polylines = const {},
       this.myLocationButtonEnabled = false,});
@@ -246,6 +251,7 @@ class _AndroidMapState extends State<AndroidMap>
       polylines: widget.polylines,
       onMapCreated: widget.onMapCreated,
       onCameraMove: widget.onCameraMove,
+      onCameraIdle: widget.onCameraIdle,
       style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle
     ));
   }
