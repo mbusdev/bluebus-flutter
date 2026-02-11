@@ -285,6 +285,24 @@ class Location {
   }) : aliases = aliases;
 }
 
+// location with arrival time attached
+// used for flow in journey
+class ArrivalTimeLocation extends Location {
+  final String arrivalTime;
+
+  ArrivalTimeLocation(
+    this.arrivalTime, 
+    Location loc,
+  ) : super(
+    loc.name,
+    loc.abbrev,
+    loc.aliases,
+    loc.isBusStop,
+    stopId: loc.stopId,
+    latlng: loc.latlng,
+  );
+}
+
 class StartupDataHolder {
   String version;
   String updateTitle;

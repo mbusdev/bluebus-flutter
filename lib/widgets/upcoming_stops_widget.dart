@@ -269,24 +269,23 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     // Downloads the upcoming stops and updates the state so they appear before your very eyes!
 
     if (!isLoading) return; // Data already loaded, no need to load again
-    if (widget.vehicleId == null){
-      if (widget.stopsToDisplayOverride != null) {
-        setState(() {
-          isLoading = false;
-          nextBusStops = [];
-          if (widget.stopsToDisplayOverride == null) return;
-          for (Location loc in widget.stopsToDisplayOverride!) {
-            nextBusStops.add(
-              DisplayBusStop(
-                name: loc.name,
-                id: loc.stopId ?? "000",
-                routeCode: widget.routeCodeOverride ?? ""
-              )
-            );
-          }
-        });
-        return; // Use override data intead of loading it from the internet
-      }
+    if (widget.vehicleId == null || widget.stopsToDisplayOverride != null) {
+      setState(() {
+        isLoading = false;
+        nextBusStops = [];
+        if (widget.stopsToDisplayOverride == null) return;
+        for (ArrivalTimeLocation loc in widget.stopsToDisplayOverride!) {
+          nextBusStops.add(
+            DisplayBusStop(
+              name: loc.name,
+              id: loc.stopId ?? "000",
+              routeCode: widget.routeCodeOverride ?? "",
+              prediction: loc.arrivalTime
+            )
+          );
+        }
+      });
+      return; // Use override data intead of loading it from the internet
     }
 
     var result;
@@ -382,8 +381,16 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     //        the user that it's clickable
 
     // lineTopStyle and lineBottomStyle are LINE_CONNECTED, LINE_DISCONNECTED, etc.
-    String predictionText = stop.prediction != null? futureTime(stop.prediction!) : "";
-    if (stop.prediction == "DUE") predictionText = "Now";
+    
+    String predictionText = "";
+    if (widget.stopsToDisplayOverride != null){
+      predictionText = stop.prediction != null? stop.prediction! : "";
+    } else if (stop.prediction == "DUE") {
+      predictionText = "Now";
+    } else{
+      predictionText = stop.prediction != null? futureTime(stop.prediction!) : "";
+    }
+    
 
     return GestureDetector(
       onTap: () {
@@ -605,7 +612,7 @@ class UpcomingStopsWidget extends StatefulWidget {
   final Function(String)? showBusSheet;
   final Function(String, String)? onBusStopClick;
   final Widget childIfNoUpcomingStopsFound;
-  final List<Location>? stopsToDisplayOverride;
+  final List<ArrivalTimeLocation>? stopsToDisplayOverride;
   final String? routeCodeOverride;
 
   @override
@@ -616,7 +623,7 @@ class UpcomingStopsWidget extends StatefulWidget {
     required this.routeId,
     String? this.vehicleId,
     // TODO: Allow passing in of stops instead of a vehicle ID
-    List<Location>? this.stopsToDisplayOverride,
+    List<ArrivalTimeLocation>? this.stopsToDisplayOverride,
     String? this.routeCodeOverride,
 
     required bool this.isExpanded,

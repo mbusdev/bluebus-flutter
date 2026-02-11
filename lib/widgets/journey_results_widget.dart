@@ -21,6 +21,24 @@ int getSecondsAfterMidnightUtc() {
   return difference.inSeconds;
 }
 
+// takes time from seconds after midnight and converts to clock time
+String formatSecondsToTime(int utcSeconds) {
+  // get the current date in UTC to serve as a reference
+  final nowUtc = DateTime.now().toUtc();
+
+  // create a DateTime object for "Midnight UTC" today
+  final midnightUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
+
+  // add the seconds to midnight
+  final specificTimeUtc = midnightUtc.add(Duration(seconds: utcSeconds));
+
+  // convert to the device's Local time zone
+  final localTime = specificTimeUtc.toLocal();
+
+  // format it (h:mm a handles 12-hour format and AM/PM)
+  return DateFormat('h:mm a').format(localTime);
+}
+
 
 // helper class to display legs with expanded property
 class LegToDisplay {
@@ -401,13 +419,13 @@ class _JourneyBodyState extends State<JourneyBody> {
   }
 
   //function to get intermediary stops between start and end
-  (bool, List<String>) intermediaryBusStops(
+  (bool, List<(String,int)>) intermediaryBusStops(
     String orgID,
     String desID,
     int legID,
   ) {
     bool foundStart = false;
-    List<String> stopIDs = [];
+    List<(String,int)> stopIDs = [];
 
     // todo: add check for .trip being null
     for (StopTime st in widget.journey.legs[legID].trip!.stopTimes) {
@@ -416,26 +434,26 @@ class _JourneyBodyState extends State<JourneyBody> {
       }
 
       if (st.stop == desID) {
-        stopIDs.add(st.stop);
+        stopIDs.add((st.stop, st.departureTime));
         return (true, stopIDs);
       }
 
       if (foundStart) {
-        stopIDs.add(st.stop);
+        stopIDs.add((st.stop, st.departureTime));
       }
     }
 
     return (false, []);
   }
 
-  List<Location> intermediaryLocations(String orgId, String desId, int legId) {
-    (bool, List<String>) intermediary_stop_data = intermediaryBusStops(orgId, desId, legId);
+  List<ArrivalTimeLocation> intermediaryLocations(String orgId, String desId, int legId) {
+    (bool, List<(String, int)>) intermediary_stop_data = intermediaryBusStops(orgId, desId, legId);
 
-    List<Location> outputLocations = [];
+    List<ArrivalTimeLocation> outputLocations = [];
 
-    for (String stopId in intermediary_stop_data.$2) {
-      Location? loc = getLocationFromID(stopId);
-      if (loc != null) outputLocations.add(loc);
+    for ((String,int) stopId in intermediary_stop_data.$2) {
+      Location? loc = getLocationFromID(stopId.$1);
+      if (loc != null) outputLocations.add(ArrivalTimeLocation(formatSecondsToTime(stopId.$2), loc));
     }
 
     return outputLocations;
@@ -459,7 +477,7 @@ class _JourneyBodyState extends State<JourneyBody> {
     String orgID,
     int legID,
   ) {
-    // todo: add check for .trip being null
+    // TODO: add check for .trip being null
     for (StopTime st in widget.journey.legs[legID].trip!.stopTimes) {
       if (st.stop == orgID) {
         return convertSecondsToFormattedTime(st.arrivalTime);
