@@ -589,7 +589,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                   UpcomingStopsWidget(
                       color: RouteColorService.getRouteColor(leg.rt!),
                       routeId: leg.rt!,
-                      vehicleId: null, // TODO: get vehicle id here somehow
+                      vehicleId: leg.trip!.vid,
                       stopsToDisplayOverride: intermediaryLocations(leg.originID, leg.destinationID, index),
                       isExpanded: true,
                       showSeeMoreButton: false,

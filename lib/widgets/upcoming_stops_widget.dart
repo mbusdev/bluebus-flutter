@@ -4,6 +4,7 @@ import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/bus_stop.dart';
 
 final Map<String, String> KEY_STOPS = {
@@ -36,6 +37,13 @@ final Map<String, String> KEY_STOPS = {
 
   // TODO: Add other important stops for buses
 };
+
+String futureTime(String minutesInFuture) {
+  int min = int.parse(minutesInFuture);
+  DateTime now = DateTime.now();
+  DateTime futureTime = now.add(Duration(minutes: min));
+  return DateFormat('h:mm a').format(futureTime);
+}
 
 // TODO: Make KEY_STOPS an API call!
 
@@ -261,25 +269,25 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     // Downloads the upcoming stops and updates the state so they appear before your very eyes!
 
     if (!isLoading) return; // Data already loaded, no need to load again
-    if (widget.stopsToDisplayOverride != null || widget.vehicleId == null) {
-      setState(() {
-        isLoading = false;
-        nextBusStops = [];
-        if (widget.stopsToDisplayOverride == null) return;
-        for (Location loc in widget.stopsToDisplayOverride!) {
-          nextBusStops.add(
-            DisplayBusStop(
-              name: loc.name,
-              id: loc.stopId ?? "000",
-              routeCode: widget.routeCodeOverride ?? ""
-            )
-          );
-        }
-      });
-      return; // Use override data intead of loading it from the internet
+    if (widget.vehicleId == null){
+      if (widget.stopsToDisplayOverride != null) {
+        setState(() {
+          isLoading = false;
+          nextBusStops = [];
+          if (widget.stopsToDisplayOverride == null) return;
+          for (Location loc in widget.stopsToDisplayOverride!) {
+            nextBusStops.add(
+              DisplayBusStop(
+                name: loc.name,
+                id: loc.stopId ?? "000",
+                routeCode: widget.routeCodeOverride ?? ""
+              )
+            );
+          }
+        });
+        return; // Use override data intead of loading it from the internet
+      }
     }
-
-    
 
     var result;
 
@@ -374,7 +382,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     //        the user that it's clickable
 
     // lineTopStyle and lineBottomStyle are LINE_CONNECTED, LINE_DISCONNECTED, etc.
-    String predictionText = "${stop.prediction} min";
+    String predictionText = stop.prediction != null? futureTime(stop.prediction!) : "";
     if (stop.prediction == "DUE") predictionText = "Now";
 
     return GestureDetector(
