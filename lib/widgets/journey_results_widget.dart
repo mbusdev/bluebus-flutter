@@ -533,74 +533,72 @@ class _JourneyBodyState extends State<JourneyBody> {
           } else {
             return Padding(
               padding: const EdgeInsets.only(bottom: 20),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              
+              child: Column(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: RouteColorService.getRouteColor(leg.rt!),
-                    ),
-                    alignment: Alignment.center,
-                    child: MediaQuery(
-                      // media query prevents text scaling
-                      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                      child: Text(
-                        leg.rt!,
-                        style: TextStyle(
-                          color: RouteColorService.getContrastingColor(leg.rt!),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1,
+                  Row(
+                    children: [
+                      // icon
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: RouteColorService.getRouteColor(leg.rt!),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(width: 10),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Take ${getPrettyRouteName(leg.rt!)}",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            height: 0,
+                        alignment: Alignment.center,
+                        child: MediaQuery(
+                          // media query prevents text scaling
+                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                          child: Text(
+                            leg.rt!,
+                            style: TextStyle(
+                              color: RouteColorService.getContrastingColor(leg.rt!),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
+                      ),
 
-                        SizedBox(height: 5,),
+                      SizedBox(width: 10),
 
-                        UpcomingStopsWidget(
-                          color: RouteColorService.getRouteColor(leg.rt!),
-                          routeId: leg.rt!,
-                          vehicleId: null,
-                          stopsToDisplayOverride: intermediaryLocations(leg.originID, leg.destinationID, index),
-                          isExpanded: true,
-                          showSeeMoreButton: false,
-                          showAbridgedStops: false,
-                          routeCodeOverride: leg.rt,
-                          childIfNoUpcomingStopsFound: Text("No stops found")),
-                      ],
-                    ),
+                      Text(
+                        "Take ${getPrettyRouteName(leg.rt!)}",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          height: 0,
+                        ),
+                      ),
+
+                      Spacer(),
+
+                      Text(
+                        "${busArrivalAtStop(leg.originID,index)}",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
-                
-                  
-                  Text(
-                    "${busArrivalAtStop(leg.originID,index)}",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                    ),
+
+                  UpcomingStopsWidget(
+                      color: RouteColorService.getRouteColor(leg.rt!),
+                      routeId: leg.rt!,
+                      vehicleId: null, // TODO: get vehicle id here somehow
+                      stopsToDisplayOverride: intermediaryLocations(leg.originID, leg.destinationID, index),
+                      isExpanded: true,
+                      showSeeMoreButton: false,
+                      showAbridgedStops: false,
+                      routeCodeOverride: leg.rt,
+                      childIfNoUpcomingStopsFound: Text("No stops found")
                   ),
                 ],
-              ),
+              )
             );
           }
         }),

@@ -348,7 +348,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     setState(() {
       nextBusStops = results_filtered.map((BusStopWithPrediction origStop) {
         return DisplayBusStop(
-            name: origStop.name, id: origStop.id, routeCode: origStop.busRouteCode);
+            name: origStop.name, id: origStop.id, routeCode: origStop.busRouteCode, prediction: origStop.prediction);
         }).toList();
       isLoading = false;
     });
