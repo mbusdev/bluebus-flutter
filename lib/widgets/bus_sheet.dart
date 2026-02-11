@@ -145,27 +145,35 @@ Widget michiganBusHeader(Bus bus) {
 
         SizedBox(width: 15),
 
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              getPrettyRouteName(bus.routeId),
-              style: TextStyle(
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w700,
-                fontSize: 30,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                getPrettyRouteName(bus.routeId),
+                style: TextStyle(
+                  fontFamily: 'Urbanist',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 30,
+                  height: 1
+                ),
               ),
-            ),
-            Text(
-              "Bus ${bus.id}",
-              style: TextStyle(
-                color: Colors.grey,
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
+
+              SizedBox(height: 6,),
+
+              Text(
+                "Bus ${bus.id}",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontFamily: 'Urbanist',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20,
+                  height: 1
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     ),
@@ -218,8 +226,12 @@ Widget theRideHeader(Bus bus) {
                   fontFamily: 'Urbanist',
                   fontWeight: FontWeight.w700,
                   fontSize: 30,
+                  height: 1
                 ),
               ),
+
+              SizedBox(height: 5,),
+
               Row(
                 children: [
                   ClipOval(
