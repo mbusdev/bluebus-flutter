@@ -583,16 +583,16 @@ class _JourneyBodyState extends State<JourneyBody> {
 
                       SizedBox(width: 10),
 
-                      Text(
-                        "Take ${getPrettyRouteName(leg.rt!)}",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          height: 0,
+                      Expanded(
+                        child: Text(
+                          "Take ${getPrettyRouteName(leg.rt!)}",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            height: 1,
+                          ),
                         ),
                       ),
-
-                      Spacer(),
 
                       Text(
                         "${busArrivalAtStop(leg.originID,index)}",

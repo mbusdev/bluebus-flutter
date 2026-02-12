@@ -151,10 +151,6 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                                   ? " • Live"
                                   : " • Estimated",
                               style: TextStyle(
-                                // color: getColor(context, ColorType.primary),
-                                // color: getColor(context, ColorType.opposite),
-                                // color: RouteColorService.getRouteColor(widget.busId),
-                                // fontWeight: FontWeight.bold,
                                 fontSize: 16.0,
                               ),
                             ),
@@ -349,12 +345,14 @@ class _StopSheetState extends State<StopSheet> {
             // with a lil simple math
             double heightOfImage = (imageBusStop)? ((MediaQuery.sizeOf(context).width) * 0.54345703125) : 0;
 
+            double paddingBelowButtons = (MediaQuery.of(context).padding.bottom == 0.0)? 20 : MediaQuery.of(context).padding.bottom;
+
             return DraggableScrollableSheet(
               initialChildSize: initialSize,
               minChildSize: 0.0, // leave at 0.0 to allow full dismissal
-              maxChildSize: 0.9,
+              maxChildSize: initialSize,
               snap: true,
-              snapSizes: const [0.9],
+              snapSizes: [initialSize],
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
                   clipBehavior: Clip.antiAlias,
@@ -369,297 +367,336 @@ class _StopSheetState extends State<StopSheet> {
                     ]
                   ),
 
-                  // In this stack, First layer is image, which sometimes doesn't exist
-                  // Second layer is the rest of everything. The stack lets the information
-                  // scroll over the image
-                  child: Stack(
-                    children: [
-                      (imageBusStop)?
-                        // Image of bus stop if it exists
-                        ClipRRect(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(30),
-                            topRight: Radius.circular(30),
-                          ),
-                          child: Image.asset(
-                              imagePath,
-                              fit: BoxFit.cover,
+                  // overflow box lets the stuff inside not shrink when page is being closed
+                  child: OverflowBox(
+                    alignment: Alignment.topCenter,
+                    maxHeight: MediaQuery.of(context).size.height * initialSize, 
+                    // In this stack, 
+                    // First (bottom) layer is image, which sometimes doesn't exist
+                    // Second layer is another stack. Inside that stack is: 
+                    //    first layer: the the main body and content
+                    //    second layer is a box with a gradient
+                    //    third layer is the buttons themselves
+                    child: Stack(
+                      children: [
+                        (imageBusStop)?
+                          // Image of bus stop if it exists
+                          ClipRRect(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(30),
+                              topRight: Radius.circular(30),
                             ),
-                        )
-                        // bus stop image does not exist, use empty widget
-                      : SizedBox.shrink(),
-
-                      Column(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              physics: const ClampingScrollPhysics(),
-                              controller: scrollController,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // spacer for image with gradient
-                                  Container(
-                                    height: heightOfImage,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          Colors.white.withValues(alpha: 0.0), 
-                                          getColor(context, ColorType.primary),                       
-                                        ],
-                                        stops: [0.7, 1]
-                                      ),
-                                    ),
-                                  ),
-                                  
-                                  // wrapped in container to add background color
-                                  Container(
-                                    color: getColor(context, ColorType.primary),
+                            child: Image.asset(
+                                imagePath,
+                                fit: BoxFit.cover,
+                              ),
+                          )
+                          // bus stop image does not exist, use empty widget
+                        : SizedBox.shrink(),
+                    
+                        Stack(
+                          children: [
+                            // yes this column only has one thing. yes this is 
+                            // the only way it works becuase the stack won't play
+                            // nice without it. Thank you flutter
+                            Column(
+                              children: [
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    physics: const ClampingScrollPhysics(),
+                                    controller: scrollController,
                                     child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // header
-                                        Padding(
-                                          padding: EdgeInsets.only(
-                                            top: (imageBusStop) ? 0 : 20,
-                                            left: 20,
-                                            right: 20,
+                                        // spacer for image with gradient
+                                        Container(
+                                          height: heightOfImage,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                getColor(context, ColorType.backgroundGradientStart),  
+                                                getColor(context, ColorType.background),                       
+                                              ],
+                                              stops: [0.7, 1]
+                                            ),
                                           ),
-                                          child: Row(
+                                        ),
+                                        
+                                        // wrapped in container to add background color
+                                        Container(
+                                          color: getColor(context, ColorType.background),
+                                          child: Column(
                                             children: [
-                                              Expanded(
-                                                child: Text(
-                                                  widget.stopName,
-                                                  style: TextStyle(
-                                                    fontFamily: 'Urbanist',
-                                                    fontWeight: FontWeight.w700,
-                                                    fontSize: 30,
-                                                    height: 0,
-                                                  ),
+                                              // header
+                                              Padding(
+                                                padding: EdgeInsets.only(
+                                                  top: (imageBusStop) ? 0 : 20,
+                                                  left: 20,
+                                                  right: 20,
                                                 ),
-                                              ),
-                                                              
-                                              SizedBox(width: 15),
-                                                              
-                                              Column(
-                                                children: <Widget>[
-                                                  IntrinsicWidth(
-                                                    child: Container(
-                                                      height: 25,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.amber,
-                                                        borderRadius:
-                                                            BorderRadius.circular(7),
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        widget.stopName,
+                                                        style: TextStyle(
+                                                          fontFamily: 'Urbanist',
+                                                          fontWeight: FontWeight.w700,
+                                                          fontSize: 30,
+                                                          height: 1.1,
+                                                        ),
                                                       ),
-                                                      child: Center(
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 5,
-                                                              ),
-                                                          child: MediaQuery(
-                                                            data: MediaQuery.of(context)
-                                                                .copyWith(
-                                                                  textScaler:
-                                                                      TextScaler.linear(
-                                                                        1.0,
+                                                    ),
+                                                                    
+                                                    SizedBox(width: 15),
+                                                                    
+                                                    Column(
+                                                      children: <Widget>[
+                                                        IntrinsicWidth(
+                                                          child: Container(
+                                                            height: 25,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.amber,
+                                                              borderRadius:
+                                                                  BorderRadius.circular(7),
+                                                            ),
+                                                            child: Center(
+                                                              child: Padding(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal: 5,
+                                                                    ),
+                                                                child: MediaQuery(
+                                                                  data: MediaQuery.of(context)
+                                                                      .copyWith(
+                                                                        textScaler:
+                                                                            TextScaler.linear(
+                                                                              1.0,
+                                                                            ),
                                                                       ),
+                                                                  child: Text(
+                                                                    widget.stopID,
+                                                                    style: TextStyle(
+                                                                      color: Colors.black,
+                                                                      fontFamily: 'Urbanist',
+                                                                      fontWeight:
+                                                                          FontWeight.w700,
+                                                                      fontSize: 17,
+                                                                    ),
+                                                                  ),
                                                                 ),
-                                                            child: Text(
-                                                              widget.stopID,
-                                                              style: TextStyle(
-                                                                color: Colors.black,
-                                                                fontFamily: 'Urbanist',
-                                                                fontWeight:
-                                                                    FontWeight.w700,
-                                                                fontSize: 17,
                                                               ),
                                                             ),
                                                           ),
                                                         ),
-                                                      ),
+                                                      ],
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                                              
-                                        SizedBox(height: 20),
-                                                              
-                                        // loading text and button
-                                        Material(
-                                          color: Colors.transparent,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                SizedBox(width: 5),
-                                                Text(
-                                                  "Next bus departures",
-                                                  style: TextStyle(
-                                                    fontFamily: 'Urbanist',
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 20,
+                                                                    
+                                              SizedBox(height: 20),
+                                                                    
+                                              // loading text and button
+                                              Material(
+                                                color: Colors.transparent,
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 20,
                                                   ),
-                                                ),
-                                                SizedBox(width: 5),
-                                                InkWell(
-                                                  customBorder: CircleBorder(),
-                                                  onTap: () {
-                                                    _refreshData();
-                                                  },
-                                                  child: SizedBox(
-                                                    width: 30,
-                                                    height: 30,
-                                                    child:
-                                                        (snapshot.connectionState ==
-                                                            ConnectionState.waiting)
-                                                        ? Align( // For some bizarre reason this is required to get the CircularProgressIndicator to conform to the size of the ConstrainedBox
-                                                            alignment: Alignment.center,
-                                                            child: ConstrainedBox(
-                                                              constraints:
-                                                                  BoxConstraints.tightFor(
-                                                                    width: 15,
-                                                                    height: 15,
-                                                                  ),
-                                                              child:
-                                                                  CircularProgressIndicator(
-                                                                    color: getColor(
-                                                                      context,
-                                                                      ColorType.opposite,
-                                                                    ),
-                                                                    strokeWidth: 2.5,
-                                                                  ),
-                                                            ),
-                                                          )
-                                                        : Icon(Icons.refresh),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                                              
-                                                              
-                                        // main page
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 0,
-                                          ),
-                                          child:
-                                              (snapshot.connectionState ==
-                                                ConnectionState.waiting)
-                                            ? Center(child: const SizedBox())
-                                            : (snapshot.hasData)
-                                            ? Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  (arrivingBuses.length == 0)
-                                                      ?
-                                                        FittedBox(
-                                                          fit: BoxFit.fill,
-                                                          alignment: Alignment.center,
-                                                          child: Text(
-                                                            "There are currently no departing buses",
-                                                            textAlign: TextAlign.center,
-                                                            style: TextStyle(
-                                                              fontFamily: 'Urbanist',
-                                                              fontWeight: FontWeight.w400,
-                                                              fontSize: 20,
-                                                            ),
-                                                          )
-                                                        )
-                                                        
-                                                      :
-                                                        SizedBox(height: 10),
-                                                              
-                                                  Column(
-                                                    mainAxisSize: MainAxisSize.max,
+                                                  child: Row(
                                                     children: [
-                                                      ListView.separated(
-                                                        controller: scrollController,
-                                                        shrinkWrap: true,
-                                                        physics:
-                                                            NeverScrollableScrollPhysics(),
-                                                        itemCount: arrivingBuses.length,
-                                                        itemBuilder: (context, index) {
-                                                          BusWithPrediction bus =
-                                                              arrivingBuses[index];
-                                                              
-                                                          return AnimationConfiguration.staggeredList(
-                                                            position: index,
-                                                            duration: const Duration(milliseconds: 575),
-                                                            delay: const Duration(milliseconds: 100),
-                                                            child: FadeInAnimation(
-                                                              child: ExpandableStopWidget(
-                                                                routeId: bus.id,
-                                                                vehicleId: bus.vehicleId,
-                                                                busId: bus.id,
-                                                                busPrediction:
-                                                                    bus.prediction,
-                                                                busDirection: bus.direction,
-                                                                stopId: widget.stopID,
-                                                                showBusSheet:
-                                                                    widget.showBusSheet,
-                                                                busProvider:
-                                                                    widget.busProvider,
-                                                              )
-                                                            ) 
-                                                            
-                                                            
-                                                          );
-                                                          
-                                                          
+                                                      SizedBox(width: 2),
+                                                      Text(
+                                                        "Next bus departures",
+                                                        style: TextStyle(
+                                                          fontFamily: 'Urbanist',
+                                                          fontWeight: FontWeight.w400,
+                                                          fontSize: 20,
+                                                        ),
+                                                      ),
+                                                      SizedBox(width: 5),
+                                                      InkWell(
+                                                        customBorder: CircleBorder(),
+                                                        onTap: () {
+                                                          _refreshData();
                                                         },
-                                                        separatorBuilder: (context, index) {
-                                                          return Divider(
-                                                            height: 0,
-                                                            indent: 20,
-                                                            endIndent: 20,
-                                                            thickness: 1,
-                                                          );
-                                                        },
+                                                        child: SizedBox(
+                                                          width: 30,
+                                                          height: 30,
+                                                          child:
+                                                              (snapshot.connectionState ==
+                                                                  ConnectionState.waiting)
+                                                              ? Align( // For some bizarre reason this is required to get the CircularProgressIndicator to conform to the size of the ConstrainedBox
+                                                                  alignment: Alignment.center,
+                                                                  child: ConstrainedBox(
+                                                                    constraints:
+                                                                        BoxConstraints.tightFor(
+                                                                          width: 15,
+                                                                          height: 15,
+                                                                        ),
+                                                                    child:
+                                                                        CircularProgressIndicator(
+                                                                          color: getColor(
+                                                                            context,
+                                                                            ColorType.opposite,
+                                                                          ),
+                                                                          strokeWidth: 2.5,
+                                                                        ),
+                                                                  ),
+                                                                )
+                                                              : Icon(Icons.refresh),
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
-                                                              
-                                                  SizedBox(height: 10),
-                                                ],
-                                              )
-                                            : Padding(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 20,
-                                                ),
-                                                child: Text(
-                                                  "There doesn't seem to be any departure data for this stop",
-                                                  style: TextStyle(
-                                                    fontFamily: 'Urbanist',
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 20,
-                                                  ),
                                                 ),
                                               ),
+                                                                    
+                                                                    
+                                              // main page
+                                              Padding(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 0,
+                                                ),
+                                                child:
+                                                    (snapshot.connectionState ==
+                                                      ConnectionState.waiting)
+                                                  ? Center(child: const SizedBox())
+                                                  : (snapshot.hasData)
+                                                  ? Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment.start,
+                                                      children: [
+                                                        (arrivingBuses.length == 0)
+                                                            ?
+                                                              FittedBox(
+                                                                fit: BoxFit.fill,
+                                                                alignment: Alignment.center,
+                                                                child: Text(
+                                                                  "There are currently no departing buses",
+                                                                  textAlign: TextAlign.center,
+                                                                  style: TextStyle(
+                                                                    fontFamily: 'Urbanist',
+                                                                    fontWeight: FontWeight.w400,
+                                                                    fontSize: 20,
+                                                                  ),
+                                                                )
+                                                              )
+                                                              
+                                                            :
+                                                              SizedBox(height: 10),
+                                                                    
+                                                        Column(
+                                                          mainAxisSize: MainAxisSize.max,
+                                                          children: [
+                                                            ListView.separated(
+                                                              controller: scrollController,
+                                                              shrinkWrap: true,
+                                                              physics:
+                                                                  NeverScrollableScrollPhysics(),
+                                                              itemCount: arrivingBuses.length,
+                                                              itemBuilder: (context, index) {
+                                                                BusWithPrediction bus =
+                                                                    arrivingBuses[index];
+                                                                    
+                                                                return AnimationConfiguration.staggeredList(
+                                                                  position: index,
+                                                                  duration: const Duration(milliseconds: 575),
+                                                                  delay: const Duration(milliseconds: 100),
+                                                                  child: FadeInAnimation(
+                                                                    child: ExpandableStopWidget(
+                                                                      routeId: bus.id,
+                                                                      vehicleId: bus.vehicleId,
+                                                                      busId: bus.id,
+                                                                      busPrediction:
+                                                                          bus.prediction,
+                                                                      busDirection: bus.direction,
+                                                                      stopId: widget.stopID,
+                                                                      showBusSheet:
+                                                                          widget.showBusSheet,
+                                                                      busProvider:
+                                                                          widget.busProvider,
+                                                                    )
+                                                                  ) 
+                                                                  
+                                                                  
+                                                                );
+                                                                
+                                                                
+                                                              },
+                                                              separatorBuilder: (context, index) {
+                                                                return Divider(
+                                                                  height: 0,
+                                                                  indent: 20,
+                                                                  endIndent: 20,
+                                                                  thickness: 1,
+                                                                );
+                                                              },
+                                                            ),
+                    
+                                                            SizedBox(height: paddingBelowButtons + 20,)
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    )
+                                                  : Padding(
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 20,
+                                                      ),
+                                                      child: Text(
+                                                        "There doesn't seem to be any departure data for this stop",
+                                                        style: TextStyle(
+                                                          fontFamily: 'Urbanist',
+                                                          fontWeight: FontWeight.w400,
+                                                          fontSize: 20,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ),
+                                            ],
                                           ),
-                                            
-                                        SizedBox(height: 10,),
+                                        )
                                       ],
-                                    ),
-                                  )
-                                ],
-                              )
+                                    )
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                      
-                          SizedBox(height: 5),
-                          // bottom buttons
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    
+                            // white box with gradient that the buttons sit on
+                            Column(
+                              children: [
+                                Spacer(), // another spacer to stick this to the bottom
+                    
+                                Container(
+                                  height: paddingBelowButtons + 65,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        getColor(context, ColorType.backgroundGradientStart),  
+                                        getColor(context, ColorType.background),                       
+                                      ],
+                                      stops: [0, 0.2]
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    
+                    
+                            // bottom buttons
+                            Column(
+                              children: [
+                                Spacer(), // sticks buttons to bottom
+                    
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  child: Row(
                                     children: [
                                       ElevatedButton.icon(
                                         onPressed: () {
@@ -678,32 +715,20 @@ class _StopSheetState extends State<StopSheet> {
                                           Icons.directions, 
                                           color: getColor(context, ColorType.mapButtonIcon),
                                           size: 20,
-                                          shadows: [
-                                            Shadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
-                                            )
-                                          ],
                                         ), 
                                         label: Text(
-                                          'Directions',
+                                          'Get Directions',
                                           style: TextStyle(
                                             color: getColor(context, ColorType.primary),
                                             fontSize: 16, 
                                             fontWeight: FontWeight.w600,
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2)
-                                              )
-                                            ],
                                           ),
                                         ), 
                                       ),
+                                      
+                                      Spacer(),
                                             
-                                      ElevatedButton.icon(
+                                      ElevatedButton(
                                         onPressed: () {
                                           // Read the current state
                                           final bool currentStatus = _isFavorited ?? false;
@@ -722,40 +747,22 @@ class _StopSheetState extends State<StopSheet> {
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: getColor(context, ColorType.dim),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(30),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                                          shape: CircleBorder(),
+                                          shadowColor: Colors.black,
+                                              padding: EdgeInsets.zero,
+                                              minimumSize: Size(0,0), // Also remove minimum size constraints
+                                              fixedSize: Size(40,40),
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Remove tap target padding
                                         ),
-                                        icon: Icon(
+                                        child: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
                                           color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.opposite),
                                           size: 20,
-                                          shadows: [
-                                            Shadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
-                                            )
-                                          ],
                                         ), 
-                                        label: Text(
-                                          (_isFavorited ?? false)?  'Remove Favorite' : 'Add to Favorites',
-                                          style: TextStyle(
-                                            color: getColor(context, ColorType.opposite),
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            shadows: [
-                                              Shadow(
-                                                color: getColor(context, ColorType.mapButtonShadow),
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2)
-                                              )
-                                            ],
-                                          ),
-                                        ),
                                       ),
-                      
+                    
+                                      SizedBox(width: 10,),
+                                            
                                       ElevatedButton(
                                         onPressed: () {
                                           showDialog(
@@ -791,23 +798,19 @@ class _StopSheetState extends State<StopSheet> {
                                           Icons.notifications_none,
                                           color: getColor(context, ColorType.opposite),
                                           size: 20.0,
-                                          shadows: [
-                                            Shadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
-                                            )
-                                          ]
-                                          )
+                                        )
                                       ),
                                     ],
                                   ),
-                                                  
-                                  (MediaQuery.of(context).padding.bottom == 0.0)?
-                                  SizedBox(height: 20,) : SizedBox(height: MediaQuery.of(context).padding.bottom,)
-                        ],
-                      ),
-                    ],
+                                ),
+                    
+                                SizedBox(height: paddingBelowButtons,)
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
