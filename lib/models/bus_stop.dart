@@ -5,15 +5,19 @@ class BusStop {
   final String name;
   final LatLng location;
   final String routeId;
+  final double rotation;
+  final bool isRide;
 
-  BusStop({required this.id, required this.name, required this.location, required this.routeId});
+  BusStop({required this.id, required this.name, required this.location, required this.routeId, required this.rotation, required this.isRide});
 
-  factory BusStop.fromJson(Map<String, dynamic> json, String routeId) {
+  factory BusStop.fromJson(Map<String, dynamic> json, String routeId, double rotation, bool isRide) {
     return BusStop(
       id: json['stpid'] ?? '',
       name: json['stpnm'] ?? '',
       location: LatLng(json['lat']?.toDouble() ?? 0, json['lon']?.toDouble() ?? 0),
       routeId: routeId,
+      rotation: rotation, 
+      isRide: isRide
     );
   }
 } 

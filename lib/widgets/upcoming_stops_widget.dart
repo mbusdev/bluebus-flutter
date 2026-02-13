@@ -1,10 +1,10 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/bus_stop.dart';
 
 final Map<String, String> KEY_STOPS = {
@@ -26,7 +26,24 @@ final Map<String, String> KEY_STOPS = {
   "M323": "Wall Street Parking Structure",
   "N422": "Northwood Fire Station", // "Top" of Northwood route
   "N437": "Northwood V",
+
+  // Blake transit center stops
+  "140": "Blake Transit Center",
+  "137": "Blake Transit Center",
+  "138": "Blake Transit Center",
+  "145": "Blake Transit Center",
+  "1150": "Blake Transit Center",
+  "142": "Blake Transit Center",
+
+  // TODO: Add other important stops for buses
 };
+
+String futureTime(String minutesInFuture) {
+  int min = int.parse(minutesInFuture);
+  DateTime now = DateTime.now();
+  DateTime futureTime = now.add(Duration(minutes: min));
+  return DateFormat('h:mm a').format(futureTime);
+}
 
 // TODO: Make KEY_STOPS an API call!
 
@@ -202,8 +219,22 @@ class UpcomingStopIconPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
+class DisplayBusStop {
+  String? prediction;
+  String name;
+  String id;
+  String routeCode;
+
+  DisplayBusStop({
+    this.prediction,
+    required this.name,
+    required this.id,
+    required this.routeCode
+  });
+}
+
 class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
-  var nextBusStops = List.empty();
+  List<DisplayBusStop> nextBusStops = List.empty();
   bool isLoading = true;
   bool isExpanded = false;
 
@@ -217,6 +248,8 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       loadData();
     }
   }
+
+
 
   @override
   void didUpdateWidget(UpcomingStopsWidget oldWidget) {
@@ -236,12 +269,30 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     // Downloads the upcoming stops and updates the state so they appear before your very eyes!
 
     if (!isLoading) return; // Data already loaded, no need to load again
+    if (widget.vehicleId == null || widget.stopsToDisplayOverride != null) {
+      setState(() {
+        isLoading = false;
+        nextBusStops = [];
+        if (widget.stopsToDisplayOverride == null) return;
+        for (ArrivalTimeLocation loc in widget.stopsToDisplayOverride!) {
+          nextBusStops.add(
+            DisplayBusStop(
+              name: loc.name,
+              id: loc.stopId ?? "000",
+              routeCode: widget.routeCodeOverride ?? "",
+              prediction: loc.arrivalTime
+            )
+          );
+        }
+      });
+      return; // Use override data intead of loading it from the internet
+    }
 
     var result;
 
     try {
       debugPrint("Loading data......");
-      result = await fetchNextBusStops(widget.vehicleId);
+      result = await fetchNextBusStops(widget.vehicleId!);
       debugPrint("    Got result! $result");
     } catch (e) {
       debugPrint("Error getting stops: $e");
@@ -265,7 +316,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       return idA.compareTo(idB);
     });
 
-    var results_filtered = [];
+    List<BusStopWithPrediction> results_filtered = [];
 
     if (widget.filterAfterPredictionTime == 0 || widget.filterAfterStop == "") {
       // If filtering parameters aren't present, don't filter the data
@@ -302,7 +353,10 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     if (!mounted) return; // If the object is destroyed, don't set its state
 
     setState(() {
-      nextBusStops = results_filtered;
+      nextBusStops = results_filtered.map((BusStopWithPrediction origStop) {
+        return DisplayBusStop(
+            name: origStop.name, id: origStop.id, routeCode: origStop.busRouteCode, prediction: origStop.prediction);
+        }).toList();
       isLoading = false;
     });
   }
@@ -311,9 +365,10 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     int lineTopStyle,
     int lineBottomStyle,
     bool isKeyStop,
-    String prediction,
-    String stopName,
-    String stopId,
+    // String prediction,
+    // String stopName,
+    // String stopId,
+    DisplayBusStop stop,
     Function(String, String)? onBusStopClick,
     Color topColor,
     Color bottomColor
@@ -326,17 +381,25 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     //        the user that it's clickable
 
     // lineTopStyle and lineBottomStyle are LINE_CONNECTED, LINE_DISCONNECTED, etc.
-    String predictionText = "${prediction} min";
-    if (prediction == "DUE") predictionText = "Now";
+    
+    String predictionText = "";
+    if (widget.stopsToDisplayOverride != null){
+      predictionText = stop.prediction != null? stop.prediction! : "";
+    } else if (stop.prediction == "DUE") {
+      predictionText = "Now";
+    } else{
+      predictionText = stop.prediction != null? futureTime(stop.prediction!) : "";
+    }
+    
 
     return GestureDetector(
       onTap: () {
-        onBusStopClick?.call(stopName, stopId);
+        onBusStopClick?.call(stop.name, stop.id);
       },
       child: Row(
         children: [
           CustomPaint(
-            size: Size(40, 40),
+            size: const Size(40, 40),
             painter: UpcomingStopIconPainter(
               lineTopStyle,
               lineBottomStyle,
@@ -348,18 +411,18 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
           ),
           Expanded(
             child: Text(
-              stopName,
+              stop.name,
               style: TextStyle(
                 fontSize: isKeyStop ? 16.0 : 14.0,
                 fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ),
-          Text(predictionText, style: TextStyle(fontSize: 16.0)),
+          (stop.prediction != null) ? Text(predictionText, style: TextStyle(fontSize: 16.0)) : SizedBox.shrink(),
 
           (onBusStopClick != null)
-              ? Icon(Icons.chevron_right, color: Colors.grey, size: 20)
-              : SizedBox.shrink(),
+              ? const Icon(Icons.chevron_right, color: Colors.grey, size: 20)
+              : const SizedBox.shrink(),
         ],
       ),
     );
@@ -375,7 +438,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     return Row(
         children: [
           CustomPaint(
-            size: Size(40, 40),
+            size: const Size(40, 40),
             painter: UpcomingStopIconSwitchRoutePainter(
               topColor,
               bottomColor
@@ -386,7 +449,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
               opacity: 0.7,
               child: Text(
                 message,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14.0,
                   fontWeight: FontWeight.normal,
                   fontStyle: FontStyle.italic
@@ -399,6 +462,8 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       );
   }
 
+  // NEXT STEPS TODO: Add key stops to TheRide!
+
   static const int DETAILED_STOPS_TO_SHOW = 4; // Number of detailed stops to show per bus
       // (Detailed stops are shown at the beginning and are connected with a solid line.)
       // Only applies if showAbridgedStops is set to true.
@@ -409,9 +474,14 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
 
     List<Widget> rowElements = [];
 
-    List<BusStopWithPrediction> additionalKeyStops = [];
+    // List<BusStopWithPrediction> additionalKeyStops = [];
+    List<DisplayBusStop> additionalKeyStops = [];
     
     int numDetailedStopsToShow = 0;
+    String lastStopRouteCode = "";
+    
+
+    
     if (widget.showAbridgedStops) {
       numDetailedStopsToShow = min(DETAILED_STOPS_TO_SHOW, nextBusStops.length);
 
@@ -425,27 +495,25 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       numDetailedStopsToShow = nextBusStops.length;
     }
 
-    String lastStopRouteCode = "";
-
     // Sets up the array of detailed stops (shown at the top, connected with a solid line)
     for (int i = 0; i < numDetailedStopsToShow; i++) {
-      BusStopWithPrediction upcomingStop = nextBusStops[i];
+      // BusStopWithPrediction upcomingStop = nextBusStops[i];
+      DisplayBusStop upcomingStop = nextBusStops[i];
 
       bool isKeyStop = false;
-      String stopName = upcomingStop.name;
+      //String stopName = upcomingStop.name;
       if (KEY_STOPS.containsKey(upcomingStop.id)) {
         isKeyStop = true;
-        stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
+        //stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
       }
 
       // Check if we need to add the "Bus changes route to ..." message
-      if (lastStopRouteCode != "" && lastStopRouteCode != upcomingStop.busRouteCode) {
-      //if (true) {
+      if (lastStopRouteCode != "" && lastStopRouteCode != upcomingStop.routeCode) {
         rowElements.add(
           getUpcomingStopRouteChangeDetectedRow(
-            "Bus changes route to "+getPrettyRouteName(upcomingStop.busRouteCode),
+            "Bus changes route to "+getPrettyRouteName(upcomingStop.routeCode),
             RouteColorService.getRouteColor(lastStopRouteCode),
-            RouteColorService.getRouteColor(upcomingStop.busRouteCode))
+            RouteColorService.getRouteColor(upcomingStop.routeCode))
         );
       }
 
@@ -458,16 +526,14 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
                     : LINE_DISCONNECTED)
               : LINE_CONNECTED,
           isKeyStop,
-          upcomingStop.prediction,
-          stopName,
-          upcomingStop.id,
+          upcomingStop,
           widget.onBusStopClick,
-          RouteColorService.getRouteColor(upcomingStop.busRouteCode),
-          RouteColorService.getRouteColor(upcomingStop.busRouteCode),
+          RouteColorService.getRouteColor(upcomingStop.routeCode),
+          RouteColorService.getRouteColor(upcomingStop.routeCode),
         ),
       );
 
-      lastStopRouteCode = upcomingStop.busRouteCode;
+      lastStopRouteCode = upcomingStop.routeCode;
     }
 
     // Sets up array of additional key stops (shown below the detailed stops and connected
@@ -475,19 +541,9 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     if (widget.showAbridgedStops) {
       // These key stops are only shown if the detailed stops were abridged
       for (int i = 0; i < additionalKeyStops.length; i++) {
-        BusStopWithPrediction upcomingStop = additionalKeyStops[i];
-        String stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
+        DisplayBusStop upcomingStop = additionalKeyStops[i];
+        //String stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
         bool isKeyStop = true; // All these stops are key stops
-
-        // if (lastStopRouteCode != "" && lastStopRouteCode != upcomingStop.busRouteCode) {
-        // //if (true) {
-        //   rowElements.add(
-        //     getUpcomingStopRouteChangeDetectedRow(
-        //       "Bus changes route to "+getPrettyRouteName(upcomingStop.busRouteCode),
-        //       RouteColorService.getRouteColor(lastStopRouteCode),
-        //       RouteColorService.getRouteColor(upcomingStop.busRouteCode))
-        //   );
-        // }
 
         rowElements.add(
           getUpcomingStopRow(
@@ -496,22 +552,20 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
                 ? LINE_DISCONNECTED
                 : LINE_PARTIALLY_CONNECTED,
             isKeyStop,
-            upcomingStop.prediction,
-            stopName,
-            upcomingStop.id,
+            upcomingStop,
             widget.onBusStopClick,
-            RouteColorService.getRouteColor(upcomingStop.busRouteCode),
-            RouteColorService.getRouteColor(upcomingStop.busRouteCode),
+            RouteColorService.getRouteColor(upcomingStop.routeCode),
+            RouteColorService.getRouteColor(upcomingStop.routeCode),
           ),
         );
 
-        lastStopRouteCode = upcomingStop.busRouteCode;
+        lastStopRouteCode = upcomingStop.routeCode;
       }
     }
 
     if (widget.shouldAnimate) {
       return AnimatedSize(
-        duration: Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         child: Container(
           width: double.infinity,
@@ -522,16 +576,16 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
                     ...rowElements,
                     (widget.showSeeMoreButton && !isLoading)
                         ? (TextButton(
-                            child: Text("See all stops for this bus"),
+                            child: const Text("See all stops for this bus"),
                             onPressed: () {
-                              widget.showBusSheet?.call(widget.vehicleId);
+                              widget.showBusSheet?.call(widget.vehicleId!);
                             },
                           ))
-                        : SizedBox.shrink(),
+                        : const SizedBox.shrink(),
                   ],
                 )
               : isLoading
-              ? SizedBox.shrink()
+              ? const SizedBox.shrink()
               : widget.childIfNoUpcomingStopsFound,
         ),
       );
@@ -539,7 +593,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       return (rowElements.length > 0)
           ? Column(children: rowElements)
           : isLoading
-          ? SizedBox.shrink()
+          ? const SizedBox.shrink()
           : widget.childIfNoUpcomingStopsFound;
     }
   }
@@ -548,16 +602,18 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
 class UpcomingStopsWidget extends StatefulWidget {
   final Color color;
   final String routeId;
-  final String vehicleId;
+  final String? vehicleId;
   final bool isExpanded;
-  bool shouldAnimate = true;
-  bool showAbridgedStops = true;
-  int filterAfterPredictionTime = 0;
-  String filterAfterStop = "";
-  bool showSeeMoreButton = false;
-  Function(String)? showBusSheet;
-  Function(String, String)? onBusStopClick;
-  Widget childIfNoUpcomingStopsFound;
+  final bool shouldAnimate;
+  final bool showAbridgedStops;
+  final int filterAfterPredictionTime;
+  final String filterAfterStop;
+  final bool showSeeMoreButton;
+  final Function(String)? showBusSheet;
+  final Function(String, String)? onBusStopClick;
+  final Widget childIfNoUpcomingStopsFound;
+  final List<ArrivalTimeLocation>? stopsToDisplayOverride;
+  final String? routeCodeOverride;
 
   @override
   State<StatefulWidget> createState() => _UpcomingStopsWidgetState();
@@ -565,7 +621,11 @@ class UpcomingStopsWidget extends StatefulWidget {
   UpcomingStopsWidget({
     required this.color,
     required this.routeId,
-    required String this.vehicleId,
+    String? this.vehicleId,
+    // TODO: Allow passing in of stops instead of a vehicle ID
+    List<ArrivalTimeLocation>? this.stopsToDisplayOverride,
+    String? this.routeCodeOverride,
+
     required bool this.isExpanded,
     this.shouldAnimate = true,
     this.showAbridgedStops = true,

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
-import '../constants.dart'; 
 import 'package:intl/intl.dart';
                           
 String futureTime(String minutesInFuture){
@@ -53,15 +52,10 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: getColor(context, ColorType.dim),
+        color: getColor(context, ColorType.infoCardColor),
         borderRadius: BorderRadius.all(Radius.circular(15)),
         boxShadow: [
-          BoxShadow(
-            color: getColor(context, ColorType.shadow),
-            spreadRadius: 1.5, 
-            blurRadius: 2, 
-            offset: Offset(0, 3), 
-          ),
+          getInfoCardShadow(context)
         ],
       ),
       child: FutureBuilder(

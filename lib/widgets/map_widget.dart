@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import '../constants.dart';
 
 // iOS Map widget
@@ -15,6 +11,7 @@ class MapWidget extends StatelessWidget {
   final String darkMapStyle;
   final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
+  final void Function()? onCameraIdle;
   final void Function(CameraPosition)? onCameraMove;
   final bool myLocationEnabled;
   final bool myLocationButtonEnabled;
@@ -29,6 +26,7 @@ class MapWidget extends StatelessWidget {
     required this.darkMapStyle,
     required this.lightMapStyle,
     this.onMapCreated,
+    this.onCameraIdle,
     this.onCameraMove,
     this.myLocationEnabled = true,
     this.myLocationButtonEnabled = false,
@@ -38,8 +36,9 @@ class MapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GoogleMap(
+    return RepaintBoundary(child: GoogleMap(
       onMapCreated: onMapCreated,
+      onCameraIdle: onCameraIdle,
       onCameraMove: onCameraMove,
       initialCameraPosition: CameraPosition(
         target: initialCenter,
@@ -47,10 +46,11 @@ class MapWidget extends StatelessWidget {
       ),
       cameraTargetBounds: CameraTargetBounds(
         LatLngBounds(
-          southwest: LatLng(42.217530, -83.809124), // Southern and Westernmost point
-          northeast: LatLng(42.328602, -83.685307), // Northern and Easternmost point
+          southwest: LatLng(42.217530, -83.84367266), // Southern and Westernmost point
+          northeast: LatLng(42.328602, -83.53892646), // Northern and Easternmost point 
         )
       ),
+      minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
       myLocationEnabled: myLocationEnabled,
       myLocationButtonEnabled: myLocationButtonEnabled,
       zoomControlsEnabled: zoomControlsEnabled,
@@ -58,7 +58,7 @@ class MapWidget extends StatelessWidget {
       polylines: polylines,
       markers: markers,
       style: isDarkMode(context) ? darkMapStyle : lightMapStyle
-    );
+    ));
   }
 } 
 
@@ -72,6 +72,7 @@ class AndroidMap extends StatefulWidget {
   final String darkMapStyle;
   final String lightMapStyle;
   final void Function(GoogleMapController)? onMapCreated;
+  final void Function()? onCameraIdle;
   final void Function(CameraPosition)? onCameraMove;
   final bool myLocationButtonEnabled;
   AndroidMap(
@@ -82,6 +83,7 @@ class AndroidMap extends StatefulWidget {
       required this.darkMapStyle,
       required this.lightMapStyle,
       this.onMapCreated,
+      this.onCameraIdle,
       this.onCameraMove,
       this.polylines = const {},
       this.myLocationButtonEnabled = false,});
@@ -99,9 +101,9 @@ class _AndroidMapState extends State<AndroidMap>
   bool _hasPending = false;
   Set<Marker>? _pendingDynamicMarkers;
   int? mapId;
-  GoogleMapController? _gController;
-  bool? _lastIsDark;
-  static const int _targetFps = 15;
+  static const int _targetFps = 8;
+  // static const int _animationDurationMs = 10900;
+  static const int _animationDurationMs = 100;
   late final Duration _minFrameGap =
       Duration(milliseconds: (1000 / _targetFps).floor());
   Duration _lastPaint = Duration.zero;
@@ -147,7 +149,7 @@ class _AndroidMapState extends State<AndroidMap>
     _controller = AnimationController(
       vsync: this,
       // duration: const Duration(milliseconds: 800),
-      duration: const Duration(milliseconds: 10900)
+      duration: const Duration(milliseconds: _animationDurationMs)
     );
 
     // final curved = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
@@ -253,7 +255,8 @@ class _AndroidMapState extends State<AndroidMap>
 
   @override
   Widget build(BuildContext context) {
-    return GoogleMap(
+    
+    return RepaintBoundary(child: GoogleMap(
       compassEnabled: false,
       myLocationEnabled: true,
       mapToolbarEnabled: false,
@@ -261,10 +264,11 @@ class _AndroidMapState extends State<AndroidMap>
       myLocationButtonEnabled: false,
       cameraTargetBounds: CameraTargetBounds(
         LatLngBounds(
-          southwest: LatLng(42.217530, -83.809124), // Southern and Westernmost point
-          northeast: LatLng(42.328602, -83.668917), // Northern and Easternmost point
+          southwest: LatLng(42.217530, -83.84367266), // Southern and Westernmost point
+          northeast: LatLng(42.328602, -83.53892646), // Northern and Easternmost point 
         )
       ),
+      minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
       markers: curMarkers.union(widget.staticMarkers),
       initialCameraPosition: CameraPosition(
         target: widget.initialCenter,
@@ -273,7 +277,8 @@ class _AndroidMapState extends State<AndroidMap>
       polylines: widget.polylines,
       onMapCreated: widget.onMapCreated,
       onCameraMove: widget.onCameraMove,
+      onCameraIdle: widget.onCameraIdle,
       style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle
-    );
+    ));
   }
 }

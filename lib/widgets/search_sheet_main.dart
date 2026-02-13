@@ -1,13 +1,9 @@
 import 'package:bluebus/globals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/journey.dart';
-import '../services/journey_repository.dart';
-import '../widgets/journey_results_widget.dart';
 import '../constants.dart';
 
 class LocationSearchBar extends HookWidget {
@@ -68,32 +64,53 @@ class LocationSearchBar extends HookWidget {
           }).toList();
         }
 
-        final stopResponse = await http.get(
-          Uri.parse(BACKEND_URL + '/getAllStops'),
-        );
-        List<Location> stopLocs = [];
-        if (stopResponse.statusCode == 200 &&
-            stopResponse.body.trim().isNotEmpty &&
-            stopResponse.body.trim() != '{}') {
-          final stopList = jsonDecode(stopResponse.body) as List<dynamic>;
-          stopLocs = stopList.map((stop) {
-            final name = stop['name'] as String;
-            final aliases = [
-              name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
-            ];
-            final stopId = stop['stpid'] as String?;
-            final lat = stop['lat'] as double?;
-            final lon = stop['lon'] as double?;
-            return Location(
-              name,
-              (stopId != null) ? stopId : "",
-              aliases,
-              true,
-              stopId: stopId,
-              latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
-            );
-          }).toList();
+        // TODO: this code is DUPLICATED. We need to refactor to avoid duplication.
+        // LOADS BOTH STOP TYPES
+        final uriStops = Uri.parse(BACKEND_URL + '/getAllStops');
+        final uriRideStops = Uri.parse(BACKEND_URL + '/getAllRideStops');
+
+        // Calling in parallel
+        final responses = await Future.wait([
+          http.get(uriStops),
+          http.get(uriRideStops),
+        ]);
+
+        // Helper function to parse a response into a List<Location>
+        // This prevents copying/pasting the parsing logic.
+        List<Location> parseLocations(http.Response response) {
+          if (response.statusCode == 200 &&
+              response.body.trim().isNotEmpty &&
+              response.body.trim() != '{}') {
+            
+            final stopList = jsonDecode(response.body) as List<dynamic>;
+            
+            return stopList.map((stop) {
+              final name = stop['name'] as String;
+              final aliases = [
+                name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
+              ];
+              final stopId = stop['stpid'] as String?;
+              final lat = stop['lat'] as double?;
+              final lon = stop['lon'] as double?;
+              
+              return Location(
+                name,
+                (stopId != null) ? stopId : "",
+                aliases,
+                true,
+                stopId: stopId,
+                latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
+              );
+            }).toList();
+          }
+          return []; // Return empty list if call failed or body is empty
         }
+
+        // parse both and merge
+        List<Location> stopLocs = [
+          ...parseLocations(responses[0]),
+          ...parseLocations(responses[1]),
+        ];
 
         globalStopLocs = stopLocs;
 
@@ -351,6 +368,7 @@ class _SearchSheetState extends State<SearchSheet> {
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
+        boxShadow: [SheetBoxShadow]
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

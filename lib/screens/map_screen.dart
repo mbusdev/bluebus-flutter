@@ -1,24 +1,23 @@
-import 'dart:io' show Platform, isIOS;
+import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
-import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
+import 'package:bluebus/widgets/loading_screen.dart';
+import 'package:bluebus/widgets/reminder_widgets.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:bluebus/widgets/universal_map_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -40,6 +39,22 @@ import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
 
+Future<BitmapDescriptor> resizeImage(ByteData image) async {
+  // Load and resize stop icon
+  final stopBytes = image;
+  final stopCodec = await ui.instantiateImageCodec(
+    stopBytes.buffer.asUint8List(),
+    targetWidth: 65,
+    targetHeight: 65,
+  );
+  final stopFrame = await stopCodec.getNextFrame();
+  final stopData = await stopFrame.image.toByteData(
+    format: ui.ImageByteFormat.png,
+  );
+  return BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
+
+}
+
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
 
@@ -53,10 +68,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
   late Journey currDisplayed;
 
   Future<void>? _dataLoadingFuture;
-  final _loadingMessageNotifier = ValueNotifier<String>('Initializing...');
-
+  final _loadingMessageNotifier = ValueNotifier<Loadpoint>(Loadpoint("Initializing...", 0));
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
+  bool? _userLocVisible;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
   Set<Polyline> _displayedPolylines = {};
@@ -76,12 +91,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
   Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
-  Map<String, String> _routeIdToName = {};
 
   // Custom marker icons
   BitmapDescriptor? _busIcon;
   BitmapDescriptor? _stopIcon;
+  BitmapDescriptor? _rideStopIcon;
   BitmapDescriptor? _favStopIcon;
+  BitmapDescriptor? _favRideStopIcon;
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -197,6 +213,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
   }
 
   Future<void> _loadAllData() async {
+    
 
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
@@ -205,7 +222,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
-    _loadingMessageNotifier.value = 'Contacting server...';
+    _loadingMessageNotifier.value = Loadpoint('Contacting server...', 1);
     StartupDataHolder? startupData = await _getStartupData();
 
     // keep trying to reach server. Can't start without this
@@ -289,6 +306,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
     ]);
 
     // actions that depend on the data loaded earlier
+    _loadingMessageNotifier.value = Loadpoint('Loading bus images...', 2);
+    await _loadRouteSpecificBusIcons();
     _loadingMessageNotifier.value = 'Loading bus images...';
     // await _loadRouteSpecificBusIcons();
     _updateAvailableRoutes(busProvider.routes);
@@ -305,44 +324,66 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
     await _loadMapStyles();
 
     // Finally, get the initial bus locations and start the live updates.
-    _loadingMessageNotifier.value = 'Loading bus positions...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus positions...', 3);
     await busProvider.loadBuses();
 
-    _loadingMessageNotifier.value = 'Loading bus stops...';
+    _loadingMessageNotifier.value = Loadpoint('Loading bus stops...', 4);
     _loadStopsForLaunch();
 
-    _loadingMessageNotifier.value = 'Starting app...';
+    _loadingMessageNotifier.value = Loadpoint('Starting app...', 5);
     busProvider.startBusUpdates();
+    await Future.delayed(const Duration(milliseconds: 180)); 
   }
 
   // need this to make sure that the stop names exist in the cache
   Future<void> _loadStopsForLaunch() async {
-    final stopResponse = await http.get(
-      Uri.parse(BACKEND_URL + '/getAllStops'),
-    );
-    List<Location> stopLocs = [];
-    if (stopResponse.statusCode == 200 &&
-        stopResponse.body.trim().isNotEmpty &&
-        stopResponse.body.trim() != '{}') {
-      final stopList = jsonDecode(stopResponse.body) as List<dynamic>;
-      stopLocs = stopList.map((stop) {
-        final name = stop['name'] as String;
-        final aliases = [
-          name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
-        ];
-        final stopId = stop['stpid'] as String?;
-        final lat = stop['lat'] as double?;
-        final lon = stop['lon'] as double?;
-        return Location(
-          name,
-          (stopId != null) ? stopId : "",
-          aliases,
-          true,
-          stopId: stopId,
-          latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
-        );
-      }).toList();
+    // LOADS BOTH STOP TYPES
+    final uriStops = Uri.parse(BACKEND_URL + '/getAllStops');
+    final uriRideStops = Uri.parse(BACKEND_URL + '/getAllRideStops');
+
+    // Calling in parallel
+    final responses = await Future.wait([
+      http.get(uriStops),
+      http.get(uriRideStops),
+    ]);
+
+    // Helper function to parse a response into a List<Location>
+    // This prevents copying/pasting the parsing logic.
+    List<Location> parseLocations(http.Response response) {
+      if (response.statusCode == 200 &&
+          response.body.trim().isNotEmpty &&
+          response.body.trim() != '{}') {
+        
+        final stopList = jsonDecode(response.body) as List<dynamic>;
+        
+        return stopList.map((stop) {
+          final name = stop['name'] as String;
+          final aliases = [
+            name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
+          ];
+          final stopId = stop['stpid'] as String?;
+          final lat = stop['lat'] as double?;
+          final lon = stop['lon'] as double?;
+          
+          return Location(
+            name,
+            (stopId != null) ? stopId : "",
+            aliases,
+            true,
+            stopId: stopId,
+            latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
+          );
+        }).toList();
+      }
+      return []; // Return empty list if call failed or body is empty
     }
+
+    // parse both and merge
+    List<Location> stopLocs = [
+      ...parseLocations(responses[0]),
+      ...parseLocations(responses[1]),
+    ];
+
     globalStopLocs = stopLocs;
   }
 
@@ -419,6 +460,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
   //     } catch (_) {
   //       _favStopIcon = null;
   //     }
+  Future<void> _loadCustomMarkers() async {
+    try {
+      // Load stop icons
+      _stopIcon = await resizeImage(  
+        await rootBundle.load('assets/busStop.png'),
+      );
+      _rideStopIcon = await resizeImage(
+        await rootBundle.load('assets/busStopRide.png'),
+      );
+      _favStopIcon = await resizeImage(
+        await rootBundle.load('assets/favbusStop.png'),
+      );
+      _favRideStopIcon = await resizeImage(
+        await rootBundle.load('assets/favbusStopRide.png'),
+      );
 
   //     // Load route specific bus icons
   //     await _loadRouteSpecificBusIcons();
@@ -432,6 +488,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
   //     _stopIcon = BitmapDescriptor.defaultMarkerWithHue(
   //       BitmapDescriptor.hueAzure,
   //     );
+      _rideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
+      _favStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
+      _favRideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueAzure,
+      );
   //   }
   // }
 
@@ -682,7 +747,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
       }
     }
     setState(() {
-      _routeIdToName = routeIdToName;
       _availableRoutes = routeIdToName.entries
           .map((e) => {'id': e.key, 'name': e.value})
           .toList();
@@ -703,6 +767,59 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
       // Use backend color if available, otherwise fallback to service
       final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
 
+      if (!_routePolylines.containsKey(routeKey)) {
+        _routePolylines[routeKey] = Polyline(
+          polylineId: PolylineId(routeKey),
+          points: r.points,
+          color: routeColor,
+          width: 4,
+        );
+      }
+      if (!_routeStopMarkers.containsKey(routeKey)) {
+        _routeStopMarkers[routeKey] = r.stops
+            .map(
+              (stop) => Marker(
+                markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
+                position: stop.location,
+                flat: true,
+                icon: _favoriteStops.contains(stop.id)
+                    ? (stop.isRide? 
+                        _favRideStopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          ) : 
+                        _favStopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          ))
+                    : (stop.isRide?
+                        _rideStopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          ) :
+                        _stopIcon ??
+                          BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          )),
+                consumeTapEvents: true,
+                onTap: () {
+                  try {
+                    Haptics.vibrate(HapticsType.light);
+                  } catch (e) { }
+                  
+                  _showStopSheet(
+                    stop.id,
+                    stop.name,
+                    stop.location.latitude,
+                    stop.location.longitude,
+                  );
+                },
+                rotation: stop.rotation,
+                anchor: Offset(0.5, 0.5),
+              ),
+            )
+            .toSet();
+      }
       // if (!_routePolylines.containsKey(routeKey)) {
       //   _routePolylines[routeKey] = Polyline(
       //     polylineId: PolylineId(routeKey),
@@ -755,6 +872,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
     //   final updated = markers.map((m) {
     //     if (m.markerId.value.startsWith('stop_${stpid}_')) {
     //       return Marker(
+            flat: true,
     //         markerId: m.markerId,
     //         position: m.position,
     //         icon: favored
@@ -797,8 +915,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
     //   _updateAllDisplayedMarkers();
     // });
   }
-
-  bool _isFavorited(String stpid) => _favoriteStops.contains(stpid);
 
 
   void _updateDisplayedRoutes() {
@@ -862,6 +978,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
           }
 
           return Marker(
+            flat: true,
             markerId: MarkerId('bus_${bus.id}'),
             consumeTapEvents: true,
             position: bus.position,
@@ -899,6 +1016,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
 
           _displayedJourneyBusMarkers.add(
             Marker(
+              flat: true,
               markerId: MarkerId('journey_bus_${bus.id}'),
               consumeTapEvents: true,
               position: bus.position,
@@ -1009,8 +1127,22 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
   //   _mapController = controller;
   // }
 
-  // void _onCameraMove(CameraPosition position) {
+  // void _onCameraMove(CameraPosition position) async {
   //   _currentCameraPos = position;
+    
+  }
+
+  void _onCameraIdle() async {
+    // check if user location is within viewport bounds
+    LatLngBounds? viewportBounds = await _mapController?.getVisibleRegion();
+    if (viewportBounds != null) {
+      Position? pos = await _getUserLocation(showError: false);
+      if (pos != null) {
+        _userLocVisible = !viewportBounds.contains(
+          LatLng(pos.latitude, pos.longitude)
+        );
+      }
+    }
   // }
 
   // Create a bus marker from a Bus model
@@ -1022,6 +1154,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
         _busIcon ??
         BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
     return Marker(
+      flat: true,
       markerId: MarkerId('bus_${bus.id}'),
       consumeTapEvents: true,
       position: bus.position,
@@ -1324,6 +1457,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
             // add stop markers at endpoints of the segment (boarding/getting off)
             _displayedJourneyMarkers.addAll([
               Marker(
+                flat: true,
                 markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),
                 position: bestSegment.first,
                 icon:
@@ -1333,6 +1467,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                     ),
               ),
               Marker(
+                flat: true,
                 markerId: MarkerId(
                   'journey_stop_${leg.destinationID}_$legIndex',
                 ),
@@ -1363,6 +1498,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                 allPoints.add(latlng);
                 _displayedJourneyMarkers.add(
                   Marker(
+                    flat: true,
                     markerId: MarkerId('journey_stop_${st.stop}_$legIndex'),
                     position: latlng,
                     icon:
@@ -1470,10 +1606,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
 
         // Check if we have both coordinates before creating walking polyline
         if (startLatLng != null && endLatLng != null) {
+          List<LatLng> pts = [];
+          if (leg.pathCoords != null && leg.pathCoords!.isNotEmpty) {
+            pts = leg.pathCoords!;
+          } else {
+            pts = [startLatLng, endLatLng];
+          }
+
           // Create a dotted line for walking segments
           final walkingPolyline = Polyline(
             polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
-            points: [startLatLng, endLatLng],
+            points: pts,
             color: walkLineColor, // Walk line color
             width: 6, // line width
             patterns: [
@@ -1489,6 +1632,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
           if (legIndex == journey.legs.length - 1) {
             _displayedJourneyMarkers.add(
               Marker(
+                flat: true,
                 markerId: MarkerId(
                   'journey_final_destination_${journey.hashCode}',
                 ),
@@ -1504,6 +1648,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
           if (legIndex == 0) {
             _displayedJourneyMarkers.add(
               Marker(
+                flat: true,
                 markerId: MarkerId('journey_start_${journey.hashCode}'),
                 position: startLatLng,
                 icon: BitmapDescriptor.defaultMarkerWithHue(
@@ -1801,45 +1946,30 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
               false,
             );
           },
-          routesWithActiveReminder:
-            IncomingBusReminderService
-              .getActiveReminders()
-              .where((x) => x.stpid == stopID)
-              .map((x) => x.rtid)
-              .toList(),
-          onToggleReminder: (stopID, routeID) async {
-            if (IncomingBusReminderService.isActiveReminder(stopID, routeID)) {
-              await IncomingBusReminderService.removeReminder(stopID, routeID);
-            } else {
-              await IncomingBusReminderService.addReminder(stopID, routeID);
-            }
-          },
         );
       },
     ).then((_) {});
   }
 
-  Future<void> _centerOnLocation(
-    bool userLocation, [
-    double lat = 0,
-    double long = 0,
-  ]) async {
+  Future<Position?> _getUserLocation({bool showError = false}) async {
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        if (!showError) { return null; }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Location services are disabled'),
             backgroundColor: Colors.red,
           ),
         );
-        return;
+        return null;
       }
 
       // Check and request location permissions if needed
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        if (!showError) { return null; }
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1848,59 +1978,72 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
               backgroundColor: Colors.red,
             ),
           );
-          return;
+          return null;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
+        if (!showError) { return null; }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Location permissions are denied. Please enable them in settings'),
             backgroundColor: Colors.red,
           ),
         );
-        return;
+        return null;
       }
-
-      // at first create a default position. User location can overwrite later if needed
-      Position position = Position(
-        longitude: long,
-        latitude: lat,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        headingAccuracy: 0,
-        speed: 0,
-        speedAccuracy: 0,
+      
+      return await Geolocator.getCurrentPosition().timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception("Location request timed out.");
+        },
       );
 
-      if (userLocation) {
-        position = await Geolocator.getCurrentPosition().timeout(
-          Duration(seconds: 5),
-          onTimeout: () {
-            throw Exception("Location request timed out.");
-          },
-        );
-      }
-
-      // Animate the map camera to the user's location
-      if (_mapController != null) {
-        await _mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: LatLng(position.latitude, position.longitude),
-              zoom: userLocation ? 15.0 : 17.0,
-            ),
-          ),
-        );
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error getting location: $e'),
           backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    return null;
+  }
+
+  Future<void> _centerOnLocation(
+    bool userLocation, [
+    double lat = 0,
+    double long = 0,
+  ]) async {
+    // at first create a default position. User location can overwrite later if needed
+    Position position = Position(
+      longitude: long,
+      latitude: lat,
+      timestamp: DateTime.now(),
+      accuracy: 0,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
+
+    if (userLocation) {
+      Position? pos = await _getUserLocation();
+      if (pos != null) position = pos;
+    }
+
+    // Animate the map camera to the user's location
+    if (_mapController != null) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(position.latitude, position.longitude),
+            zoom: userLocation ? 15.0 : 17.0,
+          ),
         ),
       );
     }
@@ -1930,8 +2073,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
     final mediaQueryData = MediaQuery.of(context);
     final double flutterSafeAreaTop = mediaQueryData.padding.top;
     final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
-    final double flutterSafeAreaLeft = mediaQueryData.padding.left;
-    final double flutterSafeAreaRight = mediaQueryData.padding.right;
     double padBottom = 0;
     double padTop = 0;
     double padLeftRight = 0;
@@ -1958,9 +2099,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
+          
           //if (!Platform.isIOS){print("is androud");} // I love androud
-          return PopScope(
+          //I also love androud
+        return AnimatedSwitcher(
+          duration: Duration(milliseconds: 200),
+          
+          child: (snapshot.connectionState == ConnectionState.done)
+          ? PopScope(
+            //for switch animation
+            key: ValueKey(1),
+
             // lets us prevent back button on map page
             canPop: false,
             onPopInvokedWithResult: (didPop, result) { 
@@ -2006,6 +2155,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                     lightMapStyle: _lightMapStyle,
                     // onMapCreated: _onMapCreated,
                     // onCameraMove: _onCameraMove,
+                    onCameraIdle: _onCameraIdle,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: true,
@@ -2090,6 +2240,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                 //         : _displayedBusMarkers,
                 //     onMapCreated: _onMapCreated,
                 //     onCameraMove: _onCameraMove,
+                    onCameraIdle: _onCameraIdle,
                 //     //myLocationEnabled: true,
                 //     myLocationButtonEnabled: false,
                 //     //zoomControlsEnabled: true,
@@ -2188,13 +2339,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                                       style: TextStyle(
                                         color: maizeBusYellow,
                                         fontWeight: FontWeight.w800,
-                                        fontSize: 30,
+                                        fontSize: 30
                                       ),
                                     ),
                                     Text(
                                       'bus',
                                       style: TextStyle(
-                                        color: maizeBusBlue,
+                                        color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,
                                         fontWeight: FontWeight.w800,
                                         fontSize: 30,
                                       ),
@@ -2242,6 +2393,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                               ],
                             )
                           ),
+
+                      // reminder widget
+                      SizedBox(height: 30.0,),
+                      ReminderWidgets(),
                        
                       Spacer(),
                       
@@ -2249,88 +2404,84 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                       (!_journeyOverlayActive)
                           ? Padding(
                             padding: const EdgeInsets.only(
-                              left: 15,
-                              right: 15.5,
-                              top: 15,
+                              bottom: 20
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                // face north button is only visible when not facing north
-                                Visibility(
-                                  visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 10,
-                                          offset: Offset(0, 6)
-                                        )
-                                      ],
-                                      borderRadius: BorderRadius.circular(25)
-                                    ),
-                                    child: FloatingActionButton.small(
-                                      onPressed: _setMapToNorth,
-                                      heroTag: 'north_fab',
-                                      backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(56),
-                                      ),
-                                      child: Transform.rotate(
-                                        angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
-                                        child: Icon(
-                                          FontAwesomeIcons.compass,
-                                          color: darkColors[ColorType.mapButtonIcon],
-                                          shadows: [
-                                            Shadow(
-                                              color: getColor(context, ColorType.mapButtonShadow),
+                                Column(
+                                  spacing: 10,
+                                  children: [
+                                    // face north button is only visible when not facing north
+                                    Visibility(
+                                      visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
                                               blurRadius: 4,
                                               offset: Offset(0, 2)
                                             )
                                           ],
+                                          borderRadius: BorderRadius.circular(25)
+                                        ),
+                                        child: FloatingActionButton.small(
+                                          onPressed: _setMapToNorth,
+                                          heroTag: 'north_fab',
+                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(56),
+                                          ),
+                                          child: Transform.rotate(
+                                            angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
+                                            child: Icon(
+                                              FontAwesomeIcons.compass,
+                                              color: getColor(context, ColorType.mapButtonPrimary),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                  
-                                // location button
-                                //DecoratedBox(
-                                //  decoration: BoxDecoration(
-                                //    boxShadow: [
-                                //      BoxShadow(
-                                //        color: getColor(context, ColorType.mapButtonShadow),
-                                //        blurRadius: 10,
-                                //        offset: Offset(0, 6)
-                                //      )
-                                //    ],
-                                //    borderRadius: BorderRadius.circular(25)
-                                //  ),
-                                //  child: FloatingActionButton.small(
-                                //    onPressed: () {
-                                //      _centerOnLocation(true);
-                                //    },
-                                //    heroTag: 'location_fab',
-                                //    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                //    elevation: 0,
-                                //    shape: RoundedRectangleBorder(
-                                //      borderRadius: BorderRadius.circular(56),
-                                //    ),
-                                //    child: Icon(
-                                //      Icons.my_location,
-                                //      color: darkColors[ColorType.mapButtonIcon],
-                                //      shadows: [
-                                //        Shadow(
-                                //          color: getColor(context, ColorType.mapButtonShadow),
-                                //          blurRadius: 4,
-                                //          offset: Offset(0, 2)
-                                //        )
-                                //      ],
-                                //    ),
-                                //  ),
-                                //),
+                      
+                                    // location button
+                                    AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 250),
+                                      child: !(_userLocVisible == null || _userLocVisible!) ?
+                                      // if not needed, sized box
+                                      SizedBox.shrink():
+                                      // otherwise, normal button
+                                      DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2)
+                                            )
+                                          ],
+                                          borderRadius: BorderRadius.circular(25)
+                                        ),
+                                        child: FloatingActionButton.small(
+                                          onPressed: () {
+                                            _centerOnLocation(true);
+                                          },
+                                          heroTag: 'location_fab',
+                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(56),
+                                          ),
+                                          child: Icon(
+                                            Icons.my_location,
+                                            color: getColor(context, ColorType.mapButtonPrimary),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
                               ],
                             ),
                           )
@@ -2369,13 +2520,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                                     color: getColor(context, ColorType.mapButtonIcon),
                                     Icons.keyboard_arrow_up,
                                     size: 18,
-                                    shadows: [
-                                      Shadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2)
-                                      )
-                                    ],
                                   ), // The icon on the left
                                   label: Text(
                                     'Steps',
@@ -2383,13 +2527,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                                       color: getColor(context, ColorType.mapButtonIcon),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                      shadows: [
-                                        Shadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2)
-                                        )
-                                      ],
                                     ),                                    
                                   ), // The text on the right
                                 ),
@@ -2590,86 +2727,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
                 )
               ],
             ),
-          );
-        } else {
-          // LOADING SCREEN
-          return Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                SizedBox(width: 30),
+          )
+          : Container(
+            //for switch animation
+            key: ValueKey(0),
 
-                Container(
-                  height: 100,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDarkMode(context) ? ui.Color.fromARGB(100, 228, 228, 228) : ui.Color.fromARGB(255, 228, 228, 228),
-                        spreadRadius: 1,
-                        blurRadius: 6,
-                        offset: Offset(0, 5), // changes position of shadow
-                      ),
-                    ],
-                    image: DecorationImage(
-                      image: AssetImage('assets/appicon.png'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+            color: getColor(context, ColorType.background),
+            
+            child: ValueListenableBuilder<Loadpoint>(
+              valueListenable: _loadingMessageNotifier,
+              builder: (context, loadpoint, child) {
+                return LoadingScreen(loadpoint: loadpoint);
+              }
+            )
+          )
+          
+        );
 
-                SizedBox(width: 30),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Loading",
-                        style: TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20,
-                        ),
-                      ),
-
-                      Row(
-                        children: [
-                          Container(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(
-                              color: const ui.Color.fromARGB(255, 11, 83, 148),
-                            ),
-                          ),
-
-                          SizedBox(width: 10),
-
-                          ValueListenableBuilder<String>(
-                            valueListenable: _loadingMessageNotifier,
-                            builder: (context, message, child) {
-                              return Text(
-                                message,
-                                style: TextStyle(
-                                  fontFamily: 'Urbanist',
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: 18,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-      },
+      }
     );
   }
 }

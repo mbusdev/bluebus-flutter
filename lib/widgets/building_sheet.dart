@@ -198,13 +198,6 @@ class _BuildingSheetState extends State<BuildingSheet> {
                     color: getColor(context, ColorType.primary),
                     fontSize: 16, 
                     fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        color: getColor(context, ColorType.mapButtonShadow),
-                        blurRadius: 4,
-                        offset: Offset(0, 2)
-                      )
-                    ],
                   ),
                 ), // The text on the right
               ),

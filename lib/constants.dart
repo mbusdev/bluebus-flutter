@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 // UPDATE WHEN RELAUNCH
 final String currentVersion = '1.0.2';
@@ -30,12 +29,12 @@ bool isCurrentVersionEqualOrHigher(String otherVersion) {
 // const String BACKEND_URL = 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3'; 
 const String BACKEND_URL = String.fromEnvironment(
   'BACKEND_URL',
-  defaultValue: 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3'
+  defaultValue: 'https://busapi.maizebus.com/mbus/api/v3'
 );
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'https://www.efeakinci.host/mbus/api/v3');
 //const String BACKEND_URL = String.fromEnvironment("BACKEND_URL", defaultValue: "http://10.0.2.2:3000/mbus/api/v3/");
-//const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://192.168.0.247:3000/mbus/api/v3');
-//const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000/mbus/api/v3/');
+//const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://35.3.198.105:3000/mbus/api/v3');
+//const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://35.2.102.249:3000/mbus/api/v3/');
 
 List<Map<String, String>> globalAvailableRoutes = [];
 
@@ -68,49 +67,70 @@ final Uri contactURL = Uri.parse('https://www.maizebus.com/#/contact/');
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
 const Color maizeBusYellow = Color.fromARGB(255, 255, 203, 45);
+const Color maizeBusBlueDarkMode = Color.fromARGB(255, 80, 150, 210);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {
-  primary, opposite, background,
+  primary, secondary, opposite, background,backgroundGradientStart,
 
   mapButtonPrimary, mapButtonSecondary,
   mapButtonIcon, mapButtonShadow,
 
   highlighted, dim,
-
   shadow,
+  
+  grayed, sliderButton,
+
+  // info card colors (in route selector, favorites sheet, etc.)
+  infoCardColor, infoCardHighlighted,
 }
 
 const Map<ColorType, Color> lightColors = {
   ColorType.primary: Colors.white,
+  ColorType.secondary: Color.fromARGB(255, 226, 231, 236),
   ColorType.opposite: Colors.black,
   ColorType.background: Colors.white,
+  ColorType.backgroundGradientStart: Color.fromARGB(0, 255, 255, 255), // same as background but transparent
   
   ColorType.mapButtonPrimary: maizeBusBlue, 
-  ColorType.mapButtonSecondary: Color.fromARGB(204, 156, 196, 230),
+  ColorType.mapButtonSecondary: Color.fromARGB(190, 255, 255, 255),
   ColorType.mapButtonIcon: Colors.white,
   ColorType.mapButtonShadow: Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
 
   ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),
   ColorType.dim: Color.fromARGB(255, 229, 242, 255),
 
-  ColorType.shadow: Color.fromARGB(95, 187, 187, 187)
+  ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
+  
+  ColorType.grayed: Color.fromARGB(255, 224, 224, 224),
+  ColorType.sliderButton: Colors.white,
+
+  ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255), 
+  ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),  
 };
 
 const Map<ColorType, Color> darkColors = {
   ColorType.primary: Colors.black,
+  ColorType.secondary: Color.fromARGB(255, 40, 54, 72),
   ColorType.opposite: Colors.white,
   ColorType.background: Color.fromARGB(255, 19, 34, 47),
+  ColorType.backgroundGradientStart: Color.fromARGB(0, 19, 34, 47), // same as background but transparent
 
-  ColorType.mapButtonPrimary: Color.fromARGB(204, 229, 242, 255),
-  ColorType.mapButtonSecondary: Color.fromARGB(204, 106, 146, 181),
-  ColorType.mapButtonIcon: Color.fromARGB(255, 29, 23, 84),
+  ColorType.mapButtonPrimary: Color.fromARGB(255, 255, 255, 255),
+  ColorType.mapButtonSecondary: Color.fromARGB(190, 11, 83, 148),
+  ColorType.mapButtonIcon: maizeBusBlue,
   ColorType.mapButtonShadow: Color.fromARGB(77, 30, 89, 141), // 77 is 30% opacity
 
   ColorType.highlighted: Color.fromARGB(255, 45, 151, 243),
   ColorType.dim: Color.fromARGB(255, 33, 71, 105),
 
-  ColorType.shadow: Color.fromARGB(95, 68, 68, 68)
+  ColorType.shadow: Color.fromARGB(95, 68, 68, 68),
+  
+  ColorType.grayed: Color.fromARGB(255, 5, 19, 32),
+  ColorType.sliderButton: Color.fromARGB(255, 33, 71, 105),
+
+  ColorType.infoCardColor: Color.fromARGB(255, 19, 34, 47),
+  ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),
 };
 
 // returns true if the current theme is dark mode
@@ -125,6 +145,58 @@ bool isDarkMode(BuildContext context) {
 // All color types are in the ColorType enum.
 Color getColor(BuildContext context, ColorType type) {
   return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
+}
+
+BoxShadow infoCardShadowLight = BoxShadow(
+  color: Color.fromARGB(80, 38, 114, 181),
+  blurRadius: 3,
+  spreadRadius: 1,
+  offset: Offset(0, 3),
+);
+
+BoxShadow infoCardShadowDark = BoxShadow(
+  color: Color.fromARGB(91, 0, 0, 0),
+  blurRadius: 5,
+  offset: Offset(0, 3),
+);
+
+// Gets the correct shadow depending on 
+BoxShadow getInfoCardShadow(BuildContext context) {
+  return isDarkMode(context) ? infoCardShadowDark : infoCardShadowLight;
+}
+
+//Clipping path for the loading screen.
+//the path has the bottom right corner replaced with a diagonal edge.
+class TrapezoidClip extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(size.width, 0); 
+    path.lineTo(size.width - size.height, size.height); 
+    path.lineTo(0, size.height);
+    path.close(); 
+    return path; 
+  }
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) {
+    return false; 
+  }
+}
+class TrapezoidClipReversed extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.moveTo(size.width, 0); 
+    path.lineTo(size.width, size.height); 
+    path.lineTo(0, size.height);
+    path.lineTo(size.height, 0);
+    path.close(); 
+    return path; 
+  }
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) {
+    return false; 
+  }
 }
 
 // THEMES
@@ -215,6 +287,24 @@ class Location {
   }) : aliases = aliases;
 }
 
+// location with arrival time attached
+// used for flow in journey
+class ArrivalTimeLocation extends Location {
+  final String arrivalTime;
+
+  ArrivalTimeLocation(
+    this.arrivalTime, 
+    Location loc,
+  ) : super(
+    loc.name,
+    loc.abbrev,
+    loc.aliases,
+    loc.isBusStop,
+    stopId: loc.stopId,
+    latlng: loc.latlng,
+  );
+}
+
 class StartupDataHolder {
   String version;
   String updateTitle;
@@ -223,3 +313,19 @@ class StartupDataHolder {
   String persistantMessage;
   StartupDataHolder(this.version, this.updateTitle, this.updateMessage, this.persistantMessageTitle, this.persistantMessage);
 }
+
+class Loadpoint {
+  final String message;
+  final int step;
+  Loadpoint(this.message, this.step);
+}
+
+const SheetBoxShadow = BoxShadow(
+  color: Color.fromRGBO(0, 0, 0, 0.2),
+  offset: const Offset(
+    0.0,
+    0.0,
+  ),
+  blurRadius: 100.0,
+  spreadRadius: 40.0,
+);

@@ -3,11 +3,9 @@ import 'dart:convert';
 
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/notification_service.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/semantics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-
-const remindersKey = "bus_reminder";
 
 /// Key for registration token as known by backend
 /// i.e. what to call /reminders with
@@ -15,7 +13,8 @@ const serverTokenKey = "server_registration_token";
 
 class IncomingBusReminderService {
   static bool _started = false;
-  static late SharedPreferencesWithCache userPrefs;
+  static late SharedPreferencesWithCache _userPrefs;
+  static VoidCallback? onReminderStateChange;
 
   static Future<void> start() async {
     if (_started) {
@@ -23,16 +22,17 @@ class IncomingBusReminderService {
     }
     _started = true;
 
-    userPrefs = await SharedPreferencesWithCache.create(
+    _userPrefs = await SharedPreferencesWithCache.create(
       cacheOptions: SharedPreferencesWithCacheOptions(
-        allowList: {remindersKey, serverTokenKey},
+        allowList: {serverTokenKey},
       ),
     );
-    if (_serverToken() != null) {
-      // notifications were used before, complete setup
-      // TODO: make sure this won't lead to constant permission requests
-      // for someone who has denied notification
-      await _completeSetup();
+  }
+
+  // called by the notificiation service when it receives a fcm message that isn't a notification
+  static void handlePushedMessage(dynamic msg) {
+    if (msg['kind'] as String == "reminderUpdate") {
+      onReminderStateChange?.call();
     }
   }
 
@@ -40,122 +40,213 @@ class IncomingBusReminderService {
     NotificationService.setTokenChangeCallback(_onTokenChange);
     await NotificationService.requestPermission();
     String? currToken = NotificationService.token();
-    if (currToken != null) {}
     if (currToken != null && currToken != _serverToken()) {
       await _onTokenChange(currToken);
     }
   }
 
+  /// the registration token that should be used when communicating with the backend
+  /// the swapping of this is handled by `_onTokenChange`
+  /// make sure `_completeSetup()` has been called
   static String? _serverToken() {
-    return userPrefs.getString(serverTokenKey);
+    return _userPrefs.getString(serverTokenKey);
   }
 
   static Future<void> _onTokenChange(String token) async {
     final serverToken = _serverToken();
     if (serverToken != null) {
-      if (!await _swapToken(oldTok: _serverToken()!, newTok: token)) {
-        print("swap token FAILED");
-      }
+      await _swapToken(oldTok: serverToken, newTok: token);
     }
-    userPrefs.setString(serverTokenKey, token);
+    _userPrefs.setString(serverTokenKey, token);
   }
 
-  static Future<void> addReminder(String stpid, String rtid) async {
+  static Future<void> addReminder(String stpid, String rtid, int thresh) async {
+    assert(!rtid.contains('|') && !stpid.contains('|'));
     await _completeSetup();
     final token = _serverToken();
-    if (token == null) return;
-    if (!await _setReminder(token: token, rtid: rtid, stpid: stpid) && kDebugMode) {
-      debugPrint("setting reminder failed");
-    }
-    assert(!rtid.contains("|"));
-    var activeReminders = userPrefs.getStringList(remindersKey);
-    activeReminders ??= [];
-    activeReminders.add("$rtid|$stpid");
-    if (kDebugMode) {
-      debugPrint("reminders is now $activeReminders");
-    }
-    await userPrefs.setStringList(remindersKey, activeReminders);
+    if (token == null) throw Exception("missing token");
+    await _setReminder(token: token, rtid: rtid, stpid: stpid, thresh: thresh);
   }
 
   static Future<void> removeReminder(String stpid, String rtid) async {
     // TODO: avoid excessive setup work
     await _completeSetup();
     final token = _serverToken();
-    if (token == null) return;
-    if (!await _unsetReminder(token: token, stpid: stpid, rtid: rtid)) {
-      debugPrint("unsetting reminder failed");
-    }
-
-    assert(!rtid.contains("|"));
-    final activeReminders = userPrefs.getStringList(remindersKey);
-    if (activeReminders == null) {
-      return;
-    }
-    if (activeReminders.contains("$rtid|$stpid")) {
-      activeReminders.remove("$rtid|$stpid");
-      if (kDebugMode) {
-        debugPrint("reminders is now $activeReminders");
-      }
-      await userPrefs.setStringList(remindersKey, activeReminders);
-    }
+    if (token == null) throw Exception("missing token");
+    await _unsetReminder(token: token, stpid: stpid, rtid: rtid);
   }
 
-  static bool isActiveReminder(String stpid, String rtid) {
-    final activeReminders = getActiveReminders();
+  static Future<void> modifyReminders(
+    List<RemindersModification> modifications,
+  ) async {
+    // TODO: avoid excessive setup work
+    await _completeSetup();
+    final token = _serverToken();
+    if (token == null) throw Exception("missing token");
+    await _modifyReminders(token: token, modifications: modifications);
+  }
+
+  static Future<bool> isActiveReminder(String stpid, String rtid) async {
+    final activeReminders = await getActiveReminders();
     return activeReminders.contains((stpid: stpid, rtid: rtid));
   }
 
-  static Set<({String stpid, String rtid})> getActiveReminders() {
-    var activeReminders = userPrefs.getStringList(remindersKey);
-    activeReminders ??= [];
-    return activeReminders
-        .map((x) => x.split('|'))
-        .map((parts) => (stpid: parts[1], rtid: parts[0]))
-        .toSet();
+  static Future<List<({String stpid, String rtid, int? eta})>>
+  getActiveReminders() async {
+    await _completeSetup();
+    final token = _serverToken();
+    if (token == null) throw Exception("missing token");
+    return await _activeReminders(token: token);
+  }
+
+  // avoid calling _completeSetup(), should in theory return an empty list instead of asking for
+  // permission when permission hasn't yet been granted
+  static Future<List<({String stpid, String rtid, int? eta})>>
+  getActiveRemindersNoSetup() async {
+    final token = _serverToken();
+    if (token == null) return [];
+    return await _activeReminders(token: token);
+  }
+
+  static Future<void> sendTestNotification() async {
+    await _completeSetup();
+    final token = _serverToken();
+    if (token == null) throw Exception("missing token");
+    await _notifyMeLater(token: token);
   }
 }
 
-Future<bool> _setReminder({
+// const REMINDER_BACKEND_URL = BACKEND_URL;
+// const REMINDER_BACKEND_URL = "http://10.0.2.2:3000/mbus/api/v3";
+const REMINDER_BACKEND_URL = String.fromEnvironment(
+  "REMINDER_BACKEND_URL",
+  defaultValue: BACKEND_URL,
+);
+
+Future<List<({String stpid, String rtid, int? eta})>> _activeReminders({
+  required String token,
+}) async {
+  final uri = Uri.parse(
+    '$REMINDER_BACKEND_URL/activeReminders/${Uri.encodeComponent(token)}',
+  );
+  final res = await http.get(uri);
+  if (res.statusCode == 200) {
+    return (jsonDecode(res.body)['reminders'] as List)
+        .map(
+          (x) => (
+            stpid: x['stpid'] as String,
+            rtid: x['rtid'] as String,
+            eta: x['eta'] as int?,
+          ),
+        )
+        .toList();
+  }
+  throw Exception(res.body);
+}
+
+Future<void> _setReminder({
+  required String token,
+  required String rtid,
+  required String stpid,
+  required int thresh,
+}) async {
+  final res = await http.post(
+    Uri.parse('$REMINDER_BACKEND_URL/setReminder'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'token': token,
+      'rtid': rtid,
+      'stpid': stpid,
+      'thresh': thresh,
+    }),
+  );
+  if (res.statusCode != 200) {
+    throw Exception(res.body);
+  }
+}
+
+Future<void> _unsetReminder({
   required String token,
   required String rtid,
   required String stpid,
 }) async {
   final res = await http.post(
-    Uri.parse('$BACKEND_URL/setReminder'),
+    Uri.parse('$REMINDER_BACKEND_URL/unsetReminder'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'token': token,
-      'event': {'rtid': rtid, 'stpid': stpid},
-    }),
+    body: jsonEncode({'token': token, 'rtid': rtid, 'stpid': stpid}),
   );
-  return res.statusCode == 200;
+  if (res.statusCode != 200) {
+    throw Exception(res.body);
+  }
 }
 
-Future<bool> _unsetReminder({
+Future<void> _modifyReminders({
   required String token,
-  required String rtid,
-  required String stpid,
+  required List<RemindersModification> modifications,
 }) async {
+  final uri = Uri.parse('$REMINDER_BACKEND_URL/modifyReminders');
   final res = await http.post(
-    Uri.parse('$BACKEND_URL/unsetReminder'),
+    uri,
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
-      'token': token,
-      'event': {'rtid': rtid, 'stpid': stpid},
+      "token": token,
+      "modifications": modifications.map((x) => x.encode()).toList(),
     }),
   );
-  return res.statusCode == 200;
+  if (res.statusCode != 200) {
+    throw Exception(res.body);
+  }
 }
 
-Future<bool> _swapToken({
+Future<void> _swapToken({
   required String oldTok,
   required String newTok,
 }) async {
   final res = await http.post(
-    Uri.parse('$BACKEND_URL/swapToken'),
+    Uri.parse('$REMINDER_BACKEND_URL/swapToken'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'oldTok': oldTok, 'newTok': newTok}),
   );
-  return res.statusCode == 200;
+  if (res.statusCode != 200) {
+    throw Exception(res.body);
+  }
 }
 
+Future<void> _notifyMeLater({required String token}) async {
+  final res = await http.post(
+    Uri.parse('$REMINDER_BACKEND_URL/notifyMeLater'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'token': token}),
+  );
+  if (res.statusCode != 200) {
+    throw Exception(res.body);
+  }
+}
+
+/// Used in the `modifyReminders` method of `IncomingBusReminderService`
+sealed class RemindersModification {
+  Map<String, dynamic> encode();
+}
+
+class AddReminder extends RemindersModification {
+  AddReminder({required this.stpid, required this.rtid, required this.thresh});
+
+  String stpid, rtid;
+  int thresh;
+
+  @override
+  Map<String, dynamic> encode() {
+    return {"action": "set", "stpid": stpid, "rtid": rtid, "thresh": thresh};
+  }
+}
+
+class RemoveReminder extends RemindersModification {
+  RemoveReminder({required this.stpid, required this.rtid});
+
+  String stpid, rtid;
+
+  @override
+  Map<String, dynamic> encode() {
+    return {"action": "unset", "stpid": stpid, "rtid": rtid};
+  }
+}
