@@ -11,11 +11,16 @@ import 'dart:async';
 import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_animarker/flutter_map_marker_animation.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart' as LatLongNew;
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide TileLayer;
+import 'package:google_maps_flutter/google_maps_flutter.dart' as GMaps;
 import '../constants.dart';
 
 class UniversalMapController {
@@ -119,17 +124,22 @@ class UniversalMapController {
 //       }
 
 class UniversalMapWidgetState extends State<UniversalMapWidget> {
-  final _controller = Completer<GoogleMapController>();
+  //final _controller = Completer<GoogleMapController>();
+  // final 
 
   List<BusRouteLine> _allLines = [];
   // List<BusStop> _stopsToDisplay = [];
   Set<String> selectedRoutes = {};
   Set<Polyline> polylinesToDisplay = {};
+  List<Polyline> new_polylinesToDisplay = [];
   Set<Marker> staticMarkersToDisplay = {};
+  List<Marker> new_staticMarkersToDisplay = [];
   MapImageService imageService = MapImageService();
 
   Map<String,Bus> liveBuses = {};
   Map<String,Marker> animatableMarkersToDisplay = {};
+
+  Style? style;
 
   void loadCustomMarkers() {
     debugPrint("Loading custom markers!!");
@@ -155,6 +165,15 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
       loadCustomMarkers();
     });
     
+    StyleReader(
+      uri:
+          'https://tiles.stadiamaps.com/styles/osm_bright.json?api_key={key}',
+      apiKey: "6a898d9f-ce94-41d5-a7fc-dd414ee3dfe1",
+      logger: Logger.console()
+    ).read().then((style) {
+      this.style = style;
+      setState(() {});
+    });
 
     super.initState();
   }
@@ -167,17 +186,33 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
     // Convert _allLines, filtered with selectedRoutes, into polylinesToDisplay
     // Future: Also incorporate currently displayed journey, if the user is in navigation mode
     setState(() {
-      polylinesToDisplay.clear();
+      // polylinesToDisplay.clear();
+      new_polylinesToDisplay.clear();
       _allLines.forEach((BusRouteLine line) {
         if (selectedRoutes.contains(line.routeId)) {
           final routeKey = '${line.routeId}_${line.points.hashCode}';
           final routeColor = line.color ?? RouteColorService.getRouteColor(line.routeId);
-          polylinesToDisplay.add(Polyline(
-            polylineId: PolylineId(routeKey),
-            points: line.points,
-            color: routeColor,
-            width: 4,
-          ));
+          
+          
+          new_polylinesToDisplay.add(
+            Polyline(
+              points: line.points.map((GMaps.LatLng item) {
+                // Convert Google Maps LatLng to Flutter Maps LatLng
+                // Both classes sharing the same name is giving me a grand headache
+                return LatLongNew.LatLng(item.latitude, item.longitude);
+              }).toList(),
+              color: routeColor,
+              strokeWidth: 6,
+              strokeJoin: StrokeJoin.round,
+              borderStrokeWidth: 6,
+              borderColor: Colors.white)
+          );
+          // polylinesToDisplay.add(Polyline(
+          //   polylineId: PolylineId(routeKey),
+          //   points: line.points,
+          //   color: routeColor,
+          //   width: 4,
+          // ));
         }
         // debugPrint("Adding new polylines! ${polylinesToDisplay}");
       });
@@ -192,32 +227,76 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
     setState(() {
       _allLines.forEach((BusRouteLine line) {
         if (selectedRoutes.contains(line.routeId)) {
-          
+
           line.stops.forEach((BusStop stop) {
-            staticMarkersToDisplay.add(
+            new_staticMarkersToDisplay.add(
               Marker(
-                markerId: MarkerId('stop_${stop.id}_${line.points.hashCode}'),
-                position: stop.location,
-                icon: imageService.stopIcon, // TODO: Track favorite stops and change the icon
-                // icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)
-                // icon: _favoriteStops.contains(stop.id) 
-                //     ? (_favStopIcon ??
-                //           _stopIcon ??
-                //           BitmapDescriptor.defaultMarkerWithHue(
-                //             BitmapDescriptor.hueAzure,
-                //           ))
-                //     : (_stopIcon ??
-                //           BitmapDescriptor.defaultMarkerWithHue(
-                //             BitmapDescriptor.hueAzure,
-                //           )),
-                consumeTapEvents: true,
-                onTap: () {
-                  widget.onStopClicked(stop);
-                },
-              ),
+                point: LatLongNew.LatLng(stop.location.latitude, stop.location.longitude),
+                width: 20,
+                height: 20,
+                child: SizedBox(
+                  width: 2.0,
+                  height: 2.0,
+                  child: Image.asset("assets/bus_stop.png", width: 2.0, height: 2.0)
+                )
+                
+                 
+              )
+
+              // NEXT STEPS TODO: Get the bitmaps working for icons! We can even do cool click animations!!!!!
+              // Also figure out what's causing the vector map crash
+
+              // Marker(
+              //   markerId: MarkerId('stop_${stop.id}_${line.points.hashCode}'),
+              //   position: stop.location,
+              //   icon: imageService.stopIcon, // TODO: Track favorite stops and change the icon
+              //   // icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)
+              //   // icon: _favoriteStops.contains(stop.id) 
+              //   //     ? (_favStopIcon ??
+              //   //           _stopIcon ??
+              //   //           BitmapDescriptor.defaultMarkerWithHue(
+              //   //             BitmapDescriptor.hueAzure,
+              //   //           ))
+              //   //     : (_stopIcon ??
+              //   //           BitmapDescriptor.defaultMarkerWithHue(
+              //   //             BitmapDescriptor.hueAzure,
+              //   //           )),
+              //   consumeTapEvents: true,
+              //   onTap: () {
+              //     widget.onStopClicked(stop);
+              //   },
+              // ),
             );
 
           });
+
+
+          
+          // line.stops.forEach((BusStop stop) {
+          //   staticMarkersToDisplay.add(
+          //     Marker(
+          //       markerId: MarkerId('stop_${stop.id}_${line.points.hashCode}'),
+          //       position: stop.location,
+          //       icon: imageService.stopIcon, // TODO: Track favorite stops and change the icon
+          //       // icon: _stopIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)
+          //       // icon: _favoriteStops.contains(stop.id) 
+          //       //     ? (_favStopIcon ??
+          //       //           _stopIcon ??
+          //       //           BitmapDescriptor.defaultMarkerWithHue(
+          //       //             BitmapDescriptor.hueAzure,
+          //       //           ))
+          //       //     : (_stopIcon ??
+          //       //           BitmapDescriptor.defaultMarkerWithHue(
+          //       //             BitmapDescriptor.hueAzure,
+          //       //           )),
+          //       consumeTapEvents: true,
+          //       onTap: () {
+          //         widget.onStopClicked(stop);
+          //       },
+          //     ),
+          //   );
+
+          //});
 
         }
       });
@@ -231,50 +310,75 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: Animarker(
-        mapId: _controller.future.then((value) => value.mapId),
-        markers: animatableMarkersToDisplay.values.toSet(), // FUTURE: Make this variable a Map and use .values.toSet() here?
-        curve: Curves.ease,
-        duration: Duration(milliseconds: 9000),
-        shouldAnimateCamera: false,
-        child: GoogleMap(
-          polylines: polylinesToDisplay,
-          markers: staticMarkersToDisplay,
-          // onMapCreated: onMapCreated,
-          onMapCreated: (gController) => _controller.complete(gController),
-          onCameraMove: widget.onCameraMove,
-          initialCameraPosition: CameraPosition(
-            target: widget.initialCenter,
-            zoom: 15.0,
-          ),
-          cameraTargetBounds: CameraTargetBounds(
-            LatLngBounds(
-              southwest: LatLng(42.217530, -83.809124), // Southern and Westernmost point
-              northeast: LatLng(42.328602, -83.685307), // Northern and Easternmost point
-            )
-          ),
-          myLocationEnabled: widget.myLocationEnabled,
-          myLocationButtonEnabled: widget.myLocationButtonEnabled,
-          zoomControlsEnabled: widget.zoomControlsEnabled,
-          mapToolbarEnabled: widget.mapToolbarEnabled,
-          style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle,
+      child: (style != null) ? FlutterMap(
+        options: MapOptions(
+          initialCenter: widget.initialCenter,
+          initialZoom: 13.0
         ),
-      )
+        children: [
+          // TileLayer( // Bring your own tiles
+          //   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // For demonstration only
+          //   userAgentPackageName: 'com.maizebus.app'/*'com.example.app'*/, // Add your app identifier
+          //   // And many more recommended properties!
+          // ),
+          
+          VectorTileLayer(
+            tileProviders: style!.providers,
+            theme: style!.theme,
+            tileOffset: TileOffset.DEFAULT,
+            layerMode: VectorTileLayerMode.raster,
+          ),
+          PolylineLayer(
+            polylines: new_polylinesToDisplay,
+          ),
+          MarkerLayer(markers: new_staticMarkersToDisplay)
+        ],
+      ) : Text("No style (yet!)")
+      
+      // Animarker(
+      //   mapId: _controller.future.then((value) => value.mapId),
+      //   markers: animatableMarkersToDisplay.values.toSet(), // FUTURE: Make this variable a Map and use .values.toSet() here?
+      //   curve: Curves.ease,
+      //   duration: Duration(milliseconds: 9000),
+      //   shouldAnimateCamera: false,
+      //   child: GoogleMap(
+      //     polylines: polylinesToDisplay,
+      //     markers: staticMarkersToDisplay,
+      //     // onMapCreated: onMapCreated,
+      //     onMapCreated: (gController) => _controller.complete(gController),
+      //     onCameraMove: widget.onCameraMove,
+      //     initialCameraPosition: CameraPosition(
+      //       target: widget.initialCenter,
+      //       zoom: 15.0,
+      //     ),
+      //     cameraTargetBounds: CameraTargetBounds(
+      //       LatLngBounds(
+      //         southwest: LatLng(42.217530, -83.809124), // Southern and Westernmost point
+      //         northeast: LatLng(42.328602, -83.685307), // Northern and Easternmost point
+      //       )
+      //     ),
+      //     myLocationEnabled: widget.myLocationEnabled,
+      //     myLocationButtonEnabled: widget.myLocationButtonEnabled,
+      //     zoomControlsEnabled: widget.zoomControlsEnabled,
+      //     mapToolbarEnabled: widget.mapToolbarEnabled,
+      //     style: isDarkMode(context) ? widget.darkMapStyle : widget.lightMapStyle,
+      //   ),
+      // )
     );
   }
 
-  Marker getMarkerForBus(Bus b) {
-    return Marker(
-      icon: imageService.getIconForBus(b),
-      markerId: MarkerId('bus_${b.id}'),
-      position: b.position,
-      rotation: b.heading,
-      anchor: const Offset(0.5,0.5),
-      onTap:() {
-        widget.onBusClicked(b);
-      },
-    );
-  }
+  // Marker getMarkerForBus(Bus b) {
+  //   // return Marker(
+  //   //   icon: imageService.getIconForBus(b),
+  //   //   markerId: MarkerId('bus_${b.id}'),
+  //   //   position: b.position,
+  //   //   rotation: b.heading,
+  //   //   anchor: const Offset(0.5,0.5),
+  //   //   onTap:() {
+  //   //     widget.onBusClicked(b);
+  //   //   },
+  //   // );
+  // }
   
   void updateBusPositions(List<Bus> newBuses, List<Bus> changedBuses) {
     debugPrint("Got updateBusPositions call! newBuses has ${newBuses.length}, changedBuses has ${changedBuses.length}");
@@ -287,13 +391,13 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
           return; // If we don't have a record of this bus, treat it like a new bus
         }
 
-        animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
+        // animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
 
       });
 
       newBuses.forEach((Bus b) {
         debugPrint("Updating new bus ${b.id} ${b.position}");
-        animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
+        // animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
       });
 
     });
@@ -302,13 +406,13 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
 }
 
 class UniversalMapWidget extends StatefulWidget {
-  final LatLng initialCenter;
+  final LatLongNew.LatLng initialCenter = LatLongNew.LatLng(42.277849, -83.7352536);
   // final Set<Polyline> polylines;
   // final Set<Marker> markers;
   final String darkMapStyle;
   final String lightMapStyle;
   // final void Function(GoogleMapController)? onMapCreated;
-  final void Function(CameraPosition)? onCameraMove;
+  // final void Function(CameraPosition)? onCameraMove;
   final bool myLocationEnabled;
   final bool myLocationButtonEnabled;
   final bool zoomControlsEnabled;
@@ -321,13 +425,12 @@ class UniversalMapWidget extends StatefulWidget {
   
   UniversalMapWidget({
     super.key,
-    required this.initialCenter,
     // required this.polylines,
     // required this.markers,
     required this.darkMapStyle,
     required this.lightMapStyle,
     // this.onMapCreated,
-    this.onCameraMove,
+    // this.onCameraMove,
     this.myLocationEnabled = true,
     this.myLocationButtonEnabled = false,
     this.zoomControlsEnabled = true,

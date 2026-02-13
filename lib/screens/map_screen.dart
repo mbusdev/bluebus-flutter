@@ -1981,7 +1981,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> with WidgetsBindingObserver
               children: [
 
                 UniversalMapWidget(
-                    initialCenter: _defaultCenter,
+                    // initialCenter: _defaultCenter,
                     // polylines: _journeyOverlayActive
                     //     ? _displayedJourneyPolylines
                     //     : _displayedPolylines.union(_displayedJourneyPolylines),
