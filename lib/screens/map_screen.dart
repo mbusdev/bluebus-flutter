@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
@@ -13,6 +14,7 @@ import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/reminder_widgets.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
+import 'package:bluebus/widgets/universal_map_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -118,6 +120,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // store persistent bottom sheet controller
   PersistentBottomSheetController? _bottomSheetController;
+
+  final _universalController = UniversalMapController();
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -2033,74 +2037,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             child: Stack(
               children: [
 
-
-
-                // underlying map layer (different ios and android)
-                Platform.isIOS?
-                  MapWidget(
-                    initialCenter: _defaultCenter,
-                    polylines: _journeyOverlayActive
-                        ? _displayedJourneyPolylines
-                        : _displayedPolylines.union(_displayedJourneyPolylines),
-                    markers: _journeyOverlayActive
-                        ? _displayedJourneyMarkers
-                              .union(_displayedJourneyBusMarkers)
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              )
-                        : _allDisplayedStopMarkers,
-                        // : _displayedStopMarkers
-                        //       .union(_displayedBusMarkers)
-                        //       .union(_displayedJourneyMarkers)
-                        //       .union(
-                        //         _searchLocationMarker != null
-                        //             ? {_searchLocationMarker!}
-                        //             : {},
-                        //       ),
-                    darkMapStyle: _darkMapStyle,
-                    lightMapStyle: _lightMapStyle,
-                    onMapCreated: _onMapCreated,
-                    onCameraMove: _onCameraMove,
-                    onCameraIdle: _onCameraIdle,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: true,
-                    mapToolbarEnabled: true,
-                  )
-                : AndroidMap(
-                    initialCenter: _defaultCenter,
-                    polylines: _journeyOverlayActive
-                        ? _displayedJourneyPolylines
-                        : _displayedPolylines.union(_displayedJourneyPolylines),
-                    staticMarkers: _journeyOverlayActive
-                        ? _displayedJourneyMarkers
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              )
-                        : _displayedStopMarkers
-                              .union(_displayedJourneyMarkers)
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              ),
-                    darkMapStyle: _darkMapStyle,
-                    lightMapStyle: _lightMapStyle,
-                    dynamicMarkers: _journeyOverlayActive
-                        ? _displayedJourneyBusMarkers
-                        : _displayedBusMarkers,
-                    onMapCreated: _onMapCreated,
-                    onCameraMove: _onCameraMove,
-                    onCameraIdle: _onCameraIdle,
-                    //myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    //zoomControlsEnabled: true,
-                    //mapToolbarEnabled: true,
-                ),
+                UniversalMapWidget(
+                  universalController: _universalController,
+                  onStopClicked: (BusStop stop) {},
+                  onBusClicked: (Bus b) {}
+                  ),
             
                 Padding(
                   padding: EdgeInsets.only(
