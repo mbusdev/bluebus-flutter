@@ -77,6 +77,7 @@ class JourneyResultsWidget extends StatefulWidget {
   final Map<String, double>? dest;
   final void Function(Location, bool) onChangeSelection;
   final void Function(Journey)? onSelectJourney;
+  final ScrollController? scrollController;
 
   const JourneyResultsWidget({
     super.key,
@@ -87,6 +88,7 @@ class JourneyResultsWidget extends StatefulWidget {
     required this.dest,
     required this.onChangeSelection,
     this.onSelectJourney,
+    required this.scrollController
   });
 
   @override
@@ -219,6 +221,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
     }).toList();
 
     return SingleChildScrollView(
+      controller: widget.scrollController,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -270,15 +273,8 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: getColor(context, ColorType.dim),
+                              color: getColor(context, ColorType.inputBackground),
                               borderRadius: BorderRadius.all(Radius.circular(20),),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: getColor(context, ColorType.mapButtonShadow),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2)
-                                )
-                              ],
                             ),
                             child: Padding(
                               padding: const EdgeInsets.only(left: 15, right: 15,),
@@ -288,6 +284,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                   fontSize: 20,
                                   fontWeight: FontWeight.w400,
                                   height: 0,
+                                  color: getColor(context, ColorType.inputText)
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -335,15 +332,8 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             alignment: Alignment.centerLeft,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: getColor(context, ColorType.dim),
+                              color: getColor(context, ColorType.inputBackground),
                               borderRadius: BorderRadius.all(Radius.circular(20),),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: getColor(context, ColorType.mapButtonShadow),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2)
-                                )
-                              ],
                             ),
                             child: Padding(
                               padding: const EdgeInsets.only(left: 15, right: 15,),
@@ -353,6 +343,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                   fontSize: 20,
                                   fontWeight: FontWeight.w400,
                                   height: 0,
+                                  color: getColor(context, ColorType.inputText)
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),

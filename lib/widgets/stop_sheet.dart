@@ -182,6 +182,8 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                           ],
                         )
                       : SizedBox.shrink(),
+                  
+                  SizedBox(width: 5,),
 
                   is_expanded
                       ? Icon(Icons.expand_less)

@@ -208,14 +208,6 @@ class LocationSearchBar extends HookWidget {
           height: 50,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: getColor(context, ColorType.mapButtonShadow),
-                  offset: const Offset(0, 1),
-                  blurRadius: 4,
-                  spreadRadius: 0,
-                ),
-              ],
               borderRadius: BorderRadius.circular(56),
             ),
             child: TextField(
@@ -387,30 +379,6 @@ class _SearchSheetState extends State<SearchSheet> {
                 ),
 
                 SizedBox(width: 10),
-
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Color.fromARGB(255, 198, 191, 255),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                    ),
-
-                    const Text(
-                      'BETA',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -425,34 +393,20 @@ class _SearchSheetState extends State<SearchSheet> {
               controller: _searchController,
               focusNode: _searchFocusNode,
               decoration: InputDecoration(
-                fillColor: getColor(context, ColorType.dim),
+                fillColor: getColor(context, ColorType.inputBackground),
                 filled: true,
                 hintText: 'where to?',
                 hintStyle: TextStyle(
-                  color: getColor(context, ColorType.opposite).withAlpha(204),
+                  color: getColor(context, ColorType.inputText).withAlpha(204),
                   fontSize: 22,
-                  shadows: [
-                    Shadow(
-                      color: getColor(context, ColorType.mapButtonShadow),
-                      blurRadius: 4,
-                      offset: Offset(0, 2)
-                    )
-                  ],
                 ),
                 isCollapsed: true,
                 prefixIcon: Padding(
                   padding: EdgeInsetsGeometry.only(left: 15),
                   child: Icon(
                     Icons.search,
-                    shadows: [
-                      Shadow(
-                        color: getColor(context, ColorType.mapButtonShadow),
-                        blurRadius: 4,
-                        offset: Offset(0, 2)
-                      )
-                    ],
                     size: 35,
-                    color: getColor(context, ColorType.opposite),
+                    color: getColor(context, ColorType.inputText),
                   ),
                 ),
                 

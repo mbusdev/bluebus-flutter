@@ -21,7 +21,8 @@ class DirectionsSheet extends StatefulWidget {
   final String destName;
   final void Function(Location, bool) onChangeSelection;
   final void Function(Journey)? onSelectJourney;
-  final void Function(Map<String, double>, Map<String, double>)? onResolved;
+  final void Function(Map<String, double>, Map<String, double>)? onResolved;final ScrollController? scrollController;
+
 
   const DirectionsSheet({
     Key? key,
@@ -31,6 +32,7 @@ class DirectionsSheet extends StatefulWidget {
     required this.originName,
     required this.destName,
     required this.onChangeSelection,
+    required this.scrollController, 
     this.onSelectJourney,
     this.onResolved,
   }) : super(key: key);
@@ -100,246 +102,236 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: getColor(context, ColorType.background),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
-        boxShadow: [SheetBoxShadow]
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(40),
+        topRight: Radius.circular(40),
       ),
-      child: FutureBuilder(
-        future: _listOfJourneys,
-        builder: (context, journeyload) {
-          if (journeyload.connectionState == ConnectionState.waiting) {
-
-            // If loading, return empty sheet...
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: getColor(context, ColorType.background),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
-                  ),
-
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 20, right: 20, top: 20),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.my_location,
-                              size: 25,
-                            ),
-
-                            SizedBox(width: 12,),
-
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () { 
-
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (BuildContext context) {
-                                      return SearchSheet(
-                                        onSearch: (Location location, isStop, id) {
-                                          final searchCoordinates = location.latlng;
-                                          // null-proofing
-                                          if (searchCoordinates != null) {
-                                            Navigator.pop(context);
-                                            widget.onChangeSelection(location, true);
-                                          } else {
-                                            print("Error: The selected location '${location.name}' has no coordinates.");
-                                          }
-                                        },
-                                      );
-                                    },
-                                  );
-                                },
-                                child: Container(
-                                  alignment: Alignment.centerLeft,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: getColor(context, ColorType.dim),
-                                    borderRadius: BorderRadius.all(Radius.circular(20)),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2)
-                                      )
-                                    ],
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 15, right: 15),
-                                    child: Text(
-                                      widget.originName,
-                                      style:  TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w400,
-                                        height: 0
-                                      ),
-                                      overflow: TextOverflow.ellipsis
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
-
-                        SizedBox(height: 13,),
-                    
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 25,
-                            ),
-
-                            SizedBox(width: 12,),
-
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () { 
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (BuildContext context) {
-                                      return SearchSheet(
-                                        onSearch: (Location location, isStop, id) {
-                                          final searchCoordinates = location.latlng;
-                                          // null-proofing
-                                          if (searchCoordinates != null) {
-                                            Navigator.pop(context);
-                                            widget.onChangeSelection(location, false);
-                                          } else {
-                                            print("Error: The selected location '${location.name}' has no coordinates.");
-                                          }
-                                        },
-                                      );
-                                    },
-                                  );
-                                },
-                                child: Container(
-                                  alignment: Alignment.centerLeft,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: getColor(context, ColorType.dim),
-                                    borderRadius: BorderRadius.all(Radius.circular(20)),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2)
-                                      )
-                                    ],
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 15, right: 15),
-                                    child: Text(
-                                      widget.destName,
-                                      style:  TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w400,
-                                        height: 0
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.only(top: 20, left: 20, right:20),
-                  child: Text(
-                    "Options",
-                    style: TextStyle(
-                      fontFamily: 'Urbanist',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 30,
-                    ),
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.only(top: 30, bottom: 40),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: getColor(context, ColorType.opposite)
-                    )
-                  ),
-                )
-              ],
-            );
-          } else if (journeyload.hasData) {
-            final journeys = journeyload.data!;
-
-            return JourneyResultsWidget(
-              journeys: journeys,
-              start: widget.originName,
-              end: widget.destName,
-              origin: widget.origin,
-              dest: widget.dest,
-              onChangeSelection: widget.onChangeSelection,
-              onSelectJourney: widget.onSelectJourney,
-            );
-          } else if (journeyload.hasError) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
+      child: Container(
+        decoration: BoxDecoration(
+          color: getColor(context, ColorType.background),
+        ),
+        child: FutureBuilder(
+          future: _listOfJourneys,
+          builder: (context, journeyload) {
+            if (journeyload.connectionState == ConnectionState.waiting) {
+      
+              // If loading, return empty sheet...
+              return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Error Loading Journey',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w700
+                  Container(
+                    decoration: BoxDecoration(
+                      color: getColor(context, ColorType.background),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
+                    ),
+      
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 20, right: 20, top: 20),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.my_location,
+                                size: 25,
+                              ),
+      
+                              SizedBox(width: 12,),
+      
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () { 
+      
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (BuildContext context) {
+                                        return SearchSheet(
+                                          onSearch: (Location location, isStop, id) {
+                                            final searchCoordinates = location.latlng;
+                                            // null-proofing
+                                            if (searchCoordinates != null) {
+                                              Navigator.pop(context);
+                                              widget.onChangeSelection(location, true);
+                                            } else {
+                                              print("Error: The selected location '${location.name}' has no coordinates.");
+                                            }
+                                          },
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Container(
+                                    alignment: Alignment.centerLeft,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: getColor(context, ColorType.inputBackground),
+                                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(left: 15, right: 15),
+                                      child: Text(
+                                        widget.originName,
+                                        style:  TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w400,
+                                          height: 0,
+                                          color: getColor(context, ColorType.inputText)
+                                        ),
+                                        overflow: TextOverflow.ellipsis
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            ],
+                          ),
+      
+                          SizedBox(height: 13,),
+                      
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 25,
+                              ),
+      
+                              SizedBox(width: 12,),
+      
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () { 
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (BuildContext context) {
+                                        return SearchSheet(
+                                          onSearch: (Location location, isStop, id) {
+                                            final searchCoordinates = location.latlng;
+                                            // null-proofing
+                                            if (searchCoordinates != null) {
+                                              Navigator.pop(context);
+                                              widget.onChangeSelection(location, false);
+                                            } else {
+                                              print("Error: The selected location '${location.name}' has no coordinates.");
+                                            }
+                                          },
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Container(
+                                    alignment: Alignment.centerLeft,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: getColor(context, ColorType.inputBackground),
+                                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(left: 15, right: 15),
+                                      child: Text(
+                                        widget.destName,
+                                        style:  TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w400,
+                                          height: 0,
+                                          color: getColor(context, ColorType.inputText)
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  Text(
-                    (journeyload.error is LocationError)?
-                      "Please make sure you have location permissions enabled in settings before trying to get directions"
-                    : (journeyload.error is NotInAnnArborError)?
-                      "Please make sure you are in Ann Arbor before trying to get on-campus bus directions"
-                    : "Error details: ${journeyload.error}",
-                    textAlign: TextAlign.left,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400
+      
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20, left: 20, right:20),
+                    child: Text(
+                      "Options",
+                      style: TextStyle(
+                        fontFamily: 'Urbanist',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 30,
+                      ),
                     ),
                   ),
-                  SizedBox(height: 10,)
+      
+                  Padding(
+                    padding: const EdgeInsets.only(top: 30, bottom: 40),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: getColor(context, ColorType.opposite)
+                      )
+                    ),
+                  )
                 ],
-              ),
-            );
-          } else {
-            return const Center(
-              child: Text(
-                'Something went wrong. Contact ishaniik@umich.edu if persistent.',
-              ),
-            );
-          }
-        },
+              );
+            } else if (journeyload.hasData) {
+              final journeys = journeyload.data!;
+      
+              return JourneyResultsWidget(
+                journeys: journeys,
+                start: widget.originName,
+                end: widget.destName,
+                origin: widget.origin,
+                dest: widget.dest,
+                onChangeSelection: widget.onChangeSelection,
+                onSelectJourney: widget.onSelectJourney,
+                scrollController: widget.scrollController,
+              );
+            } else if (journeyload.hasError) {
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Error Loading Journey',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w700
+                      ),
+                    ),
+                    Text(
+                      (journeyload.error is LocationError)?
+                        "Please make sure you have location permissions enabled in settings before trying to get directions"
+                      : (journeyload.error is NotInAnnArborError)?
+                        "Please make sure you are in Ann Arbor before trying to get on-campus bus directions"
+                      : "Error details: ${journeyload.error}",
+                      textAlign: TextAlign.left,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w400
+                      ),
+                    ),
+                    SizedBox(height: 10,)
+                  ],
+                ),
+              );
+            } else {
+              return const Center(
+                child: Text(
+                  'Something went wrong. Contact ishaniik@umich.edu if persistent.',
+                ),
+              );
+            }
+          },
+        ),
       ),
     );
   }

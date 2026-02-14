@@ -144,7 +144,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   void _onDraggingMichiganRoute(PointerMoveEvent event) async {
     if (!_isReordering) return;
     if (widget.canVibrate &&
-        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 60) { // hpatic rate or like cooldown
+        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 10) { // hpatic rate or like cooldown
       return;
     }
 
@@ -183,7 +183,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   void _onDraggingRideRoute(PointerMoveEvent event) async {
     if (!_isReordering) return;
     if (widget.canVibrate &&
-        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 60) { // hpatic rate or like cooldown
+        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 10) { // hpatic rate or like cooldown
       return;
     }
 

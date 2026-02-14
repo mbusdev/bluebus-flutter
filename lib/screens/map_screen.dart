@@ -1177,65 +1177,75 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _bottomSheetController = showBottomSheet(
       context: context,
       enableDrag: true,
+      
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return DirectionsSheet(
-          origin: start,
-          dest: end,
-          useOrigin: dontUseLocation,
-          originName: startLoc,
-          destName: endLoc, // true = start changed, false = end changed
-          onChangeSelection: (Location location, bool startChanged) {
-            // Clear any existing search location marker before showing new destination
-            _removeSearchLocationMarker();
-
-            if (startChanged) {
-              // Show red pin for new start location if it's a building (not bus stop)
-              if (!location.isBusStop) {
-                _showSearchLocationMarker(
-                  location.latlng!.latitude,
-                  location.latlng!.longitude,
-                );
-              }
-
-              _showDirectionsSheet(
-                {
-                  'lat': location.latlng!.latitude,
-                  'lon': location.latlng!.longitude,
-                },
-                end,
-                location.name,
-                endLoc,
-                true,
-              );
-            } else {
-              // Show red pin for new destination if it's a building (non-bus stop)
-              if (!location.isBusStop) {
-                _showSearchLocationMarker(
-                  location.latlng!.latitude,
-                  location.latlng!.longitude,
-                );
-              }
-
-              _showDirectionsSheet(
-                start,
-                {
-                  'lat': location.latlng!.latitude,
-                  'lon': location.latlng!.longitude,
-                },
-                startLoc,
-                location.name,
-                dontUseLocation,
-              );
-            }
-          },
-          onSelectJourney: (journey) {
-            _displayJourneyOnMap(journey, getColor(context, ColorType.opposite));
-          },
-          onResolved: (orig, dest) {
-            // Cache resolved coordinates for virtual origin/destination resolution
-            _lastJourneyRequestOrigin = orig;
-            _lastJourneyRequestDest = dest;
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6, 
+          maxChildSize: 0.6, 
+          minChildSize: 0,  
+          expand: false,
+          builder: (context, scrollController){
+            return DirectionsSheet(
+              origin: start,
+              dest: end,
+              useOrigin: dontUseLocation,
+              originName: startLoc,
+              destName: endLoc, // true = start changed, false = end changed
+              onChangeSelection: (Location location, bool startChanged) {
+                // Clear any existing search location marker before showing new destination
+                _removeSearchLocationMarker();
+            
+                if (startChanged) {
+                  // Show red pin for new start location if it's a building (not bus stop)
+                  if (!location.isBusStop) {
+                    _showSearchLocationMarker(
+                      location.latlng!.latitude,
+                      location.latlng!.longitude,
+                    );
+                  }
+            
+                  _showDirectionsSheet(
+                    {
+                      'lat': location.latlng!.latitude,
+                      'lon': location.latlng!.longitude,
+                    },
+                    end,
+                    location.name,
+                    endLoc,
+                    true,
+                  );
+                } else {
+                  // Show red pin for new destination if it's a building (non-bus stop)
+                  if (!location.isBusStop) {
+                    _showSearchLocationMarker(
+                      location.latlng!.latitude,
+                      location.latlng!.longitude,
+                    );
+                  }
+            
+                  _showDirectionsSheet(
+                    start,
+                    {
+                      'lat': location.latlng!.latitude,
+                      'lon': location.latlng!.longitude,
+                    },
+                    startLoc,
+                    location.name,
+                    dontUseLocation,
+                  );
+                }
+              },
+              onSelectJourney: (journey) {
+                _displayJourneyOnMap(journey, getColor(context, ColorType.opposite));
+              },
+              onResolved: (orig, dest) {
+                // Cache resolved coordinates for virtual origin/destination resolution
+                _lastJourneyRequestOrigin = orig;
+                _lastJourneyRequestDest = dest;
+              },
+              scrollController: scrollController,
+            );
           },
         );
       },
@@ -1598,8 +1608,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         // Adjust bounds to position route in top 1/3 of screen (accounting for bottom sheet)
         final latSpan = north - south;
         final adjustedSouth =
-            south - (latSpan * 0.8); // Much more padding to bottom
-        final adjustedNorth = north + (latSpan * 0.2); // Less padding to top
+            south - (latSpan) * 2; // Much more padding to bottom
+        final adjustedNorth = north; // Less padding to top
 
         final bounds = LatLngBounds(
           southwest: LatLng(adjustedSouth, west),

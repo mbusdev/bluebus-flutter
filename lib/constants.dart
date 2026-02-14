@@ -76,6 +76,8 @@ enum ColorType {
   mapButtonPrimary, mapButtonSecondary,
   mapButtonIcon, mapButtonShadow,
 
+  inputBackground, inputText,
+
   highlighted, dim,
   shadow,
   
@@ -107,6 +109,9 @@ const Map<ColorType, Color> lightColors = {
 
   ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255), 
   ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),  
+
+  ColorType.inputBackground: Color.fromARGB(255, 227, 227, 227),
+  ColorType.inputText: Colors.black,
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -117,7 +122,7 @@ const Map<ColorType, Color> darkColors = {
   ColorType.backgroundGradientStart: Color.fromARGB(0, 19, 34, 47), // same as background but transparent
 
   ColorType.mapButtonPrimary: Color.fromARGB(255, 255, 255, 255),
-  ColorType.mapButtonSecondary: Color.fromARGB(190, 11, 83, 148),
+  ColorType.mapButtonSecondary: Color.fromARGB(187, 104, 104, 134),
   ColorType.mapButtonIcon: maizeBusBlue,
   ColorType.mapButtonShadow: Color.fromARGB(77, 30, 89, 141), // 77 is 30% opacity
 
@@ -131,6 +136,9 @@ const Map<ColorType, Color> darkColors = {
 
   ColorType.infoCardColor: Color.fromARGB(255, 19, 34, 47),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),
+
+  ColorType.inputBackground: Color.fromARGB(255, 0, 0, 0), 
+  ColorType.inputText: Colors.white,
 };
 
 // returns true if the current theme is dark mode
@@ -149,9 +157,9 @@ Color getColor(BuildContext context, ColorType type) {
 
 BoxShadow infoCardShadowLight = BoxShadow(
   color: Color.fromARGB(80, 38, 114, 181),
-  blurRadius: 3,
+  blurRadius: 5,
   spreadRadius: 1,
-  offset: Offset(0, 3),
+  offset: Offset(0, 1),
 );
 
 BoxShadow infoCardShadowDark = BoxShadow(
