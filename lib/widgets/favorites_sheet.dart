@@ -38,12 +38,17 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
 
   @override
   void initState() {
+
+    // TODO: right now, every time the sheet opens it first fetches all the names from the backend
+    // there should be a better way to cache this so we don't have to fetch every time
+    // also this leads to weird "pop in" behavior
     super.initState();
     _favoritesFuture = _loadFavoriteStopIds();
 
     // Build stop id -> name map to show readable names in the list.
     BlueBusApi.fetchRoutes()
         .then((routes) {
+          if (!mounted) return; // makes sure widget hasn't been closed while waiting for this
           final map = <String, String>{};
           for (final r in routes) {
             for (final s in r.stops) {
@@ -59,6 +64,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
     // same for ride
     RideAPI.fetchRoutes()
         .then((routes) {
+          if (!mounted) return; // makes sure widget hasn't been closed while waiting for this
           final map = <String, String>{};
           for (final r in routes) {
             for (final s in r.stops) {
