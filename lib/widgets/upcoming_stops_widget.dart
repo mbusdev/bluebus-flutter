@@ -388,7 +388,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     } else if (stop.prediction == "DUE") {
       predictionText = "Now";
     } else{
-      predictionText = stop.prediction != null? futureTime(stop.prediction!) : "";
+      predictionText = stop.prediction != null? (stop.prediction! + " min") : "";
     }
     
 
@@ -585,7 +585,10 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
                   ],
                 )
               : isLoading
-              ? const SizedBox.shrink()
+              ? (isExpanded)? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator(color: widget.color,)),
+              ) : SizedBox.shrink()
               : widget.childIfNoUpcomingStopsFound,
         ),
       );
@@ -593,7 +596,10 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       return (rowElements.length > 0)
           ? Column(children: rowElements)
           : isLoading
-          ? const SizedBox.shrink()
+          ? Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Center(child: CircularProgressIndicator(color: widget.color,)),
+          )
           : widget.childIfNoUpcomingStopsFound;
     }
   }
