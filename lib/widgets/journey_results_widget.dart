@@ -150,6 +150,14 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
+              onExpansionChanged: (value) {
+                // lets this also change the selected index when you expand the tile by 
+                // tapping the expansion icon, not just when you tap the whole card
+                setState(() {
+                  _selectedIndex = idx;
+                });
+                widget.onSelectJourney?.call(journey);
+              },
               title: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
