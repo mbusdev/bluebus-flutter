@@ -1985,27 +1985,39 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final mediaQueryData = MediaQuery.of(context);
     final double flutterSafeAreaTop = mediaQueryData.padding.top;
     final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
-    double padBottom = 0;
-    double padTop = 0;
-    double padLeftRight = 0;
     // then, changing them based on phone
     if(Platform.isIOS){
       if(flutterSafeAreaBottom == 0){
         // rectangle iphone
-        padBottom = 10;
-        padLeftRight = 10;
-        padTop = 20;
+        globalBottomPadding = 10;
+        globalLeftRightPadding = 10;
+        globalTopPadding = 20;
       } else {
         // round iphone
-        padBottom = 30;
-        padLeftRight = 30;
-        padTop = flutterSafeAreaTop;
+        globalBottomPadding = 30;
+        globalLeftRightPadding = 30;
+        globalTopPadding = flutterSafeAreaTop;
       }
     } else {
       // andoird
-      padBottom = 30;
-      padLeftRight = 30;
-      padTop = flutterSafeAreaTop;
+      
+      if (flutterSafeAreaBottom < 30){
+        // in this case, 30 from the bottom is fine because
+        // it's over the safe area. this usually works
+        // for round bottom phones like the google pixel
+
+        globalBottomPadding = 30;
+        globalLeftRightPadding = 30;
+        globalTopPadding = flutterSafeAreaTop;
+      } else {
+        // this case, it's over 30. probably means
+        // a rectangle android. so no need to make
+        // it like 30
+
+        globalBottomPadding = flutterSafeAreaBottom + 15;
+        globalLeftRightPadding = 15;
+        globalTopPadding = flutterSafeAreaTop;
+      }
     }
 
     return FutureBuilder(
@@ -2041,8 +2053,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             child: Stack(
               children: [
 
-
-
                 // underlying map layer (different ios and android)
                 Platform.isIOS?
                   MapWidget(
@@ -2059,14 +2069,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     : {},
                               )
                         : _allDisplayedStopMarkers,
-                        // : _displayedStopMarkers
-                        //       .union(_displayedBusMarkers)
-                        //       .union(_displayedJourneyMarkers)
-                        //       .union(
-                        //         _searchLocationMarker != null
-                        //             ? {_searchLocationMarker!}
-                        //             : {},
-                        //       ),
                     darkMapStyle: _darkMapStyle,
                     lightMapStyle: _lightMapStyle,
                     onMapCreated: _onMapCreated,
@@ -2112,7 +2114,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             
                 Padding(
                   padding: EdgeInsets.only(
-                    top: padTop, bottom: padBottom, left: padLeftRight, right: padLeftRight, 
+                    top: globalTopPadding, bottom: globalBottomPadding, left: globalLeftRightPadding, right: globalLeftRightPadding, 
                   ),
                   child: Column(
                     children: [
@@ -2124,9 +2126,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             ? Padding(
                                 key: const ValueKey('offline-banner'),
                                 padding: EdgeInsets.only(
-                                  top: padTop,
-                                  left: padLeftRight,
-                                  right: padLeftRight,
+                                  top: globalTopPadding,
+                                  left: globalLeftRightPadding,
+                                  right: globalLeftRightPadding,
                                   bottom: 10,
                                 ),
                                 child: _buildOfflineBanner(),

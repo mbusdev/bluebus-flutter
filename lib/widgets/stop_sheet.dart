@@ -1,3 +1,4 @@
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
@@ -347,7 +348,7 @@ class _StopSheetState extends State<StopSheet> {
             // with a lil simple math
             double heightOfImage = (imageBusStop)? ((MediaQuery.sizeOf(context).width) * 0.54345703125) : 0;
 
-            double paddingBelowButtons = (MediaQuery.of(context).padding.bottom == 0.0)? 20 : MediaQuery.of(context).padding.bottom;
+            double paddingBelowButtons = globalBottomPadding;
 
             return DraggableScrollableSheet(
               initialChildSize: initialSize,
@@ -680,10 +681,11 @@ class _StopSheetState extends State<StopSheet> {
                                       begin: Alignment.topCenter,
                                       end: Alignment.bottomCenter,
                                       colors: [
-                                        getColor(context, ColorType.backgroundGradientStart),  
-                                        getColor(context, ColorType.background),                       
+                                        getColor(context, ColorType.backgroundGradientStart),  // transparent
+                                        Color.lerp(getColor(context, ColorType.backgroundGradientStart),  getColor(context, ColorType.background), 0.5)!, // half-way color
+                                        getColor(context, ColorType.background), // full color
                                       ],
-                                      stops: [0, 0.2]
+                                      stops: [0, 0.4, 1]
                                     ),
                                   ),
                                 ),
@@ -697,7 +699,7 @@ class _StopSheetState extends State<StopSheet> {
                                 Spacer(), // sticks buttons to bottom
                     
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  padding: EdgeInsets.symmetric(horizontal: globalLeftRightPadding),
                                   child: Row(
                                     children: [
                                       ElevatedButton.icon(
@@ -706,12 +708,13 @@ class _StopSheetState extends State<StopSheet> {
                                           widget.onGetDirections();
                                         },
                                         style: ElevatedButton.styleFrom(
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
                                           backgroundColor: getColor(context, ColorType.mapButtonPrimary),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(30),
                                           ),
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          //elevation: 4
+                                          elevation: 5
                                         ),
                                         icon: Icon(
                                           Icons.directions, 
@@ -751,10 +754,11 @@ class _StopSheetState extends State<StopSheet> {
                                           backgroundColor: getColor(context, ColorType.dim),
                                           shape: CircleBorder(),
                                           shadowColor: Colors.black,
-                                              padding: EdgeInsets.zero,
-                                              minimumSize: Size(0,0), // Also remove minimum size constraints
-                                              fixedSize: Size(40,40),
-                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Remove tap target padding
+                                          padding: EdgeInsets.zero,
+                                          minimumSize: Size(0,0),
+                                          fixedSize: Size(40,40),
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
+                                          elevation: 4
                                         ),
                                         child: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
@@ -791,10 +795,11 @@ class _StopSheetState extends State<StopSheet> {
                                           backgroundColor: getColor(context, ColorType.dim),
                                           shape: CircleBorder(),
                                           shadowColor: Colors.black,
-                                              padding: EdgeInsets.zero,
-                                              minimumSize: Size(0,0), // Also remove minimum size constraints
-                                              fixedSize: Size(40,40),
-                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Remove tap target padding
+                                          padding: EdgeInsets.zero,
+                                          minimumSize: Size(0,0),
+                                          fixedSize: Size(40,40),
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
+                                          elevation: 4
                                         ),
                                         child: Icon(
                                           Icons.notifications_none,

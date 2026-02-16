@@ -11,6 +11,7 @@ class MaizebusSlidingSegmentedControl extends StatefulWidget {
   final TextStyle? selectedLabelStyle;
   final double height;
   final double width;
+  final List<BoxShadow>? shadows;
 
   const MaizebusSlidingSegmentedControl({
     super.key,
@@ -23,6 +24,7 @@ class MaizebusSlidingSegmentedControl extends StatefulWidget {
     this.selectedLabelStyle,
     this.height = 50,
     this.width = 300,
+    this.shadows,
   });
 
   @override
@@ -33,6 +35,7 @@ class MaizebusSlidingSegmentedControl extends StatefulWidget {
 class _MaizebusSlidingSegmentedControlState
     extends State<MaizebusSlidingSegmentedControl> {
   late int _selectedIndex;
+  
 
   @override
   void initState() {
@@ -60,6 +63,7 @@ class _MaizebusSlidingSegmentedControlState
       decoration: BoxDecoration(
         color: getColor(context, widget.backgroundColor),
         borderRadius: BorderRadius.circular(25),
+        boxShadow: widget.shadows
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -67,6 +71,8 @@ class _MaizebusSlidingSegmentedControlState
           double segmentWidth = constraints.maxWidth / widget.labels.length;
 
           return GestureDetector(
+            behavior: HitTestBehavior.opaque, 
+            
             // Tap logic
             onTapUp: (details) {
               int newIndex = (details.localPosition.dx / segmentWidth).floor();
