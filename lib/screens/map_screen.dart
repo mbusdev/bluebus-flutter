@@ -2568,6 +2568,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         },
                                         style: ElevatedButton.styleFrom(
                                           alignment: Alignment.centerLeft,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 13,
+                                            vertical: 8,
+                                          ),
                                         ),
                                         icon: Icon(
                                           Icons.search_sharp,
