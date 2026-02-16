@@ -45,6 +45,14 @@ String futureTime(String minutesInFuture) {
   return DateFormat('h:mm a').format(futureTime);
 }
 
+bool isRide(String? s) {
+  if (s != null && int.tryParse(s) != null) {
+    // busID is numeric, so it's a ride bus
+    return true;
+  } 
+  return false;
+}
+
 // TODO: Make KEY_STOPS an API call!
 
 const Color UPCOMING_STOP_COLOR = Color.fromARGB(255, 85, 119, 130);
@@ -429,9 +437,9 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
   }
 
   Row getUpcomingStopRouteChangeDetectedRow( // TODO: Add a lineTopColor and lineBottomColor attribute to the constructor and pass those in from the loop (so that it works when the bus color changes)
-    String message,
-    Color topColor,
-    Color bottomColor
+    String changingToRouteName,
+    String routeIDOfPreviousBus,
+    String routeIDOfNextBus
   ) {
     // Builds a special single line of the upcoming stops prediction, used for messages like "Bus changes to Commuter South". A single line includes
 
@@ -440,23 +448,29 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
           CustomPaint(
             size: const Size(40, 40),
             painter: UpcomingStopIconSwitchRoutePainter(
-              topColor,
-              bottomColor
+              RouteColorService.getRouteColor(routeIDOfPreviousBus),
+              RouteColorService.getRouteColor(routeIDOfNextBus)
             ),
           ),
-          Expanded(
-            child: Opacity(
-              opacity: 0.7,
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontSize: 14.0,
-                  fontWeight: FontWeight.normal,
-                  fontStyle: FontStyle.italic
-                ),
-                textAlign: TextAlign.center,
-              ),
-            )
+
+          (isRide(routeIDOfPreviousBus))? 
+            rideIcon(RouteColorService.getRouteColor(routeIDOfPreviousBus), routeIDOfPreviousBus):
+            michiganBusIcon(RouteColorService.getRouteColor(routeIDOfPreviousBus), routeIDOfPreviousBus),
+          Icon(
+            Icons.chevron_right
+          ),
+          (isRide(routeIDOfNextBus))? 
+            rideIcon(RouteColorService.getRouteColor(routeIDOfNextBus), routeIDOfNextBus) : 
+            michiganBusIcon(RouteColorService.getRouteColor(routeIDOfNextBus), routeIDOfNextBus),
+
+          SizedBox(width: 8.0),
+          Text(
+            changingToRouteName,
+            style: TextStyle(
+              fontSize: 16.0,
+              fontWeight: FontWeight.w700,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       );
@@ -511,9 +525,9 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       if (lastStopRouteCode != "" && lastStopRouteCode != upcomingStop.routeCode) {
         rowElements.add(
           getUpcomingStopRouteChangeDetectedRow(
-            "Bus changes route to "+getPrettyRouteName(upcomingStop.routeCode),
-            RouteColorService.getRouteColor(lastStopRouteCode),
-            RouteColorService.getRouteColor(upcomingStop.routeCode))
+            getPrettyRouteName(upcomingStop.routeCode),
+            lastStopRouteCode,
+            upcomingStop.routeCode)
         );
       }
 
@@ -642,4 +656,54 @@ class UpcomingStopsWidget extends StatefulWidget {
     this.onBusStopClick,
     required this.childIfNoUpcomingStopsFound,
   });
+}
+
+Widget rideIcon(Color color, String id){
+  return Container( // Bus circular icon
+    width: 50,
+    height: 35,
+    decoration: BoxDecoration(
+      shape: BoxShape.rectangle,
+      borderRadius: BorderRadius.circular(39), // should be 27.5 (55 divided by 2) but 39 works too
+      color: color,
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      id,
+      style: TextStyle(
+        color: RouteColorService.getContrastingColor(
+          id,
+        ),
+        fontSize: 18,
+        fontWeight: FontWeight.w900,
+        letterSpacing: -1,
+      ),
+      textAlign: TextAlign.center,
+    ),
+  );
+}
+
+Widget michiganBusIcon(Color color, String id){
+  return Container( // Bus circular icon
+    width: 35,
+    height: 35,
+    decoration: BoxDecoration(
+      shape: BoxShape.rectangle,
+      borderRadius: BorderRadius.circular(39), // should be 27.5 (55 divided by 2) but 39 works too
+      color: color,
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      id,
+      style: TextStyle(
+        color: RouteColorService.getContrastingColor(
+          id,
+        ),
+        fontSize: 18,
+        fontWeight: FontWeight.w900,
+        letterSpacing: -1,
+      ),
+      textAlign: TextAlign.center,
+    ),
+  );
 }
