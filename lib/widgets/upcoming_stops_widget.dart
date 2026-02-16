@@ -421,8 +421,9 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
             child: Text(
               stop.name,
               style: TextStyle(
-                fontSize: isKeyStop ? 16.0 : 14.0,
+                fontSize: 14.0,
                 fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
+                height: 1.15
               ),
             ),
           ),
@@ -453,24 +454,18 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
             ),
           ),
 
-          (isRide(routeIDOfPreviousBus))? 
-            rideIcon(RouteColorService.getRouteColor(routeIDOfPreviousBus), routeIDOfPreviousBus):
-            michiganBusIcon(RouteColorService.getRouteColor(routeIDOfPreviousBus), routeIDOfPreviousBus),
-          Icon(
-            Icons.chevron_right
-          ),
-          (isRide(routeIDOfNextBus))? 
-            rideIcon(RouteColorService.getRouteColor(routeIDOfNextBus), routeIDOfNextBus) : 
-            michiganBusIcon(RouteColorService.getRouteColor(routeIDOfNextBus), routeIDOfNextBus),
-
-          SizedBox(width: 8.0),
-          Text(
-            changingToRouteName,
-            style: TextStyle(
-              fontSize: 16.0,
-              fontWeight: FontWeight.w700,
+          
+          Expanded(
+            child: Center(
+              child: Text(
+                "Bus changes to $changingToRouteName",
+                style: TextStyle(
+                  fontSize: 14.0,
+                  fontStyle: FontStyle.italic
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       );

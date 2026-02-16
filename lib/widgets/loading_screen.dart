@@ -54,7 +54,7 @@ class LoadingScreen extends StatelessWidget {
 
                       child: Container(
                         height: 40,
-                        color: getColor(context, ColorType.secondary),
+                        color: getColor(context, ColorType.dim),
                       ),
                     ),
 
