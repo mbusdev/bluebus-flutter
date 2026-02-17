@@ -116,38 +116,6 @@ class NotificationService {
     return _registrationToken;
   }
 
-  // if (Platform.isIOS /*|| Platform.isMacOS*/ ) {
-  //   await _localNotificationsPlugin
-  //       .resolvePlatformSpecificImplementation<
-  //         IOSFlutterLocalNotificationsPlugin
-  //       >()
-  //       ?.requestPermissions(alert: true, badge: true, sound: true);
-  //   await _localNotificationsPlugin
-  //       .resolvePlatformSpecificImplementation<
-  //         MacOSFlutterLocalNotificationsPlugin
-  //       >()
-  //       ?.requestPermissions(alert: true, badge: true, sound: true);
-  // } else if (Platform.isAndroid) {
-  //   final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-  //       _localNotificationsPlugin
-  //           .resolvePlatformSpecificImplementation<
-  //             AndroidFlutterLocalNotificationsPlugin
-  //           >();
-
-  //   await androidImplementation?.requestNotificationsPermission();
-  // }
-  // }
-
-  // static Future<void> sendTestPushNotification() async {
-  //   await FirebaseMessaging.instance.getAPNSToken();
-  //   final registrationToken = await FirebaseMessaging.instance.getToken();
-  //   await http.post(
-  //     Uri.parse('$BACKEND_URL/notifyMeLater'),
-  //     headers: {'Content-Type': 'application/json'},
-  //     body: jsonEncode({'token': registrationToken}),
-  //   );
-  // }
-
   static Future<void> sendLocalNotification(
     String? title,
     String? body,

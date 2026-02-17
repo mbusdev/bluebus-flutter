@@ -8,6 +8,7 @@ import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
+import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
@@ -221,63 +222,18 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     await RouteColorService.initialize();
 
     if (!isCurrentVersionEqualOrHigher(startupData.version)) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(
-              startupData!.updateTitle,
-              style: TextStyle(
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w700,
-                fontSize: 24,
-              ),
-            ),
-            content: Text(
-              startupData.updateMessage,
-              style: TextStyle(
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w400,
-                fontSize: 16,
-              ),
-            ),
-          );
-        },
+      showUndismissableMaizebusDialog(
+        contextIn: context,
+        title: Text(startupData!.updateTitle),
+        content: Text(startupData.updateMessage)
       );
     }
 
     if (startupData.persistantMessageTitle != ''){
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(
-              startupData!.persistantMessageTitle,
-              style: TextStyle(
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w700,
-                fontSize: 24,
-              ),
-            ),
-            content: Text(
-              startupData.persistantMessage,
-              style: TextStyle(
-                fontFamily: 'Urbanist',
-                fontWeight: FontWeight.w400,
-                fontSize: 16,
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: Text("OK"),
-                onPressed: () {
-                  Navigator.of(context).pop(); 
-                },
-              )
-            ],
-          );
-        },
+      showMaizebusOKDialog(
+        contextIn: context,
+        title: Text(startupData!.persistantMessageTitle),
+        content: Text(startupData.persistantMessage)
       );
     }
 
@@ -1783,22 +1739,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               if (latLong != null) {
                 _showStopSheet(id, name, latLong.latitude, latLong.longitude);
               } else {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Error'),
-                      content: const Text('Couldn\'t load stop.'),
-                      actions: <Widget>[
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop(); // Dismiss the dialog
-                          },
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    );
-                  },
+                showMaizebusOKDialog(
+                  contextIn: context,
+                  title: const Text("Error"),
+                  content: const Text("Couldn't load stop."),
                 );
               }
             },
@@ -1821,22 +1765,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             if (latLong != null) {
               _showStopSheet(id, name, latLong.latitude, latLong.longitude);
             } else {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Error'),
-                    content: const Text('Couldn\'t load stop.'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Dismiss the dialog
-                        },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  );
-                },
+              showMaizebusOKDialog(
+                contextIn: context,
+                title: const Text('Error'),
+                content: const Text('Couldn\'t load stop.'),
               );
             }
           },

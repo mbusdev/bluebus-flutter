@@ -589,7 +589,7 @@ class _StopSheetState extends State<StopSheet> {
                                                                       color: Color.fromARGB(255, 150, 150, 150),
                                                                     ),
                                                                     Text(
-                                                                      "no busses arriving",
+                                                                      "no buses arriving",
                                                                       style: TextStyle(
                                                                         color: Color.fromARGB(255, 150, 150, 150),
                                                                         fontWeight: FontWeight.bold

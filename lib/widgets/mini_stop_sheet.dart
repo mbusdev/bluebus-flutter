@@ -198,7 +198,7 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                       separatorBuilder: (context, index) {
                         return Divider();
                       },
-                    ): Text("No upcoming busses", style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20,))
+                    ): Text("No upcoming buses", style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20,))
                   ],
                 ),
               ),

@@ -1,4 +1,5 @@
 import 'package:bluebus/theride_api.dart';
+import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/mini_stop_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -153,29 +154,29 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                       ),
 
                       Expanded(
-                        child:
-                            (snapshot.connectionState ==
-                                ConnectionState.waiting)
-                            ? const Center(child: CircularProgressIndicator())
-                            : ((snapshot.data ?? []).isEmpty)
-                            ? const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.only(
-                                    left: 20,
-                                    right: 20,
-                                    bottom: 20,
-                                  ),
-                                  child: Text(
-                                    "You don't currently have any favorites. You can find bus stops to favorite on the map",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 20,
-                                      height: 0,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : Padding(
+                        child: Builder(
+                          builder: (context) {
+                            if (snapshot.connectionState == ConnectionState.waiting){
+                              return const Center(child: CircularProgressIndicator());
+                            } else if ((snapshot.data ?? []).isEmpty){
+                              // code that creates the dialog box
+
+                              // schedule for end of frame (to avoid crash)
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!context.mounted) return;
+
+                                Navigator.of(context).pop();
+
+                                showMaizebusOKDialog(
+                                  contextIn: context,
+                                  title: const Text("No Favorites"),
+                                  content: const Text("Hit the heart icon on a stop to add it to your favorites and see it here!"),
+                                );
+                              });
+
+                              return const SizedBox.shrink();
+                            } else {
+                              return Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                 ),
@@ -205,7 +206,10 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                                     );
                                   },
                                 ),
-                              ),
+                              );
+                            }
+                          }
+                        ) 
                       ),
                     ],
                   ),

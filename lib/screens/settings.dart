@@ -174,7 +174,10 @@ class _SettingsState extends State<Settings> {
                 personShowcase(context, "Ryan Lu", "Backend Lead", "assets/portraits/none.jpg"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Aravind Kandarpa", "Developer - City Busses Backend", "assets/portraits/none.jpg"),
+                personShowcase(context, "Karen Lin", "UI Designer - Colors", "assets/portraits/none.jpg"),
+
+                const SizedBox(height: heightBetween),
+                personShowcase(context, "Aravind Kandarpa", "Developer - City Buses Backend", "assets/portraits/none.jpg"),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Evan Huang", "Developer - Movable Routes", "assets/portraits/none.jpg"),

@@ -1,3 +1,4 @@
+import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
@@ -20,38 +21,10 @@ void sendEmailWithSender(BuildContext context, String emailSubject, String email
 }
 
 void showFallbackOptions(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(
-          'Email-Send failed',
-          style: TextStyle(
-            color: Colors.black,
-            fontFamily: 'Urbanist',
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
-          ),
-        ),
-        content: Text(
-          'Unable to reach the email app on your device. You can still send us feedback by manually emailing ishaniik@umich.edu',
-          style: TextStyle(
-            color: Colors.black,
-            fontFamily: 'Urbanist',
-            fontWeight: FontWeight.w400,
-            fontSize: 16,
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: Text('OK'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
+  showMaizebusOKDialog(
+    contextIn: context,
+    title: const Text("Email-Send failed"),
+    content: const Text("Unable to reach the email app on your device. You can still send us feedback by manually emailing contact@maizebus.com"),
   );
 }
 
