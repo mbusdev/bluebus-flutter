@@ -334,7 +334,11 @@ class _StopSheetState extends State<StopSheet> {
 
               // edge case
               if (itemCount == 0) {
-                initialSize = 0.5;
+                if (imageBusStop) {
+                  initialSize = 0.8;
+                } else {
+                  initialSize = 0.5;
+                }
               }
             } else {
               // A fixed initial size for loading or error states.
@@ -575,18 +579,24 @@ class _StopSheetState extends State<StopSheet> {
                                                       children: [
                                                         (arrivingBuses.length == 0)
                                                             ?
-                                                              FittedBox(
-                                                                fit: BoxFit.fill,
-                                                                alignment: Alignment.center,
-                                                                child: Text(
-                                                                  "There are currently no departing buses",
-                                                                  textAlign: TextAlign.center,
-                                                                  style: TextStyle(
-                                                                    fontFamily: 'Urbanist',
-                                                                    fontWeight: FontWeight.w400,
-                                                                    fontSize: 20,
-                                                                  ),
-                                                                )
+                                                              Center(
+                                                                child: Column(
+                                                                  children: [
+                                                                    SizedBox(height: 50,),
+                                                                    Icon(
+                                                                      Icons.no_transfer,
+                                                                      size: 80,
+                                                                      color: Color.fromARGB(255, 150, 150, 150),
+                                                                    ),
+                                                                    Text(
+                                                                      "no busses arriving",
+                                                                      style: TextStyle(
+                                                                        color: Color.fromARGB(255, 150, 150, 150),
+                                                                        fontWeight: FontWeight.bold
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
                                                               )
                                                               
                                                             :
