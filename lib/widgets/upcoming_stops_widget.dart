@@ -520,7 +520,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
           ),
           Expanded(
             child: Text(
-              stop.id + ": " + stop.name,
+              stop.name,
               style: TextStyle(
                 fontSize: 14.0,
                 fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
