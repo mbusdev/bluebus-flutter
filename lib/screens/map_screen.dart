@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as Math;
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
@@ -36,6 +37,27 @@ import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
+
+// Function to calculate rotation angle between two geographical points
+// (used for bus stop icon orientation)
+double pointRotation(double lat1, double lon1, double lat2, double lon2) {
+  const double degToRad = 0.017453292519943295; // π / 180
+  const double radToDeg = 57.29577951308232;    // 180 / π
+
+  double dLat = lat2 - lat1;
+  double dLon = lon2 - lon1;
+
+  // Scale longitude by cos(lat) to correct for east-west distance
+  double x = dLon * (Math.cos(lat1 * degToRad));
+  double y = dLat;
+
+  double angle = Math.atan2(x, y) * radToDeg;
+
+  // Normalize to [0, 360)
+  if (angle < 0) angle += 360;
+
+  return angle;
+}
 
 Future<BitmapDescriptor> resizeImage(ByteData image) async {
   // Load and resize stop icon
@@ -1376,6 +1398,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     BitmapDescriptor.defaultMarkerWithHue(
                       _colorToHue(RouteColorService.getRouteColor(leg.rt!)),
                     ),
+                rotation: (bestSegment.length >= 3)
+                    ? pointRotation(bestSegment[1].latitude, bestSegment[1].longitude, bestSegment[2].latitude, bestSegment[2].longitude)
+                    : 0,  
               ),
               Marker(
                 flat: true,
@@ -1388,6 +1413,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     BitmapDescriptor.defaultMarkerWithHue(
                       _colorToHue(RouteColorService.getRouteColor(leg.rt!)),
                     ),
+                rotation: (bestSegment.length >= 3)
+                    ? pointRotation(bestSegment[bestSegment.length - 3].latitude, bestSegment[bestSegment.length - 3].longitude, bestSegment[bestSegment.length - 2].latitude, bestSegment[bestSegment.length - 2].longitude)
+                    : 0,  
               ),
             ]);
 
