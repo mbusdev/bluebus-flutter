@@ -224,7 +224,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (!isCurrentVersionEqualOrHigher(startupData.version)) {
       showUndismissableMaizebusDialog(
         contextIn: context,
-        title: Text(startupData!.updateTitle),
+        title: Text(startupData.updateTitle),
         content: Text(startupData.updateMessage)
       );
     }
@@ -232,7 +232,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (startupData.persistantMessageTitle != ''){
       showMaizebusOKDialog(
         contextIn: context,
-        title: Text(startupData!.persistantMessageTitle),
+        title: Text(startupData.persistantMessageTitle),
         content: Text(startupData.persistantMessage)
       );
     }
@@ -325,11 +325,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   Widget _buildOfflineBanner() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.red.shade600,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(30),
         boxShadow: const [
           BoxShadow(
             color: ui.Color.fromARGB(48, 0, 0, 0),
@@ -348,12 +347,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           ),
           const SizedBox(width: 10),
           const Text(
-            'No internet. Data may be inaccurate',
+            'No internet connection',
             style: TextStyle(
               color: Colors.white,
               fontFamily: 'Urbanist',
               fontWeight: FontWeight.w600,
-              fontSize: 14,
+              fontSize: 16,
             ),
           ),
         ],
@@ -542,25 +541,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // Ignore cache save errors
     }
   }
-
-  // // Clear all cached bus icons and version info (useful for development/testing)
-  // Future<void> _clearIconCache() async {
-  //   try {
-  //     final prefs = await SharedPreferences.getInstance();
-  //     final keys = prefs.getKeys();
-
-  //     for (final key in keys) {
-  //       if (key.startsWith('bus_icon_') || key == 'cached_assets_version') {
-  //         await prefs.remove(key);
-  //       }
-  //     }
-
-  //     // Clear in-memory cache too
-  //     _routeBusIcons.clear();
-  //   } catch (e) {
-  //     // Ignore errors
-  //   }
-  // }
 
   // Load a specific route's bus icon
   Future<void> _loadRouteBusIcon(String routeId, String imageUrl) async {
@@ -2078,25 +2058,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   ),
                   child: Column(
                     children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        child: _isOffline
-                            ? Padding(
-                                key: const ValueKey('offline-banner'),
-                                padding: EdgeInsets.only(
-                                  top: globalTopPadding,
-                                  left: globalLeftRightPadding,
-                                  right: globalLeftRightPadding,
-                                  bottom: 10,
-                                ),
-                                child: _buildOfflineBanner(),
-                              )
-                            : const SizedBox.shrink(
-                                key: ValueKey('offline-banner-hidden'),
-                              ),
-                      ),
                       // if showing journey, show header
                       (_journeyOverlayActive)
                           ? DecoratedBox(
@@ -2218,6 +2179,26 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               ],
                             )
                           ),
+
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: _isOffline
+                            ? Padding(
+                                key: const ValueKey('offline-banner'),
+                                padding: EdgeInsets.only(
+                                  top: 15,
+                                  left: globalLeftRightPadding,
+                                  right: globalLeftRightPadding,
+                                  bottom: 10,
+                                ),
+                                child: _buildOfflineBanner(),
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('offline-banner-hidden'),
+                              ),
+                      ),
 
                       // reminder widget
                       SizedBox(height: 30.0,),

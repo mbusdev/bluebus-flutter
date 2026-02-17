@@ -660,7 +660,7 @@ class _StopSheetState extends State<StopSheet> {
                                                         horizontal: 20,
                                                       ),
                                                       child: Text(
-                                                        "There doesn't seem to be any departure data for this stop",
+                                                        "Can't load data. Check your internet connection and try refreshing",
                                                         style: TextStyle(
                                                           fontFamily: 'Urbanist',
                                                           fontWeight: FontWeight.w400,
