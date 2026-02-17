@@ -1,4 +1,5 @@
 // Import necessary Flutter packages
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/services/notification_service.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initPlugin();
   await IncomingBusReminderService.start();
+
+  BorderRadiusManager.loadScreenRadius();
 
   runApp(
     MultiProvider(

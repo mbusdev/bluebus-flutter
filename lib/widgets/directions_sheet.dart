@@ -1,3 +1,4 @@
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -104,10 +105,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(40),
-        topRight: Radius.circular(40),
-      ),
+      borderRadius: BorderRadiusManager.getSheetBorderRadius(context),
+      // borderRadius: const BorderRadius.only(
+      //   topLeft: Radius.circular(40),
+      //   topRight: Radius.circular(40),
+      // ),
       child: Container(
         decoration: BoxDecoration(
           color: getColor(context, ColorType.background),
@@ -125,10 +127,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                   Container(
                     decoration: BoxDecoration(
                       color: getColor(context, ColorType.background),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
+                      borderRadius: BorderRadiusManager.getSheetBorderRadius(context)
+                      // borderRadius: BorderRadius.only(
+                      //   topLeft: Radius.circular(30),
+                      //   topRight: Radius.circular(30),
+                      // ),
                     ),
       
                     child: Padding(

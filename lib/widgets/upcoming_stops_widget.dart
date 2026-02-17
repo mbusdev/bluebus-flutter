@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/bus_info_service.dart';
@@ -181,22 +182,65 @@ class UpcomingStopIconSwitchRoutePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
 
-    Paint fill_paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [top_color, bottom_color]
-      ).createShader(Rect.fromLTWH(0,0,size.width,size.height));
+    Paint top_fill_paint = Paint()
+      ..color = top_color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.fill;
+    
+    Paint bottom_fill_paint = Paint()
+      ..color = bottom_color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.fill;
+
+    // Paint fill_paint = Paint()
+    //   ..shader = LinearGradient(
+    //     begin: Alignment.topCenter,
+    //     end: Alignment.bottomCenter,
+    //     colors: [top_color, bottom_color]
+    //   ).createShader(Rect.fromLTWH(0,0,size.width,size.height));
+
+    double left_coord = (1.0 - BACKLINE_WIDTH) / 2 * size.width;
+    double line_width = size.width * BACKLINE_WIDTH;
 
     canvas.drawRect(
       Rect.fromLTWH(
-        (1.0 - BACKLINE_WIDTH) / 2 * size.width,
+        left_coord,
+        // (1.0 - BACKLINE_WIDTH) / 2 * size.width,
         0,
-        size.width * BACKLINE_WIDTH,
+        // size.width * BACKLINE_WIDTH,
+        line_width,
         size.height,
       ),
-      fill_paint,
+      top_fill_paint,
     );
+
+    canvas.drawRect(
+      Rect.fromLTWH(
+        // (1.0 - BACKLINE_WIDTH) / 2 * size.width,
+        left_coord,
+        size.height / 2,
+        // 0,
+        // size.width * BACKLINE_WIDTH,
+        line_width,
+        size.height / 2,
+      ),
+      bottom_fill_paint,
+    );
+
+    canvas.drawVertices(
+      Vertices.new(
+        VertexMode.triangles,
+        [
+          Offset(left_coord, size.height / 2),
+          Offset(left_coord + line_width / 2, size.height / 2 + 8),
+          Offset(left_coord + line_width, size.height / 2)
+        ]
+      ),
+      BlendMode.src,
+      top_fill_paint
+    );
+
+
   }
 
   @override

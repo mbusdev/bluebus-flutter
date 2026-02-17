@@ -1,6 +1,8 @@
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 import '../constants.dart';
 import '../models/bus.dart';
 import '../services/route_color_service.dart';
@@ -55,10 +57,11 @@ class _BusSheetState extends State<BusSheet> {
     return Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
+        borderRadius: BorderRadiusManager.getSheetBorderRadius(context),
+        // borderRadius: BorderRadius.only(
+        //   topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+        //   topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+        // ),
         boxShadow: [
           SheetBoxShadow
         ]

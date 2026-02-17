@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:screen_corner_radius/screen_corner_radius.dart';
+
 import 'constants.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -45,4 +48,18 @@ Location? getLocationFromID (String id) {
   }
 
   return null;
+}
+
+class BorderRadiusManager {
+  static ScreenRadius? screenRadius = null;
+  static void loadScreenRadius() async {
+    final radius = await ScreenCornerRadius.get();
+    screenRadius = radius;
+  }
+  static BorderRadius getSheetBorderRadius(BuildContext context) {
+    return BorderRadius.only(
+        topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+        topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+      );
+  }
 }

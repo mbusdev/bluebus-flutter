@@ -30,6 +30,7 @@ dependencies:
   firebase_core: ^4.4.0
   firebase_messaging: ^16.1.1
   flutter_staggered_animations: ^1.1.1
+  screen_corner_radius: ^3.0.0
 
 dev_dependencies:
   flutter_test:

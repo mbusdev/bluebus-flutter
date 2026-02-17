@@ -37,6 +37,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   int? _lastHoverIndex;
   DateTime _lastHoverHaptic = DateTime.fromMillisecondsSinceEpoch(0);
 
+  
+
   @override
   void initState() {
     super.initState();
@@ -283,10 +285,11 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
             height: MediaQuery.of(context).size.height * 0.9,
             decoration: BoxDecoration(
               color: getColor(context, ColorType.background),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
+              borderRadius: BorderRadiusManager.getSheetBorderRadius(context)
+              // borderRadius: BorderRadius.only(
+              //   topLeft: Radius.circular(30),
+              //   topRight: Radius.circular(30),
+              // ),
             ),
 
             child: Column(
@@ -294,10 +297,11 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
               children: [
                 Expanded(
                   child: ClipRRect(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
+                    borderRadius: BorderRadiusManager.getSheetBorderRadius(context),
+                    // borderRadius: BorderRadius.only(
+                    //   topLeft: Radius.circular(30),
+                    //   topRight: Radius.circular(30),
+                    // ),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [

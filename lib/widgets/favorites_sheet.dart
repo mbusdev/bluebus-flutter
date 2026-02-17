@@ -1,3 +1,4 @@
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/theride_api.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/mini_stop_sheet.dart';
@@ -131,10 +132,11 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                 return Container(
                   decoration: BoxDecoration(
                     color: getColor(context, ColorType.background),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
+                    borderRadius: BorderRadiusManager.getSheetBorderRadius(context),
+                    // borderRadius: BorderRadius.only(
+                    //   topLeft: Radius.circular(30),
+                    //   topRight: Radius.circular(30),
+                    // ),
                     boxShadow: [SheetBoxShadow]
                   ),
                   child: Column(

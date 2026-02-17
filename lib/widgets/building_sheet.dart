@@ -1,5 +1,7 @@
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
@@ -47,6 +49,11 @@ class BuildingSheet extends StatefulWidget {
 class _BuildingSheetState extends State<BuildingSheet> {
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   void dispose() {
     super.dispose();
   }
@@ -56,10 +63,14 @@ class _BuildingSheetState extends State<BuildingSheet> {
     return Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
+        borderRadius: BorderRadiusManager.getSheetBorderRadius(context)
+        // borderRadius: BorderRadius.only(
+        //   topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+        //   topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+
+        //   // topLeft: Radius.circular(30),
+        //   // topRight: Radius.circular(30),
+        // ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

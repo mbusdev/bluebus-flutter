@@ -236,10 +236,11 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           Container(
             decoration: BoxDecoration(
               color: getColor(context, ColorType.background),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
+              borderRadius: BorderRadiusManager.getSheetBorderRadius(context)
+              // borderRadius: BorderRadius.only(
+              //   topLeft: Radius.circular(30),
+              //   topRight: Radius.circular(30),
+              // ),
             ),
 
             child: Padding(

@@ -4,6 +4,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 import '../constants.dart';
 
 class LocationSearchBar extends HookWidget {
@@ -344,6 +345,11 @@ class _SearchSheetState extends State<SearchSheet> {
   final FocusNode _searchFocusNode = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -356,10 +362,14 @@ class _SearchSheetState extends State<SearchSheet> {
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
+        borderRadius: BorderRadiusManager.getSheetBorderRadius(context),
+        // borderRadius: BorderRadius.only(
+        //   topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+        //   topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+
+        //   // topLeft: Radius.circular(30),
+        //   // topRight: Radius.circular(30),
+        // ),
         boxShadow: [SheetBoxShadow]
       ),
       child: Column(

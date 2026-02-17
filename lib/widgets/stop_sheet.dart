@@ -4,6 +4,7 @@ import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 import '../constants.dart';
 import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
@@ -365,10 +366,13 @@ class _StopSheetState extends State<StopSheet> {
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: getColor(context, ColorType.background),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
+                    borderRadius: BorderRadiusManager.getSheetBorderRadius(context),
+                    // borderRadius: BorderRadius.only(
+                    //   // topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+                    //   // topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+                    //   // topLeft: Radius.circular(30),
+                    //   // topRight: Radius.circular(30),
+                    // ),
                     boxShadow: [
                       SheetBoxShadow
                     ]
@@ -389,10 +393,13 @@ class _StopSheetState extends State<StopSheet> {
                         (imageBusStop)?
                           // Image of bus stop if it exists
                           ClipRRect(
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(30),
-                              topRight: Radius.circular(30),
-                            ),
+                            borderRadius: BorderRadiusManager.getSheetBorderRadius(context),
+                            // borderRadius: BorderRadius.only(
+                            //   topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+                            //   topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+                            //   // topLeft: Radius.circular(30),
+                            //   // topRight: Radius.circular(30),
+                            // ),
                             child: Image.asset(
                                 imagePath,
                                 fit: BoxFit.cover,

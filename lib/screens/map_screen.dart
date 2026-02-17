@@ -22,6 +22,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -1221,10 +1222,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return Container(
           decoration: BoxDecoration(
             color: getColor(context, ColorType.background),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
-            ),
+            borderRadius: BorderRadiusManager.getSheetBorderRadius(context)
+            // borderRadius: BorderRadius.only(
+            //   topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+            //   topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+            //   // topLeft: Radius.circular(30),
+            //   // topRight: Radius.circular(30),
+            // ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
