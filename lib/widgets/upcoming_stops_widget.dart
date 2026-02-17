@@ -10,6 +10,12 @@ import '../models/bus_stop.dart';
 final Map<String, String> KEY_STOPS = {
   // Key stops are shown larger in the list of upcoming stops for each bus.
   //     You can also rename them here!
+
+  // Key stops were chosen by whether they met one of the following criteria
+  //  * Was a major landmark (i.e. large shopping malls, Walmart/Meijer, Michigan Stadium, transit center, Amtrak, etc)
+  //  * Was the end/beginning of a route
+  //  * Was a stop unique to that route or a small set of routes (e.g. Oxford Housing)
+
   "C250": "Central Campus Transit Center", // South side CCTC
   "C251": "Central Campus Transit Center", // North side CCTC
   "N551": "Pierpont Commons", // Murfin Inbound, to Central Campus
@@ -27,16 +33,111 @@ final Map<String, String> KEY_STOPS = {
   "N422": "Northwood Fire Station", // "Top" of Northwood route
   "N437": "Northwood V",
 
+  "1285": "Central Campus Transit Center", // TheRide stop for CCTC, southbound. Route 62, 23, 64
+  "1776": "Central Campus Transit Center", // TheRide stop for CCTC, northbound. Route 23, 104, 63, 64
+
   // Blake transit center stops
   "140": "Blake Transit Center",
+  "142": "Blake Transit Center",
+  "143": "Blake Transit Center",
+  "144": "Blake Transit Center",
+  "145": "Blake Transit Center",
   "137": "Blake Transit Center",
   "138": "Blake Transit Center",
   "145": "Blake Transit Center",
   "1150": "Blake Transit Center",
-  "142": "Blake Transit Center",
+  "2262": "Blake Transit Center",
+
+  // Ypsilanti Transit Center stops
+  "130": "Ypsilanti Transit Center",
+  "131": "Ypsilanti Transit Center",
+  "132": "Ypsilanti Transit Center",
+  "133": "Ypsilanti Transit Center",
+  "135": "Ypsilanti Transit Center",
+  "146": "Ypsilanti Transit Center",
+
+  "1564": "VA Medical Center",
+  "267": "Trinity Health - Ann Arbor Hospital",
+  "266": "Washtenaw Community College - Student Ctr",
+  "2250": "Washtenaw Community College - Service Dr",
+  "2250": "Washtenaw Community College - South Side",
+  "1944": "Briarwood Mall - Main Stop", // Route 6, 67
+  "420": "Meijer - Carpenter Rd",
+  "959": "Roundtree Place Shopping Center",
+  "952": "Roundtree Place Shopping Center",
+  "330": "Manchester Park",
+  "1350": "Traver Village Shopping Center", // Route 22, 23, 65
+  "1455": "Green Rd Park and Ride", // Route 65, 66
+
+  "1591": "Meijer - Saline South",
+
+  "2160": "Scio Ridge + Sudburry",
+  "2161": "Scio Ridge + Chamberlain",
+
+  "1199": "Pauline + South Maple", // Route 27, 28
+  "659": "Michigan Stadium", // Route 25, 29
+
+  "681": "Westgate Shopping Center", // Route 28
+  "710": "Westgate Shopping Center",
+  "704": "Westgate Shopping Center",
+
+  "1271": "Meijer - Jackson Road", // Route 30
+
+  "1880": "Skyline High School", // Route 61
+
+  "1492": "Rudolf Steiner School", // Route 33?
+  "795": "Holyoke + Newport", // Route 33
+
+  "1885": "Amtrak Station", // Route 33
+
+  "1759": "Miller Rd Park + Ride", // Route 34, 61
+
+  "1936": "Aldi Grocery",
+
+  "1642": "Tyler + Nash", // Route 44
+
+  "2196": "Harbour Cove Tennis Court", // Route 46
+
+  "2195": "Arbor Preparatory High School", // Route 46
+
+  "1977": "Kroger - Paint Creek", // Route 46
+  "1955": "Kroger - Paint Creek", // Route 46
+
+  "1640": "Ypsilanti Township Civic Center", // Route 46
+  "2212": "Ypsilanti Township Civic Center", // Route 46
+
+  "1019": "Harry + Grove", // Route 45
+
+  "2156": "Holmes + Ridge", // Route 43, 68
+  "983": "Ridge + Holmes", // Route 42, 43
+
+  "1433": "MacArthur + Harris", // Route 42
+
+  "1293": "Wolverine Tower (Briarwood)", // Route 62
+  "2235": "U-M Tennis and Gymnastics", // Route 62
+  "1750": "U-M Tennis and Gymnastics", // Route 62
+
+  "582": "Pioneer High School", // Route 25, 26, 29, 64
+
+  "1697": "Dhu Varren Foodgatherers", // Route 63
+
+  "190": "Kellogg Eye Center", // Route 23, 63
+  "235": "Kellogg Eye Center", // Route 23, 63
+
+  "2169": "Roundtree Place Shopping Ctr", // Route 47
+
+  "419": "Meijer - Carpenter Rd", // Route 66, 5
+
+  "1499": "Service Dr. + Emerick", // Route 68
+  "2156": "Holmes + Ridge",
+  "983": "Holmes + Ridge",
 
   // TODO: Add other important stops for buses
 };
+
+
+
+// TODO: Add a heart if a stop is favorited!
 
 String futureTime(String minutesInFuture) {
   int min = int.parse(minutesInFuture);
@@ -419,7 +520,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
           ),
           Expanded(
             child: Text(
-              stop.name,
+              stop.id + ": " + stop.name,
               style: TextStyle(
                 fontSize: 14.0,
                 fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
@@ -497,6 +598,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       // Add the additional key stops to the array if we're abridging the detailed stops
       for (int i = DETAILED_STOPS_TO_SHOW; i < nextBusStops.length; i++) {
       if (KEY_STOPS.containsKey(nextBusStops[i].id)) {
+        nextBusStops[i].name = KEY_STOPS[nextBusStops[i].id]!;
         additionalKeyStops.add(nextBusStops[i]);
       }
     }
@@ -513,6 +615,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       //String stopName = upcomingStop.name;
       if (KEY_STOPS.containsKey(upcomingStop.id)) {
         isKeyStop = true;
+        upcomingStop.name = KEY_STOPS[upcomingStop.id]!;
         //stopName = KEY_STOPS[upcomingStop.id] ?? upcomingStop.name;
       }
 

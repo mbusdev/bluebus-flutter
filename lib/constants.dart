@@ -173,6 +173,36 @@ BoxShadow getInfoCardShadow(BuildContext context) {
   return isDarkMode(context) ? infoCardShadowDark : infoCardShadowLight;
 }
 
+Color getGradientLerpColor(BuildContext context, double percentage) {
+  if (percentage == 1) {
+    return getColor(context, ColorType.background);
+  } else if (percentage == 0) {
+    return getColor(context, ColorType.backgroundGradientStart); // Transparent
+  }
+
+  return Color.lerp(
+    getColor(context, ColorType.backgroundGradientStart),
+    getColor(context, ColorType.background),
+    percentage
+  )!;
+}
+
+LinearGradient getStopHeroImageGradient(BuildContext context) {
+  // A slightly smoother gradient than sRGB 
+  return LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      getGradientLerpColor(context, 0),
+      getGradientLerpColor(context, 0.15),
+      getGradientLerpColor(context, 0.5),
+      getGradientLerpColor(context, 0.75),
+      getGradientLerpColor(context, 1)
+    ],
+    stops: [0.6, 0.65, 0.74, 0.85, 1]
+  );
+}
+
 //Clipping path for the loading screen.
 //the path has the bottom right corner replaced with a diagonal edge.
 class TrapezoidClip extends CustomClipper<Path> {
