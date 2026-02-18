@@ -785,18 +785,21 @@ class _StopSheetState extends State<StopSheet> {
                                             context: context,
                                             builder: (context) {
                                               return Dialog(
+                                                
+                                                backgroundColor: getColor(context, ColorType.background),
+                                                
+                                                
+                                              
                                                 constraints: BoxConstraints(
                                                   minWidth: 0.0,
                                                   minHeight: 0.0,
-                                                  maxHeight: MediaQuery.of(context).size.height * 0.4
                                                 ),
-                                                child: Center(
-                                                  child: ReminderForm(
-                                                    stpid: widget.stopID,
-                                                    activeRoutes: arrivingBuses
-                                                      .fold([], (xs, x) => xs.contains(x.id) ? xs : xs + [x.id]),
-                                                  ),
-                                                )
+                                                child: ReminderForm(
+                                                  stpid: widget.stopID,
+                                                  
+                                                  activeRoutes: arrivingBuses
+                                                    .fold([], (xs, x) => xs.contains(x.id) ? xs : xs + [x.id]),
+                                                ),
                                               );
                                             }
                                           );
@@ -863,7 +866,8 @@ class _ReminderFormState extends State<ReminderForm> {
   /// ones that have been selected to be added / removed
   Set<String> rtidsToChange = {};
   int reminderThresh = 5;
-  
+  String? rtidToRemove;
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -871,9 +875,11 @@ class _ReminderFormState extends State<ReminderForm> {
       future: reminderInfoFuture,
       builder: (context, snapshot) {
         // TODO: 30s timeout
+
         if (snapshot.connectionState != ConnectionState.done) {
           return Center(child: Text("Loading"),);
         }
+        
         final dataForAllStops = snapshot.data;
         if (dataForAllStops == null) {
           return Center(child: Column(children: [
@@ -881,110 +887,252 @@ class _ReminderFormState extends State<ReminderForm> {
             Text("Error: ${snapshot.error}"),
           ]));
         }
+        
+
         final dataForThisStop = dataForAllStops.where((x) => x.stpid == widget.stpid);
+        
         final routesToShow = widget.activeRoutes;
+
         for (final reminder in dataForThisStop) {
+          rtidsToChange.add(reminder.rtid);
           if (routesToShow.contains(reminder.rtid)) {
             continue;
           }
+
           routesToShow.add(reminder.rtid);
+          
+          
+          print(reminder.rtid);
         }
+
+        if (rtidToRemove != null) {
+          rtidsToChange.remove(rtidToRemove);
+        }
+        rtidToRemove = null;
+        
+
         return Column(
+          spacing: 0,
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: routesToShow
-                .map((rtid) {
-                  final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
-                  return GestureDetector(
-                    onTap: () {
+            Container(
+              padding: EdgeInsets.all(25),
+              
+              child: Column(
+                spacing: 0,
+                
+                children: [
+                  Row( //"set notification"
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Set Notification",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'Urbanist',
+                            color: getColor(context, ColorType.opposite)
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row( //"for bus routes:"
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "For these bus routes:",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w400,
+                            fontFamily: 'Urbanist',
+                            color: getColor(context, ColorType.opposite)
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Wrap( //icons
+                    alignment: WrapAlignment.center,
+                    //mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 0,
+                    runSpacing: 0,
+
+
+
+                    children: routesToShow.map((rtid) {
+                      return Stack(
+                        
+                        children: [
+                          Column(
+                            
+                            children: [
+                              SizedBox(
+                                height: 10,
+                                width: 60,
+                              ),
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: RouteColorService.getRouteColor(rtid), 
+                                ),
+                                alignment: Alignment.center,
+                                child: MediaQuery(
+                                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                  child: Text(
+                                    rtid,
+                                    style: TextStyle(
+                                      color: RouteColorService.getContrastingColor(rtid), 
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -1,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                              
+                              Checkbox(
+                                value: rtidsToChange.contains(rtid),
+                                side: BorderSide(
+                                  color: getColor(context, ColorType.highlighted)
+                                ),
+                                activeColor: getColor(context, ColorType.highlighted),
+                                onChanged: (bool? value){}
+                              )
+                            ]
+                          ),
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              setState(() {
+                                if (rtidsToChange.contains(rtid)) {
+                                  rtidToRemove = rtid;
+                                } else {
+                                  rtidsToChange.add(rtid);
+                                }
+                              });
+                            },
+                            child: Container(
+                              height: 100,
+                              width: 48,
+                              color: Colors.transparent
+                            )
+                          )
+                        ]
+                      );
+                    }).toList()
+                  ),
+                  Row( //"remind me when:"
+                    children: [
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w400,
+                            color: getColor(context, ColorType.opposite),
+                            fontFamily: 'Urbanist',
+                            ),
+                            children: [
+                              TextSpan(
+                                text: "Remind me when a bus is\n"
+                              ),
+                              TextSpan(
+                                text: reminderThresh.toString(),
+                                style: TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w700,
+                                  color: getColor(context, ColorType.highlighted),
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                              TextSpan(
+                                text: " min away"
+                              )
+                            ]
+                          ),
+                        
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider( //slider
+                    activeColor: getColor(context, ColorType.highlighted),
+
+                    value: reminderThresh.toDouble(),
+                    label: reminderThresh.toString(),
+
+                    onChanged: (x) {
                       setState(() {
-                        if (rtidsToChange.contains(rtid)) {
-                          rtidsToChange.remove(rtid);
-                        } else {
-                          rtidsToChange.add(rtid);
-                        }
+                        reminderThresh = x.toInt();
                       });
                     },
-                    child: Column(
-                      children: [
-                        Text(rtid),
-                        Text(reminderCurrentlyActive ? "active" : "inactive"),
-                      ] + (rtidsToChange.contains(rtid) ? [Text("marked")] : [])
-                    ),
-                  );
-                })
-                .toList(),
-            ),
-            Slider(
-              value: reminderThresh.toDouble(),
-              label: reminderThresh.toString(),
-              onChanged: (x) {
-                setState(() {
-                  reminderThresh = x.toInt();
-                });
-              },
-              min: 3.0,
-              max: 15.0,
-              divisions: 15 - 3 + 1,
-            ),
-            Text("$dataForThisStop"),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(
-                "Cancel",
-                style: TextStyle(
-                  color: getColor(context, ColorType.primary)
-                ),
+                    min: 3.0,
+                    max: 20.0,
+                    
+                    //divisions: 9,
+                  ),
+                ],
               )
             ),
-            ElevatedButton(
-              onPressed: () async {
-                  final modifications = rtidsToChange.map((rtid) {
-                    final reminderCurrentlyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
-                    if (reminderCurrentlyActive) {
-                      return RemoveReminder(stpid: widget.stpid, rtid: rtid);
-                    } else {
-                      return AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh);
-                    }
-                  }).toList();
+            Padding(
+              padding: EdgeInsetsGeometry.only(
+                left: 10,
+                right: 10,
+                bottom: 6
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                          
+                        List<RemindersModification> modifications = [];
+                        for (String rtid in routesToShow) {
+                          final bool alreadyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
+                          final bool pressed = rtidsToChange.contains(rtid);
 
-                  try {
-                    await IncomingBusReminderService.modifyReminders(modifications);                  
-                    Navigator.pop(context);
-                    if (!context.mounted) return;
-                  } on Exception catch (e) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => SimpleDialog(title: Text("Failed!\n${e.toString()}"))
-                    );
-                  }
-              },
-              child: Text(
-                "Update",
-                style: TextStyle(
-                  color: getColor(context, ColorType.primary)
-                ),
+                          if (alreadyActive) {
+                            modifications.add(RemoveReminder(stpid: widget.stpid, rtid: rtid));
+                          }
+                          if (pressed) {
+                            modifications.add(AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh));
+                          }
+                        }
+
+                        try {
+                          await IncomingBusReminderService.modifyReminders(modifications);                  
+                          Navigator.pop(context);
+                          if (!context.mounted) return;
+                        } on Exception catch (e) {
+                          showDialog(
+                            context: context,
+                            
+                            builder: (context) => SimpleDialog(
+                              
+                              title: Text("Failed!\n${e.toString()}")),
+                              
+                          );
+                        }
+                      },
+                      child: Text(
+                        "Update",
+                        style: TextStyle(
+                          color: getColor(context, ColorType.primary),
+                          fontSize: 16, 
+                          fontWeight: FontWeight.w600,
+                        )
+                      ),
+                    ),
+                  )
+                ],
               )
             ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  await IncomingBusReminderService.sendTestNotification();
-                } on Exception catch (e) {
-                  print("test notification failed: ${e.toString()}");
-                }
-              },
-              child: Text(
-                "Send Test Notification (takes about 10s)",
-                style: TextStyle(
-                  color: getColor(context, ColorType.primary)
-                ),
-              )
-            ),
-          ],
+          ]
         );
       },
     );
