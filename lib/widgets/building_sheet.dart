@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
+import 'package:bluebus/globals.dart';
 
 
 void sendEmailWithSender(BuildContext context, String emailSubject, String emailBody) async {
@@ -137,87 +138,72 @@ class _BuildingSheetState extends State<BuildingSheet> {
           SizedBox(height: 20,),
       
           // two bottom buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context); 
-                  widget.onGetDirections(widget.building);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: getColor(context, ColorType.mapButtonPrimary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+          Padding(
+            padding: EdgeInsets.only(left: globalLeftRightPadding, right: globalLeftRightPadding, bottom: globalBottomPadding),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context); 
+                      widget.onGetDirections(widget.building);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      elevation: 4,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                    ),
+                    icon:  Icon(
+                      Icons.directions, 
+                      color: getColor(context, ColorType.mapButtonIcon),
+                      size: 20,
+                    ),
+                    label: Text(
+                      'Directions',
+                      style: TextStyle(
+                        color: getColor(context, ColorType.primary),
+                        fontSize: 16, 
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ), // The text on the right
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                  elevation: 4
                 ),
-                icon:  Icon(
-                  Icons.directions, 
-                  color: getColor(context, ColorType.mapButtonIcon),
-                  size: 20,
-                  shadows: [
-                    Shadow(
-                      color: getColor(context, ColorType.mapButtonShadow),
-                      blurRadius: 4,
-                      offset: Offset(0, 2)
-                    )
-                  ],
+            
+                SizedBox(width: globalLeftRightPadding,),
+                  
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => launchUrl(contactURL),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: getColor(context, ColorType.dim),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                    ),
+                    icon: Icon(
+                      Icons.report, 
+                      color: getColor(context, ColorType.opposite),
+                      size: 20,
+                    ), // The icon on the left
+                    label: Text(
+                      'Feedback',
+                      style: TextStyle(
+                        color: getColor(context, ColorType.opposite), 
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        overflow: TextOverflow.ellipsis
+                      ),
+                    ), // The text on the right
+                  ),
                 ),
-                label: Text(
-                  'Get Directions',
-                  style: TextStyle(
-                    color: getColor(context, ColorType.primary),
-                    fontSize: 16, 
-                    fontWeight: FontWeight.w600,
-                  ),
-                ), // The text on the right
-              ),
-      
-              ElevatedButton.icon(
-                onPressed: () => launchUrl(contactURL),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: getColor(context, ColorType.dim),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                ),
-                icon: Icon(
-                  Icons.warning_amber_rounded, 
-                  color: getColor(context, ColorType.opposite),
-                  size: 20,
-                  shadows: [
-                    Shadow(
-                      color: getColor(context, ColorType.mapButtonShadow),
-                      blurRadius: 4,
-                      offset: Offset(0, 2)
-                    )
-                  ],
-                ), // The icon on the left
-                label: Text(
-                  'Report an Issue',
-                  style: TextStyle(
-                    color: getColor(context, ColorType.opposite), 
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        color: getColor(context, ColorType.mapButtonShadow),
-                        blurRadius: 4,
-                        offset: Offset(0, 2)
-                      )
-                    ],
-                  ),
-                ), // The text on the right
-              ),
-      
-            ],
+                  
+              ],
+            ),
           ),
-          
-          (MediaQuery.of(context).padding.bottom == 0.0)?
-          SizedBox(height: 20,) : SizedBox(height: MediaQuery.of(context).padding.bottom,)
         ],
       )
     );
