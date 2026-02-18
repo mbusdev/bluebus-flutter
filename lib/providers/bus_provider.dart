@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
@@ -15,8 +16,18 @@ class BusProvider extends ChangeNotifier {
   List<Bus> get buses => _buses;
   bool get loading => _loading;
   String? get error => _error;
+  Timer? _timer;
 
   BusProvider({required this.repository});
+
+  void startRouteUpdates() {
+    loadRoutes();
+
+    // reloads every 2 minutes
+    _timer = Timer.periodic(const Duration(minutes: 2), (timer) {
+      loadRoutes();
+    });
+  }
 
   Future<void> loadRoutes() async {
     try {
@@ -67,6 +78,7 @@ class BusProvider extends ChangeNotifier {
   @override
   void dispose() {
     repository.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 } 

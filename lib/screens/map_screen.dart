@@ -268,6 +268,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     _loadingMessageNotifier.value = Loadpoint('Starting app...', 5);
     busProvider.startBusUpdates();
+    busProvider.startRouteUpdates();
     await Future.delayed(const Duration(milliseconds: 180)); 
   }
 
@@ -2424,7 +2425,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             await Haptics.vibrate(HapticsType.light);
                                           }
                 
-                                          // just in case
+                                          // TODO: delete this but first make sure it doesn't break
+                                          // anything but i'm pretty sure it won't because its
+                                          // redundant
                                           if (busProvider.routes.isEmpty){
                                             await busProvider.loadRoutes();
                                             _updateAvailableRoutes(busProvider.routes);
