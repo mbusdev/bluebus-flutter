@@ -685,49 +685,22 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
       insetPadding: EdgeInsets.all(10),
       child: SizedBox(
         width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height * 0.85,
+        height: MediaQuery.of(context).size.height * 0.6,
         child: Column(
           mainAxisSize: MainAxisSize.max,
           children: [
-            // Header with route name
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.routeName,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Urbanist',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             // Image container with zoom
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
                   color: getColor(context, ColorType.background),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(30),
                   ),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(30),
                   ),
                   child: widget.imagePath != null
                       ? Stack(
@@ -757,7 +730,7 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
                             ),
                             // Zoom hint at bottom center that fades
                             Positioned(
-                              bottom: 15,
+                              top: 30,
                               left: 0,
                               right: 0,
                               child: AnimatedOpacity(
@@ -774,7 +747,7 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
                                       'Pinch to zoom • Drag to pan',
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 12,
+                                        fontSize: 17,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -783,18 +756,40 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
                               ),
                             ),
                             // Back arrow at bottom left
-                            Positioned(
-                              bottom: 15,
-                              left: 15,
-                              child: IconButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
-                                style: IconButton.styleFrom(
-                                  backgroundColor: Colors.black.withValues(alpha: 0.6),
-                                  padding: EdgeInsets.all(12),
-                                ),
+                            Center(
+                              child: Column(
+                                children: [
+                                  Spacer(),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    icon: Icon(
+                                      Icons.arrow_back,
+                                      color: getColor(context, ColorType.mapButtonIcon),
+                                    ),
+                                    label: Text(
+                                      'back',
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        color: getColor(context, ColorType.mapButtonIcon)
+                                      ),
+                                      
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      elevation: 2
+                                    ),
+                                  ),
+                                  SizedBox(height: 15,)
+                                ]
                               ),
-                            ),
+                            )
                           ],
                         )
                       : Center(
