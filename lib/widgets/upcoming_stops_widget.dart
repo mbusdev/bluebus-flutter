@@ -421,13 +421,23 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
             child: Text(
               stop.name,
               style: TextStyle(
-                fontSize: 14.0,
+                fontSize: 15.0,
                 fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
-                height: 1.15
+                height: 1.15,
               ),
+              
             ),
           ),
-          (stop.prediction != null) ? Text(predictionText, style: TextStyle(fontSize: 16.0)) : SizedBox.shrink(),
+
+          SizedBox(width: 15),
+
+          (stop.prediction != null) ? Text(
+            predictionText, 
+            style: TextStyle(
+              fontSize: 15.0,
+            )
+          ) : 
+          SizedBox.shrink(),
 
           (onBusStopClick != null)
               ? const Icon(Icons.chevron_right, color: Colors.grey, size: 20)
