@@ -1219,32 +1219,37 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: getColor(context, ColorType.background),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Steps',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w700,
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0,    
+          maxChildSize: 0.9,    
+          snap: true,
+          expand: false,        
+          
+          builder: (BuildContext context, ScrollController scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: getColor(context, ColorType.background),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(20),
+                shrinkWrap: true, 
+                children: [
+                  Text(
+                    'Steps',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                SizedBox(height: 15,),
-                JourneyBody(journey: currDisplayed),
-              ],
-            ),
-          )
+                  SizedBox(height: 15),
+                  JourneyBody(journey: currDisplayed),
+                ],
+              ),
+            );
+          },
         );
       },
     );
