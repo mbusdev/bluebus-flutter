@@ -53,7 +53,7 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
     return Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.infoCardColor),
-        borderRadius: BorderRadius.all(Radius.circular(15)),
+        borderRadius: BorderRadius.all(Radius.circular(20)),
         boxShadow: [
           getInfoCardShadow(context)
         ],
@@ -73,7 +73,7 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                 widget.onTapOnThis();
               },
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(15),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

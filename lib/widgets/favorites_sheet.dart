@@ -137,22 +137,8 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                     ),
                     boxShadow: [SheetBoxShadow]
                   ),
-                  child: Column(
+                  child: Stack(
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Favorites',
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-
                       Expanded(
                         child: Builder(
                           builder: (context) {
@@ -176,40 +162,79 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
 
                               return const SizedBox.shrink();
                             } else {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                child: ListView.builder(
-                                  itemCount: snapshot.data!.length,
-                                  controller: scrollController,
-                                  itemBuilder: (context, index) {
-                                    final stpid = snapshot.data![index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 20,
-                                      ),
-                                      child: MiniStopSheet(
-                                        stopID: stpid,
-                                        stopName: _stopIdToName[stpid] ?? stpid,
-                                        onUnfavorite: () {
-                                          _removeFavorite(stpid);
-                                        },
-                                        onTapOnThis: () {
-                                          Navigator.of(context).pop();
-                                          widget.onSelectStop(
-                                            _stopIdToName[stpid] ?? stpid,
-                                            stpid,
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
+                              return ListView.builder(
+                                itemCount: snapshot.data!.length + 1, // +1 for the title box at the top
+                                controller: scrollController,
+                                itemBuilder: (context, index) {
+                                  if (index == 0) {
+                                    // first item is just the title spacer box
+                                    return const SizedBox(height: 70);
+                                  }
+
+                                  index -= 1; // adjust index to account for title box
+
+                                  final stpid = snapshot.data![index];
+                                  return Padding(
+                                    padding: EdgeInsets.only(
+                                      left: 20,
+                                      right: 20,
+                                      bottom: 10,
+                                      top: 10,
+                                    ),
+                                    child: MiniStopSheet(
+                                      stopID: stpid,
+                                      stopName: _stopIdToName[stpid] ?? stpid,
+                                      onUnfavorite: () {
+                                        _removeFavorite(stpid);
+                                      },
+                                      onTapOnThis: () {
+                                        Navigator.of(context).pop();
+                                        widget.onSelectStop(
+                                          _stopIdToName[stpid] ?? stpid,
+                                          stpid,
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
                               );
                             }
                           }
                         ) 
+                      ),
+
+                      // gradient box for title background
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: Container(
+                          height: 75,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                getColor(context, ColorType.background),       
+                                getColor(context, ColorType.backgroundGradientStart),  
+                              ],
+                              stops: [0.85, 1]
+                            ),
+                          ),
+                        ),
+                      ),
+                  
+                      // title
+                      const Padding(
+                        padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: Text(
+                            'Favorites',
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

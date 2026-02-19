@@ -324,7 +324,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
             } else {
               return const Center(
                 child: Text(
-                  'Something went wrong. Contact contact@maizebus.com if persistent.',
+                  'Something went wrong. Email contact@maizebus.com if persistent.',
                 ),
               );
             }

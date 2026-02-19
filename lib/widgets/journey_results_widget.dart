@@ -139,7 +139,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8.0),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               getInfoCardShadow(context)
             ],
