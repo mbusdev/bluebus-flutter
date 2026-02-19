@@ -877,12 +877,23 @@ class _ReminderFormState extends State<ReminderForm> {
         // TODO: 30s timeout
 
         if (snapshot.connectionState != ConnectionState.done) {
-          return Center(child: Text("Loading"),);
+          return SizedBox(
+            height: 400,
+            width: 400,
+            child: Center(
+              child: SizedBox(
+                height: 40,
+                width: 40,
+                child: CircularProgressIndicator()
+              ),
+            ),
+          );
         }
         
         final dataForAllStops = snapshot.data;
         if (dataForAllStops == null) {
-          return Center(child: Column(children: [
+          return Center(child: Column(
+            children: [
             Text("Loading failed!"),
             Text("Error: ${snapshot.error}"),
           ]));
