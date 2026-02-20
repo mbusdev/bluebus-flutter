@@ -1,4 +1,5 @@
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/innerShadow.dart';
 import 'package:bluebus/widgets/upcoming_stops_widget.dart';
 import 'package:flutter/material.dart';
 import '../models/journey.dart';
@@ -158,113 +159,109 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           margin: const EdgeInsets.symmetric(vertical: 8.0),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              (_selectedIndex == idx)? BoxShadow(
-                blurRadius: 0,
-                spreadRadius: 0,
-              ):
-              getInfoCardShadow(context)
-            ],
+            boxShadow: (_selectedIndex == idx)
+                ? []
+                : [getInfoCardShadow(context)],
             color: (_selectedIndex == idx)
               ? getColor(context, ColorType.infoCardHighlighted)
               : getColor(context, ColorType.infoCardColor),
           ),
-          // inner rim as an "inner shadow"
-          foregroundDecoration: (_selectedIndex == idx)
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  border: const Border(
-                    top: BorderSide(color: Colors.black12, width: 2),
-                  ),
-                )
-              : null,
-          child: Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              onExpansionChanged: (value) {
-                // lets this also change the selected index when you expand the tile by 
-                // tapping the expansion icon, not just when you tap the whole card
+          child: InnerShadow(
+            isActive: (_selectedIndex == idx),
+            blurRadius: 5,
+            offset: const Offset(4, 4),
+            color: Colors.black.withAlpha(20),
+            borderRadius: BorderRadius.circular(20),
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                onExpansionChanged: (value) {
+                  // lets this also change the selected index when you expand the tile by 
+                  // tapping the expansion icon, not just when you tap the whole card
+                  bool willChange = (_selectedIndex != idx);
 
-                if(_selectedIndex != idx) {
                   setState(() {
                     _selectedIndex = idx;
                   });
-                  widget.onSelectJourney?.call(journey);
-                }
-              },
-              title: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    '${(totalDuration / 60.0).round()}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 40,
-                      height: 1.15,
+
+                  if(willChange) {
+                    widget.onSelectJourney?.call(journey);
+                  }
+                },
+                title: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${(totalDuration / 60.0).round()}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 40,
+                        height: 1.15,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 7,),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'min',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                          height: 1.1
-                        ),
-                      ),
-                      Text(
-                        'arrive ${formatSecondsToTimeNoAMPM(journey.arrivalTime)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w400,
-                          fontSize: 16,
-                          height: 1
-                        ),
-                      ),
-                      SizedBox(height: 5,),
-                    ],
-                  ),
-                  Spacer(),
-                  ...busIDs.map((busID) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 3),
-                      child: Container(
-                        width: 35,
-                        height: 35,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: RouteColorService.getRouteColor(busID),
-                        ),
-                        alignment: Alignment.center,
-                        child: MediaQuery(
-                          // media query prevents text scaling
-                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                          child: Text(
-                            busID,
-                            style: TextStyle(
-                              color: RouteColorService.getContrastingColor(busID),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -1,
-                            ),
-                            textAlign: TextAlign.center,
+                    SizedBox(width: 7,),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'min',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            height: 1.1
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                        Text(
+                          'arrive ${formatSecondsToTimeNoAMPM(journey.arrivalTime)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16,
+                            height: 1
+                          ),
+                        ),
+                        SizedBox(height: 5,),
+                      ],
+                    ),
+                    Spacer(),
+                    ...busIDs.map((busID) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 3),
+                        child: Container(
+                          width: 35,
+                          height: 35,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: RouteColorService.getRouteColor(busID),
+                          ),
+                          alignment: Alignment.center,
+                          child: MediaQuery(
+                            // media query prevents text scaling
+                            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                            child: Text(
+                              busID,
+                              style: TextStyle(
+                                color: RouteColorService.getContrastingColor(busID),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+                iconColor: getColor(context, ColorType.opposite),       
+                collapsedIconColor: getColor(context, ColorType.opposite), 
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16),
+                    child: JourneyBody(journey: journey),
+                  ),
                 ],
               ),
-              iconColor: getColor(context, ColorType.opposite),       
-              collapsedIconColor: getColor(context, ColorType.opposite), 
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 16),
-                  child: JourneyBody(journey: journey),
-                ),
-              ],
             ),
           ),
         ),

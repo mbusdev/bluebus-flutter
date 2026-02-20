@@ -1,4 +1,5 @@
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/innerShadow.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
@@ -353,104 +354,97 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                       decoration: BoxDecoration(
                                         color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
                                         borderRadius: BorderRadius.circular(60),
-                                        boxShadow: [
-                                          isSelected? BoxShadow(
-                                            blurRadius: 0,
-                                            spreadRadius: 0,
-                                          ):
-                                          getInfoCardShadow(context)
-                                        ],
+                                        boxShadow: isSelected? []:
+                                          [getInfoCardShadow(context)]
                                       ),
-                                      // inner rim as an "inner shadow"
-                                      foregroundDecoration: isSelected
-                                          ? BoxDecoration(
-                                              borderRadius: BorderRadius.circular(30),
-                                              border: const Border(
-                                                top: BorderSide(color: Colors.black12, width: 2),
-                                              ),
-                                            )
-                                          : null,
-                                      child: Theme(
-                                        data: Theme.of(context).copyWith(
-                                          splashColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                        ),
-                                        child: ListTile(
-                                          contentPadding: EdgeInsets.only(left: 10, right: 16), 
-                                          leading: Container(
-                                            width: 35,
-                                            height: 35,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: RouteColorService.getRouteColor(route['id']!), 
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: MediaQuery(
-                                              // media query prevents text scaling
-                                              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                              child: Text(
-                                                route['id']!,
-                                                style: TextStyle(
-                                                  color: RouteColorService.getContrastingColor(route['id']!), 
-                                                  fontSize: 17,
-                                                  fontWeight: FontWeight.w900,
-                                                  letterSpacing: -1,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
+                                      child: InnerShadow(
+                                        isActive: isSelected,
+                                        blurRadius: 5,
+                                        offset: const Offset(4, 4),
+                                        color: Colors.black.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(60),
+                                        child: Theme(
+                                          data: Theme.of(context).copyWith(
+                                            splashColor: Colors.transparent,
+                                            highlightColor: Colors.transparent,
                                           ),
-                                          title: Text(
-                                            route['name'] ?? route['id']!,
-                                            style: TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                              color: getColor(context, ColorType.opposite),
-                                            ),
-                                          ),
-                                          trailing: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              // Info button
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.info_outline,
-                                                  color: getColor(context, ColorType.opposite).withAlpha(150),
-                                                  size: 22,
-                                                ),
-                                                onPressed: () {
-                                                  _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
-                                                },
-                                                padding: EdgeInsets.all(8),
-                                                constraints: BoxConstraints(),
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.only(left: 10, right: 16), 
+                                            leading: Container(
+                                              width: 35,
+                                              height: 35,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: RouteColorService.getRouteColor(route['id']!), 
                                               ),
-                                              ReorderableDragStartListener(
-                                                index: index,
-                                                child: Icon(
-                                                  Icons.drag_handle,
-                                                  color: getColor(context, ColorType.opposite).withAlpha(150),
+                                              alignment: Alignment.center,
+                                              child: MediaQuery(
+                                                // media query prevents text scaling
+                                                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                                child: Text(
+                                                  route['id']!,
+                                                  style: TextStyle(
+                                                    color: RouteColorService.getContrastingColor(route['id']!), 
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: -1,
+                                                  ),
+                                                  textAlign: TextAlign.center,
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                          onTap: () {
-                                            setState(() {
-                                              if (isSelected) {
-                                                tempSelectedRoutes.remove(route['id']!);
-                                              } else {
-                                                tempSelectedRoutes.add(route['id']!);
+                                            ),
+                                            title: Text(
+                                              route['name'] ?? route['id']!,
+                                              style: TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                                color: getColor(context, ColorType.opposite),
+                                              ),
+                                            ),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // Info button
+                                                IconButton(
+                                                  icon: Icon(
+                                                    Icons.info_outline,
+                                                    color: getColor(context, ColorType.opposite).withAlpha(150),
+                                                    size: 22,
+                                                  ),
+                                                  onPressed: () {
+                                                    _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
+                                                  },
+                                                  padding: EdgeInsets.all(8),
+                                                  constraints: BoxConstraints(),
+                                                ),
+                                                ReorderableDragStartListener(
+                                                  index: index,
+                                                  child: Icon(
+                                                    Icons.drag_handle,
+                                                    color: getColor(context, ColorType.opposite).withAlpha(150),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            onTap: () {
+                                              setState(() {
+                                                if (isSelected) {
+                                                  tempSelectedRoutes.remove(route['id']!);
+                                                } else {
+                                                  tempSelectedRoutes.add(route['id']!);
+                                                }
+                                              });
+                                            },
+                                            onLongPress: () async {
+                                              if (widget.canVibrate){
+                                                await Haptics.vibrate(HapticsType.soft);
                                               }
-                                            });
-                                          },
-                                          onLongPress: () async {
-                                            if (widget.canVibrate){
-                                              await Haptics.vibrate(HapticsType.soft);
-                                            }
-                                            setState(() {
-                                              tempSelectedRoutes.clear();
-                                              tempSelectedRoutes.add(route['id']!);
-                                            });
-                                          },
+                                              setState(() {
+                                                tempSelectedRoutes.clear();
+                                                tempSelectedRoutes.add(route['id']!);
+                                              });
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -499,87 +493,79 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                       decoration: BoxDecoration(
                                         color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
                                         borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          isSelected? BoxShadow(
-                                            blurRadius: 0,
-                                            spreadRadius: 0,
-                                          ):
-                                          getInfoCardShadow(context)
-                                        ],
+                                        boxShadow: (isSelected)?[] : [getInfoCardShadow(context)],
                                       ),
-                                      // inner rim as an "inner shadow"
-                                      foregroundDecoration: isSelected
-                                          ? BoxDecoration(
-                                              borderRadius: BorderRadius.circular(30),
-                                              border: const Border(
-                                                top: BorderSide(color: Colors.black12, width: 2),
+                                      child: InnerShadow(
+                                        isActive: isSelected,
+                                        blurRadius: 5,
+                                        offset: const Offset(4, 4),
+                                        color: Colors.black.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(60),
+                                        child: Theme(
+                                          data: Theme.of(context).copyWith(
+                                            splashColor: Colors.transparent,
+                                            highlightColor: Colors.transparent,
+                                          ),
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.only(left: 8, right: 16), 
+                                            minTileHeight: 40,
+                                            leading: Container(
+                                              width: 40,
+                                              height: 30,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.rectangle,
+                                                borderRadius: BorderRadius.circular(15), 
+                                                color: RouteColorService.getRouteColor(route['id']!), 
                                               ),
-                                            )
-                                          : null,
-                                      child: Theme(
-                                        data: Theme.of(context).copyWith(
-                                          splashColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                        ),
-                                        child: ListTile(
-                                          contentPadding: EdgeInsets.only(left: 8, right: 16), 
-                                          minTileHeight: 40,
-                                          leading: Container(
-                                            width: 40,
-                                            height: 30,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.rectangle,
-                                              borderRadius: BorderRadius.circular(15), 
-                                              color: RouteColorService.getRouteColor(route['id']!), 
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: MediaQuery(
-                                              // media query prevents text scaling
-                                              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                              child: Text(
-                                                route['id']!,
-                                                style: TextStyle(
-                                                  color: RouteColorService.getContrastingColor(route['id']!), 
-                                                  fontSize: 17,
-                                                  fontWeight: FontWeight.w900,
-                                                  letterSpacing: -1,
+                                              alignment: Alignment.center,
+                                              child: MediaQuery(
+                                                // media query prevents text scaling
+                                                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                                                child: Text(
+                                                  route['id']!,
+                                                  style: TextStyle(
+                                                    color: RouteColorService.getContrastingColor(route['id']!), 
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: -1,
+                                                  ),
+                                                  textAlign: TextAlign.center,
                                                 ),
-                                                textAlign: TextAlign.center,
                                               ),
                                             ),
-                                          ),
-                                          title: Text(
-                                            route['name'] ?? route['id']!,
-                                            style: TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                              color: getColor(context, ColorType.opposite),
+                                            title: Text(
+                                              route['name'] ?? route['id']!,
+                                              style: TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                                color: getColor(context, ColorType.opposite),
+                                              ),
                                             ),
-                                          ),
-                                          trailing: ReorderableDragStartListener(
-                                            index: index,
-                                            child: Icon(Icons.drag_handle,
-                                            
-                                                  color: getColor(context, ColorType.opposite).withAlpha(150),),
-                                          ),
-                                          onTap: () {
-                                            setState(() {
-                                              if (isSelected) {
-                                                tempSelectedRoutes.remove(route['id']!);
-                                              } else {
-                                                tempSelectedRoutes.add(route['id']!);
+                                            trailing: ReorderableDragStartListener(
+                                              index: index,
+                                              child: Icon(Icons.drag_handle,
+                                              
+                                                    color: getColor(context, ColorType.opposite).withAlpha(150),),
+                                            ),
+                                            onTap: () {
+                                              setState(() {
+                                                if (isSelected) {
+                                                  tempSelectedRoutes.remove(route['id']!);
+                                                } else {
+                                                  tempSelectedRoutes.add(route['id']!);
+                                                }
+                                              });
+                                            },
+                                            onLongPress: () async {
+                                              if (widget.canVibrate){
+                                                await Haptics.vibrate(HapticsType.soft);
                                               }
-                                            });
-                                          },
-                                          onLongPress: () async {
-                                            if (widget.canVibrate){
-                                              await Haptics.vibrate(HapticsType.soft);
-                                            }
-                                            setState(() {
-                                              tempSelectedRoutes.clear();
-                                              tempSelectedRoutes.add(route['id']!);
-                                            });
-                                          },
+                                              setState(() {
+                                                tempSelectedRoutes.clear();
+                                                tempSelectedRoutes.add(route['id']!);
+                                              });
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ),
