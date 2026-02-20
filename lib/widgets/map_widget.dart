@@ -37,6 +37,7 @@ class MapWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(child: GoogleMap(
+      compassEnabled: false,
       onMapCreated: onMapCreated,
       onCameraIdle: onCameraIdle,
       onCameraMove: onCameraMove,

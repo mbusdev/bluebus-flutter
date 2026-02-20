@@ -876,7 +876,9 @@ class _ReminderFormState extends State<ReminderForm> {
               child: SizedBox(
                 height: 40,
                 width: 40,
-                child: CircularProgressIndicator()
+                child: CircularProgressIndicator(
+                  color: getColor(context, ColorType.opposite),
+                )
               ),
             ),
           );

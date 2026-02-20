@@ -253,7 +253,19 @@ class LocationSearchBar extends HookWidget {
               return const SizedBox.shrink();
             }
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CircularProgressIndicator();
+              return Padding(
+                padding: const EdgeInsets.only(top: 50),
+                child: Center(
+                  child: SizedBox(
+                    width: 30,
+                    height: 30,
+                    child: CircularProgressIndicator(
+                      color: getColor(context, ColorType.opposite),
+                      strokeWidth: 4,
+                    ),
+                  ),
+                ),
+              );
             } else if (snapshot.hasData) {
               final locations = snapshot.data!;
               return ListView.separated(

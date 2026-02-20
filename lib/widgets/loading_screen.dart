@@ -138,13 +138,28 @@ class LoadingScreen extends StatelessWidget {
 
           Spacer(flex: 3),
           //status text at bottom
-          Text(
-            loadpoint.message,
-            style: TextStyle(
-              fontFamily: 'Urbanist',
-              fontWeight: FontWeight.w400,
-              fontSize: 18,
-            ),
+          Row(
+            children: [
+              Spacer(),
+              SizedBox(
+                width: 15,
+                height: 15,
+                child: CircularProgressIndicator(
+                  color: getColor(context, ColorType.opposite),
+                  strokeWidth: 2.5,
+                ),
+              ),
+              SizedBox(width: 10,),
+              Text(
+                loadpoint.message,
+                style: TextStyle(
+                  fontFamily: 'Urbanist',
+                  fontWeight: FontWeight.w400,
+                  fontSize: 18,
+                ),
+              ),
+              Spacer(),
+            ],
           ),
           Spacer(flex: 1),
         ],
