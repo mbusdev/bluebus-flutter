@@ -1,5 +1,6 @@
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
+import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -391,6 +392,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                             style: TextStyle(
                                               fontSize: 17,
                                               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                              color: getColor(context, ColorType.opposite),
                                             ),
                                           ),
                                           trailing: Row(
@@ -400,7 +402,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                               IconButton(
                                                 icon: Icon(
                                                   Icons.info_outline,
-                                                  color: Colors.grey.shade700,
+                                                  color: getColor(context, ColorType.opposite).withAlpha(150),
                                                   size: 22,
                                                 ),
                                                 onPressed: () {
@@ -411,7 +413,10 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                               ),
                                               ReorderableDragStartListener(
                                                 index: index,
-                                                child: Icon(Icons.drag_handle),
+                                                child: Icon(
+                                                  Icons.drag_handle,
+                                                  color: getColor(context, ColorType.opposite).withAlpha(150),
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -522,11 +527,14 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                             style: TextStyle(
                                               fontSize: 17,
                                               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                              color: getColor(context, ColorType.opposite),
                                             ),
                                           ),
                                           trailing: ReorderableDragStartListener(
                                             index: index,
-                                            child: Icon(Icons.drag_handle),
+                                            child: Icon(Icons.drag_handle,
+                                            
+                                                  color: getColor(context, ColorType.opposite).withAlpha(150),),
                                           ),
                                           onTap: () {
                                             setState(() {
@@ -576,19 +584,53 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         ),
                     
                         // title
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: const Padding(
-                            padding: EdgeInsets.only(left: 20, top: 20, bottom: 4), 
-                            child: Text(
-                              'Select Routes',
-                              style: TextStyle(
-                                fontFamily: 'Urbanist',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 30,
+                        Column(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(left: 20, top: 20, right: 20), 
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Routes',
+                                    style: TextStyle(
+                                      fontFamily: 'Urbanist',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 30,
+                                    ),
+                                  ),
+                                  Spacer(),
+                                  SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero, 
+                                      constraints: const BoxConstraints(), 
+                                      onPressed: () {
+                                        showMaizebusOKDialog(
+                                          contextIn: context,
+                                          title: const Text("Routes"),
+                                          content: const Text("Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route"),
+                                        );
+                                      },
+                                      style: IconButton.styleFrom(
+                                        side: BorderSide(
+                                          color: getColor(context, ColorType.opposite).withAlpha(150), 
+                                          width: 2,
+                                        ),
+                                        shape: const CircleBorder(),
+                                      ),
+                                      icon: Icon(
+                                        Icons.question_mark_rounded,
+                                        color: getColor(context, ColorType.opposite).withAlpha(150),
+                                        size: 15, 
+                                      ),
+                                    ),
+                                  )
+                                ],
                               ),
                             ),
-                          ),
+                            Spacer()
+                          ],
                         ),
                     
                         // bottom gradient

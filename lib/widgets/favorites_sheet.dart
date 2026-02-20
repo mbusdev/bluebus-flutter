@@ -128,115 +128,121 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
               snap: true,
               snapSizes: const [0.9],
               builder: (BuildContext context, ScrollController scrollController) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: getColor(context, ColorType.background),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
-                    boxShadow: [SheetBoxShadow]
+                return ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
                   ),
-                  child: Stack(
-                    children: [
-                      Expanded(
-                        child: Builder(
-                          builder: (context) {
-                            if (snapshot.connectionState == ConnectionState.waiting){
-                              return const Center(child: CircularProgressIndicator());
-                            } else if ((snapshot.data ?? []).isEmpty){
-                              // code that creates the dialog box
-
-                              // schedule for end of frame (to avoid crash)
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (!context.mounted) return;
-
-                                Navigator.of(context).pop();
-
-                                showMaizebusOKDialog(
-                                  contextIn: context,
-                                  title: const Text("No Favorites"),
-                                  content: const Text("Hit the heart icon on a stop to add it to your favorites and see it here!"),
-                                );
-                              });
-
-                              return const SizedBox.shrink();
-                            } else {
-                              return ListView.builder(
-                                itemCount: snapshot.data!.length + 1, // +1 for the title box at the top
-                                controller: scrollController,
-                                itemBuilder: (context, index) {
-                                  if (index == 0) {
-                                    // first item is just the title spacer box
-                                    return const SizedBox(height: 70);
-                                  }
-
-                                  index -= 1; // adjust index to account for title box
-
-                                  final stpid = snapshot.data![index];
-                                  return Padding(
-                                    padding: EdgeInsets.only(
-                                      left: 20,
-                                      right: 20,
-                                      bottom: 10,
-                                      top: 10,
-                                    ),
-                                    child: MiniStopSheet(
-                                      stopID: stpid,
-                                      stopName: _stopIdToName[stpid] ?? stpid,
-                                      onUnfavorite: () {
-                                        _removeFavorite(stpid);
-                                      },
-                                      onTapOnThis: () {
-                                        Navigator.of(context).pop();
-                                        widget.onSelectStop(
-                                          _stopIdToName[stpid] ?? stpid,
-                                          stpid,
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-                              );
-                            }
-                          }
-                        ) 
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: getColor(context, ColorType.background),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
                       ),
-
-                      // gradient box for title background
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: Container(
-                          height: 75,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                getColor(context, ColorType.background),       
-                                getColor(context, ColorType.backgroundGradientStart),  
-                              ],
-                              stops: [0.85, 1]
-                            ),
-                          ),
-                        ),
-                      ),
+                      boxShadow: [SheetBoxShadow]
+                    ),
+                    child: Stack(
+                      children: [
+                        Expanded(
+                          child: Builder(
+                            builder: (context) {
+                              if (snapshot.connectionState == ConnectionState.waiting){
+                                return const Center(child: CircularProgressIndicator());
+                              } else if ((snapshot.data ?? []).isEmpty){
+                                // code that creates the dialog box
                   
-                      // title
-                      const Padding(
-                        padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            'Favorites',
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.w700,
+                                // schedule for end of frame (to avoid crash)
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (!context.mounted) return;
+                  
+                                  Navigator.of(context).pop();
+                  
+                                  showMaizebusOKDialog(
+                                    contextIn: context,
+                                    title: const Text("No Favorites"),
+                                    content: const Text("Hit the heart icon on a stop to add it to your favorites and see it here!"),
+                                  );
+                                });
+                  
+                                return const SizedBox.shrink();
+                              } else {
+                                return ListView.builder(
+                                  itemCount: snapshot.data!.length + 1, // +1 for the title box at the top
+                                  controller: scrollController,
+                                  itemBuilder: (context, index) {
+                                    if (index == 0) {
+                                      // first item is just the title spacer box
+                                      return const SizedBox(height: 70);
+                                    }
+                  
+                                    index -= 1; // adjust index to account for title box
+                  
+                                    final stpid = snapshot.data![index];
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                        left: 20,
+                                        right: 20,
+                                        bottom: 10,
+                                        top: 10,
+                                      ),
+                                      child: MiniStopSheet(
+                                        stopID: stpid,
+                                        stopName: _stopIdToName[stpid] ?? stpid,
+                                        onUnfavorite: () {
+                                          _removeFavorite(stpid);
+                                        },
+                                        onTapOnThis: () {
+                                          Navigator.of(context).pop();
+                                          widget.onSelectStop(
+                                            _stopIdToName[stpid] ?? stpid,
+                                            stpid,
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                );
+                              }
+                            }
+                          ) 
+                        ),
+                  
+                        // gradient box for title background
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Container(
+                            height: 75,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  getColor(context, ColorType.background),       
+                                  getColor(context, ColorType.backgroundGradientStart),  
+                                ],
+                                stops: [0.85, 1]
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                    
+                        // title
+                        const Padding(
+                          padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: Text(
+                              'Favorites',
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
