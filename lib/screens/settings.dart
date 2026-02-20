@@ -119,7 +119,7 @@ class _SettingsState extends State<Settings> {
                     ElevatedButton.icon(
                       onPressed: () => launchUrl(contactURL),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: getColor(context, ColorType.dim),
+                        backgroundColor: getColor(context, ColorType.importantButtonBackground),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -128,13 +128,13 @@ class _SettingsState extends State<Settings> {
                       ),
                       icon: Icon(
                         Icons.email, 
-                        color: getColor(context, ColorType.opposite),
+                        color: getColor(context, ColorType.importantButtonText),
                         size: 20,
                       ), // The icon on the left
                       label: Text(
                         'Send Feedback',
                         style: TextStyle(
-                          color: getColor(context, ColorType.opposite), 
+                          color: getColor(context, ColorType.importantButtonText), 
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),

@@ -85,6 +85,10 @@ enum ColorType {
 
   // info card colors (in route selector, favorites sheet, etc.)
   infoCardColor, infoCardHighlighted,
+
+  // all the buttons except for the main map buttons
+  importantButtonBackground, importantButtonText,
+  secondaryButtonBackground, secondaryButtonText,
 }
 
 const Map<ColorType, Color> lightColors = {
@@ -97,10 +101,10 @@ const Map<ColorType, Color> lightColors = {
   ColorType.mapButtonPrimary: maizeBusBlue, 
   ColorType.mapButtonSecondary: Color.fromARGB(190, 255, 255, 255),
   ColorType.mapButtonIcon: Colors.white,
-  ColorType.mapButtonShadow: Color.fromARGB(77, 42, 133, 212), // 77 is 30% opacity
+  ColorType.mapButtonShadow: Color.fromARGB(77, 133, 133, 133), 
 
   ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),
-  ColorType.dim: Color.fromARGB(255, 229, 242, 255),
+  ColorType.dim: Color.fromARGB(255, 215, 228, 241),
 
   ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
   
@@ -112,33 +116,43 @@ const Map<ColorType, Color> lightColors = {
 
   ColorType.inputBackground: Color.fromARGB(255, 227, 227, 227),
   ColorType.inputText: Colors.black,
+
+  ColorType.importantButtonBackground: maizeBusBlue,
+  ColorType.importantButtonText: Colors.white,
+  ColorType.secondaryButtonBackground: Color.fromARGB(255, 215, 228, 241),
+  ColorType.secondaryButtonText: maizeBusBlue,
 };
 
 const Map<ColorType, Color> darkColors = {
   ColorType.primary: Colors.black,
   ColorType.secondary: Color.fromARGB(255, 40, 54, 72),
   ColorType.opposite: Colors.white,
-  ColorType.background: Color.fromARGB(255, 19, 34, 47),
-  ColorType.backgroundGradientStart: Color.fromARGB(0, 19, 34, 47), // same as background but transparent
+  ColorType.background: Color.fromARGB(255, 32, 33, 34),
+  ColorType.backgroundGradientStart: Color.fromARGB(0, 32, 33, 34), // same as background but transparent
 
   ColorType.mapButtonPrimary: Color.fromARGB(255, 255, 255, 255),
   ColorType.mapButtonSecondary: Color.fromARGB(187, 104, 104, 134),
   ColorType.mapButtonIcon: maizeBusBlue,
-  ColorType.mapButtonShadow: Color.fromARGB(77, 30, 89, 141), // 77 is 30% opacity
+  ColorType.mapButtonShadow: Color.fromARGB(95, 68, 68, 68), 
 
-  ColorType.highlighted: Color.fromARGB(255, 45, 151, 243),
-  ColorType.dim: Color.fromARGB(255, 33, 71, 105),
+  ColorType.highlighted: Color.fromARGB(255, 49, 129, 199),
+  ColorType.dim: Color.fromARGB(255, 47, 54, 60),
 
   ColorType.shadow: Color.fromARGB(95, 68, 68, 68),
   
   ColorType.grayed: Color.fromARGB(255, 5, 19, 32),
   ColorType.sliderButton: Color.fromARGB(255, 33, 71, 105),
 
-  ColorType.infoCardColor: Color.fromARGB(255, 19, 34, 47),
+  ColorType.infoCardColor: Color.fromARGB(255, 47, 54, 60),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),
 
-  ColorType.inputBackground: Color.fromARGB(255, 0, 0, 0), 
+  ColorType.inputBackground:Color.fromARGB(255, 47, 54, 60),
   ColorType.inputText: Colors.white,
+
+  ColorType.importantButtonBackground: Color.fromARGB(255, 49, 129, 199),
+  ColorType.importantButtonText: Colors.white,
+  ColorType.secondaryButtonBackground: Color.fromARGB(255, 47, 54, 60),
+  ColorType.secondaryButtonText: Color.fromARGB(255, 49, 129, 199),
 };
 
 // returns true if the current theme is dark mode
@@ -199,7 +213,11 @@ LinearGradient getStopHeroImageGradient(BuildContext context) {
       getGradientLerpColor(context, 0.75),
       getGradientLerpColor(context, 1)
     ],
-    stops: [0.6, 0.65, 0.74, 0.85, 1]
+    // original stops by Isaac
+    // stops: [0.6, 0.65, 0.74, 0.85, 1]
+
+    // adjusted stops by Ishan - using the same ratios but less tall
+    stops: [0.67, 0.71, 0.79, 0.88, 1]
   );
 }
 

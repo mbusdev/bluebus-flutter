@@ -131,13 +131,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: FloatingActionButton(
                               elevation: 0,
                               onPressed: (){},
-                              backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                              backgroundColor: getColor(context, ColorType.importantButtonBackground),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
                               child: Icon(
                                 Icons.directions_bus,
-                                color: getColor(context, ColorType.primary),
+                                color: getColor(context, ColorType.importantButtonText),
                                 size: 28
                               ),
                             ),
@@ -165,13 +165,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: FloatingActionButton(
                               elevation: 0,
                               onPressed: (){},
-                              backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                              backgroundColor: getColor(context, ColorType.importantButtonBackground),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
                               child: Icon(
                                 Icons.favorite,
-                                color: getColor(context, ColorType.primary),
+                                color: getColor(context, ColorType.importantButtonText),
                                 size: 28
                               ),
                             ),
@@ -199,13 +199,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: FloatingActionButton(
                               elevation: 0,
                               onPressed: (){},
-                              backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                              backgroundColor: getColor(context, ColorType.importantButtonBackground),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(56),
                               ),
                               child: Icon(
                                 Icons.search_sharp,
-                                color: getColor(context, ColorType.primary),
+                                color: getColor(context, ColorType.importantButtonText),
                                 size: 28
                               ),
                             ),
@@ -231,8 +231,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           curve: Curves.easeInOut,
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: getColor(context, ColorType.mapButtonPrimary), // Sets the background color for all states
-                          foregroundColor: Colors.white, // Sets the text/icon color
+                          backgroundColor: getColor(context, ColorType.importantButtonBackground), // Sets the background color for all states
+                          foregroundColor: getColor(context, ColorType.importantButtonText), // Sets the text/icon color
                         ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 3),
@@ -314,7 +314,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       fillColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
                         if (states.contains(WidgetState.selected)) {
                           // The color when the checkbox is checked.
-                          return getColor(context, ColorType.mapButtonPrimary);
+                          return getColor(context, ColorType.importantButtonBackground);
                         }
                         // The color when the checkbox is unchecked.
                         return Colors.grey; 
@@ -334,8 +334,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     children: [
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: getColor(context, ColorType.mapButtonPrimary), // Sets the background color for all states
-                          foregroundColor: Colors.white, // Sets the text/icon color
+                          backgroundColor: getColor(context, ColorType.importantButtonBackground), // Sets the background color for all states
+                          foregroundColor: getColor(context, ColorType.importantButtonText), // Sets the text/icon color
                         ),
                         onPressed: _agreeChecked
                             ? () => _setAccepted(true)

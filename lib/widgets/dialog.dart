@@ -13,21 +13,23 @@ Future<T?> showMaizebusOKDialog<T>({
     builder: (BuildContext context) {
       return AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30.0),
+          borderRadius: BorderRadius.circular(36.0),
         ),
         backgroundColor: getColor(context, ColorType.background),
-        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        titlePadding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
         titleTextStyle: TextStyle(
           color: getColor(context, ColorType.opposite),
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
+          fontFamily: 'Urbanist',
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
         contentTextStyle: TextStyle(
           color: getColor(context, ColorType.opposite),
-          fontSize: 16,
+          fontSize: 18,
+          fontFamily: 'Urbanist',
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
         actionsAlignment: MainAxisAlignment.end,
         
         title: title,
@@ -38,21 +40,22 @@ Future<T?> showMaizebusOKDialog<T>({
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                backgroundColor: getColor(context, ColorType.mapButtonPrimary),
-                foregroundColor: getColor(context, ColorType.mapButtonIcon),
+                backgroundColor: getColor(context, ColorType.importantButtonBackground),
+                foregroundColor: getColor(context, ColorType.importantButtonText),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30), // Rounded corners
                 ),
-                elevation: 2
+                elevation: 0
 
               ),
               onPressed: () => Navigator.pop(context),
               child: Text(
                 "OK",
                 style: TextStyle(
-                  color: getColor(context, ColorType.mapButtonIcon),
-                  fontSize: 16, 
+                  color: getColor(context, ColorType.importantButtonText),
+                  fontSize: 18, 
                   fontWeight: FontWeight.bold,
+                  fontFamily: 'Urbanist',
                 ),
               )
             ),
@@ -78,18 +81,20 @@ Future<T?> showUndismissableMaizebusDialog<T>({
           borderRadius: BorderRadius.circular(30.0),
         ),
         backgroundColor: getColor(context, ColorType.background),
-        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         titleTextStyle: TextStyle(
           color: getColor(context, ColorType.opposite),
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
+          fontFamily: 'Urbanist',
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
         contentTextStyle: TextStyle(
           color: getColor(context, ColorType.opposite),
-          fontSize: 16,
+          fontSize: 18,
+          fontFamily: 'Urbanist',
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
         actionsAlignment: MainAxisAlignment.end,
         
         title: title,

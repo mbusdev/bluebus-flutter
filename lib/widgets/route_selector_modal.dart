@@ -354,9 +354,22 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                         color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
                                         borderRadius: BorderRadius.circular(60),
                                         boxShadow: [
+                                          isSelected? BoxShadow(
+                                            blurRadius: 0,
+                                            spreadRadius: 0,
+                                          ):
                                           getInfoCardShadow(context)
                                         ],
                                       ),
+                                      // inner rim as an "inner shadow"
+                                      foregroundDecoration: isSelected
+                                          ? BoxDecoration(
+                                              borderRadius: BorderRadius.circular(30),
+                                              border: const Border(
+                                                top: BorderSide(color: Colors.black12, width: 2),
+                                              ),
+                                            )
+                                          : null,
                                       child: Theme(
                                         data: Theme.of(context).copyWith(
                                           splashColor: Colors.transparent,
@@ -487,9 +500,22 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                         color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
                                         borderRadius: BorderRadius.circular(20),
                                         boxShadow: [
+                                          isSelected? BoxShadow(
+                                            blurRadius: 0,
+                                            spreadRadius: 0,
+                                          ):
                                           getInfoCardShadow(context)
                                         ],
                                       ),
+                                      // inner rim as an "inner shadow"
+                                      foregroundDecoration: isSelected
+                                          ? BoxDecoration(
+                                              borderRadius: BorderRadius.circular(30),
+                                              border: const Border(
+                                                top: BorderSide(color: Colors.black12, width: 2),
+                                              ),
+                                            )
+                                          : null,
                                       child: Theme(
                                         data: Theme.of(context).copyWith(
                                           splashColor: Colors.transparent,
@@ -608,7 +634,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                       onPressed: () {
                                         showMaizebusOKDialog(
                                           contextIn: context,
-                                          title: const Text("Routes"),
+                                          title: const Text("Route Selector"),
                                           content: const Text("Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route"),
                                         );
                                       },
@@ -808,19 +834,19 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
                                     },
                                     icon: Icon(
                                       Icons.arrow_back,
-                                      color: getColor(context, ColorType.mapButtonIcon),
+                                      color: getColor(context, ColorType.importantButtonText),
                                     ),
                                     label: Text(
                                       'back',
                                       style: TextStyle(
                                         fontSize: 17,
                                         fontWeight: FontWeight.w700,
-                                        color: getColor(context, ColorType.mapButtonIcon)
+                                        color: getColor(context, ColorType.importantButtonText)
                                       ),
                                       
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                                      backgroundColor: getColor(context, ColorType.importantButtonBackground),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(20),
                                       ),

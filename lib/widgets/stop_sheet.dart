@@ -711,7 +711,7 @@ class _StopSheetState extends State<StopSheet> {
                                         },
                                         style: ElevatedButton.styleFrom(
                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                                          backgroundColor: getColor(context, ColorType.importantButtonBackground),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(30),
                                           ),
@@ -720,13 +720,13 @@ class _StopSheetState extends State<StopSheet> {
                                         ),
                                         icon: Icon(
                                           Icons.directions, 
-                                          color: getColor(context, ColorType.mapButtonIcon),
+                                          color: getColor(context, ColorType.importantButtonText),
                                           size: 20,
                                         ), 
                                         label: Text(
                                           'Get Directions',
                                           style: TextStyle(
-                                            color: getColor(context, ColorType.primary),
+                                            color: getColor(context, ColorType.importantButtonText),
                                             fontSize: 16, 
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -753,7 +753,7 @@ class _StopSheetState extends State<StopSheet> {
                                           });
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: getColor(context, ColorType.dim),
+                                          backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
                                           shape: CircleBorder(),
                                           shadowColor: Colors.black,
                                           padding: EdgeInsets.zero,
@@ -764,7 +764,7 @@ class _StopSheetState extends State<StopSheet> {
                                         ),
                                         child: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.opposite),
+                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
                                           size: 20,
                                         ), 
                                       ),
@@ -797,7 +797,7 @@ class _StopSheetState extends State<StopSheet> {
                                           );
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: getColor(context, ColorType.dim),
+                                          backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
                                           shape: CircleBorder(),
                                           shadowColor: Colors.black,
                                           padding: EdgeInsets.zero,
@@ -808,7 +808,7 @@ class _StopSheetState extends State<StopSheet> {
                                         ),
                                         child: Icon(
                                           Icons.notifications_none,
-                                          color: getColor(context, ColorType.opposite),
+                                          color: getColor(context, ColorType.secondaryButtonText),
                                           size: 20.0,
                                         )
                                       ),
@@ -1122,10 +1122,13 @@ class _ReminderFormState extends State<ReminderForm> {
                           );
                         }
                       },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: getColor(context, ColorType.importantButtonBackground),
+                      ),
                       child: Text(
                         "Update",
                         style: TextStyle(
-                          color: getColor(context, ColorType.primary),
+                          color: getColor(context, ColorType.importantButtonText),
                           fontSize: 16, 
                           fontWeight: FontWeight.w600,
                         )

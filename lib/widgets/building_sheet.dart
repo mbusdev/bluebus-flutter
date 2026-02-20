@@ -149,7 +149,7 @@ class _BuildingSheetState extends State<BuildingSheet> {
                       widget.onGetDirections(widget.building);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                      backgroundColor: getColor(context, ColorType.importantButtonBackground),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -158,13 +158,13 @@ class _BuildingSheetState extends State<BuildingSheet> {
                     ),
                     icon:  Icon(
                       Icons.directions, 
-                      color: getColor(context, ColorType.mapButtonIcon),
+                      color: getColor(context, ColorType.importantButtonText),
                       size: 20,
                     ),
                     label: Text(
                       'Directions',
                       style: TextStyle(
-                        color: getColor(context, ColorType.primary),
+                        color: getColor(context, ColorType.importantButtonText),
                         fontSize: 16, 
                         fontWeight: FontWeight.w600,
                       ),
@@ -178,7 +178,7 @@ class _BuildingSheetState extends State<BuildingSheet> {
                   child: ElevatedButton.icon(
                     onPressed: () => launchUrl(contactURL),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: getColor(context, ColorType.dim),
+                      backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -186,13 +186,13 @@ class _BuildingSheetState extends State<BuildingSheet> {
                     ),
                     icon: Icon(
                       Icons.report, 
-                      color: getColor(context, ColorType.opposite),
+                      color: getColor(context, ColorType.secondaryButtonText),
                       size: 20,
                     ), // The icon on the left
                     label: Text(
                       'Feedback',
                       style: TextStyle(
-                        color: getColor(context, ColorType.opposite), 
+                        color: getColor(context, ColorType.secondaryButtonText), 
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         overflow: TextOverflow.ellipsis

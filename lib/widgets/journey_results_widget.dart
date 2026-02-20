@@ -21,7 +21,7 @@ int getSecondsAfterMidnightUtc() {
   return difference.inSeconds;
 }
 
-// takes time from seconds after midnight and converts to clock time
+/// takes time from seconds after midnight and converts to clock time
 String formatSecondsToTime(int utcSeconds) {
   // get the current date in UTC to serve as a reference
   final nowUtc = DateTime.now().toUtc();
@@ -37,6 +37,24 @@ String formatSecondsToTime(int utcSeconds) {
 
   // format it (h:mm a handles 12-hour format and AM/PM)
   return DateFormat('h:mm a').format(localTime);
+}
+
+/// doesn't add am or pm at the end
+String formatSecondsToTimeNoAMPM(int utcSeconds) {
+  // get the current date in UTC to serve as a reference
+  final nowUtc = DateTime.now().toUtc();
+
+  // create a DateTime object for "Midnight UTC" today
+  final midnightUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
+
+  // add the seconds to midnight
+  final specificTimeUtc = midnightUtc.add(Duration(seconds: utcSeconds));
+
+  // convert to the device's Local time zone
+  final localTime = specificTimeUtc.toLocal();
+
+  // format it (h:mm a handles 12-hour format and AM/PM)
+  return DateFormat('h:mm').format(localTime);
 }
 
 
@@ -141,57 +159,80 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
+              (_selectedIndex == idx)? BoxShadow(
+                blurRadius: 0,
+                spreadRadius: 0,
+              ):
               getInfoCardShadow(context)
             ],
             color: (_selectedIndex == idx)
               ? getColor(context, ColorType.infoCardHighlighted)
               : getColor(context, ColorType.infoCardColor),
           ),
+          // inner rim as an "inner shadow"
+          foregroundDecoration: (_selectedIndex == idx)
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  border: const Border(
+                    top: BorderSide(color: Colors.black12, width: 2),
+                  ),
+                )
+              : null,
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
               onExpansionChanged: (value) {
                 // lets this also change the selected index when you expand the tile by 
                 // tapping the expansion icon, not just when you tap the whole card
-                setState(() {
-                  _selectedIndex = idx;
-                });
-                widget.onSelectJourney?.call(journey);
+
+                if(_selectedIndex != idx) {
+                  setState(() {
+                    _selectedIndex = idx;
+                  });
+                  widget.onSelectJourney?.call(journey);
+                }
               },
               title: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    '${(totalDuration / 60).round()}',
+                    '${(totalDuration / 60.0).round()}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 40,
-                      height: 0,
+                      height: 1.15,
                     ),
                   ),
-                  Text(
-                    ' min',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 25,
-                      height: 1.5,
-                    ),
+                  SizedBox(width: 7,),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'min',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                          height: 1.1
+                        ),
+                      ),
+                      Text(
+                        'arrive ${formatSecondsToTimeNoAMPM(journey.arrivalTime)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w400,
+                          fontSize: 16,
+                          height: 1
+                        ),
+                      ),
+                      SizedBox(height: 5,),
+                    ],
                   ),
                   Spacer(),
-                  Text(
-                    (busIDs.isEmpty) ? '' : 'via ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w400,
-                      fontSize: 25,
-                      height: 1.5,
-                    ),
-                  ),
                   ...busIDs.map((busID) {
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 6, right: 6),
+                      padding: const EdgeInsets.only(right: 3),
                       child: Container(
-                        width: 30,
-                        height: 30,
+                        width: 35,
+                        height: 35,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: RouteColorService.getRouteColor(busID),
@@ -204,7 +245,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                             busID,
                             style: TextStyle(
                               color: RouteColorService.getContrastingColor(busID),
-                              fontSize: 17,
+                              fontSize: 18,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -1,
                             ),
@@ -216,6 +257,8 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                   }),
                 ],
               ),
+              iconColor: getColor(context, ColorType.opposite),       
+              collapsedIconColor: getColor(context, ColorType.opposite), 
               children: [
                 Padding(
                   padding: const EdgeInsets.only(left: 16, right: 16),

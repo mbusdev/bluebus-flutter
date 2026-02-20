@@ -1141,11 +1141,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       builder: (BuildContext context) {
         return DraggableScrollableSheet(
           initialChildSize: 0.5, 
-          maxChildSize: 0.5, 
+          maxChildSize: 0.9, 
           minChildSize: 0,  
           expand: false,
           snap: true,
-          snapSizes: [0.5],
+          snapSizes: [0.5, 0.9],
           builder: (context, scrollController){
             return DirectionsSheet(
               origin: start,
@@ -2306,19 +2306,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             children: [
                               DecoratedBox(
                                 decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: getColor(context, ColorType.mapButtonShadow),
-                                      blurRadius: 10,
-                                      offset: Offset(0, 6)
-                                    )
-                                  ],
                                   borderRadius: BorderRadius.circular(56)
                                 ),
                                 child: ElevatedButton.icon(
                                   onPressed: _showJourneySheetOnReopen,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                                    backgroundColor: getColor(context, ColorType.importantButtonBackground),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(56),
                                     ),
@@ -2326,17 +2319,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       horizontal: 20,
                                       vertical: 8,
                                     ),
-                                    elevation: 0,
+                                    elevation: 1,
                                   ),
                                   icon: Icon(
-                                    color: getColor(context, ColorType.mapButtonIcon),
+                                    color: getColor(context, ColorType.importantButtonText),
                                     Icons.keyboard_arrow_up,
                                     size: 18,
                                   ), // The icon on the left
                                   label: Text(
                                     'Steps',
                                     style: TextStyle(
-                                      color: getColor(context, ColorType.mapButtonIcon),
+                                      color: getColor(context, ColorType.importantButtonText),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                     ),                                    
@@ -2348,19 +2341,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   
                               DecoratedBox(
                                 decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: getColor(context, ColorType.mapButtonShadow),
-                                      blurRadius: 10,
-                                      offset: Offset(0, 6)
-                                    )
-                                  ],
                                   borderRadius: BorderRadius.circular(56)
                                 ),
                                 child: ElevatedButton.icon(
                                   onPressed: _clearJourneyOverlays,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.mapButtonSecondary),
+                                    backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(56),
                                     ),
@@ -2368,33 +2354,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       horizontal: 20,
                                       vertical: 8,
                                     ),
-                                    elevation: 0,
+                                    elevation: 1,
                                   ),
                                   icon: Icon(
                                     Icons.close,
-                                    color: darkColors[ColorType.mapButtonIcon]!,
+                                    color: getColor(context, ColorType.secondaryButtonText),
                                     size: 18,
-                                    shadows: [
-                                      Shadow(
-                                        color: getColor(context, ColorType.mapButtonShadow),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2)
-                                      )
-                                    ],
                                   ), // The icon on the left
                                   label: Text(
                                     'Close',
                                     style: TextStyle(
-                                      color: darkColors[ColorType.mapButtonIcon]!,
+                                      color: getColor(context, ColorType.secondaryButtonText),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
-                                      shadows: [
-                                        Shadow(
-                                          color: getColor(context, ColorType.mapButtonShadow),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2)
-                                        )
-                                      ],
                                     ),
                                   ), // The text on the right
                                 ),
