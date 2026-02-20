@@ -95,11 +95,19 @@ class _BusSheetState extends State<BusSheet> {
                 onBusStopClick: (String stopName, String stopId) {
                   widget.onSelectStop(stopName, stopId);
                 },
-                childIfNoUpcomingStopsFound: const Text(
-                    "It doesn't appear there are upcoming stops for this bus",
-                    style: TextStyle(fontSize: 20.0),
-                    textAlign: TextAlign.center,
-                  )
+                childIfNoUpcomingStopsFound: Padding(
+                  padding: const EdgeInsets.only(left: 10, top: 10),
+                  child: Center(
+                    child: const Text(
+                        "No upcoming stops found",
+                        style: TextStyle(
+                          fontSize: 16.0,
+                          fontStyle: FontStyle.italic
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                  ),
+                )
               ),
 
               SizedBox(height: 10), // Extra padding on the bottom to look nicer
