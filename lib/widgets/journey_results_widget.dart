@@ -382,6 +382,19 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
             padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
             child: Column(children: journeyWidgets),
           ),
+
+          
+          Padding(
+            padding:  EdgeInsets.only(left: 20, right: 20, bottom: globalBottomPadding),
+            child: Text(
+              "Note: For now, directions are only based on the university buses",
+              style: TextStyle(
+                fontFamily: 'Urbanist',
+                fontWeight: FontWeight.w400,
+                fontSize: 16,
+              ),
+            ),
+          ),
         ],
       ),
     );

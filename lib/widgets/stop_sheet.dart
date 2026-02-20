@@ -207,7 +207,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                 : int.parse(widget.busPrediction) -
                       5, // Minus five minutes to account for prediction time discrepancies
             filterAfterStop: widget.stopId,
-            showSeeMoreButton: true,
+            showSeeMoreButton: (widget.busProvider.containsBus(widget.vehicleId)), // Only show the see more button if the bus is live
             showBusSheet: widget.showBusSheet,
             childIfNoUpcomingStopsFound: Padding(
               padding: EdgeInsets.only(left: 55),
