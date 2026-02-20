@@ -2,6 +2,7 @@ import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
+import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../constants.dart';
@@ -716,7 +717,7 @@ class _StopSheetState extends State<StopSheet> {
                                             borderRadius: BorderRadius.circular(30),
                                           ),
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          elevation: 5
+                                          elevation: 3
                                         ),
                                         icon: Icon(
                                           Icons.directions, 
@@ -760,7 +761,7 @@ class _StopSheetState extends State<StopSheet> {
                                           minimumSize: Size(0,0),
                                           fixedSize: Size(40,40),
                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          elevation: 4
+                                          elevation: 3
                                         ),
                                         child: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
@@ -804,7 +805,7 @@ class _StopSheetState extends State<StopSheet> {
                                           minimumSize: Size(0,0),
                                           fixedSize: Size(40,40),
                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          elevation: 4
+                                          elevation: 3
                                         ),
                                         child: Icon(
                                           Icons.notifications_none,
@@ -886,11 +887,17 @@ class _ReminderFormState extends State<ReminderForm> {
         
         final dataForAllStops = snapshot.data;
         if (dataForAllStops == null) {
-          return Center(child: Column(
-            children: [
-            Text("Loading failed!"),
-            Text("Error: ${snapshot.error}"),
-          ]));
+          // Wait for the current build frame to finish before showing dialogs/popping
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.pop(context);
+            
+            showMaizebusOKDialog(
+              contextIn: context,
+              title: Text("Failed to load reminders"),
+              content: Text("Make sure you have the notification permission enabled in settings. If this error is persistent, please send us feedback through the feedback form in the setting page"),
+            );
+          });
+          return SizedBox.shrink();
         }
         
 

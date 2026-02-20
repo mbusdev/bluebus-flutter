@@ -3,6 +3,7 @@ import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
@@ -27,7 +28,13 @@ class NotificationService {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('appicon_no_bg');
     final DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings();
+        DarwinInitializationSettings(
+          // setting these to false just means the user won't be prompted for permissions right away, 
+          // we can call requestPermission() later to ask for permissions when we need to
+          requestAlertPermission: false, 
+          requestBadgePermission: false, 
+          requestSoundPermission: false, 
+        );
     final InitializationSettings settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -60,8 +67,12 @@ class NotificationService {
   // as it sets up some important listeners
   static Future<void> requestPermission() async {
     // todo: add back in if needed
-    //final notificationSettings = await FirebaseMessaging.instance
-    //    .requestPermission();
+    final notificationSettings = await FirebaseMessaging.instance
+        .requestPermission();
+
+    if (notificationSettings.authorizationStatus == AuthorizationStatus.denied) {
+      return;
+    }
 
     // notificationSettings.authorizationStatus ...
     final apnsToken = await FirebaseMessaging.instance
