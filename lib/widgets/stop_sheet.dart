@@ -419,15 +419,7 @@ class _StopSheetState extends State<StopSheet> {
                                         Container(
                                           height: heightOfImage,
                                           decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                getColor(context, ColorType.backgroundGradientStart),  
-                                                getColor(context, ColorType.background),                       
-                                              ],
-                                              stops: [0.7, 1]
-                                            ),
+                                            gradient: getStopHeroImageGradient(context)
                                           ),
                                         ),
                                         
