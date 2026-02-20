@@ -118,6 +118,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   BitmapDescriptor? _rideStopIcon;
   BitmapDescriptor? _favStopIcon;
   BitmapDescriptor? _favRideStopIcon;
+  BitmapDescriptor? _getOn;
+  BitmapDescriptor? _getOff;
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -375,6 +377,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
       _favRideStopIcon = await resizeImage(
         await rootBundle.load('assets/favbusStopRide.png'),
+      );
+      _getOn = await resizeImage(  
+        await rootBundle.load('assets/getOn.png'),
+      );
+      _getOff = await resizeImage(
+        await rootBundle.load('assets/getOff.png'),
       );
 
       // Load route specific bus icons
@@ -1336,13 +1344,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),
                 position: bestSegment.first,
                 icon:
-                    _stopIcon ??
+                    _getOn ??
                     BitmapDescriptor.defaultMarkerWithHue(
                       _colorToHue(RouteColorService.getRouteColor(leg.rt!)),
                     ),
-                rotation: (bestSegment.length >= 3)
-                    ? pointRotation(bestSegment[1].latitude, bestSegment[1].longitude, bestSegment[2].latitude, bestSegment[2].longitude)
-                    : 0,  
               ),
               Marker(
                 flat: true,
@@ -1351,13 +1356,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 ),
                 position: bestSegment.last,
                 icon:
-                    _stopIcon ??
+                    _getOff ??
                     BitmapDescriptor.defaultMarkerWithHue(
                       _colorToHue(RouteColorService.getRouteColor(leg.rt!)),
                     ),
-                rotation: (bestSegment.length >= 3)
-                    ? pointRotation(bestSegment[bestSegment.length - 3].latitude, bestSegment[bestSegment.length - 3].longitude, bestSegment[bestSegment.length - 2].latitude, bestSegment[bestSegment.length - 2].longitude)
-                    : 0,  
               ),
             ]);
 
