@@ -45,7 +45,7 @@ final Map<String, String> KEY_STOPS = {
   "145": "Blake Transit Center",
   "137": "Blake Transit Center",
   "138": "Blake Transit Center",
-  "145": "Blake Transit Center",
+  //"145": "Blake Transit Center",
   "1150": "Blake Transit Center",
   "2262": "Blake Transit Center",
 
@@ -61,7 +61,7 @@ final Map<String, String> KEY_STOPS = {
   "267": "Trinity Health - Ann Arbor Hospital",
   "266": "Washtenaw Community College - Student Ctr",
   "2250": "Washtenaw Community College - Service Dr",
-  "2250": "Washtenaw Community College - South Side",
+  //"2250": "Washtenaw Community College - South Side",
   "1944": "Briarwood Mall - Main Stop", // Route 6, 67
   "420": "Meijer - Carpenter Rd",
   "959": "Roundtree Place Shopping Center",
@@ -130,8 +130,8 @@ final Map<String, String> KEY_STOPS = {
   "419": "Meijer - Carpenter Rd", // Route 66, 5
 
   "1499": "Service Dr. + Emerick", // Route 68
-  "2156": "Holmes + Ridge",
-  "983": "Holmes + Ridge",
+  //"2156": "Holmes + Ridge",
+  //"983": "Holmes + Ridge",
 
   // TODO: Add other important stops for buses
 };
