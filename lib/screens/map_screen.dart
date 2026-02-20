@@ -1703,38 +1703,31 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-
         child: DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          maxChildSize: 0.85,
+          snap: true,
 
-        // Very hacky, I know. I couldn't find a better way to:
-        //    1. Have the contents of the BusSheet be scrollable
-        //    2. Have swiping down on the BusSheet close the modal, AND
-        //    3. Have clicking in the shaded area at the top close the modal
-        initialChildSize: 0.99,
-        minChildSize: 0.9, 
-        maxChildSize: 1.0,
-
-        builder: (BuildContext context, ScrollController scrollController) {
-          return BusSheet(
-            busID: busID,
-            scrollController: scrollController,
-            onSelectStop: (name, id) {
-              Navigator.pop(context); // Close the current modal
-              LatLng? latLong = getLatLongFromStopID(id);
-              if (latLong != null) {
-                _showStopSheet(id, name, latLong.latitude, latLong.longitude);
-              } else {
-                showMaizebusOKDialog(
-                  contextIn: context,
-                  title: const Text("Error"),
-                  content: const Text("Couldn't load stop."),
-                );
-              }
-            },
-          );
-        },
-      )
+          builder: (BuildContext context, ScrollController scrollController) {
+            return BusSheet(
+              busID: busID,
+              scrollController: scrollController,
+              onSelectStop: (name, id) {
+                Navigator.pop(context); // Close the current modal
+                LatLng? latLong = getLatLongFromStopID(id);
+                if (latLong != null) {
+                  _showStopSheet(id, name, latLong.latitude, latLong.longitude);
+                } else {
+                  showMaizebusOKDialog(
+                    contextIn: context,
+                    title: const Text("Error"),
+                    content: const Text("Couldn't load stop."),
+                  );
+                }
+              },
+            );
+          },
+        )
       )
     );
   }
