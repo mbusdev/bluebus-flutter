@@ -1921,44 +1921,48 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     });
 
-    // set all padding
-    // first, getting all the padding values
-    final mediaQueryData = MediaQuery.of(context);
-    final double flutterSafeAreaTop = mediaQueryData.padding.top;
-    final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
-    // then, changing them based on phone
-    if(Platform.isIOS){
-      if(flutterSafeAreaBottom == 0){
-        // rectangle iphone
-        globalBottomPadding = 10;
-        globalLeftRightPadding = 10;
-        globalTopPadding = 20;
+    if (!globallPaddingHasBeenSet){
+      // set all padding
+      // first, getting all the padding values
+      final mediaQueryData = MediaQuery.of(context);
+      final double flutterSafeAreaTop = mediaQueryData.padding.top;
+      final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
+      // then, changing them based on phone
+      if(Platform.isIOS){
+        if(flutterSafeAreaBottom == 0){
+          // rectangle iphone
+          globalBottomPadding = 10;
+          globalLeftRightPadding = 10;
+          globalTopPadding = 20;
+        } else {
+          // round iphone
+          globalBottomPadding = 30;
+          globalLeftRightPadding = 30;
+          globalTopPadding = flutterSafeAreaTop;
+        }
       } else {
-        // round iphone
-        globalBottomPadding = 30;
-        globalLeftRightPadding = 30;
-        globalTopPadding = flutterSafeAreaTop;
-      }
-    } else {
-      // andoird
-      
-      if (flutterSafeAreaBottom < 30){
-        // in this case, 30 from the bottom is fine because
-        // it's over the safe area. this usually works
-        // for round bottom phones like the google pixel
+        // andoird
+        
+        if (flutterSafeAreaBottom < 30){
+          // in this case, 30 from the bottom is fine because
+          // it's over the safe area. this usually works
+          // for round bottom phones like the google pixel
 
-        globalBottomPadding = 30;
-        globalLeftRightPadding = 30;
-        globalTopPadding = flutterSafeAreaTop;
-      } else {
-        // this case, it's over 30. probably means
-        // a rectangle android. so no need to make
-        // it like 30
+          globalBottomPadding = 30;
+          globalLeftRightPadding = 30;
+          globalTopPadding = flutterSafeAreaTop;
+        } else {
+          // this case, it's over 30. probably means
+          // a rectangle android. so no need to make
+          // it like 30
 
-        globalBottomPadding = flutterSafeAreaBottom + 15;
-        globalLeftRightPadding = 15;
-        globalTopPadding = flutterSafeAreaTop;
+          globalBottomPadding = flutterSafeAreaBottom + 15;
+          globalLeftRightPadding = 15;
+          globalTopPadding = flutterSafeAreaTop;
+        }
       }
+
+      globallPaddingHasBeenSet = true;
     }
 
     return FutureBuilder(

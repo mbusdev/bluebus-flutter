@@ -144,7 +144,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                     ),
                     child: Stack(
                       children: [
-                        Expanded(
+                        Positioned.fill(
                           child: Builder(
                             builder: (context) {
                               if (snapshot.connectionState == ConnectionState.waiting){

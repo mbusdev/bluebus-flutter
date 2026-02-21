@@ -5,6 +5,7 @@ List<Location> globalStopLocs = [];
 
 // the global app padding
 // don't modify these here, instead use the helper function in map_screen.dart that sets these based on phone type and safe area insets
+bool globallPaddingHasBeenSet = false;
 double globalBottomPadding = 0;
 double globalTopPadding = 0;
 double globalLeftRightPadding = 0;
