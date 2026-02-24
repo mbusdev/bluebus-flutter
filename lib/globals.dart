@@ -58,8 +58,10 @@ class BorderRadiusManager {
   }
   static BorderRadius getSheetBorderRadius(BuildContext context) {
     return BorderRadius.only(
-        topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
-        topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
+        topLeft: Radius.circular(30),
+        topRight: Radius.circular(30)
+        // topLeft: Radius.circular(screenRadius != null ? screenRadius!.topLeft : 30),
+        // topRight: Radius.circular(screenRadius != null ? screenRadius!.topRight : 30),
       );
   }
 }

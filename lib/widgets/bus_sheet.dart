@@ -66,13 +66,14 @@ class _BusSheetState extends State<BusSheet> {
           SheetBoxShadow
         ]
       ),
-      child: Padding(
-        padding: const EdgeInsets.only(
-          left: 10,
-          top: 0,
-          right: 20,
-          bottom: 0,
-        ),
+      // child: Padding(
+      //   padding: const EdgeInsets.only(
+      //     left: 10,
+      //     top: 0,
+      //     right: 20,
+      //     bottom: 0,
+      //   ),
+      //   child: 
         child: SingleChildScrollView(
           controller: widget.scrollController,
 
@@ -80,114 +81,157 @@ class _BusSheetState extends State<BusSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // spacer
-              const SizedBox(height: 20),
 
-              // header (if the bus id is a number it's a ride bus)
-              isNumber(bus.routeId) ? theRideHeader(bus) : michiganBusHeader(bus),
+              Container(
+                // color: bus.routeColor,
+                decoration: BoxDecoration(
+                  color: bus.routeColor,
+                  borderRadius: BorderRadiusManager.getSheetBorderRadius(context)
+                  // borderRadius: BorderRadius.only(
+                  //   topLeft: Radius.circular(30),
+                  //   topRight: Radius.circular(30),
+                  // ),
+                ),
+                child: Column(
+                  children: [
+                    // spacer
+                    const SizedBox(height: 20),
 
-              SizedBox(height: 20),
+                    // header (if the bus id is a number it's a ride bus)
+                    isNumber(bus.routeId) ? theRideHeader(bus, context) : michiganBusHeader(bus, context),
 
-              UpcomingStopsWidget(
-                color: RouteColorService.getRouteColor(bus.routeId),
-                routeId: bus.routeId,
-                vehicleId: bus.id,
-                isExpanded: true,
-                shouldAnimate: false,
-                showAbridgedStops: false,
-                onBusStopClick: (String stopName, String stopId) {
-                  widget.onSelectStop(stopName, stopId);
-                },
-                childIfNoUpcomingStopsFound: const Text(
-                    "It doesn't appear there are upcoming stops for this bus",
-                    style: TextStyle(fontSize: 20.0),
-                    textAlign: TextAlign.center,
-                  )
+                    SizedBox(height: 20),
+                  ]
+                ),
               ),
+              
+              Container(
+                color: bus.routeColor,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: getColor(context, ColorType.background),
+                    borderRadius: BorderRadiusManager.getSheetBorderRadius(context)
+                  ),
+                  child: Padding(
+                      padding: const EdgeInsets.only(
+                      left: 10,
+                      top: 10,
+                      right: 20,
+                      bottom: 0,
+                    ),
+                    child: 
+                      UpcomingStopsWidget(
+                        color: RouteColorService.getRouteColor(bus.routeId),
+                        routeId: bus.routeId,
+                        vehicleId: bus.id,
+                        isExpanded: true,
+                        shouldAnimate: false,
+                        showAbridgedStops: false,
+                        onBusStopClick: (String stopName, String stopId) {
+                          widget.onSelectStop(stopName, stopId);
+                        },
+                        childIfNoUpcomingStopsFound: const Text(
+                            "It doesn't appear there are upcoming stops for this bus",
+                            style: TextStyle(fontSize: 20.0),
+                            textAlign: TextAlign.center,
+                          )
+                    ),
+                  ),
+                )
+              ),
+              
 
               SizedBox(height: 10), // Extra padding on the bottom to look nicer
             ],
           ),
         ),
-      ),
+      // ),
     );
   }
 }
 
-Widget michiganBusHeader(Bus bus) {
-  return Padding(
-    padding: const EdgeInsets.only(
-      left: 10,
-      right: 0,
-      top: 0,
-      bottom: 0,
-    ),
-    child: Row(
-      children: [
-        Container( // Bus circular icon
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: bus.routeColor,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            bus.routeId,
-            style: TextStyle(
-              color: RouteColorService.getContrastingColor(
-                bus.routeId,
-              ),
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1,
+Widget michiganBusHeader(Bus bus, BuildContext context) {
+  return Container(
+    // color: bus.routeColor,
+    child: Padding(
+      padding: const EdgeInsets.only(
+        left: 20,
+        right: 0,
+        top: 0,
+        bottom: 0,
+      ),
+      child: Row(
+        children: [
+          Container( // Bus circular icon
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              // color: bus.routeColor,
+              color: getColor(context, ColorType.background)
             ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-
-        SizedBox(width: 15),
-
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                getPrettyRouteName(bus.routeId),
-                style: TextStyle(
-                  fontFamily: 'Urbanist',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 30,
-                  height: 1
-                ),
+            alignment: Alignment.center,
+            child: Text(
+              bus.routeId,
+              style: TextStyle(
+                // color: RouteColorService.getContrastingColor(
+                //   bus.routeId,
+                // ),
+                // color: Color.fromARGB(255, 75, 75, 75),
+                color: getColor(context, ColorType.opposite),
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1,
               ),
-
-              SizedBox(height: 6,),
-
-              Text(
-                "Bus ${bus.id}",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontFamily: 'Urbanist',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  height: 1
-                ),
-              ),
-            ],
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
-      ],
-    ),
+
+          SizedBox(width: 15),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  getPrettyRouteName(bus.routeId),
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    color: RouteColorService.getContrastingColor(bus.id),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 30,
+                    height: 1
+                  ),
+                ),
+
+                SizedBox(height: 6,),
+
+                Text(
+                  "Bus ${bus.id}",
+                  style: TextStyle(
+                    // color: Colors.grey,
+                    color: RouteColorService.getContrastingColor(bus.id),
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    height: 1
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    )
   );
 }
 
 
-Widget theRideHeader(Bus bus) {
+Widget theRideHeader(Bus bus, BuildContext context) {
   return Padding(
     padding: const EdgeInsets.only(
-      left: 10,
+      left: 20,
       right: 0,
       top: 0,
       bottom: 0,
@@ -200,15 +244,17 @@ Widget theRideHeader(Bus bus) {
           decoration: BoxDecoration(
             shape: BoxShape.rectangle,
             borderRadius: BorderRadius.circular(39), // should be 27.5 (55 divided by 2) but 39 works too
-            color: bus.routeColor,
+            // color: bus.routeColor,
+            color: getColor(context, ColorType.background)
           ),
           alignment: Alignment.center,
           child: Text(
             bus.routeId,
             style: TextStyle(
-              color: RouteColorService.getContrastingColor(
-                bus.routeId,
-              ),
+              color: getColor(context, ColorType.opposite),
+              // color: RouteColorService.getContrastingColor(
+              //   bus.routeId,
+              // ),
               fontSize: 30,
               fontWeight: FontWeight.w900,
               letterSpacing: -1,
@@ -229,8 +275,12 @@ Widget theRideHeader(Bus bus) {
                   fontFamily: 'Urbanist',
                   fontWeight: FontWeight.w700,
                   fontSize: 30,
-                  height: 1
+                  height: 1,
+                  color: RouteColorService.getContrastingColor(
+                    bus.routeId,
+                  ),
                 ),
+                
               ),
 
               SizedBox(height: 5,),
@@ -251,7 +301,10 @@ Widget theRideHeader(Bus bus) {
                   Text(
                     "Bus ${bus.id}",
                     style: TextStyle(
-                      color: Colors.grey,
+                      // color: Colors.grey,
+                      color: RouteColorService.getContrastingColor(
+                    bus.routeId,
+                  ),
                       fontFamily: 'Urbanist',
                       fontWeight: FontWeight.w700,
                       fontSize: 20,
