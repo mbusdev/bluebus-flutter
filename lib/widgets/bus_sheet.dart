@@ -81,7 +81,7 @@ class _BusSheetState extends State<BusSheet> {
               const SizedBox(height: 20),
 
               // header (if the bus id is a number it's a ride bus)
-              isNumber(bus.routeId) ? theRideHeader(bus) : michiganBusHeader(bus),
+              isNumber(bus.routeId) ? theRideHeader(bus, context) : michiganBusHeader(bus, context),
 
               SizedBox(height: 20),
 
@@ -119,7 +119,7 @@ class _BusSheetState extends State<BusSheet> {
   }
 }
 
-Widget michiganBusHeader(Bus bus) {
+Widget michiganBusHeader(Bus bus, BuildContext context) {
   return Padding(
     padding: const EdgeInsets.only(
       left: 10,
@@ -137,17 +137,20 @@ Widget michiganBusHeader(Bus bus) {
             color: bus.routeColor,
           ),
           alignment: Alignment.center,
-          child: Text(
-            bus.routeId,
-            style: TextStyle(
-              color: RouteColorService.getContrastingColor(
-                bus.routeId,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+            child: Text(
+              bus.routeId,
+              style: TextStyle(
+                color: RouteColorService.getContrastingColor(
+                  bus.routeId,
+                ),
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1,
               ),
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1,
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ),
 
@@ -189,7 +192,7 @@ Widget michiganBusHeader(Bus bus) {
 }
 
 
-Widget theRideHeader(Bus bus) {
+Widget theRideHeader(Bus bus, BuildContext context) {
   return Padding(
     padding: const EdgeInsets.only(
       left: 10,
@@ -208,17 +211,20 @@ Widget theRideHeader(Bus bus) {
             color: bus.routeColor,
           ),
           alignment: Alignment.center,
-          child: Text(
-            bus.routeId,
-            style: TextStyle(
-              color: RouteColorService.getContrastingColor(
-                bus.routeId,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+            child: Text(
+              bus.routeId,
+              style: TextStyle(
+                color: RouteColorService.getContrastingColor(
+                  bus.routeId,
+                ),
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1,
               ),
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1,
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ),
 
