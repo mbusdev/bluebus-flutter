@@ -861,6 +861,10 @@ class _ReminderFormState extends State<ReminderForm> {
   int reminderThresh = 5;
   String? rtidToRemove;
 
+  // exists to ensure the notification button isn't pressed multiple times 
+  // while waiting for the response
+  bool _isProcessing = false;
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -921,7 +925,6 @@ class _ReminderFormState extends State<ReminderForm> {
           rtidsToChange.remove(rtidToRemove);
         }
         rtidToRemove = null;
-        
 
         return Column(
           spacing: 0,
@@ -970,9 +973,6 @@ class _ReminderFormState extends State<ReminderForm> {
                     //mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 0,
                     runSpacing: 0,
-
-
-
                     children: routesToShow.map((rtid) {
                       return Stack(
                         
@@ -1101,8 +1101,10 @@ class _ReminderFormState extends State<ReminderForm> {
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                          
+                      onPressed: _isProcessing ? null : () async {
+                        // is processing lets us make sure no one spams the button
+                        setState(() => _isProcessing = true);
+                      
                         List<RemindersModification> modifications = [];
                         for (String rtid in routesToShow) {
                           final bool alreadyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
@@ -1123,13 +1125,11 @@ class _ReminderFormState extends State<ReminderForm> {
                         } on Exception catch (e) {
                           showDialog(
                             context: context,
-                            
                             builder: (context) => SimpleDialog(
-                              
                               title: Text("Failed!\n${e.toString()}")),
-                              
                           );
                         }
+                        setState(() => _isProcessing = false);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: getColor(context, ColorType.importantButtonBackground),

@@ -167,6 +167,7 @@ class _BuildingSheetState extends State<BuildingSheet> {
                         color: getColor(context, ColorType.importantButtonText),
                         fontSize: 16, 
                         fontWeight: FontWeight.w600,
+                        overflow: TextOverflow.ellipsis
                       ),
                     ), // The text on the right
                   ),
