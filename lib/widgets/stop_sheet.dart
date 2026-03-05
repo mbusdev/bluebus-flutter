@@ -774,6 +774,10 @@ class _StopSheetState extends State<StopSheet> {
                                             
                                       ElevatedButton(
                                         onPressed: () {
+                                          if (arrivingBuses.isEmpty) {
+                                            return;
+                                          }
+
                                           showDialog(
                                             context: context,
                                             builder: (context) {
@@ -808,7 +812,7 @@ class _StopSheetState extends State<StopSheet> {
                                           elevation: 3
                                         ),
                                         child: Icon(
-                                          Icons.notifications_none,
+                                          (arrivingBuses.isEmpty)? Icons.notifications_off_outlined : Icons.notifications_none,
                                           color: getColor(context, ColorType.secondaryButtonText),
                                           size: 20.0,
                                         )
