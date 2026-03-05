@@ -20,7 +20,7 @@ class RouteSelectorModal extends StatefulWidget {
     required this.availableRoutes,
     required this.initialSelectedRoutes,
     required this.onApply,
-    required this.canVibrate
+    required this.canVibrate,
   });
 
   @override
@@ -58,7 +58,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
         michiganRoutes.add(route);
       }
     }
-    
+
     // use the saved order from local data to reorder michigan routes
     _loadMichiganRouteOrder().then((order) {
       if (order == null) return;
@@ -147,7 +147,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   void _onDraggingMichiganRoute(PointerMoveEvent event) async {
     if (!_isReordering) return;
     if (widget.canVibrate &&
-        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 10) { // hpatic rate or like cooldown
+        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 10) {
+      // hpatic rate or like cooldown
       return;
     }
 
@@ -164,7 +165,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
       final topLeft = box.localToGlobal(Offset.zero);
       final size = box.size;
-      final centerY = topLeft.dy+size.height /2;
+      final centerY = topLeft.dy + size.height / 2;
       final dist = (globalPos.dy - centerY).abs();
 
       if (dist < closestDistance) {
@@ -186,7 +187,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   void _onDraggingRideRoute(PointerMoveEvent event) async {
     if (!_isReordering) return;
     if (widget.canVibrate &&
-        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 10) { // hpatic rate or like cooldown
+        DateTime.now().difference(_lastHoverHaptic).inMilliseconds < 10) {
+      // hpatic rate or like cooldown
       return;
     }
 
@@ -203,7 +205,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
       final topLeft = box.localToGlobal(Offset.zero);
       final size = box.size;
-      final centerY = topLeft.dy+size.height /2;
+      final centerY = topLeft.dy + size.height / 2;
       final dist = (globalPos.dy - centerY).abs();
 
       if (dist < closestDistance) {
@@ -229,7 +231,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
   // Function to show route info
   void _showRouteInfo(String routeId, String routeName) {
     String? imagePath = _getRouteImagePath(routeId);
-    
+
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -246,10 +248,10 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
       (r) => r['id'] == routeId,
       orElse: () => {'id': routeId, 'name': routeId},
     );
-    
+
     final routeName = route['name'] ?? routeId;
     final imagePath = 'assets/$routeName Route.png';
-    
+
     return imagePath;
   }
 
@@ -257,11 +259,10 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
   @override
   Widget build(BuildContext context) {
-
     // pop scope lets us update busses when the modal closes
     return PopScope(
       onPopInvokedWithResult: (bool didPop, Object? result) {
-        if (didPop){
+        if (didPop) {
           // runs when modal closed
           widget.onApply(tempSelectedRoutes);
         }
@@ -271,13 +272,12 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
       child: DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.0, // leave at 0.0 to allow full dismissal
-        maxChildSize: 0.9, 
-        expand: false, 
-        snap: true, 
-        snapSizes: const [0.9], 
+        maxChildSize: 0.9,
+        expand: false,
+        snap: true,
+        snapSizes: const [0.9],
 
         builder: (BuildContext context, ScrollController scrollController) {
-
           // lets you control which page is shown (ride or michigan)
           final PageController pageController = PageController();
 
@@ -306,13 +306,13 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         // routes list
                         PageView(
                           controller: pageController,
-                          onPageChanged: (index){
+                          onPageChanged: (index) {
                             // When swiping pages, update the selector index
                             setState(() {
                               _currentIndex = index;
                             });
                           },
-                          
+
                           children: [
                             // MICHIGAN ROUTES PAGE
                             Listener(
@@ -324,38 +324,62 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                               child: ReorderableListView.builder(
                                 scrollController: scrollController,
                                 itemCount: michiganRoutes.length,
-                                
+
                                 buildDefaultDragHandles: false,
                                 onReorder: _onMichiganReorder,
-                    
-                                header: SizedBox(height: 70), // space for the title
-                                footer: SizedBox(height: globalBottomPadding + 50), // space for slider
-                            
+
+                                header: SizedBox(
+                                  height: 70,
+                                ), // space for the title
+                                footer: SizedBox(
+                                  height: globalBottomPadding + 50,
+                                ), // space for slider
                                 // how a route looks when it's being dragged
-                                proxyDecorator: (Widget child, int index, Animation<double> anim) {
-                                  _isReordering = true;
-                                  _lastHoverIndex = index;
-                                  return Material(
-                                    color: Colors.transparent,
-                                    child: child,
-                                  );
-                                },
-                            
+                                proxyDecorator:
+                                    (
+                                      Widget child,
+                                      int index,
+                                      Animation<double> anim,
+                                    ) {
+                                      _isReordering = true;
+                                      _lastHoverIndex = index;
+                                      return Material(
+                                        color: Colors.transparent,
+                                        child: child,
+                                      );
+                                    },
+
                                 itemBuilder: (context, index) {
                                   final route = michiganRoutes[index];
-                                  final isSelected = tempSelectedRoutes.contains(route['id']);
-                                  final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
-                            
+                                  final isSelected = tempSelectedRoutes
+                                      .contains(route['id']);
+                                  final key = _itemKeys.putIfAbsent(
+                                    route['id']!,
+                                    () => GlobalKey(),
+                                  );
+
                                   return KeyedSubtree(
                                     key: ValueKey(route['id']!),
                                     child: Container(
                                       key: key,
-                                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 7,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
+                                        color: isSelected
+                                            ? getColor(
+                                                context,
+                                                ColorType.infoCardHighlighted,
+                                              )
+                                            : getColor(
+                                                context,
+                                                ColorType.infoCardColor,
+                                              ),
                                         borderRadius: BorderRadius.circular(60),
-                                        boxShadow: isSelected? []:
-                                          [getInfoCardShadow(context)]
+                                        boxShadow: isSelected
+                                            ? []
+                                            : [getInfoCardShadow(context)],
                                       ),
                                       child: InnerShadow(
                                         isActive: isSelected,
@@ -369,36 +393,113 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                             highlightColor: Colors.transparent,
                                           ),
                                           child: ListTile(
-                                            contentPadding: EdgeInsets.only(left: 10, right: 16), 
-                                            leading: Container(
-                                              width: 35,
-                                              height: 35,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: RouteColorService.getRouteColor(route['id']!), 
-                                              ),
-                                              alignment: Alignment.center,
-                                              child: MediaQuery(
-                                                // media query prevents text scaling
-                                                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                                child: Text(
-                                                  route['id']!,
-                                                  style: TextStyle(
-                                                    color: RouteColorService.getContrastingColor(route['id']!), 
-                                                    fontSize: 17,
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: -1,
+                                            contentPadding: EdgeInsets.only(
+                                              left: 10,
+                                              right: 16,
+                                            ),
+                                            leading: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  if (isSelected) {
+                                                    tempSelectedRoutes.remove(
+                                                      route['id']!,
+                                                    );
+                                                  } else {
+                                                    tempSelectedRoutes.add(
+                                                      route['id']!,
+                                                    );
+                                                  }
+                                                });
+                                              },
+                                              onLongPress: () async {
+                                                if (widget.canVibrate) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.soft,
+                                                  );
+                                                }
+                                                setState(() {
+                                                  tempSelectedRoutes.clear();
+                                                  tempSelectedRoutes.add(
+                                                    route['id']!,
+                                                  );
+                                                });
+                                              },
+                                              child: Container(
+                                                width: 35,
+                                                height: 35,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color:
+                                                      RouteColorService.getRouteColor(
+                                                        route['id']!,
+                                                      ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: MediaQuery(
+                                                  // media query prevents text scaling
+                                                  data: MediaQuery.of(context)
+                                                      .copyWith(
+                                                        textScaler:
+                                                            TextScaler.linear(
+                                                              1.0,
+                                                            ),
+                                                      ),
+                                                  child: Text(
+                                                    route['id']!,
+                                                    style: TextStyle(
+                                                      color:
+                                                          RouteColorService.getContrastingColor(
+                                                            route['id']!,
+                                                          ),
+                                                      fontSize: 17,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      letterSpacing: -1,
+                                                    ),
+                                                    textAlign: TextAlign.center,
                                                   ),
-                                                  textAlign: TextAlign.center,
                                                 ),
                                               ),
                                             ),
-                                            title: Text(
-                                              route['name'] ?? route['id']!,
-                                              style: TextStyle(
-                                                fontSize: 17,
-                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                                color: getColor(context, ColorType.opposite),
+                                            title: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  if (isSelected) {
+                                                    tempSelectedRoutes.remove(
+                                                      route['id']!,
+                                                    );
+                                                  } else {
+                                                    tempSelectedRoutes.add(
+                                                      route['id']!,
+                                                    );
+                                                  }
+                                                });
+                                              },
+                                              onLongPress: () async {
+                                                if (widget.canVibrate) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.soft,
+                                                  );
+                                                }
+                                                setState(() {
+                                                  tempSelectedRoutes.clear();
+                                                  tempSelectedRoutes.add(
+                                                    route['id']!,
+                                                  );
+                                                });
+                                              },
+                                              child: Text(
+                                                route['name'] ?? route['id']!,
+                                                style: TextStyle(
+                                                  fontSize: 17,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w400,
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.opposite,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                             trailing: Row(
@@ -408,11 +509,18 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                 IconButton(
                                                   icon: Icon(
                                                     Icons.info_outline,
-                                                    color: getColor(context, ColorType.opposite).withAlpha(150),
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType.opposite,
+                                                    ).withAlpha(150),
                                                     size: 22,
                                                   ),
                                                   onPressed: () {
-                                                    _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
+                                                    _showRouteInfo(
+                                                      route['id']!,
+                                                      route['name'] ??
+                                                          route['id']!,
+                                                    );
                                                   },
                                                   padding: EdgeInsets.all(8),
                                                   constraints: BoxConstraints(),
@@ -421,29 +529,14 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                   index: index,
                                                   child: Icon(
                                                     Icons.drag_handle,
-                                                    color: getColor(context, ColorType.opposite).withAlpha(150),
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType.opposite,
+                                                    ).withAlpha(150),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            onTap: () {
-                                              setState(() {
-                                                if (isSelected) {
-                                                  tempSelectedRoutes.remove(route['id']!);
-                                                } else {
-                                                  tempSelectedRoutes.add(route['id']!);
-                                                }
-                                              });
-                                            },
-                                            onLongPress: () async {
-                                              if (widget.canVibrate){
-                                                await Haptics.vibrate(HapticsType.soft);
-                                              }
-                                              setState(() {
-                                                tempSelectedRoutes.clear();
-                                                tempSelectedRoutes.add(route['id']!);
-                                              });
-                                            },
                                           ),
                                         ),
                                       ),
@@ -452,7 +545,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 },
                               ),
                             ),
-                        
+
                             // RIDE ROUTES PAGE
                             Listener(
                               key: _rideListKey,
@@ -463,37 +556,62 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                               child: ReorderableListView.builder(
                                 scrollController: scrollController,
                                 itemCount: rideRoutes.length,
-                                
+
                                 buildDefaultDragHandles: false,
                                 onReorder: _onRideReorder,
-                    
-                                header: SizedBox(height: 70), // space for the title
-                                footer: SizedBox(height: globalBottomPadding + 50), // space for slider
-                            
+
+                                header: SizedBox(
+                                  height: 70,
+                                ), // space for the title
+                                footer: SizedBox(
+                                  height: globalBottomPadding + 50,
+                                ), // space for slider
                                 // how a route looks when it's being dragged
-                                proxyDecorator: (Widget child, int index, Animation<double> anim) {
-                                  _isReordering = true;
-                                  _lastHoverIndex = index;
-                                  return Material(
-                                    color: Colors.transparent,
-                                    child: child,
-                                  );
-                                },
-                            
+                                proxyDecorator:
+                                    (
+                                      Widget child,
+                                      int index,
+                                      Animation<double> anim,
+                                    ) {
+                                      _isReordering = true;
+                                      _lastHoverIndex = index;
+                                      return Material(
+                                        color: Colors.transparent,
+                                        child: child,
+                                      );
+                                    },
+
                                 itemBuilder: (context, index) {
                                   final route = rideRoutes[index];
-                                  final isSelected = tempSelectedRoutes.contains(route['id']);
-                                  final key = _itemKeys.putIfAbsent(route['id']!, () => GlobalKey());
-                            
+                                  final isSelected = tempSelectedRoutes
+                                      .contains(route['id']);
+                                  final key = _itemKeys.putIfAbsent(
+                                    route['id']!,
+                                    () => GlobalKey(),
+                                  );
+
                                   return KeyedSubtree(
                                     key: ValueKey(route['id']!),
                                     child: Container(
                                       key: key,
-                                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 7,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: isSelected ? getColor(context, ColorType.infoCardHighlighted) : getColor(context, ColorType.infoCardColor),
+                                        color: isSelected
+                                            ? getColor(
+                                                context,
+                                                ColorType.infoCardHighlighted,
+                                              )
+                                            : getColor(
+                                                context,
+                                                ColorType.infoCardColor,
+                                              ),
                                         borderRadius: BorderRadius.circular(20),
-                                        boxShadow: (isSelected)?[] : [getInfoCardShadow(context)],
+                                        boxShadow: (isSelected)
+                                            ? []
+                                            : [getInfoCardShadow(context)],
                                       ),
                                       child: InnerShadow(
                                         isActive: isSelected,
@@ -507,64 +625,130 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                             highlightColor: Colors.transparent,
                                           ),
                                           child: ListTile(
-                                            contentPadding: EdgeInsets.only(left: 8, right: 16), 
+                                            contentPadding: EdgeInsets.only(
+                                              left: 8,
+                                              right: 16,
+                                            ),
                                             minTileHeight: 40,
-                                            leading: Container(
-                                              width: 40,
-                                              height: 30,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.rectangle,
-                                                borderRadius: BorderRadius.circular(15), 
-                                                color: RouteColorService.getRouteColor(route['id']!), 
-                                              ),
-                                              alignment: Alignment.center,
-                                              child: MediaQuery(
-                                                // media query prevents text scaling
-                                                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                                child: Text(
-                                                  route['id']!,
-                                                  style: TextStyle(
-                                                    color: RouteColorService.getContrastingColor(route['id']!), 
-                                                    fontSize: 17,
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: -1,
+                                            leading: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  if (isSelected) {
+                                                    tempSelectedRoutes.remove(
+                                                      route['id']!,
+                                                    );
+                                                  } else {
+                                                    tempSelectedRoutes.add(
+                                                      route['id']!,
+                                                    );
+                                                  }
+                                                });
+                                              },
+                                              onLongPress: () async {
+                                                if (widget.canVibrate) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.soft,
+                                                  );
+                                                }
+                                                setState(() {
+                                                  tempSelectedRoutes.clear();
+                                                  tempSelectedRoutes.add(
+                                                    route['id']!,
+                                                  );
+                                                });
+                                              },
+                                              child: Container(
+                                                width: 40,
+                                                height: 30,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.rectangle,
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                  color:
+                                                      RouteColorService.getRouteColor(
+                                                        route['id']!,
+                                                      ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: MediaQuery(
+                                                  // media query prevents text scaling
+                                                  data: MediaQuery.of(context)
+                                                      .copyWith(
+                                                        textScaler:
+                                                            TextScaler.linear(
+                                                              1.0,
+                                                            ),
+                                                      ),
+                                                  child: Text(
+                                                    route['id']!,
+                                                    style: TextStyle(
+                                                      color:
+                                                          RouteColorService.getContrastingColor(
+                                                            route['id']!,
+                                                          ),
+                                                      fontSize: 17,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      letterSpacing: -1,
+                                                    ),
+                                                    textAlign: TextAlign.center,
                                                   ),
-                                                  textAlign: TextAlign.center,
                                                 ),
                                               ),
                                             ),
-                                            title: Text(
-                                              route['name'] ?? route['id']!,
-                                              style: TextStyle(
-                                                fontSize: 17,
-                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                                color: getColor(context, ColorType.opposite),
+                                            title: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  if (isSelected) {
+                                                    tempSelectedRoutes.remove(
+                                                      route['id']!,
+                                                    );
+                                                  } else {
+                                                    tempSelectedRoutes.add(
+                                                      route['id']!,
+                                                    );
+                                                  }
+                                                });
+                                              },
+                                              onLongPress: () async {
+                                                if (widget.canVibrate) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.soft,
+                                                  );
+                                                }
+                                                setState(() {
+                                                  tempSelectedRoutes.clear();
+                                                  tempSelectedRoutes.add(
+                                                    route['id']!,
+                                                  );
+                                                });
+                                              },
+                                              child: Text(
+                                                route['name'] ?? route['id']!,
+                                                style: TextStyle(
+                                                  fontSize: 17,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w400,
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.opposite,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                            trailing: ReorderableDragStartListener(
-                                              index: index,
-                                              child: Icon(Icons.drag_handle,
-                                              
-                                                    color: getColor(context, ColorType.opposite).withAlpha(150),),
-                                            ),
-                                            onTap: () {
-                                              setState(() {
-                                                if (isSelected) {
-                                                  tempSelectedRoutes.remove(route['id']!);
-                                                } else {
-                                                  tempSelectedRoutes.add(route['id']!);
-                                                }
-                                              });
-                                            },
-                                            onLongPress: () async {
-                                              if (widget.canVibrate){
-                                                await Haptics.vibrate(HapticsType.soft);
-                                              }
-                                              setState(() {
-                                                tempSelectedRoutes.clear();
-                                                tempSelectedRoutes.add(route['id']!);
-                                              });
-                                            },
+                                            trailing:
+                                                ReorderableDragStartListener(
+                                                  index: index,
+                                                  child: Icon(
+                                                    Icons.drag_handle,
+
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType.opposite,
+                                                    ).withAlpha(150),
+                                                  ),
+                                                ),
                                           ),
                                         ),
                                       ),
@@ -573,9 +757,9 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 },
                               ),
                             ),
-                          ]
+                          ],
                         ),
-                    
+
                         // gradient box for title background
                         Align(
                           alignment: Alignment.topCenter,
@@ -586,20 +770,27 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  getColor(context, ColorType.background),       
-                                  getColor(context, ColorType.backgroundGradientStart),  
+                                  getColor(context, ColorType.background),
+                                  getColor(
+                                    context,
+                                    ColorType.backgroundGradientStart,
+                                  ),
                                 ],
-                                stops: [0.85, 1]
+                                stops: [0.85, 1],
                               ),
                             ),
                           ),
                         ),
-                    
+
                         // title
                         Column(
                           children: [
                             Padding(
-                              padding: EdgeInsets.only(left: 20, top: 20, right: 20), 
+                              padding: EdgeInsets.only(
+                                left: 20,
+                                top: 20,
+                                right: 20,
+                              ),
                               child: Row(
                                 children: [
                                   Text(
@@ -615,36 +806,44 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                     height: 20,
                                     width: 20,
                                     child: IconButton(
-                                      padding: EdgeInsets.zero, 
-                                      constraints: const BoxConstraints(), 
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
                                       onPressed: () {
                                         showMaizebusOKDialog(
                                           contextIn: context,
                                           title: const Text("Route Selector"),
-                                          content: const Text("Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route"),
+                                          content: const Text(
+                                            "Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route",
+                                          ),
                                         );
                                       },
                                       style: IconButton.styleFrom(
                                         side: BorderSide(
-                                          color: getColor(context, ColorType.opposite).withAlpha(150), 
+                                          color: getColor(
+                                            context,
+                                            ColorType.opposite,
+                                          ).withAlpha(150),
                                           width: 2,
                                         ),
                                         shape: const CircleBorder(),
                                       ),
                                       icon: Icon(
                                         Icons.question_mark_rounded,
-                                        color: getColor(context, ColorType.opposite).withAlpha(150),
-                                        size: 15, 
+                                        color: getColor(
+                                          context,
+                                          ColorType.opposite,
+                                        ).withAlpha(150),
+                                        size: 15,
                                       ),
                                     ),
-                                  )
+                                  ),
                                 ],
                               ),
                             ),
-                            Spacer()
+                            Spacer(),
                           ],
                         ),
-                    
+
                         // bottom gradient
                         Align(
                           alignment: Alignment.bottomCenter,
@@ -655,20 +854,23 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  getColor(context, ColorType.backgroundGradientStart),  
-                                  getColor(context, ColorType.background),       
+                                  getColor(
+                                    context,
+                                    ColorType.backgroundGradientStart,
+                                  ),
+                                  getColor(context, ColorType.background),
                                 ],
-                                stops: [0, 1]
+                                stops: [0, 1],
                               ),
                             ),
                           ),
                         ),
-                    
+
                         // Slider
                         Positioned(
                           bottom: globalBottomPadding,
                           child: MaizebusSlidingSegmentedControl(
-                            labels: ['University', 'The Ride'], 
+                            labels: ['University', 'The Ride'],
                             selectedIndex: _currentIndex,
                             onSelectionChanged: (int index) {
                               // first, set the new index
@@ -684,11 +886,11 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                             },
                             height: 40,
                             width: 250,
-                            // kelevation uses flutter's default shadows - 
+                            // kelevation uses flutter's default shadows -
                             // the same ones used in elevated button
                             shadows: kElevationToShadow[3],
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -696,7 +898,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
               ],
             ),
           );
-        }
+        },
       ),
     );
   }
@@ -707,10 +909,7 @@ class _RouteImageDialog extends StatefulWidget {
   final String? imagePath;
   final String routeName;
 
-  const _RouteImageDialog({
-    required this.imagePath,
-    required this.routeName,
-  });
+  const _RouteImageDialog({required this.imagePath, required this.routeName});
 
   @override
   State<_RouteImageDialog> createState() => _RouteImageDialogState();
@@ -748,14 +947,10 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
               child: Container(
                 decoration: BoxDecoration(
                   color: getColor(context, ColorType.background),
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(30),
-                  ),
+                  borderRadius: BorderRadius.all(Radius.circular(30)),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(30),
-                  ),
+                  borderRadius: BorderRadius.all(Radius.circular(30)),
                   child: widget.imagePath != null
                       ? Stack(
                           children: [
@@ -792,9 +987,14 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
                                 duration: Duration(milliseconds: 500),
                                 child: Center(
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.6),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.6,
+                                      ),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
@@ -820,30 +1020,41 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
                                     },
                                     icon: Icon(
                                       Icons.arrow_back,
-                                      color: getColor(context, ColorType.importantButtonText),
+                                      color: getColor(
+                                        context,
+                                        ColorType.importantButtonText,
+                                      ),
                                     ),
                                     label: Text(
                                       'back',
                                       style: TextStyle(
                                         fontSize: 17,
                                         fontWeight: FontWeight.w700,
-                                        color: getColor(context, ColorType.importantButtonText)
+                                        color: getColor(
+                                          context,
+                                          ColorType.importantButtonText,
+                                        ),
                                       ),
-                                      
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: getColor(context, ColorType.importantButtonBackground),
+                                      backgroundColor: getColor(
+                                        context,
+                                        ColorType.importantButtonBackground,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(20),
                                       ),
-                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      elevation: 2
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      elevation: 2,
                                     ),
                                   ),
-                                  SizedBox(height: 15,)
-                                ]
+                                  SizedBox(height: 15),
+                                ],
                               ),
-                            )
+                            ),
                           ],
                         )
                       : Center(
