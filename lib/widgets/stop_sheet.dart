@@ -860,10 +860,11 @@ class ReminderForm extends StatefulWidget {
 class _ReminderFormState extends State<ReminderForm> {
 
   Future<List<({ String stpid, String rtid, int? eta })>>? reminderInfoFuture;
+  /// ones that have an active reminder set
+  Set<String> activeRtids = {};
   /// ones that have been selected to be added / removed
   Set<String> rtidsToChange = {};
   int reminderThresh = 5;
-  String? rtidToRemove;
 
   // exists to ensure the notification button isn't pressed multiple times 
   // while waiting for the response
@@ -892,8 +893,8 @@ class _ReminderFormState extends State<ReminderForm> {
           );
         }
         
-        final dataForAllStops = snapshot.data;
-        if (dataForAllStops == null) {
+        final activeRemindersForAllStops = snapshot.data;
+        if (activeRemindersForAllStops == null) {
           // Wait for the current build frame to finish before showing dialogs/popping
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pop(context);
@@ -908,25 +909,16 @@ class _ReminderFormState extends State<ReminderForm> {
         }
         
 
-        final dataForThisStop = dataForAllStops.where((x) => x.stpid == widget.stpid);
-        
+        final activeRemindersForThisStop = activeRemindersForAllStops.where((x) => x.stpid == widget.stpid);
+        // which icons to show (active reminders + active routes)
         final routesToShow = widget.activeRoutes;
 
-        for (final reminder in dataForThisStop) {
-          rtidsToChange.add(reminder.rtid);
-          if (routesToShow.contains(reminder.rtid)) {
-            continue;
+        for (final reminder in activeRemindersForThisStop) {
+          activeRtids.add(reminder.rtid);
+          if (!routesToShow.contains(reminder.rtid)) {
+            routesToShow.add(reminder.rtid);
           }
-
-          routesToShow.add(reminder.rtid);
-          
-          print(reminder.rtid);
         }
-
-        if (rtidToRemove != null) {
-          rtidsToChange.remove(rtidToRemove);
-        }
-        rtidToRemove = null;
 
         return Column(
           spacing: 0,
@@ -1017,12 +1009,12 @@ class _ReminderFormState extends State<ReminderForm> {
                               ),
                               
                               Checkbox(
-                                value: rtidsToChange.contains(rtid),
+                                value: activeRtids.contains(rtid) != rtidsToChange.contains(rtid),
                                 side: BorderSide(
                                   color: getColor(context, ColorType.highlighted)
                                 ),
                                 activeColor: getColor(context, ColorType.highlighted),
-                                onChanged: null,
+                                onChanged: (_) {},
                               )
                             ]
                           ),
@@ -1031,7 +1023,7 @@ class _ReminderFormState extends State<ReminderForm> {
                             onTap: () {
                               setState(() {
                                 if (rtidsToChange.contains(rtid)) {
-                                  rtidToRemove = rtid;
+                                  rtidsToChange.remove(rtid);
                                 } else {
                                   rtidsToChange.add(rtid);
                                 }
@@ -1114,13 +1106,13 @@ class _ReminderFormState extends State<ReminderForm> {
                       
                         List<RemindersModification> modifications = [];
                         for (String rtid in routesToShow) {
-                          final bool alreadyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
-                          final bool pressed = rtidsToChange.contains(rtid);
+                          final bool alreadyActive = activeRemindersForThisStop.map((x) => x.rtid).contains(rtid);
+                          final bool keepOrAdd = rtidsToChange.contains(rtid) != activeRtids.contains(rtid);
 
                           if (alreadyActive) {
                             modifications.add(RemoveReminder(stpid: widget.stpid, rtid: rtid));
                           }
-                          if (pressed) {
+                          if (keepOrAdd) {
                             modifications.add(AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh));
                           }
                         }
