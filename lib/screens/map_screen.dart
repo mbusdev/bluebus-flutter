@@ -216,6 +216,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     // keep trying to reach server. Can't start without this
     while (startupData == null) {
+      if (kDebugMode) {
+        debugPrint("retrying _getStartupData");
+      }
       await Future.delayed(Duration(seconds: 2));
       startupData = await _getStartupData();
     }
@@ -502,8 +505,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           p_message['title'],
           p_message['subtitle']
         );
+      } else if (kDebugMode) {
+        debugPrint("Got non-OK response for startup data: ${response.statusCode}");
+        debugPrint(response.body);
       }
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint("Couldn't load startup data: ${e.toString()}");
+      }
       return null;
     }
     return null;
