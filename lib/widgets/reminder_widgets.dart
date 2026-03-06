@@ -4,6 +4,7 @@ import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 
+/// The reminder banners that sit on the home screen on the top
 class ReminderWidgets extends StatefulWidget {
   const ReminderWidgets({super.key});
 

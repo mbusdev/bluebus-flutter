@@ -2400,16 +2400,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           if (canVibrate && Platform.isIOS){
                                             await Haptics.vibrate(HapticsType.light);
                                           }
-                
-                                          // TODO: delete this but first make sure it doesn't break
-                                          // anything but i'm pretty sure it won't because its
-                                          // redundant
-                                          if (busProvider.routes.isEmpty){
-                                            await busProvider.loadRoutes();
-                                            _updateAvailableRoutes(busProvider.routes);
-                                            _cacheRouteOverlays(busProvider.routes);
-                                          }
-                                          
                                           _showBusRoutesModal(busProvider.routes,);
                                         },
                                         heroTag: 'routes_fab',
