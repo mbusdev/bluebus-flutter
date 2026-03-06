@@ -871,7 +871,6 @@ class _ReminderFormState extends State<ReminderForm> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return FutureBuilder(
       future: reminderInfoFuture,
       builder: (context, snapshot) {
@@ -920,7 +919,6 @@ class _ReminderFormState extends State<ReminderForm> {
           }
 
           routesToShow.add(reminder.rtid);
-          
           
           print(reminder.rtid);
         }
@@ -974,7 +972,6 @@ class _ReminderFormState extends State<ReminderForm> {
                   ),
                   Wrap( //icons
                     alignment: WrapAlignment.center,
-                    //mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 0,
                     runSpacing: 0,
                     children: routesToShow.map((rtid) {
@@ -1025,7 +1022,7 @@ class _ReminderFormState extends State<ReminderForm> {
                                   color: getColor(context, ColorType.highlighted)
                                 ),
                                 activeColor: getColor(context, ColorType.highlighted),
-                                onChanged: (bool? value){}
+                                onChanged: null,
                               )
                             ]
                           ),
@@ -1097,8 +1094,6 @@ class _ReminderFormState extends State<ReminderForm> {
                     },
                     min: 3.0,
                     max: 20.0,
-                    
-                    //divisions: 9,
                   ),
                 ],
               )
@@ -1132,8 +1127,8 @@ class _ReminderFormState extends State<ReminderForm> {
 
                         try {
                           await IncomingBusReminderService.modifyReminders(modifications);                  
-                          Navigator.pop(context);
                           if (!context.mounted) return;
+                          Navigator.pop(context);
                         } on Exception catch (e) {
                           showDialog(
                             context: context,
@@ -1167,7 +1162,6 @@ class _ReminderFormState extends State<ReminderForm> {
   
   @override
   void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
     super.didChangeDependencies();
     reminderInfoFuture ??= IncomingBusReminderService.getActiveReminders();
   }
