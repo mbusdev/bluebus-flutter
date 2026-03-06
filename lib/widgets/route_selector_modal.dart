@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/innerShadow.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
@@ -175,7 +177,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
     if (closestIndex != null && closestIndex != _lastHoverIndex) {
       _lastHoverIndex = closestIndex;
-      if (widget.canVibrate) {
+      if (widget.canVibrate && Platform.isIOS) {
         _lastHoverHaptic = DateTime.now();
         await Haptics.vibrate(HapticsType.light);
       }
@@ -214,9 +216,9 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
 
     if (closestIndex != null && closestIndex != _lastHoverIndex) {
       _lastHoverIndex = closestIndex;
-      if (widget.canVibrate) {
+      if (widget.canVibrate && Platform.isIOS) {
         _lastHoverHaptic = DateTime.now();
-        await Haptics.vibrate(HapticsType.medium);
+        await Haptics.vibrate(HapticsType.light);
       }
     }
   }
