@@ -4,9 +4,11 @@
 *.log
 *.pyc
 *.swp
+*.patch
 .buildlog/
 .history
 .DS_Store
+justfile
 
 # JetBrains IDEs
 .idea/
@@ -16,7 +18,7 @@ gmap.xcconfig
 
 # Firebase related
 firebase.json
-google-services.json
+google-services*.json
 GoogleService-Info.plist
 # auto generated
 lib/firebase_options.dart
