@@ -43,7 +43,7 @@ import './settings.dart';
 // (used for bus stop icon orientation)
 double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232;    // 180 / π
+  const double radToDeg = 57.29577951308232; // 180 / π
 
   double dLat = lat2 - lat1;
   double dLon = lon2 - lon1;
@@ -73,7 +73,6 @@ Future<BitmapDescriptor> resizeImage(ByteData image) async {
     format: ui.ImageByteFormat.png,
   );
   return BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
-
 }
 
 class MaizeBusCore extends StatefulWidget {
@@ -88,7 +87,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   late Journey currDisplayed;
 
   Future<void>? _dataLoadingFuture;
-  final _loadingMessageNotifier = ValueNotifier<Loadpoint>(Loadpoint("Initializing...", 0));
+  final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
+    Loadpoint("Initializing...", 0),
+  );
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
   bool? _userLocVisible;
@@ -141,29 +142,60 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isOffline = false;
 
+  // Provider listener for route updates
+  BusProvider? _busProviderRef;
+  VoidCallback? _busProviderListener;
+  int _routesFingerprint = 0;
   // store persistent bottom sheet controller
   PersistentBottomSheetController? _bottomSheetController;
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
   String _lightMapStyle = "{}";
-  
+
   Future _loadMapStyles() async {
     _darkMapStyle = await rootBundle.loadString('assets/maps_dark_style.json');
-    _lightMapStyle = await rootBundle.loadString('assets/maps_light_style.json');
+    _lightMapStyle = await rootBundle.loadString(
+      'assets/maps_light_style.json',
+    );
   }
 
   @override
   void initState() {
     super.initState();
     _setupConnectivityMonitoring();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        _busProviderRef = Provider.of<BusProvider>(context, listen: false);
+        _busProviderListener = () {
+          final routes = _busProviderRef?.routes ?? [];
+          final newFp = _computeRoutesFingerprint(routes);
+          if (newFp != _routesFingerprint) {
+            // debugPrint(
+            //   '[RouteUpdate] CHANGE DETECTED! old fingerprint=$_routesFingerprint  new fingerprint=$newFp  routeCount=${routes.length}',
+            // );
+            // for (final r in routes) {
+            //   debugPrint(
+            //     '[RouteUpdate]   route=${r.routeId}  points=${r.points.length}  pointsHash=${r.points.hashCode}',
+            //   );
+            // }
+            _routesFingerprint = newFp;
+            _handleRoutesUpdated(routes);
+          }
+        };
+        _busProviderRef?.addListener(_busProviderListener!);
+      } catch (e) {
+        // Provider not available yet; ignore
+      }
+    });
   }
 
   Future<void> _setupConnectivityMonitoring() async {
     final connectivity = Connectivity();
 
-    _connectivitySubscription =
-        connectivity.onConnectivityChanged.listen((results) {
+    _connectivitySubscription = connectivity.onConnectivityChanged.listen((
+      results,
+    ) {
       final offline = _isOfflineResult(results);
       if (mounted && _isOffline != offline) {
         setState(() {
@@ -202,8 +234,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
-    
-
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme(); // load user theme data
@@ -227,15 +257,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       showUndismissableMaizebusDialog(
         contextIn: context,
         title: Text(startupData.updateTitle),
-        content: Text(startupData.updateMessage)
+        content: Text(startupData.updateMessage),
       );
     }
 
-    if (startupData.persistantMessageTitle != ''){
+    if (startupData.persistantMessageTitle != '') {
       showMaizebusOKDialog(
         contextIn: context,
         title: Text(startupData.persistantMessageTitle),
-        content: Text(startupData.persistantMessage)
+        content: Text(startupData.persistantMessage),
       );
     }
 
@@ -271,7 +301,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _loadingMessageNotifier.value = Loadpoint('Starting app...', 5);
     busProvider.startBusUpdates();
     busProvider.startRouteUpdates();
-    await Future.delayed(const Duration(milliseconds: 180)); 
+    await Future.delayed(const Duration(milliseconds: 180));
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -292,9 +322,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (response.statusCode == 200 &&
           response.body.trim().isNotEmpty &&
           response.body.trim() != '{}') {
-        
         final stopList = jsonDecode(response.body) as List<dynamic>;
-        
+
         return stopList.map((stop) {
           final name = stop['name'] as String;
           final aliases = [
@@ -303,7 +332,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           final stopId = stop['stpid'] as String?;
           final lat = stop['lat'] as double?;
           final lon = stop['lon'] as double?;
-          
+
           return Location(
             name,
             (stopId != null) ? stopId : "",
@@ -343,11 +372,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.wifi_off_rounded,
-            color: Colors.white,
-            size: 20,
-          ),
+          const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
           const SizedBox(width: 10),
           const Text(
             'No internet connection',
@@ -366,7 +391,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Future<void> _loadCustomMarkers() async {
     try {
       // Load stop icons
-      _stopIcon = await resizeImage(  
+      _stopIcon = await resizeImage(
         await rootBundle.load('assets/busStop.png'),
       );
       _rideStopIcon = await resizeImage(
@@ -378,12 +403,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       _favRideStopIcon = await resizeImage(
         await rootBundle.load('assets/favbusStopRide.png'),
       );
-      _getOn = await resizeImage(  
-        await rootBundle.load('assets/getOn.png'),
-      );
-      _getOff = await resizeImage(
-        await rootBundle.load('assets/getOff.png'),
-      );
+      _getOn = await resizeImage(await rootBundle.load('assets/getOn.png'));
+      _getOff = await resizeImage(await rootBundle.load('assets/getOff.png'));
 
       // Load route specific bus icons
       await _loadRouteSpecificBusIcons();
@@ -500,7 +521,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           message['title'],
           message['subtitle'],
           p_message['title'],
-          p_message['subtitle']
+          p_message['subtitle'],
         );
       }
     } catch (e) {
@@ -626,8 +647,78 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _loadingMessageNotifier.dispose();
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
+    if (_busProviderRef != null && _busProviderListener != null) {
+      try {
+        _busProviderRef!.removeListener(_busProviderListener!);
+      } catch (e) {}
+    }
     _mapController?.dispose();
     super.dispose();
+  }
+
+  // Compute a lightweight fingerprint of the routes list to detect changes
+  int _computeRoutesFingerprint(List<BusRouteLine> routes) {
+    int h = 1;
+    for (final r in routes) {
+      h = 31 * h + r.routeId.hashCode;
+      // include geometry hash so changes to polyline points are detected
+      h = 31 * h + r.points.hashCode;
+      h = 31 * h + (r.color?.value ?? 0);
+    }
+    return h;
+  }
+
+  // Called when provider reports routes changed
+  void _handleRoutesUpdated(List<BusRouteLine> routes) {
+    // debugPrint(
+    //   '[RouteUpdate] _handleRoutesUpdated called with ${routes.length} routes',
+    // );
+
+    // Evict stale cached overlays for routes that changed
+    final newKeys = routes
+        .map((r) => '${r.routeId}_${r.points.hashCode}')
+        .toSet();
+    final newRouteIds = routes.map((r) => r.routeId).toSet();
+
+    //final oldPolyKeys = _routePolylines.keys.toList(); // used for debugging to verify only expected keys are evicted
+    //final oldStopKeys = _routeStopMarkers.keys.toList(); // used for debugging to verify only expected keys are evicted
+
+    _routePolylines.removeWhere((key, _) {
+      for (final id in newRouteIds) {
+        if (key.startsWith('${id}_') && !newKeys.contains(key)) {
+          // debugPrint('[RouteUpdate] EVICTING stale polyline: $key');
+          return true;
+        }
+      }
+      return false;
+    });
+
+    _routeStopMarkers.removeWhere((key, _) {
+      for (final id in newRouteIds) {
+        if (key.startsWith('${id}_') && !newKeys.contains(key)) {
+          // debugPrint('[RouteUpdate] EVICTING stale stop markers: $key');
+          return true;
+        }
+      }
+      return false;
+    });
+
+    // debugPrint('[RouteUpdate] Polyline keys before: $oldPolyKeys');
+    // debugPrint(
+    //   '[RouteUpdate] Polyline keys after:  ${_routePolylines.keys.toList()}',
+    // );
+    // debugPrint('[RouteUpdate] New keys to cache:    $newKeys');
+
+    // Update available routes and cached overlays
+    _updateAvailableRoutes(routes);
+    _cacheRouteOverlays(routes);
+
+    // If user has selected routes, re-apply selection to refresh displayed markers/polylines
+    if (_selectedRoutes.isNotEmpty) {
+      _updateDisplayedRoutes();
+    } else {
+      setState(() {});
+    }
   }
 
   void _updateAvailableRoutes(List<BusRouteLine> routes) {
@@ -678,30 +769,30 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 position: stop.location,
                 flat: true,
                 icon: _favoriteStops.contains(stop.id)
-                    ? (stop.isRide? 
-                        _favRideStopIcon ??
-                          BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueAzure,
-                          ) : 
-                        _favStopIcon ??
-                          BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueAzure,
-                          ))
-                    : (stop.isRide?
-                        _rideStopIcon ??
-                          BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueAzure,
-                          ) :
-                        _stopIcon ??
-                          BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueAzure,
-                          )),
+                    ? (stop.isRide
+                          ? _favRideStopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                )
+                          : _favStopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                ))
+                    : (stop.isRide
+                          ? _rideStopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                )
+                          : _stopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                )),
                 consumeTapEvents: true,
                 onTap: () {
                   try {
                     Haptics.vibrate(HapticsType.light);
-                  } catch (e) { }
-                  
+                  } catch (e) {}
+
                   _showStopSheet(
                     stop.id,
                     stop.name,
@@ -761,7 +852,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       _stopIcon ??
                       BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueAzure,
-                     ))
+                      ))
                 : (_stopIcon ??
                       BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueAzure,
@@ -794,7 +885,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       _updateAllDisplayedMarkers();
     });
   }
-
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
@@ -860,7 +950,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             onTap: () {
               try {
                 Haptics.vibrate(HapticsType.light);
-              } catch (e) { }
+              } catch (e) {}
               _showBusSheet(bus.id);
             },
           );
@@ -902,7 +992,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
 
-    
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
       _updateAllDisplayedMarkers();
@@ -911,13 +1000,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _updateAllDisplayedMarkers() {
     _allDisplayedStopMarkers = _displayedStopMarkers
-      .union(_displayedBusMarkers)
-      .union(_displayedJourneyMarkers)
-      .union(
-        _searchLocationMarker != null
-            ? {_searchLocationMarker!}
-            : {},
-      );
+        .union(_displayedBusMarkers)
+        .union(_displayedJourneyMarkers)
+        .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
   }
 
   /// Convert a Color to a BitmapDescriptor hue value
@@ -983,6 +1068,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _refreshCachedStopMarkers() {
     // Clear cached stop markers so they'll be recreated with the new icons
     _routeStopMarkers.clear();
+    // Clear cached polylines too so they will be rebuilt with the latest geometry
+    _routePolylines.clear();
     // Re-cache all route overlays with the new icons
     _cacheRouteOverlays(
       Provider.of<BusProvider>(context, listen: false).routes,
@@ -995,7 +1082,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onCameraMove(CameraPosition position) async {
     _currentCameraPos = position;
-    
   }
 
   void _onCameraIdle() async {
@@ -1005,7 +1091,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       Position? pos = await _getLastKnownLocation();
       if (pos != null) {
         _userLocVisible = !viewportBounds.contains(
-          LatLng(pos.latitude, pos.longitude)
+          LatLng(pos.latitude, pos.longitude),
         );
       }
     }
@@ -1144,17 +1230,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _bottomSheetController = showBottomSheet(
       context: context,
       enableDrag: true,
-      
+
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.5, 
-          maxChildSize: 0.9, 
-          minChildSize: 0,  
+          initialChildSize: 0.5,
+          maxChildSize: 0.9,
+          minChildSize: 0,
           expand: false,
           snap: true,
           snapSizes: [0.5, 0.9],
-          builder: (context, scrollController){
+          builder: (context, scrollController) {
             return DirectionsSheet(
               origin: start,
               dest: end,
@@ -1164,7 +1250,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               onChangeSelection: (Location location, bool startChanged) {
                 // Clear any existing search location marker before showing new destination
                 _removeSearchLocationMarker();
-            
+
                 if (startChanged) {
                   // Show red pin for new start location if it's a building (not bus stop)
                   if (!location.isBusStop) {
@@ -1173,7 +1259,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       location.latlng!.longitude,
                     );
                   }
-            
+
                   _showDirectionsSheet(
                     {
                       'lat': location.latlng!.latitude,
@@ -1192,7 +1278,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       location.latlng!.longitude,
                     );
                   }
-            
+
                   _showDirectionsSheet(
                     start,
                     {
@@ -1206,7 +1292,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 }
               },
               onSelectJourney: (journey) {
-                _displayJourneyOnMap(journey, getColor(context, ColorType.opposite));
+                _displayJourneyOnMap(
+                  journey,
+                  getColor(context, ColorType.opposite),
+                );
               },
               onResolved: (orig, dest) {
                 // Cache resolved coordinates for virtual origin/destination resolution
@@ -1221,7 +1310,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
   }
 
-  _showJourneySheetOnReopen(){
+  _showJourneySheetOnReopen() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1229,11 +1318,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       builder: (BuildContext context) {
         return DraggableScrollableSheet(
           initialChildSize: 0.9,
-          minChildSize: 0,    
-          maxChildSize: 0.9,    
+          minChildSize: 0,
+          maxChildSize: 0.9,
           snap: true,
-          expand: false,        
-          
+          expand: false,
+
           builder: (BuildContext context, ScrollController scrollController) {
             return Container(
               decoration: BoxDecoration(
@@ -1243,14 +1332,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               child: ListView(
                 controller: scrollController,
                 padding: const EdgeInsets.all(20),
-                shrinkWrap: true, 
+                shrinkWrap: true,
                 children: [
                   Text(
                     'Steps',
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 15),
                   JourneyBody(journey: currDisplayed),
@@ -1729,8 +1815,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               },
             );
           },
-        )
-      )
+        ),
+      ),
     );
   }
 
@@ -1802,7 +1888,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       },
     ).then((_) {});
   }
-  
+
   // lighter function for when we need to get location
   // over and over without constantly doing a full
   // hardware gps lock
@@ -1838,16 +1924,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (permission == LocationPermission.deniedForever) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Location permissions are denied. Please enable them in settings'),
+            content: Text(
+              'Location permissions are denied. Please enable them in settings',
+            ),
             backgroundColor: Colors.red,
           ),
         );
         return null;
       }
-      
+
       Position? position = await Geolocator.getLastKnownPosition();
       return position;
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1905,7 +1992,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             target: _currentCameraPos!.target, // current position
             zoom: _currentCameraPos!.zoom,
             bearing: 0, // face north
-          )
+          ),
         ),
       );
     }
@@ -1921,15 +2008,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     });
 
-    if (!globallPaddingHasBeenSet){
+    if (!globallPaddingHasBeenSet) {
       // set all padding
       // first, getting all the padding values
       final mediaQueryData = MediaQuery.of(context);
       final double flutterSafeAreaTop = mediaQueryData.padding.top;
       final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
       // then, changing them based on phone
-      if(Platform.isIOS){
-        if(flutterSafeAreaBottom == 0){
+      if (Platform.isIOS) {
+        if (flutterSafeAreaBottom == 0) {
           // rectangle iphone
           globalBottomPadding = 10;
           globalLeftRightPadding = 10;
@@ -1942,8 +2029,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         }
       } else {
         // andoird
-        
-        if (flutterSafeAreaBottom < 30){
+
+        if (flutterSafeAreaBottom < 30) {
           // in this case, 30 from the bottom is fine because
           // it's over the safe area. this usually works
           // for round bottom phones like the google pixel
@@ -1968,572 +2055,716 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
-          
-          //if (!Platform.isIOS){print("is androud");} // I love androud
-          //I also love androud
+        //if (!Platform.isIOS){print("is androud");} // I love androud
+        //I also love androud
         return AnimatedSwitcher(
           duration: Duration(milliseconds: 200),
-          
+
           child: (snapshot.connectionState == ConnectionState.done)
-          ? PopScope(
-            //for switch animation
-            key: ValueKey(1),
+              ? PopScope(
+                  //for switch animation
+                  key: ValueKey(1),
 
-            // lets us prevent back button on map page
-            canPop: false,
-            onPopInvokedWithResult: (didPop, result) { 
-              // when journey is showing and pop was attempted, clear journey
-              if (_journeyOverlayActive) {
-                _clearJourneyOverlays();
-              }
+                  // lets us prevent back button on map page
+                  canPop: false,
+                  onPopInvokedWithResult: (didPop, result) {
+                    // when journey is showing and pop was attempted, clear journey
+                    if (_journeyOverlayActive) {
+                      _clearJourneyOverlays();
+                    }
 
-              // If showing a persistent bottom sheet, close it.
-              // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
-              if (_bottomSheetController != null) {
-                _bottomSheetController!.close();
-                _bottomSheetController = null;
-                _removeSearchLocationMarker();
-              }
-            },
-            child: Stack(
-              children: [
-
-                // underlying map layer (different ios and android)
-                Platform.isIOS?
-                  MapWidget(
-                    initialCenter: _defaultCenter,
-                    polylines: _journeyOverlayActive
-                        ? _displayedJourneyPolylines
-                        : _displayedPolylines.union(_displayedJourneyPolylines),
-                    markers: _journeyOverlayActive
-                        ? _displayedJourneyMarkers
-                              .union(_displayedJourneyBusMarkers)
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              )
-                        : _allDisplayedStopMarkers,
-                    darkMapStyle: _darkMapStyle,
-                    lightMapStyle: _lightMapStyle,
-                    onMapCreated: _onMapCreated,
-                    onCameraMove: _onCameraMove,
-                    onCameraIdle: _onCameraIdle,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: true,
-                    mapToolbarEnabled: true,
-                  )
-                : AndroidMap(
-                    initialCenter: _defaultCenter,
-                    polylines: _journeyOverlayActive
-                        ? _displayedJourneyPolylines
-                        : _displayedPolylines.union(_displayedJourneyPolylines),
-                    staticMarkers: _journeyOverlayActive
-                        ? _displayedJourneyMarkers
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              )
-                        : _displayedStopMarkers
-                              .union(_displayedJourneyMarkers)
-                              .union(
-                                _searchLocationMarker != null
-                                    ? {_searchLocationMarker!}
-                                    : {},
-                              ),
-                    darkMapStyle: _darkMapStyle,
-                    lightMapStyle: _lightMapStyle,
-                    dynamicMarkers: _journeyOverlayActive
-                        ? _displayedJourneyBusMarkers
-                        : _displayedBusMarkers,
-                    onMapCreated: _onMapCreated,
-                    onCameraMove: _onCameraMove,
-                    onCameraIdle: _onCameraIdle,
-                    //myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    //zoomControlsEnabled: true,
-                    //mapToolbarEnabled: true,
-                ),
-            
-                Padding(
-                  padding: EdgeInsets.only(
-                    top: globalTopPadding, bottom: globalBottomPadding, left: globalLeftRightPadding, right: globalLeftRightPadding, 
-                  ),
-                  child: Column(
+                    // If showing a persistent bottom sheet, close it.
+                    // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
+                    if (_bottomSheetController != null) {
+                      _bottomSheetController!.close();
+                      _bottomSheetController = null;
+                      _removeSearchLocationMarker();
+                    }
+                  },
+                  child: Stack(
                     children: [
-                      // if showing journey, show header
-                      (_journeyOverlayActive)
-                          ? DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: getColor(context, ColorType.background),
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(56),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: ui.Color.fromARGB(39, 0, 0, 0),
-                                    spreadRadius: 1,
-                                    blurRadius: 2,
-                                    offset: Offset(
-                                      0,
-                                      3,
-                                    ), // changes position of shadow
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(width: 10),
-                              
-                                  Icon(Icons.route),
-                              
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 15,
-                                      vertical: 5,
+                      // underlying map layer (different ios and android)
+                      Platform.isIOS
+                          ? MapWidget(
+                              initialCenter: _defaultCenter,
+                              polylines: _journeyOverlayActive
+                                  ? _displayedJourneyPolylines
+                                  : _displayedPolylines.union(
+                                      _displayedJourneyPolylines,
                                     ),
-                                    child: Text(
-                                      "Showing route on map",
-                                      style: TextStyle(
-                                        fontFamily: 'Urbanist',
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              markers: _journeyOverlayActive
+                                  ? _displayedJourneyMarkers
+                                        .union(_displayedJourneyBusMarkers)
+                                        .union(
+                                          _searchLocationMarker != null
+                                              ? {_searchLocationMarker!}
+                                              : {},
+                                        )
+                                  : _allDisplayedStopMarkers,
+                              darkMapStyle: _darkMapStyle,
+                              lightMapStyle: _lightMapStyle,
+                              onMapCreated: _onMapCreated,
+                              onCameraMove: _onCameraMove,
+                              onCameraIdle: _onCameraIdle,
+                              myLocationEnabled: true,
+                              myLocationButtonEnabled: false,
+                              zoomControlsEnabled: true,
+                              mapToolbarEnabled: true,
                             )
-                            // not showing journey, show usual header
-                          :DecoratedBox(
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isDarkMode(context) ? Colors.black.withAlpha(50) : Colors.white.withAlpha(100),
-                                  spreadRadius: 50,
-                                  blurRadius: 50,
-                                )
-                              ]
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container( // group maize and bus together on the left
-                                  child: Row(children: [
-                                    Text(
-                                      'maize',
-                                      style: TextStyle(
-                                        color: maizeBusYellow,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 30
-                                      ),
+                          : AndroidMap(
+                              initialCenter: _defaultCenter,
+                              polylines: _journeyOverlayActive
+                                  ? _displayedJourneyPolylines
+                                  : _displayedPolylines.union(
+                                      _displayedJourneyPolylines,
                                     ),
-                                    Text(
-                                      'bus',
-                                      style: TextStyle(
-                                        color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 30,
-                                      ),
-                                    ),
-                                  ],),
-                                ),
-              
-                                SizedBox(
-                                  width: 45,
-                                  height: 45,
-                                  child: FittedBox(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          // switch to settings menu
-                                          // with the MaterialPagesRoute animation
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute<void>(
-                                              builder: (context) => Settings(),
-                                            ),
-                                          );
-                                        },
-                                        heroTag: 'settings_fab',
-                                        elevation: 0,
-                                        child: Icon(
-                                          Icons.menu,
-                                          color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
+                              staticMarkers: _journeyOverlayActive
+                                  ? _displayedJourneyMarkers.union(
+                                      _searchLocationMarker != null
+                                          ? {_searchLocationMarker!}
+                                          : {},
+                                    )
+                                  : _displayedStopMarkers
+                                        .union(_displayedJourneyMarkers)
+                                        .union(
+                                          _searchLocationMarker != null
+                                              ? {_searchLocationMarker!}
+                                              : {},
                                         ),
+                              darkMapStyle: _darkMapStyle,
+                              lightMapStyle: _lightMapStyle,
+                              dynamicMarkers: _journeyOverlayActive
+                                  ? _displayedJourneyBusMarkers
+                                  : _displayedBusMarkers,
+                              onMapCreated: _onMapCreated,
+                              onCameraMove: _onCameraMove,
+                              onCameraIdle: _onCameraIdle,
+                              //myLocationEnabled: true,
+                              myLocationButtonEnabled: false,
+                              //zoomControlsEnabled: true,
+                              //mapToolbarEnabled: true,
+                            ),
+
+                      Padding(
+                        padding: EdgeInsets.only(
+                          top: globalTopPadding,
+                          bottom: globalBottomPadding,
+                          left: globalLeftRightPadding,
+                          right: globalLeftRightPadding,
+                        ),
+                        child: Column(
+                          children: [
+                            // if showing journey, show header
+                            (_journeyOverlayActive)
+                                ? DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: getColor(
+                                        context,
+                                        ColorType.background,
                                       ),
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(56),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: ui.Color.fromARGB(39, 0, 0, 0),
+                                          spreadRadius: 1,
+                                          blurRadius: 2,
+                                          offset: Offset(
+                                            0,
+                                            3,
+                                          ), // changes position of shadow
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        SizedBox(width: 10),
+
+                                        Icon(Icons.route),
+
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 15,
+                                            vertical: 5,
+                                          ),
+                                          child: Text(
+                                            "Showing route on map",
+                                            style: TextStyle(
+                                              fontFamily: 'Urbanist',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                // not showing journey, show usual header
+                                : DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: isDarkMode(context)
+                                              ? Colors.black.withAlpha(50)
+                                              : Colors.white.withAlpha(100),
+                                          spreadRadius: 50,
+                                          blurRadius: 50,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          // group maize and bus together on the left
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                'maize',
+                                                style: TextStyle(
+                                                  color: maizeBusYellow,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 30,
+                                                ),
+                                              ),
+                                              Text(
+                                                'bus',
+                                                style: TextStyle(
+                                                  color: isDarkMode(context)
+                                                      ? maizeBusBlueDarkMode
+                                                      : maizeBusBlue,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 30,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                        SizedBox(
+                                          width: 45,
+                                          height: 45,
+                                          child: FittedBox(
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType.mapButtonShadow,
+                                                    ),
+                                                    blurRadius: 10,
+                                                    offset: Offset(0, 6),
+                                                  ),
+                                                ],
+                                                borderRadius:
+                                                    BorderRadius.circular(25),
+                                              ),
+                                              child: FloatingActionButton(
+                                                onPressed: () async {
+                                                  // switch to settings menu
+                                                  // with the MaterialPagesRoute animation
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute<void>(
+                                                      builder: (context) =>
+                                                          Settings(),
+                                                    ),
+                                                  );
+                                                },
+                                                heroTag: 'settings_fab',
+                                                elevation: 0,
+                                                child: Icon(
+                                                  Icons.menu,
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.mapButtonIcon,
+                                                  ),
+                                                  size: 28,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                              ],
-                            )
-                          ),
 
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        child: _isOffline
-                            ? Padding(
-                                key: const ValueKey('offline-banner'),
-                                padding: EdgeInsets.only(
-                                  top: 15,
-                                  left: globalLeftRightPadding,
-                                  right: globalLeftRightPadding,
-                                  bottom: 10,
-                                ),
-                                child: _buildOfflineBanner(),
-                              )
-                            : const SizedBox.shrink(
-                                key: ValueKey('offline-banner-hidden'),
-                              ),
-                      ),
-
-                      // reminder widget
-                      SizedBox(height: 30.0,),
-                      ReminderWidgets(),
-                       
-                      Spacer(),
-                      
-                      // temp row (might add settings button to it later)
-                      (!_journeyOverlayActive)
-                          ? Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: 20
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              switchInCurve: Curves.easeOut,
+                              switchOutCurve: Curves.easeIn,
+                              child: _isOffline
+                                  ? Padding(
+                                      key: const ValueKey('offline-banner'),
+                                      padding: EdgeInsets.only(
+                                        top: 15,
+                                        left: globalLeftRightPadding,
+                                        right: globalLeftRightPadding,
+                                        bottom: 10,
+                                      ),
+                                      child: _buildOfflineBanner(),
+                                    )
+                                  : const SizedBox.shrink(
+                                      key: ValueKey('offline-banner-hidden'),
+                                    ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Column(
-                                  spacing: 10,
-                                  children: [
-                                    // face north button is only visible when not facing north
-                                    Visibility(
-                                      visible: _currentCameraPos != null && _currentCameraPos!.bearing != 0,
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
-                                            )
+
+                            // reminder widget
+                            SizedBox(height: 30.0),
+                            ReminderWidgets(),
+
+                            Spacer(),
+
+                            // temp row (might add settings button to it later)
+                            (!_journeyOverlayActive)
+                                ? Padding(
+                                    padding: const EdgeInsets.only(bottom: 20),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Column(
+                                          spacing: 10,
+                                          children: [
+                                            // face north button is only visible when not facing north
+                                            Visibility(
+                                              visible:
+                                                  _currentCameraPos != null &&
+                                                  _currentCameraPos!.bearing !=
+                                                      0,
+                                              child: DecoratedBox(
+                                                decoration: BoxDecoration(
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: getColor(
+                                                        context,
+                                                        ColorType
+                                                            .mapButtonShadow,
+                                                      ).withAlpha(50),
+                                                      blurRadius: 4,
+                                                      offset: Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                  borderRadius:
+                                                      BorderRadius.circular(25),
+                                                ),
+                                                child: FloatingActionButton.small(
+                                                  onPressed: _setMapToNorth,
+                                                  heroTag: 'north_fab',
+                                                  backgroundColor: getColor(
+                                                    context,
+                                                    ColorType
+                                                        .mapButtonSecondary,
+                                                  ),
+                                                  elevation: 0,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          56,
+                                                        ),
+                                                  ),
+                                                  child: Transform.rotate(
+                                                    angle:
+                                                        _currentCameraPos !=
+                                                            null
+                                                        ? (-_currentCameraPos!
+                                                                      .bearing -
+                                                                  45) *
+                                                              (math.pi / 180)
+                                                        : 0,
+                                                    child: Icon(
+                                                      FontAwesomeIcons.compass,
+                                                      color: getColor(
+                                                        context,
+                                                        ColorType
+                                                            .mapButtonPrimary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            // location button
+                                            AnimatedSwitcher(
+                                              duration: const Duration(
+                                                milliseconds: 250,
+                                              ),
+                                              child:
+                                                  !(_userLocVisible == null ||
+                                                      _userLocVisible!)
+                                                  ?
+                                                    // if not needed, sized box
+                                                    SizedBox.shrink()
+                                                  :
+                                                    // otherwise, normal button
+                                                    DecoratedBox(
+                                                      decoration: BoxDecoration(
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: getColor(
+                                                              context,
+                                                              ColorType
+                                                                  .mapButtonShadow,
+                                                            ).withAlpha(50),
+                                                            blurRadius: 4,
+                                                            offset: Offset(
+                                                              0,
+                                                              2,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              25,
+                                                            ),
+                                                      ),
+                                                      child: FloatingActionButton.small(
+                                                        onPressed: () {
+                                                          _centerOnLocation(
+                                                            true,
+                                                          );
+                                                        },
+                                                        heroTag: 'location_fab',
+                                                        backgroundColor: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonSecondary,
+                                                        ),
+                                                        elevation: 0,
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                56,
+                                                              ),
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.my_location,
+                                                          color: getColor(
+                                                            context,
+                                                            ColorType
+                                                                .mapButtonPrimary,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                            ),
                                           ],
-                                          borderRadius: BorderRadius.circular(25)
                                         ),
-                                        child: FloatingActionButton.small(
-                                          onPressed: _setMapToNorth,
-                                          heroTag: 'north_fab',
-                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                          elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(56),
-                                          ),
-                                          child: Transform.rotate(
-                                            angle: _currentCameraPos != null ? (-_currentCameraPos!.bearing - 45) * (math.pi / 180) : 0,
-                                            child: Icon(
-                                              FontAwesomeIcons.compass,
-                                              color: getColor(context, ColorType.mapButtonPrimary),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                      ],
                                     ),
-                      
-                                    // location button
-                                    AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 250),
-                                      child: !(_userLocVisible == null || _userLocVisible!) ?
-                                      // if not needed, sized box
-                                      SizedBox.shrink():
-                                      // otherwise, normal button
+                                  )
+                                : SizedBox.shrink(),
+
+                            // if showing journey, show close and reopen button
+                            (_journeyOverlayActive)
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
                                       DecoratedBox(
                                         decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
-                                            )
-                                          ],
-                                          borderRadius: BorderRadius.circular(25)
-                                        ),
-                                        child: FloatingActionButton.small(
-                                          onPressed: () {
-                                            _centerOnLocation(true);
-                                          },
-                                          heroTag: 'location_fab',
-                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                          elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(56),
-                                          ),
-                                          child: Icon(
-                                            Icons.my_location,
-                                            color: getColor(context, ColorType.mapButtonPrimary),
+                                          borderRadius: BorderRadius.circular(
+                                            56,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              ],
-                            ),
-                          )
-                          : SizedBox.shrink(),
-                              
-                      // if showing journey, show close and reopen button
-                      (_journeyOverlayActive)
-                          ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(56)
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: _showJourneySheetOnReopen,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.importantButtonBackground),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(56),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 8,
-                                    ),
-                                    elevation: 1,
-                                  ),
-                                  icon: Icon(
-                                    color: getColor(context, ColorType.importantButtonText),
-                                    Icons.keyboard_arrow_up,
-                                    size: 18,
-                                  ), // The icon on the left
-                                  label: Text(
-                                    'Steps',
-                                    style: TextStyle(
-                                      color: getColor(context, ColorType.importantButtonText),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),                                    
-                                  ), // The text on the right
-                                ),
-                              ),
-                  
-                              SizedBox(width: 20,),
-                  
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(56)
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: _clearJourneyOverlays,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(56),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 8,
-                                    ),
-                                    elevation: 1,
-                                  ),
-                                  icon: Icon(
-                                    Icons.close,
-                                    color: getColor(context, ColorType.secondaryButtonText),
-                                    size: 18,
-                                  ), // The icon on the left
-                                  label: Text(
-                                    'Close',
-                                    style: TextStyle(
-                                      color: getColor(context, ColorType.secondaryButtonText),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ), // The text on the right
-                                ),
-                              ),
-                            ],
-                          )
-                          
-                          // else, main buttons row
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                            
-                              children: [
-                                
-                                // routes
-                                SizedBox(
-                                  width: 45,
-                                  height: 45,
-                                  child: FittedBox(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-                
-                                          // TODO: delete this but first make sure it doesn't break
-                                          // anything but i'm pretty sure it won't because its
-                                          // redundant
-                                          if (busProvider.routes.isEmpty){
-                                            await busProvider.loadRoutes();
-                                            _updateAvailableRoutes(busProvider.routes);
-                                            _cacheRouteOverlays(busProvider.routes);
-                                          }
-                                          
-                                          _showBusRoutesModal(busProvider.routes,);
-                                        },
-                                        heroTag: 'routes_fab',
-                                        elevation: 0, // handle shadow ourselves
-                                        child: Icon(
-                                          Icons.directions_bus,
-                                          color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
+                                        child: ElevatedButton.icon(
+                                          onPressed: _showJourneySheetOnReopen,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: getColor(
+                                              context,
+                                              ColorType
+                                                  .importantButtonBackground,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(56),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 20,
+                                              vertical: 8,
+                                            ),
+                                            elevation: 1,
+                                          ),
+                                          icon: Icon(
+                                            color: getColor(
+                                              context,
+                                              ColorType.importantButtonText,
+                                            ),
+                                            Icons.keyboard_arrow_up,
+                                            size: 18,
+                                          ), // The icon on the left
+                                          label: Text(
+                                            'Steps',
+                                            style: TextStyle(
+                                              color: getColor(
+                                                context,
+                                                ColorType.importantButtonText,
+                                              ),
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ), // The text on the right
                                         ),
                                       ),
-                                    )
-                                  ),
-                                ),
-                            
-                                SizedBox(width: 12),
-                
-                                // favorites
-                                SizedBox(
-                                  width: 45,
-                                  height: 45,
-                                  child: FittedBox(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-                                          _showFavoritesSheet();
-                                        },
-                                        heroTag: 'favorites_fab',
-                                        elevation: 0,
-                                        child: Icon(
-                                          Icons.favorite,
-                                          color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                
-                                SizedBox(width: 12),
-                
-                                
-                                // search
-                                Expanded( // stretch width
-                                  child: SizedBox(
-                                    height: 45,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: ElevatedButton.icon(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-                                          _showSearchSheet();
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          alignment: Alignment.centerLeft,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 13,
-                                            vertical: 8,
+
+                                      SizedBox(width: 20),
+
+                                      DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            56,
                                           ),
                                         ),
-                                        icon: Icon(
-                                          Icons.search_sharp,
-                                          color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
-                                        ),
-                                        label: Text(
-                                          "where to?",
-                                          style: TextStyle(
-                                            color: getColor(context, ColorType.mapButtonIcon).withAlpha(214),
-                                            fontSize: 18,
-                                          )
+                                        child: ElevatedButton.icon(
+                                          onPressed: _clearJourneyOverlays,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: getColor(
+                                              context,
+                                              ColorType
+                                                  .secondaryButtonBackground,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(56),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 20,
+                                              vertical: 8,
+                                            ),
+                                            elevation: 1,
+                                          ),
+                                          icon: Icon(
+                                            Icons.close,
+                                            color: getColor(
+                                              context,
+                                              ColorType.secondaryButtonText,
+                                            ),
+                                            size: 18,
+                                          ), // The icon on the left
+                                          label: Text(
+                                            'Close',
+                                            style: TextStyle(
+                                              color: getColor(
+                                                context,
+                                                ColorType.secondaryButtonText,
+                                              ),
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ), // The text on the right
                                         ),
                                       ),
-                                    ),
+                                    ],
+                                  )
+                                // else, main buttons row
+                                : Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+
+                                    children: [
+                                      // routes
+                                      SizedBox(
+                                        width: 45,
+                                        height: 45,
+                                        child: FittedBox(
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.mapButtonShadow,
+                                                  ),
+                                                  blurRadius: 10,
+                                                  offset: Offset(0, 6),
+                                                ),
+                                              ],
+                                              borderRadius:
+                                                  BorderRadius.circular(25),
+                                            ),
+                                            child: FloatingActionButton(
+                                              onPressed: () async {
+                                                if (canVibrate &&
+                                                    Platform.isIOS) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.light,
+                                                  );
+                                                }
+
+                                                // TODO: delete this but first make sure it doesn't break
+                                                // anything but i'm pretty sure it won't because its
+                                                // redundant
+                                                if (busProvider
+                                                    .routes
+                                                    .isEmpty) {
+                                                  await busProvider
+                                                      .loadRoutes();
+                                                  _updateAvailableRoutes(
+                                                    busProvider.routes,
+                                                  );
+                                                  _cacheRouteOverlays(
+                                                    busProvider.routes,
+                                                  );
+                                                }
+
+                                                _showBusRoutesModal(
+                                                  busProvider.routes,
+                                                );
+                                              },
+                                              heroTag: 'routes_fab',
+                                              elevation:
+                                                  0, // handle shadow ourselves
+                                              child: Icon(
+                                                Icons.directions_bus,
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.mapButtonIcon,
+                                                ),
+                                                size: 28,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      SizedBox(width: 12),
+
+                                      // favorites
+                                      SizedBox(
+                                        width: 45,
+                                        height: 45,
+                                        child: FittedBox(
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.mapButtonShadow,
+                                                  ),
+                                                  blurRadius: 10,
+                                                  offset: Offset(0, 6),
+                                                ),
+                                              ],
+                                              borderRadius:
+                                                  BorderRadius.circular(25),
+                                            ),
+                                            child: FloatingActionButton(
+                                              onPressed: () async {
+                                                if (canVibrate &&
+                                                    Platform.isIOS) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.light,
+                                                  );
+                                                }
+                                                _showFavoritesSheet();
+                                              },
+                                              heroTag: 'favorites_fab',
+                                              elevation: 0,
+                                              child: Icon(
+                                                Icons.favorite,
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.mapButtonIcon,
+                                                ),
+                                                size: 28,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      SizedBox(width: 12),
+
+                                      // search
+                                      Expanded(
+                                        // stretch width
+                                        child: SizedBox(
+                                          height: 45,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.mapButtonShadow,
+                                                  ),
+                                                  blurRadius: 10,
+                                                  offset: Offset(0, 6),
+                                                ),
+                                              ],
+                                              borderRadius:
+                                                  BorderRadius.circular(25),
+                                            ),
+                                            child: ElevatedButton.icon(
+                                              onPressed: () async {
+                                                if (canVibrate &&
+                                                    Platform.isIOS) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.light,
+                                                  );
+                                                }
+                                                _showSearchSheet();
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                alignment: Alignment.centerLeft,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 13,
+                                                      vertical: 8,
+                                                    ),
+                                              ),
+                                              icon: Icon(
+                                                Icons.search_sharp,
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.mapButtonIcon,
+                                                ),
+                                                size: 28,
+                                              ),
+                                              label: Text(
+                                                "where to?",
+                                                style: TextStyle(
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.mapButtonIcon,
+                                                  ).withAlpha(214),
+                                                  fontSize: 18,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 )
-              ],
-            ),
-          )
-          : Container(
-            //for switch animation
-            key: ValueKey(0),
+              : Container(
+                  //for switch animation
+                  key: ValueKey(0),
 
-            color: getColor(context, ColorType.background),
-            
-            child: ValueListenableBuilder<Loadpoint>(
-              valueListenable: _loadingMessageNotifier,
-              builder: (context, loadpoint, child) {
-                return LoadingScreen(loadpoint: loadpoint);
-              }
-            )
-          )
-          
+                  color: getColor(context, ColorType.background),
+
+                  child: ValueListenableBuilder<Loadpoint>(
+                    valueListenable: _loadingMessageNotifier,
+                    builder: (context, loadpoint, child) {
+                      return LoadingScreen(loadpoint: loadpoint);
+                    },
+                  ),
+                ),
         );
-
-      }
+      },
     );
   }
 }
