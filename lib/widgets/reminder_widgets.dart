@@ -66,15 +66,15 @@ class _ReminderWidgetsState extends State<ReminderWidgets> {
     return FutureBuilder(
       future: dataFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
+        if (!snapshot.hasData) {
           return SizedBox.shrink();
         }
-        if (!snapshot.hasData) {
-          print("${snapshot.error}");
-          return Placeholder();
-        }
         final reminders = snapshot.data!;
-        reminders.sort((lhs, rhs) => (lhs.eta ?? -1).compareTo(rhs.eta ?? -1));
+        reminders.sort(
+          (lhs, rhs) => (lhs.eta?.toDouble() ?? double.infinity).compareTo(
+            rhs.eta?.toDouble() ?? double.infinity,
+          ),
+        );
         return Column(
           mainAxisSize: MainAxisSize.min,
           spacing: 10.0,
