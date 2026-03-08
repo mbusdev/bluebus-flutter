@@ -989,12 +989,20 @@ class _ReminderFormState extends State<ReminderForm> {
                                 width: 60,
                               ),
                               Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: RouteColorService.getRouteColor(rtid), 
-                                ),
+                                width: isRide(rtid) ? 45 : 40,
+                                height: isRide(rtid) ? 35 : 40, 
+                                decoration: isRide(rtid) ? 
+                                  // ride icon
+                                  BoxDecoration(
+                                    shape: BoxShape.rectangle,
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: RouteColorService.getRouteColor(rtid),
+                                  ) :
+                                  // michigan icon
+                                  BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: RouteColorService.getRouteColor(rtid),
+                                  ),
                                 alignment: Alignment.center,
                                 child: MediaQuery(
                                   data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
