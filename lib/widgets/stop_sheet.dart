@@ -1106,10 +1106,10 @@ class _ReminderFormState extends State<ReminderForm> {
                       
                         List<RemindersModification> modifications = [];
                         for (String rtid in routesToShow) {
-                          final bool alreadyActive = activeRemindersForThisStop.map((x) => x.rtid).contains(rtid);
                           final bool keepOrAdd = rtidsToChange.contains(rtid) != activeRtids.contains(rtid);
+                          final bool shouldRemove = rtidsToChange.contains(rtid) && activeRtids.contains(rtid);
 
-                          if (alreadyActive) {
+                          if (shouldRemove) {
                             modifications.add(RemoveReminder(stpid: widget.stpid, rtid: rtid));
                           }
                           if (keepOrAdd) {
