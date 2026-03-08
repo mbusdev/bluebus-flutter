@@ -552,7 +552,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
       child: Row(
         children: [
           CustomPaint(
-            size: const Size(40, 40),
+            size: const Size(20, 20),
             painter: UpcomingStopIconPainter(
               lineTopStyle,
               lineBottomStyle,
@@ -566,7 +566,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
             child: Text(
               stop.name,
               style: TextStyle(
-                fontSize: 15.0,
+                fontSize: 10.0,
                 fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
                 height: 1.15,
               ),
@@ -574,12 +574,12 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
             ),
           ),
 
-          SizedBox(width: 15),
+          SizedBox(width: 5),
 
           (stop.prediction != null) ? Text(
             predictionText, 
             style: TextStyle(
-              fontSize: 15.0,
+              fontSize: 10.0,
             )
           ) : 
           SizedBox.shrink(),
@@ -742,7 +742,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
                     ...rowElements,
                     (widget.showSeeMoreButton && !isLoading)
                         ? (TextButton(
-                            child: const Text("See all stops for this bus"),
+                            child: const Text("See all stops for this bus", style: TextStyle(fontSize: 10.0)),
                             onPressed: () {
                               widget.showBusSheet?.call(widget.vehicleId!);
                             },

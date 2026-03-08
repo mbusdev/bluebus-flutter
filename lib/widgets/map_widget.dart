@@ -13,11 +13,10 @@ class MapWidget extends StatelessWidget {
   final void Function(GoogleMapController)? onMapCreated;
   final void Function()? onCameraIdle;
   final void Function(CameraPosition)? onCameraMove;
-  final bool myLocationEnabled;
   final bool myLocationButtonEnabled;
   final bool zoomControlsEnabled;
   final bool mapToolbarEnabled;
-  
+
   const MapWidget({
     super.key,
     required this.initialCenter,
@@ -28,7 +27,6 @@ class MapWidget extends StatelessWidget {
     this.onMapCreated,
     this.onCameraIdle,
     this.onCameraMove,
-    this.myLocationEnabled = true,
     this.myLocationButtonEnabled = false,
     this.zoomControlsEnabled = true,
     this.mapToolbarEnabled = true,
@@ -52,7 +50,7 @@ class MapWidget extends StatelessWidget {
         )
       ),
       minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
-      myLocationEnabled: myLocationEnabled,
+      myLocationEnabled: false,
       myLocationButtonEnabled: myLocationButtonEnabled,
       zoomControlsEnabled: zoomControlsEnabled,
       mapToolbarEnabled: mapToolbarEnabled,
@@ -233,7 +231,7 @@ class _AndroidMapState extends State<AndroidMap>
     
     return RepaintBoundary(child: GoogleMap(
       compassEnabled: false,
-      myLocationEnabled: true,
+      myLocationEnabled: false,
       mapToolbarEnabled: false,
       zoomControlsEnabled: false,
       myLocationButtonEnabled: false,

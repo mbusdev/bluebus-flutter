@@ -42,7 +42,8 @@ class MainApp extends StatelessWidget {
         statusBarColor: Colors.transparent,
       ),
       child: Consumer<ThemeProvider>( // rebuilds when ThemeProvider changes
-        builder: (context, themeObj, child) => MaterialApp(
+        builder: ( 
+          context, themeObj, child) => MaterialApp(
           //showPerformanceOverlay: true,
           // Remove the debug banner
           debugShowCheckedModeBanner: false,

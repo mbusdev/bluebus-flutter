@@ -390,7 +390,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                         route['id']!,
                                                         style: TextStyle(
                                                           color: RouteColorService.getContrastingColor(route['id']!), 
-                                                          fontSize: 17,
+                                                          fontSize: 10,
                                                           fontWeight: FontWeight.w900,
                                                           letterSpacing: -1,
                                                         ),
@@ -401,24 +401,24 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                   title: Text(
                                                     route['name'] ?? route['id']!,
                                                     style: TextStyle(
-                                                      fontSize: 17,
+                                                      fontSize: 10,
                                                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                                                       color: getColor(context, ColorType.opposite),
                                                     ),
                                                   ),
-                                                  trailing:// Info button
-                                                    IconButton(
-                                                      icon: Icon(
-                                                        Icons.info_outline,
-                                                        color: getColor(context, ColorType.opposite).withAlpha(150),
-                                                        size: 22,
-                                                      ),
-                                                      onPressed: () {
-                                                        _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
-                                                      },
-                                                      padding: EdgeInsets.all(8),
-                                                      constraints: BoxConstraints(),
-                                                    ),
+                                                  // trailing:// Info button
+                                                  //   IconButton(
+                                                  //     icon: Icon(
+                                                  //       Icons.info_outline,
+                                                  //       color: getColor(context, ColorType.opposite).withAlpha(150),
+                                                  //       size: 22,
+                                                  //     ),
+                                                  //     onPressed: () {
+                                                  //       _showRouteInfo(route['id']!, route['name'] ?? route['id']!);
+                                                  //     },
+                                                  //     padding: EdgeInsets.all(8),
+                                                  //     constraints: BoxConstraints(),
+                                                  //   ),
                                                   onTap: () {
                                                     setState(() {
                                                       if (isSelected) {
@@ -440,16 +440,16 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                 ),
                                               ),
 
-                                              Padding(
-                                                padding: const EdgeInsets.only(right: 16),
-                                                child: ReorderableDragStartListener(
-                                                  index: index,
-                                                  child: Icon(
-                                                    Icons.drag_handle,
-                                                    color: getColor(context, ColorType.opposite).withAlpha(150),
-                                                  ),
-                                                ),
-                                              ),
+                                              // Padding(
+                                              //   padding: const EdgeInsets.only(right: 16),
+                                              //   child: ReorderableDragStartListener(
+                                              //     index: index,
+                                              //     child: Icon(
+                                              //       Icons.drag_handle,
+                                              //       color: getColor(context, ColorType.opposite).withAlpha(150),
+                                              //     ),
+                                              //   ),
+                                              // ),
                                             ],
                                           ),
                                         ),
@@ -517,11 +517,11 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                             children: [
                                               Expanded(
                                                 child: ListTile(
-                                                  contentPadding: EdgeInsets.only(left: 8, right: 0), 
+                                                  contentPadding: EdgeInsets.only(left: 0, right: 0), 
                                                   minTileHeight: 40,
                                                   leading: Container(
-                                                    width: 40,
-                                                    height: 30,
+                                                    width: 50,
+                                                    height: 10,
                                                     decoration: BoxDecoration(
                                                       shape: BoxShape.rectangle,
                                                       borderRadius: BorderRadius.circular(15), 
@@ -535,7 +535,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                         route['id']!,
                                                         style: TextStyle(
                                                           color: RouteColorService.getContrastingColor(route['id']!), 
-                                                          fontSize: 17,
+                                                          fontSize: 10,
                                                           fontWeight: FontWeight.w900,
                                                           letterSpacing: -1,
                                                         ),
@@ -546,7 +546,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                   title: Text(
                                                     route['name'] ?? route['id']!,
                                                     style: TextStyle(
-                                                      fontSize: 17,
+                                                      fontSize: 10,
                                                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                                                       color: getColor(context, ColorType.opposite),
                                                     ),
@@ -572,15 +572,15 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                 ),
                                               ),
 
-                                              Padding(
-                                                padding: const EdgeInsets.only(right: 16),
-                                                child: ReorderableDragStartListener(
-                                                  index: index,
-                                                  child: Icon(
-                                                    Icons.drag_handle,
-                                                    color: getColor(context, ColorType.opposite).withAlpha(150),),
-                                                ),
-                                              ),
+                                              // Padding(
+                                              //   padding: const EdgeInsets.only(right: 16),
+                                              //   child: ReorderableDragStartListener(
+                                              //     index: index,
+                                              //     child: Icon(
+                                              //       Icons.drag_handle,
+                                              //       color: getColor(context, ColorType.opposite).withAlpha(150),),
+                                              //   ),
+                                              // ),
                                             ],
                                           ),
                                         ),
@@ -594,23 +594,23 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         ),
                     
                         // gradient box for title background
-                        Align(
-                          alignment: Alignment.topCenter,
-                          child: Container(
-                            height: 75,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  getColor(context, ColorType.background),       
-                                  getColor(context, ColorType.backgroundGradientStart),  
-                                ],
-                                stops: [0.85, 1]
-                              ),
-                            ),
-                          ),
-                        ),
+                        // Align(
+                        //   alignment: Alignment.topCenter,
+                        //   child: Container(
+                        //     height: 75,
+                        //     decoration: BoxDecoration(
+                        //       gradient: LinearGradient(
+                        //         begin: Alignment.topCenter,
+                        //         end: Alignment.bottomCenter,
+                        //         colors: [
+                        //           getColor(context, ColorType.background),       
+                        //           getColor(context, ColorType.backgroundGradientStart),  
+                        //         ],
+                        //         stops: [0.85, 1]
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
                     
                         // title
                         Column(
@@ -624,37 +624,37 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                     style: TextStyle(
                                       fontFamily: 'Urbanist',
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 30,
+                                      fontSize: 10,
                                     ),
                                   ),
                                   Spacer(),
-                                  SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero, 
-                                      constraints: const BoxConstraints(), 
-                                      onPressed: () {
-                                        showMaizebusOKDialog(
-                                          contextIn: context,
-                                          title: const Text("Route Selector"),
-                                          content: const Text("Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route"),
-                                        );
-                                      },
-                                      style: IconButton.styleFrom(
-                                        side: BorderSide(
-                                          color: getColor(context, ColorType.opposite).withAlpha(150), 
-                                          width: 2,
-                                        ),
-                                        shape: const CircleBorder(),
-                                      ),
-                                      icon: Icon(
-                                        Icons.question_mark_rounded,
-                                        color: getColor(context, ColorType.opposite).withAlpha(150),
-                                        size: 15, 
-                                      ),
-                                    ),
-                                  )
+                                  // SizedBox(
+                                  //   height: 20,
+                                  //   width: 20,
+                                  //   child: IconButton(
+                                  //     padding: EdgeInsets.zero, 
+                                  //     constraints: const BoxConstraints(), 
+                                  //     onPressed: () {
+                                  //       showMaizebusOKDialog(
+                                  //         contextIn: context,
+                                  //         title: const Text("Route Selector"),
+                                  //         content: const Text("Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route"),
+                                  //       );
+                                  //     },
+                                  //     style: IconButton.styleFrom(
+                                  //       side: BorderSide(
+                                  //         color: getColor(context, ColorType.opposite).withAlpha(150), 
+                                  //         width: 2,
+                                  //       ),
+                                  //       shape: const CircleBorder(),
+                                  //     ),
+                                  //     icon: Icon(
+                                  //       Icons.question_mark_rounded,
+                                  //       color: getColor(context, ColorType.opposite).withAlpha(150),
+                                  //       size: 15, 
+                                  //     ),
+                                  //   ),
+                                  // )
                                 ],
                               ),
                             ),
@@ -699,8 +699,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                 curve: Curves.ease,
                               );
                             },
-                            height: 40,
-                            width: 250,
+                            height: 20,
+                            width: 150,
                             // kelevation uses flutter's default shadows - 
                             // the same ones used in elevated button
                             shadows: kElevationToShadow[3],
@@ -753,7 +753,7 @@ class _RouteImageDialogState extends State<_RouteImageDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: getColor(context, ColorType.background),
-      insetPadding: EdgeInsets.all(10),
+      insetPadding: EdgeInsets.all(0),
       child: SizedBox(
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height * 0.6,

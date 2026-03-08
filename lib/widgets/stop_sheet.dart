@@ -84,12 +84,12 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
               });
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               child: Row(
                 children: [
                   Container( // Circular icon on the left (with the bus code, e.g. "NW")
-                    width: isRide(widget.busId) ? 45 : 40,
-                    height: isRide(widget.busId) ? 35 : 40, 
+                    width: isRide(widget.busId) ? 35 : 30,
+                    height: isRide(widget.busId) ? 25 : 30, 
                     decoration: isRide(widget.busId) ? 
                       // ride icon
                       BoxDecoration(
@@ -109,7 +109,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                           widget.busId,
                           style: TextStyle(
                             color: RouteColorService.getContrastingColor(widget.busId), 
-                            fontSize: 20,
+                            fontSize: 15,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -1,
                           ),
@@ -118,7 +118,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                       ),
                   ),
 
-                  SizedBox(width: 15),
+                  SizedBox(width: 5),
 
                   Expanded(
                     child: Column(
@@ -130,7 +130,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                           style: TextStyle(
                             fontFamily: 'Urbanist',
                             fontWeight: FontWeight.w700,
-                            fontSize: 16,
+                            fontSize: 12,
                           ),
                         ),
 
@@ -144,7 +144,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                               style: TextStyle(
                                 fontFamily: 'Urbanist',
                                 fontWeight: FontWeight.w400,
-                                fontSize: 16,
+                                fontSize: 10,
                               ),
                             ),
 
@@ -153,7 +153,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                                   ? " • Live"
                                   : " • Estimated",
                               style: TextStyle(
-                                fontSize: 16.0,
+                                fontSize: 10.0,
                               ),
                             ),
                           ],
@@ -169,7 +169,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                               widget.busPrediction,
                               style: TextStyle(
                                 fontWeight: FontWeight.w400,
-                                fontSize: 20,
+                                fontSize: 15,
                                 height: 0,
                               ),
                             ),
@@ -177,7 +177,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                               "min",
                               style: TextStyle(
                                 fontWeight: FontWeight.w400,
-                                fontSize: 14,
+                                fontSize: 8,
                                 height: 0,
                               ),
                             ),
@@ -348,6 +348,7 @@ class _StopSheetState extends State<StopSheet> {
                 initialSize = 0.6;
               }
             }
+            initialSize = 0.99;
 
             // we know image dimensions, so we can use the width to find the height
             // with a lil simple math
@@ -444,7 +445,7 @@ class _StopSheetState extends State<StopSheet> {
                                                         style: TextStyle(
                                                           fontFamily: 'Urbanist',
                                                           fontWeight: FontWeight.w700,
-                                                          fontSize: 30,
+                                                          fontSize: 12,
                                                           height: 1.1,
                                                         ),
                                                       ),
@@ -483,7 +484,7 @@ class _StopSheetState extends State<StopSheet> {
                                                                       fontFamily: 'Urbanist',
                                                                       fontWeight:
                                                                           FontWeight.w700,
-                                                                      fontSize: 17,
+                                                                      fontSize: 10,
                                                                     ),
                                                                   ),
                                                                 ),
@@ -497,24 +498,24 @@ class _StopSheetState extends State<StopSheet> {
                                                 ),
                                               ),
                                                                     
-                                              SizedBox(height: 20),
+                                              SizedBox(height: 5),
                                                                     
                                               // loading text and button
                                               Material(
                                                 color: Colors.transparent,
                                                 child: Padding(
                                                   padding: const EdgeInsets.symmetric(
-                                                    horizontal: 20,
+                                                    horizontal: 10,
                                                   ),
                                                   child: Row(
                                                     children: [
-                                                      SizedBox(width: 2),
+                                                      // SizedBox(width: 2),
                                                       Text(
                                                         "Next bus departures",
                                                         style: TextStyle(
                                                           fontFamily: 'Urbanist',
                                                           fontWeight: FontWeight.w400,
-                                                          fontSize: 20,
+                                                          fontSize: 10,
                                                         ),
                                                       ),
                                                       SizedBox(width: 5),
@@ -673,157 +674,157 @@ class _StopSheetState extends State<StopSheet> {
                             ),
                     
                             // white box with gradient that the buttons sit on
-                            Column(
-                              children: [
-                                Spacer(), // another spacer to stick this to the bottom
+                            // Column(
+                            //   children: [
+                            //     Spacer(), // another spacer to stick this to the bottom
                     
-                                Container(
-                                  height: paddingBelowButtons + 65,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        getColor(context, ColorType.backgroundGradientStart),  // transparent
-                                        Color.lerp(getColor(context, ColorType.backgroundGradientStart),  getColor(context, ColorType.background), 0.5)!, // half-way color
-                                        getColor(context, ColorType.background), // full color
-                                      ],
-                                      stops: [0, 0.4, 1]
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            //     Container(
+                            //       height: paddingBelowButtons + 65,
+                            //       decoration: BoxDecoration(
+                            //         gradient: LinearGradient(
+                            //           begin: Alignment.topCenter,
+                            //           end: Alignment.bottomCenter,
+                            //           colors: [
+                            //             getColor(context, ColorType.backgroundGradientStart),  // transparent
+                            //             Color.lerp(getColor(context, ColorType.backgroundGradientStart),  getColor(context, ColorType.background), 0.5)!, // half-way color
+                            //             getColor(context, ColorType.background), // full color
+                            //           ],
+                            //           stops: [0, 0.4, 1]
+                            //         ),
+                            //       ),
+                            //     ),
+                            //   ],
+                            // ),
                     
                     
                             // bottom buttons
-                            Column(
-                              children: [
-                                Spacer(), // sticks buttons to bottom
+                            // Column(
+                            //   children: [
+                            //     Spacer(), // sticks buttons to bottom
                     
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: globalLeftRightPadding),
-                                  child: Row(
-                                    children: [
-                                      ElevatedButton.icon(
-                                        onPressed: () {
-                                          Navigator.pop(context); 
-                                          widget.onGetDirections();
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          backgroundColor: getColor(context, ColorType.importantButtonBackground),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(30),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          elevation: 3
-                                        ),
-                                        icon: Icon(
-                                          Icons.directions, 
-                                          color: getColor(context, ColorType.importantButtonText),
-                                          size: 20,
-                                        ), 
-                                        label: Text(
-                                          'Get Directions',
-                                          style: TextStyle(
-                                            color: getColor(context, ColorType.importantButtonText),
-                                            fontSize: 16, 
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ), 
-                                      ),
+                            //     Padding(
+                            //       padding: EdgeInsets.symmetric(horizontal: globalLeftRightPadding),
+                            //       child: Row(
+                            //         children: [
+                            //           ElevatedButton.icon(
+                            //             onPressed: () {
+                            //               Navigator.pop(context); 
+                            //               widget.onGetDirections();
+                            //             },
+                            //             style: ElevatedButton.styleFrom(
+                            //               tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
+                            //               backgroundColor: getColor(context, ColorType.importantButtonBackground),
+                            //               shape: RoundedRectangleBorder(
+                            //                 borderRadius: BorderRadius.circular(30),
+                            //               ),
+                            //               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            //               elevation: 3
+                            //             ),
+                            //             icon: Icon(
+                            //               Icons.directions, 
+                            //               color: getColor(context, ColorType.importantButtonText),
+                            //               size: 20,
+                            //             ), 
+                            //             label: Text(
+                            //               'Get Directions',
+                            //               style: TextStyle(
+                            //                 color: getColor(context, ColorType.importantButtonText),
+                            //                 fontSize: 16, 
+                            //                 fontWeight: FontWeight.w600,
+                            //               ),
+                            //             ), 
+                            //           ),
                                       
-                                      Spacer(),
+                            //           Spacer(),
                                             
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          // Read the current state
-                                          final bool currentStatus = _isFavorited ?? false;
+                            //           ElevatedButton(
+                            //             onPressed: () {
+                            //               // Read the current state
+                            //               final bool currentStatus = _isFavorited ?? false;
                                             
-                                          // Call the appropriate function
-                                          if (currentStatus){
-                                            widget.onUnFavorite(widget.stopID, widget.stopName);
-                                          } else {
-                                            widget.onFavorite(widget.stopID, widget.stopName);
-                                          }
+                            //               // Call the appropriate function
+                            //               if (currentStatus){
+                            //                 widget.onUnFavorite(widget.stopID, widget.stopName);
+                            //               } else {
+                            //                 widget.onFavorite(widget.stopID, widget.stopName);
+                            //               }
                                             
-                                          // Update the UI immediately
-                                          setState(() {
-                                            _isFavorited = !currentStatus;
-                                          });
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
-                                          shape: CircleBorder(),
-                                          shadowColor: Colors.black,
-                                          padding: EdgeInsets.zero,
-                                          minimumSize: Size(0,0),
-                                          fixedSize: Size(40,40),
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          elevation: 3
-                                        ),
-                                        child: Icon(
-                                          (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
-                                          size: 20,
-                                        ), 
-                                      ),
+                            //               // Update the UI immediately
+                            //               setState(() {
+                            //                 _isFavorited = !currentStatus;
+                            //               });
+                            //             },
+                            //             style: ElevatedButton.styleFrom(
+                            //               backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
+                            //               shape: CircleBorder(),
+                            //               shadowColor: Colors.black,
+                            //               padding: EdgeInsets.zero,
+                            //               minimumSize: Size(0,0),
+                            //               fixedSize: Size(40,40),
+                            //               tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
+                            //               elevation: 3
+                            //             ),
+                            //             child: Icon(
+                            //               (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
+                            //               color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
+                            //               size: 20,
+                            //             ), 
+                            //           ),
                     
-                                      SizedBox(width: 10,),
+                            //           SizedBox(width: 10,),
                                             
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          if (arrivingBuses.isEmpty) {
-                                            return;
-                                          }
+                            //           ElevatedButton(
+                            //             onPressed: () {
+                            //               if (arrivingBuses.isEmpty) {
+                            //                 return;
+                            //               }
 
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) {
-                                              return Dialog(
+                            //               showDialog(
+                            //                 context: context,
+                            //                 builder: (context) {
+                            //                   return Dialog(
                                                 
-                                                backgroundColor: getColor(context, ColorType.background),
+                            //                     backgroundColor: getColor(context, ColorType.background),
                                                 
                                                 
                                               
-                                                constraints: BoxConstraints(
-                                                  minWidth: 0.0,
-                                                  minHeight: 0.0,
-                                                ),
-                                                child: ReminderForm(
-                                                  stpid: widget.stopID,
+                            //                     constraints: BoxConstraints(
+                            //                       minWidth: 0.0,
+                            //                       minHeight: 0.0,
+                            //                     ),
+                            //                     child: ReminderForm(
+                            //                       stpid: widget.stopID,
                                                   
-                                                  activeRoutes: arrivingBuses
-                                                    .fold([], (xs, x) => xs.contains(x.id) ? xs : xs + [x.id]),
-                                                ),
-                                              );
-                                            }
-                                          );
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
-                                          shape: CircleBorder(),
-                                          shadowColor: Colors.black,
-                                          padding: EdgeInsets.zero,
-                                          minimumSize: Size(0,0),
-                                          fixedSize: Size(40,40),
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          elevation: 3
-                                        ),
-                                        child: Icon(
-                                          (arrivingBuses.isEmpty)? Icons.notifications_off_outlined : Icons.notifications_none,
-                                          color: getColor(context, ColorType.secondaryButtonText),
-                                          size: 20.0,
-                                        )
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                            //                       activeRoutes: arrivingBuses
+                            //                         .fold([], (xs, x) => xs.contains(x.id) ? xs : xs + [x.id]),
+                            //                     ),
+                            //                   );
+                            //                 }
+                            //               );
+                            //             },
+                            //             style: ElevatedButton.styleFrom(
+                            //               backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
+                            //               shape: CircleBorder(),
+                            //               shadowColor: Colors.black,
+                            //               padding: EdgeInsets.zero,
+                            //               minimumSize: Size(0,0),
+                            //               fixedSize: Size(40,40),
+                            //               tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
+                            //               elevation: 3
+                            //             ),
+                            //             child: Icon(
+                            //               (arrivingBuses.isEmpty)? Icons.notifications_off_outlined : Icons.notifications_none,
+                            //               color: getColor(context, ColorType.secondaryButtonText),
+                            //               size: 20.0,
+                            //             )
+                            //           ),
+                            //         ],
+                            //       ),
+                            //     ),
                     
-                                SizedBox(height: paddingBelowButtons,)
-                              ],
-                            ),
+                            //     SizedBox(height: paddingBelowButtons,)
+                            //   ],
+                            // ),
                           ],
                         ),
                       ],

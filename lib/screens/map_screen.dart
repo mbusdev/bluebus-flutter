@@ -34,7 +34,6 @@ import '../models/bus_route_line.dart';
 import '../models/journey.dart';
 import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
-import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
@@ -65,8 +64,10 @@ Future<BitmapDescriptor> resizeImage(ByteData image) async {
   final stopBytes = image;
   final stopCodec = await ui.instantiateImageCodec(
     stopBytes.buffer.asUint8List(),
-    targetWidth: 65,
-    targetHeight: 65,
+    // targetWidth: 65,
+    // targetHeight: 65,
+    targetWidth: 40,
+    targetHeight: 40
   );
   final stopFrame = await stopCodec.getNextFrame();
   final stopData = await stopFrame.image.toByteData(
@@ -91,7 +92,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(Loadpoint("Initializing...", 0));
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
-  bool? _userLocVisible;
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
   Set<Polyline> _displayedPolylines = {};
@@ -563,8 +563,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         try {
           final codec = await ui.instantiateImageCodec(
             imageBytes,
-            targetWidth: 125,
-            targetHeight: 125,
+            // targetWidth: 125,
+            targetWidth: 20,
+            targetHeight: 20,
+            // targetHeight: 125,
           );
           final frame = await codec.getNextFrame();
           final data = await frame.image.toByteData(
@@ -999,16 +1001,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _onCameraIdle() async {
-    // check if user location is within viewport bounds
-    LatLngBounds? viewportBounds = await _mapController?.getVisibleRegion();
-    if (viewportBounds != null) {
-      Position? pos = await _getLastKnownLocation();
-      if (pos != null) {
-        _userLocVisible = !viewportBounds.contains(
-          LatLng(pos.latitude, pos.longitude)
-        );
-      }
-    }
+    // Camera idle callback - can be used for future functionality
   }
 
   // Create a bus marker from a Bus model
@@ -1076,7 +1069,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             if (searchCoordinates != null) {
               if (isBusStop) {
                 _centerOnLocation(
-                  false,
                   searchCoordinates.latitude,
                   searchCoordinates.longitude,
                 );
@@ -1088,7 +1080,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 );
               } else {
                 _centerOnLocation(
-                  false,
                   searchCoordinates.latitude,
                   searchCoordinates.longitude,
                 );
@@ -1434,18 +1425,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           }
         }
 
-        // If still unresolved and this is a virtual origin, attempt to use device location
-        if (startLatLng == null && leg.originID == 'VIRTUAL_ORIGIN') {
-          try {
-            final pos = await Geolocator.getCurrentPosition().timeout(
-              Duration(seconds: 3),
-            );
-            startLatLng = LatLng(pos.latitude, pos.longitude);
-          } catch (e) {
-            // ignore GPS resolution failure
-          }
-        }
-
         if (startLatLng == null && legIndex > 0) {
           // Try to get end location from previous leg
           final prevLeg = journey.legs[legIndex - 1];
@@ -1466,18 +1445,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               _lastJourneyRequestOrigin!['lat']!,
               _lastJourneyRequestOrigin!['lon']!,
             );
-          }
-        }
-
-        // If still unresolved and this is a virtual destination, attempt device location fallback
-        if (endLatLng == null && leg.destinationID == 'VIRTUAL_DESTINATION') {
-          try {
-            final pos = await Geolocator.getCurrentPosition().timeout(
-              Duration(seconds: 3),
-            );
-            endLatLng = LatLng(pos.latitude, pos.longitude);
-          } catch (e) {
-            print('Could not resolve VIRTUAL_DESTINATION via device GPS: $e');
           }
         }
 
@@ -1803,94 +1770,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ).then((_) {});
   }
   
-  // lighter function for when we need to get location
-  // over and over without constantly doing a full
-  // hardware gps lock
-  Future<Position?> _getLastKnownLocation() async {
-    try {
-      // Check if location services are enabled on the device
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location services are disabled'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return null;
-      }
-
-      // Check and request location permissions if needed
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location permission denied'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return null;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location permissions are denied. Please enable them in settings'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return null;
-      }
-      
-      Position? position = await Geolocator.getLastKnownPosition();
-      return position;
-
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error getting location: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-
-    return null;
-  }
-
-  Future<void> _centerOnLocation(
-    bool userLocation, [
-    double lat = 0,
-    double long = 0,
-  ]) async {
-    // at first create a default position. User location can overwrite later if needed
-    Position position = Position(
-      longitude: long,
-      latitude: lat,
-      timestamp: DateTime.now(),
-      accuracy: 0,
-      altitude: 0,
-      altitudeAccuracy: 0,
-      heading: 0,
-      headingAccuracy: 0,
-      speed: 0,
-      speedAccuracy: 0,
-    );
-
-    if (userLocation) {
-      Position? pos = await _getLastKnownLocation();
-      if (pos != null) position = pos;
-    }
-
-    // Animate the map camera to the user's location
+  Future<void> _centerOnLocation(double lat, double long) async {
     if (_mapController != null) {
       await _mapController!.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
-            target: LatLng(position.latitude, position.longitude),
-            zoom: userLocation ? 15.0 : 17.0,
+            target: LatLng(lat, long),
+            zoom: 17.0,
           ),
         ),
       );
@@ -2019,7 +1905,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     onMapCreated: _onMapCreated,
                     onCameraMove: _onCameraMove,
                     onCameraIdle: _onCameraIdle,
-                    myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: true,
                     mapToolbarEnabled: true,
@@ -2111,76 +1996,76 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             // not showing journey, show usual header
                           :DecoratedBox(
                             decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isDarkMode(context) ? Colors.black.withAlpha(50) : Colors.white.withAlpha(100),
-                                  spreadRadius: 50,
-                                  blurRadius: 50,
-                                )
-                              ]
+                              // boxShadow: [
+                              //   BoxShadow(
+                              //     color: isDarkMode(context) ? Colors.black.withAlpha(50) : Colors.white.withAlpha(100),
+                              //     spreadRadius: 50,
+                              //     blurRadius: 50,
+                              //   )
+                              // ]
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Container( // group maize and bus together on the left
-                                  child: Row(children: [
-                                    Text(
-                                      'maize',
-                                      style: TextStyle(
-                                        color: maizeBusYellow,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 30
-                                      ),
-                                    ),
-                                    Text(
-                                      'bus',
-                                      style: TextStyle(
-                                        color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 30,
-                                      ),
-                                    ),
-                                  ],),
-                                ),
+                                // Container( // group maize and bus together on the left
+                                //   child: Row(children: [
+                                //     Text(
+                                //       'maize',
+                                //       style: TextStyle(
+                                //         color: maizeBusYellow,
+                                //         fontWeight: FontWeight.w800,
+                                //         fontSize: 30
+                                //       ),
+                                //     ),
+                                //     Text(
+                                //       'bus',
+                                //       style: TextStyle(
+                                //         color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,
+                                //         fontWeight: FontWeight.w800,
+                                //         fontSize: 30,
+                                //       ),
+                                //     ),
+                                //   ],),
+                                // ),
               
-                                SizedBox(
-                                  width: 45,
-                                  height: 45,
-                                  child: FittedBox(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          // switch to settings menu
-                                          // with the MaterialPagesRoute animation
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute<void>(
-                                              builder: (context) => Settings(),
-                                            ),
-                                          );
-                                        },
-                                        heroTag: 'settings_fab',
-                                        elevation: 0,
-                                        child: Icon(
-                                          Icons.menu,
-                                          color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                // SizedBox(
+                                //   width: 45,
+                                //   height: 45,
+                                //   child: FittedBox(
+                                //     child: DecoratedBox(
+                                //       decoration: BoxDecoration(
+                                //         boxShadow: [
+                                //           BoxShadow(
+                                //             color: getColor(context, ColorType.mapButtonShadow),
+                                //             blurRadius: 10,
+                                //             offset: Offset(0, 6)
+                                //           )
+                                //         ],
+                                //         borderRadius: BorderRadius.circular(25)
+                                //       ),
+                                //       child: FloatingActionButton(
+                                //         onPressed: () async {
+                                //           // switch to settings menu
+                                //           // with the MaterialPagesRoute animation
+                                //           Navigator.push(
+                                //             context,
+                                //             MaterialPageRoute<void>(
+                                //               builder: (context) => Settings(),
+                                //             ),
+                                //           );
+                                //         },
+                                //         heroTag: 'settings_fab',
+                                //         elevation: 0,
+                                //         child: Icon(
+                                //           Icons.menu,
+                                //           color: getColor(context, ColorType.mapButtonIcon),
+                                //           size: 28,
+                                //         ),
+                                //       ),
+                                //     ),
+                                //   ),
+                                // ),
                               ],
                             )
                           ),
@@ -2256,41 +2141,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       ),
                                     ),
                       
-                                    // location button
-                                    AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 250),
-                                      child: !(_userLocVisible == null || _userLocVisible!) ?
-                                      // if not needed, sized box
-                                      SizedBox.shrink():
-                                      // otherwise, normal button
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: getColor(context, ColorType.mapButtonShadow).withAlpha(50),
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2)
-                                            )
-                                          ],
-                                          borderRadius: BorderRadius.circular(25)
-                                        ),
-                                        child: FloatingActionButton.small(
-                                          onPressed: () {
-                                            _centerOnLocation(true);
-                                          },
-                                          heroTag: 'location_fab',
-                                          backgroundColor: getColor(context, ColorType.mapButtonSecondary),
-                                          elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(56),
-                                          ),
-                                          child: Icon(
-                                            Icons.my_location,
-                                            color: getColor(context, ColorType.mapButtonPrimary),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
                                   ],
                                 )
                               ],
@@ -2305,7 +2155,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             children: [
                               DecoratedBox(
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(56)
+                                  borderRadius: BorderRadius.circular(16)
                                 ),
                                 child: ElevatedButton.icon(
                                   onPressed: _showJourneySheetOnReopen,
@@ -2315,7 +2165,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       borderRadius: BorderRadius.circular(56),
                                     ),
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
+                                      horizontal: 0,
                                       vertical: 8,
                                     ),
                                     elevation: 1,
@@ -2375,14 +2225,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           
                           // else, main buttons row
                           : Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                            
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              
                               children: [
                                 
                                 // routes
                                 SizedBox(
-                                  width: 45,
-                                  height: 45,
+                                  width: 25,
+                                  height: 25,
                                   child: FittedBox(
                                     child: DecoratedBox(
                                       decoration: BoxDecoration(
@@ -2407,19 +2257,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         child: Icon(
                                           Icons.directions_bus,
                                           color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
+                                          size: 30,
                                         ),
                                       ),
                                     )
                                   ),
                                 ),
                             
-                                SizedBox(width: 12),
+                                SizedBox(width: 5),
                 
                                 // favorites
                                 SizedBox(
-                                  width: 45,
-                                  height: 45,
+                                  width: 25,
+                                  height: 25,
                                   child: FittedBox(
                                     child: DecoratedBox(
                                       decoration: BoxDecoration(
@@ -2451,13 +2301,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   ),
                                 ),
                 
-                                SizedBox(width: 12),
+                                SizedBox(width: 5),
                 
                                 
                                 // search
-                                Expanded( // stretch width
-                                  child: SizedBox(
-                                    height: 45,
+                                // Expanded( // stretch width
+                                  // child: 
+                                  SizedBox(
+                                    width: 25,
+                                    height: 25,
                                     child: DecoratedBox(
                                       decoration: BoxDecoration(
                                         boxShadow: [
@@ -2469,36 +2321,36 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         ],
                                         borderRadius: BorderRadius.circular(25)
                                       ),
-                                      child: ElevatedButton.icon(
+                                      child: FloatingActionButton(
                                         onPressed: () async {
                                           if (canVibrate && Platform.isIOS){
                                             await Haptics.vibrate(HapticsType.light);
                                           }
                                           _showSearchSheet();
                                         },
-                                        style: ElevatedButton.styleFrom(
-                                          alignment: Alignment.centerLeft,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 13,
-                                            vertical: 8,
-                                          ),
-                                        ),
-                                        icon: Icon(
+                                        // style: ElevatedButton.styleFrom(
+                                        //   alignment: Alignment.centerLeft,
+                                        //   padding: const EdgeInsets.symmetric(
+                                        //     horizontal: 13,
+                                        //     vertical: 8,
+                                        //   ),
+                                        // ),
+                                        child: Icon(
                                           Icons.search_sharp,
                                           color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
+                                          size: 15,
                                         ),
-                                        label: Text(
-                                          "where to?",
-                                          style: TextStyle(
-                                            color: getColor(context, ColorType.mapButtonIcon).withAlpha(214),
-                                            fontSize: 18,
-                                          )
-                                        ),
+                                        // label: Text(
+                                        //   "where to?",
+                                        //   style: TextStyle(
+                                        //     color: getColor(context, ColorType.mapButtonIcon).withAlpha(214),
+                                        //     fontSize: 18,
+                                        //   )
+                                        // ),
                                       ),
                                     ),
                                   ),
-                                ),
+                                // ),
                               ],
                             ),
                     ],

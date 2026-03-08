@@ -1,17 +1,13 @@
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import '../models/journey.dart';
 import '../services/journey_repository.dart';
 import '../widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import '../constants.dart';
 
-class LocationError implements Exception {
-  const LocationError();
-}
-class NotInAnnArborError implements Exception {
-  const NotInAnnArborError();
+class OriginRequiredError implements Exception {
+  const OriginRequiredError();
 }
 
 class DirectionsSheet extends StatefulWidget {
@@ -54,25 +50,14 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
   Future<List<Journey>> _loadJourneys() async {
     double originLat, originLon;
 
-    if (widget.useOrigin) {
+    if (widget.useOrigin && widget.origin != null) {
+      originLat = widget.origin!['lat']!;
+      originLon = widget.origin!['lon']!;
+    } else if (widget.origin != null) {
       originLat = widget.origin!['lat']!;
       originLon = widget.origin!['lon']!;
     } else {
-      Position? position;
-      try {
-        position = await Geolocator.getCurrentPosition();
-      } catch(e){
-        throw const LocationError();
-      }
-      // check if you're in ann arbor
-      if ((position.latitude > 42.238948) && (position.latitude < 42.327619) &&
-          (position.longitude > -83.793253) && (position.longitude < -83.680937) ){
-        // we good
-      } else {
-        throw const NotInAnnArborError();
-      }
-      originLat = position.latitude;
-      originLon = position.longitude;
+      throw const OriginRequiredError();
     }
 
     try {
@@ -299,17 +284,11 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
 
                 Navigator.of(context).pop();
 
-                if (journeyload.error is LocationError) {
-                showMaizebusOKDialog(
-                  contextIn: context,
-                  title: const Text("Location Error"),
-                  content: const Text("Please make sure you have location permissions enabled in settings before trying to get directions"),
-                );
-                } else if (journeyload.error is NotInAnnArborError) {
+                if (journeyload.error is OriginRequiredError) {
                   showMaizebusOKDialog(
                     contextIn: context,
-                    title: const Text("Not in Ann Arbor"),
-                    content: const Text("Please make sure you are in Ann Arbor before trying to get on-campus bus directions"),
+                    title: const Text("Origin Required"),
+                    content: const Text("Please select a starting location for directions"),
                   );
                 } else {
                   showMaizebusOKDialog(
