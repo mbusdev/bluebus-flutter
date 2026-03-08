@@ -29,15 +29,13 @@ class _ReminderWidgetsState extends State<ReminderWidgets> {
   void initState() {
     super.initState();
     IncomingBusReminderService.onReminderStateChange = () {
-      setState(() {
-        _resetDataFuture();
-      });
+      _resetDataFuture();
     };
-    lifecycleListener = AppLifecycleListener(onResume: () {
-      setState(() {
-        _resetDataFuture();  
-      });
-    });
+    lifecycleListener = AppLifecycleListener(
+      onResume: () {
+        _resetDataFuture();
+      },
+    );
   }
 
   @override
@@ -52,11 +50,15 @@ class _ReminderWidgetsState extends State<ReminderWidgets> {
     if (dataFuture == null) {
       _resetDataFuture();
     }
-    dataFuture ??= IncomingBusReminderService.getActiveRemindersNoSetup();
+    setState(() {
+      dataFuture ??= IncomingBusReminderService.getActiveRemindersNoSetup();
+    });
   }
 
   void _resetDataFuture() {
-    dataFuture = IncomingBusReminderService.getActiveRemindersNoSetup();
+    setState(() {
+      dataFuture = IncomingBusReminderService.getActiveRemindersNoSetup();
+    });
   }
 
   @override
