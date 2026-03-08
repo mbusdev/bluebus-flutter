@@ -661,8 +661,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     int h = 1;
     for (final r in routes) {
       h = 31 * h + r.routeId.hashCode;
-      // include geometry hash so changes to polyline points are detected
-      h = 31 * h + r.points.hashCode;
+      // include geometry hash computed over element values
+      h = 31 * h + Object.hashAll(r.points);
       h = 31 * h + (r.color?.value ?? 0);
     }
     return h;
@@ -676,7 +676,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     // Evict stale cached overlays for routes that changed
     final newKeys = routes
-        .map((r) => '${r.routeId}_${r.points.hashCode}')
+        .map((r) => '${r.routeId}_${Object.hashAll(r.points)}')
         .toSet();
     final newRouteIds = routes.map((r) => r.routeId).toSet();
 
@@ -749,7 +749,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _cacheRouteOverlays(List<BusRouteLine> routes) {
     for (final r in routes) {
       // Create unique key for each route variant
-      final routeKey = '${r.routeId}_${r.points.hashCode}';
+      final routeKey = '${r.routeId}_${Object.hashAll(r.points)}';
       // Use backend color if available, otherwise fallback to service
       final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
 
@@ -765,7 +765,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         _routeStopMarkers[routeKey] = r.stops
             .map(
               (stop) => Marker(
-                markerId: MarkerId('stop_${stop.id}_${r.points.hashCode}'),
+                markerId: MarkerId(
+                  'stop_${stop.id}_${Object.hashAll(r.points)}',
+                ),
                 position: stop.location,
                 flat: true,
                 icon: _favoriteStops.contains(stop.id)
@@ -1030,7 +1032,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _refreshAllMarkers() {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
-    _refreshCachedStopMarkers();
+    _refreshCachedRouteOverlays();
     _refreshRouteBusIcons();
     _updateDisplayedRoutes();
     _updateDisplayedBuses(busProvider.buses);
@@ -1065,7 +1067,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     });
   }
 
-  void _refreshCachedStopMarkers() {
+  void _refreshCachedRouteOverlays() {
     // Clear cached stop markers so they'll be recreated with the new icons
     _routeStopMarkers.clear();
     // Clear cached polylines too so they will be rebuilt with the latest geometry
