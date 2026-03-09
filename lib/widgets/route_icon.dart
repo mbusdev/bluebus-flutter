@@ -1,15 +1,6 @@
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/material.dart';
 
-/// lets you check if a bus is the ride (checks if id is numeric)
-bool isRide(String? s) {
-  if (s != null && int.tryParse(s) != null) {
-    // busID is numeric, so it's a ride bus
-    return true;
-  } 
-  return false;
-}
-
 enum RouteIconType { normal, outlined, normalWithWhiteBorder }
 
 class RouteIcon extends StatelessWidget {
@@ -78,21 +69,14 @@ class RouteIcon extends StatelessWidget {
       RouteIconType.normalWithWhiteBorder => Border.all(color: Color(0xFFFFFFFF), width: 1.0),
     };
 
-    return Container( // 45, 35
-      width: isRide(rtid)? sizeWithBorder * 1.125 : sizeWithBorder,
-      height: isRide(rtid)? sizeWithBorder * 0.875 : sizeWithBorder,
-      decoration: isRide(rtid)? 
-        BoxDecoration(
-          shape: BoxShape.rectangle,
-          borderRadius: BorderRadius.circular(sizeWithBorder/2),
-          color: bgColor,
-          border: border,
-        )
-        : BoxDecoration(
-            shape: BoxShape.circle,
-            color: bgColor,
-            border: border,
-          ),
+    return Container(
+      width: sizeWithBorder,
+      height: sizeWithBorder,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: bgColor,
+        border: border,
+      ),
       alignment: Alignment.center,
       child: MediaQuery(
         data: MediaQuery.of(

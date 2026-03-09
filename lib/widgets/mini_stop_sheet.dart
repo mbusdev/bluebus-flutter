@@ -21,15 +21,6 @@ String format(String text) {
   return text[0].toUpperCase() + text.substring(1).toLowerCase();
 }
 
-/// lets you check if a bus is the ride (checks if id is numeric)
-bool isRide(String? s) {
-  if (s != null && int.tryParse(s) != null) {
-    // busID is numeric, so it's a ride bus
-    return true;
-  } 
-  return false;
-}
-
 class MiniStopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
@@ -127,20 +118,12 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                             Row(
                               children: [
                                 Container(
-                                  width: isRide(bus.id) ? 45 : 40,
-                                  height: isRide(bus.id) ? 35 : 40, 
-                                  decoration: isRide(bus.id) ? 
-                                    // ride icon
-                                    BoxDecoration(
-                                      shape: BoxShape.rectangle,
-                                      borderRadius: BorderRadius.circular(20),
-                                      color: RouteColorService.getRouteColor(bus.id),
-                                    ) :
-                                    // michigan icon
-                                    BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: RouteColorService.getRouteColor(bus.id),
-                                    ),
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: RouteColorService.getRouteColor(bus.id), 
+                                  ),
                                   alignment: Alignment.center,
                                   child: MediaQuery(
                                     data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),

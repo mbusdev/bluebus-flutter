@@ -2563,124 +2563,75 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ), // The text on the right
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                )
-                              ],
-                            ),
-                          )
-                          : SizedBox.shrink(),
-                              
-                      // if showing journey, show close and reopen button
-                      (_journeyOverlayActive)
-                          ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(56)
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: _showJourneySheetOnReopen,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.importantButtonBackground),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(56),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 8,
-                                    ),
-                                    elevation: 1,
-                                  ),
-                                  icon: Icon(
-                                    color: getColor(context, ColorType.importantButtonText),
-                                    Icons.keyboard_arrow_up,
-                                    size: 18,
-                                  ), // The icon on the left
-                                  label: Text(
-                                    'Steps',
-                                    style: TextStyle(
-                                      color: getColor(context, ColorType.importantButtonText),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),                                    
-                                  ), // The text on the right
-                                ),
-                              ),
-                  
-                              SizedBox(width: 20,),
-                  
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(56)
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: _clearJourneyOverlays,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: getColor(context, ColorType.secondaryButtonBackground),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(56),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 8,
-                                    ),
-                                    elevation: 1,
-                                  ),
-                                  icon: Icon(
-                                    Icons.close,
-                                    color: getColor(context, ColorType.secondaryButtonText),
-                                    size: 18,
-                                  ), // The icon on the left
-                                  label: Text(
-                                    'Close',
-                                    style: TextStyle(
-                                      color: getColor(context, ColorType.secondaryButtonText),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ), // The text on the right
-                                ),
-                              ),
-                            ],
-                          )
-                          
-                          // else, main buttons row
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                            
-                              children: [
-                                
-                                // routes
-                                SizedBox(
-                                  width: 45,
-                                  height: 45,
-                                  child: FittedBox(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          if (canVibrate && Platform.isIOS){
-                                            await Haptics.vibrate(HapticsType.light);
-                                          }
-                                          _showBusRoutesModal(busProvider.routes,);
-                                        },
-                                        heroTag: 'routes_fab',
-                                        elevation: 0, // handle shadow ourselves
-                                        child: Icon(
-                                          Icons.directions_bus,
-                                          color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
+                                    ],
+                                  )
+                                // else, main buttons row
+                                : Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+
+                                    children: [
+                                      // routes
+                                      SizedBox(
+                                        width: 45,
+                                        height: 45,
+                                        child: FittedBox(
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType.mapButtonShadow,
+                                                  ),
+                                                  blurRadius: 10,
+                                                  offset: Offset(0, 6),
+                                                ),
+                                              ],
+                                              borderRadius:
+                                                  BorderRadius.circular(25),
+                                            ),
+                                            child: FloatingActionButton(
+                                              onPressed: () async {
+                                                if (canVibrate &&
+                                                    Platform.isIOS) {
+                                                  await Haptics.vibrate(
+                                                    HapticsType.light,
+                                                  );
+                                                }
+
+                                                // TODO: delete this but first make sure it doesn't break
+                                                // anything but i'm pretty sure it won't because its
+                                                // redundant
+                                                if (busProvider
+                                                    .routes
+                                                    .isEmpty) {
+                                                  await busProvider
+                                                      .loadRoutes();
+                                                  _updateAvailableRoutes(
+                                                    busProvider.routes,
+                                                  );
+                                                  _cacheRouteOverlays(
+                                                    busProvider.routes,
+                                                  );
+                                                }
+
+                                                _showBusRoutesModal(
+                                                  busProvider.routes,
+                                                );
+                                              },
+                                              heroTag: 'routes_fab',
+                                              elevation:
+                                                  0, // handle shadow ourselves
+                                              child: Icon(
+                                                Icons.directions_bus,
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.mapButtonIcon,
+                                                ),
+                                                size: 28,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
 
