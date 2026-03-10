@@ -3,6 +3,7 @@ import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/dialog.dart';
+import 'package:bluebus/widgets/refresh_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../constants.dart';
@@ -518,37 +519,9 @@ class _StopSheetState extends State<StopSheet> {
                                                         ),
                                                       ),
                                                       SizedBox(width: 5),
-                                                      InkWell(
-                                                        customBorder: CircleBorder(),
-                                                        onTap: () {
-                                                          _refreshData();
-                                                        },
-                                                        child: SizedBox(
-                                                          width: 30,
-                                                          height: 30,
-                                                          child:
-                                                              (snapshot.connectionState ==
-                                                                  ConnectionState.waiting)
-                                                              ? Align( // For some bizarre reason this is required to get the CircularProgressIndicator to conform to the size of the ConstrainedBox
-                                                                  alignment: Alignment.center,
-                                                                  child: ConstrainedBox(
-                                                                    constraints:
-                                                                        BoxConstraints.tightFor(
-                                                                          width: 15,
-                                                                          height: 15,
-                                                                        ),
-                                                                    child:
-                                                                        CircularProgressIndicator(
-                                                                          color: getColor(
-                                                                            context,
-                                                                            ColorType.opposite,
-                                                                          ),
-                                                                          strokeWidth: 2.5,
-                                                                        ),
-                                                                  ),
-                                                                )
-                                                              : Icon(Icons.refresh),
-                                                        ),
+                                                      RefreshButton(
+                                                        loading: snapshot.connectionState == ConnectionState.waiting,
+                                                        onTap: _refreshData
                                                       ),
                                                     ],
                                                   ),
