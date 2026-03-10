@@ -184,8 +184,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           }
         };
         _busProviderRef?.addListener(_busProviderListener!);
-      } catch (e) {
-        // Provider not available yet; ignore
+      } catch (e, stackTrace) {
+        // Provider not available yet or another error occurred; log for diagnostics
+        debugPrint(
+          'Error obtaining BusProvider or registering route listener in MapScreen.initState: $e',
+        );
+        debugPrint(stackTrace.toString());
       }
     });
   }
@@ -650,7 +654,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (_busProviderRef != null && _busProviderListener != null) {
       try {
         _busProviderRef!.removeListener(_busProviderListener!);
-      } catch (e) {}
+      } catch (e, stackTrace) {
+        debugPrint(
+          'Error removing _busProviderListener in MapScreen.dispose: $e',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
     }
     _mapController?.dispose();
     super.dispose();
@@ -670,23 +679,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Called when provider reports routes changed
   void _handleRoutesUpdated(List<BusRouteLine> routes) {
-    // debugPrint(
-    //   '[RouteUpdate] _handleRoutesUpdated called with ${routes.length} routes',
-    // );
-
     // Evict stale cached overlays for routes that changed
     final newKeys = routes
         .map((r) => '${r.routeId}_${Object.hashAll(r.points)}')
         .toSet();
     final newRouteIds = routes.map((r) => r.routeId).toSet();
 
-    //final oldPolyKeys = _routePolylines.keys.toList(); // used for debugging to verify only expected keys are evicted
-    //final oldStopKeys = _routeStopMarkers.keys.toList(); // used for debugging to verify only expected keys are evicted
-
     _routePolylines.removeWhere((key, _) {
       for (final id in newRouteIds) {
         if (key.startsWith('${id}_') && !newKeys.contains(key)) {
-          // debugPrint('[RouteUpdate] EVICTING stale polyline: $key');
           return true;
         }
       }
@@ -696,18 +697,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _routeStopMarkers.removeWhere((key, _) {
       for (final id in newRouteIds) {
         if (key.startsWith('${id}_') && !newKeys.contains(key)) {
-          // debugPrint('[RouteUpdate] EVICTING stale stop markers: $key');
           return true;
         }
       }
       return false;
     });
-
-    // debugPrint('[RouteUpdate] Polyline keys before: $oldPolyKeys');
-    // debugPrint(
-    //   '[RouteUpdate] Polyline keys after:  ${_routePolylines.keys.toList()}',
-    // );
-    // debugPrint('[RouteUpdate] New keys to cache:    $newKeys');
 
     // Update available routes and cached overlays
     _updateAvailableRoutes(routes);
