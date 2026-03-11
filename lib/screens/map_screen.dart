@@ -2216,7 +2216,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                       // reminder widget
                       SizedBox(height: 30.0,),
-                      _journeyOverlayActive
+                      _journeyOverlayActive || _isOffline
                         ? SizedBox.shrink()
                         : SizedBox(
                           height: 0,
