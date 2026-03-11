@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:bluebus/models/bus.dart';
@@ -18,9 +19,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_map_tiles_pmtiles/vector_map_tiles_pmtiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' hide TileLayer;
 import 'package:google_maps_flutter/google_maps_flutter.dart' as GMaps;
 import '../constants.dart';
+import 'package:path_provider/path_provider.dart';
+
 
 class UniversalMapController {
   UniversalMapWidgetState? _widget;
@@ -57,7 +61,7 @@ class UniversalMapController {
     // When this function is called, store selectedRoutes to a state variable
     // and change the stored set of routesToDisplay and stopsToDisplay
     // Also filter out stops
-    debugPrint("Setting route filter!");
+    debugPrint("Setting route filter! Got ${selectedRoutes.length} routes");
     _widget?.selectedRoutes = selectedRoutes;
     _widget?.regeneratePolylines();
     _widget?.regenerateStaticMarkers();
@@ -157,12 +161,16 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
     });
   }
 
+  late final Future<PmTilesVectorTileProvider> _futureLocalTileProvider;
+
   @override
   void initState() {
     widget.universalController.connectToWidget(this);
     loadSelectedRoutesFromStorage(() {
       loadCustomMarkers();
     });
+    
+    _futureLocalTileProvider = _loadLocalTileProvider();
     
     StyleReader(
       uri:
@@ -176,19 +184,35 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
 
     super.initState();
   }
+
+  Future<PmTilesVectorTileProvider> _loadLocalTileProvider() async {
+    // TODO: Save this to storage so this only needs to run once per install.
+    // Right now it's re-writing the map data to cache every time the app loads
+    final bytes = await rootBundle.load('assets/cache.pmtiles');
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/cache.pmtiles');
+    await file.writeAsBytes(bytes.buffer.asUint8List());
+    return await PmTilesVectorTileProvider.fromSource(file.path);
+  }
+
+  
   
   void setBusRouteLines(List<BusRouteLine> allLinesIn) {
     _allLines = allLinesIn;
   }
 
   void regeneratePolylines() {
+    debugPrint("regeneratePolylines() call, currently have ${selectedRoutes.length} routes selected");
+    debugPrint("    allLines has ${_allLines.length} lines");
     // Convert _allLines, filtered with selectedRoutes, into polylinesToDisplay
     // Future: Also incorporate currently displayed journey, if the user is in navigation mode
     setState(() {
       // polylinesToDisplay.clear();
       new_polylinesToDisplay.clear();
       _allLines.forEach((BusRouteLine line) {
+        // debugPrint(selectedRoutes.first);
         if (selectedRoutes.contains(line.routeId)) {
+          // debugPrint("Route should be shown!!");
           final routeKey = '${line.routeId}_${line.points.hashCode}';
           final routeColor = line.color ?? RouteColorService.getRouteColor(line.routeId);
           
@@ -233,11 +257,18 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
                 point: LatLongNew.LatLng(stop.location.latitude, stop.location.longitude),
                 width: 20,
                 height: 20,
-                child: SizedBox(
-                  width: 2.0,
-                  height: 2.0,
-                  child: Image.asset("assets/bus_stop.png", width: 2.0, height: 2.0)
+                child: GestureDetector(
+                  onTap: () {
+                    widget.onStopClicked(stop);
+                  },
+                  child: SizedBox(
+                    width: 2.0,
+                    height: 2.0,
+                    child: Image.asset("assets/bus_stop.png", width: 2.0, height: 2.0)
+                  ),
                 )
+                
+                
                 
                  
               )
@@ -308,31 +339,67 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("Is dark mode? ${isDarkMode(context)}");
     return RepaintBoundary(
-      child: (style != null) ? FlutterMap(
-        options: MapOptions(
-          initialCenter: widget.initialCenter,
-          initialZoom: 13.0
-        ),
-        children: [
-          // TileLayer( // Bring your own tiles
-          //   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // For demonstration only
-          //   userAgentPackageName: 'com.maizebus.app'/*'com.example.app'*/, // Add your app identifier
-          //   // And many more recommended properties!
-          // ),
-          
-          VectorTileLayer(
-            tileProviders: style!.providers,
-            theme: style!.theme,
-            tileOffset: TileOffset.DEFAULT,
-            // layerMode: VectorTileLayerMode.raster,
-          ),
-          PolylineLayer(
-            polylines: new_polylinesToDisplay,
-          ),
-          MarkerLayer(markers: new_staticMarkersToDisplay)
-        ],
-      ) : Text("No style (yet!)")
+      child: (style != null) ? 
+      
+      FutureBuilder<PmTilesVectorTileProvider>(
+        future: _futureLocalTileProvider,
+        builder: (BuildContext context, AsyncSnapshot<PmTilesVectorTileProvider> snapshot) {
+          if (snapshot.hasError) return Text("Error: ${snapshot.error}");
+          if (!snapshot.hasData) return Text("Not ready yet");
+          return FlutterMap(
+            options: MapOptions(
+              initialCenter: widget.initialCenter,
+              initialZoom: 13.0,
+              maxZoom: 18,
+              backgroundColor: isDarkMode(context) ? Colors.black : Colors.white,
+              interactionOptions: InteractionOptions(
+                enableMultiFingerGestureRace: true,
+                rotationThreshold: 20.0,
+              )
+            ),
+            children: [
+              // TileLayer( // Bring your own tiles
+              //   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // For demonstration only
+              //   userAgentPackageName: 'com.maizebus.app'/*'com.example.app'*/, // Add your app identifier
+              //   // And many more recommended properties!
+              // ),
+
+              // isDarkMode(context) ?
+              VectorTileLayer(
+                tileProviders: TileProviders({
+                  'protomaps': snapshot.data!
+                }),
+                theme: ProtomapsThemes.lightV4(logger: const Logger.console()),
+                // TODO: Figure out how to erase the cache for switching between light and dark modes
+                layerMode: VectorTileLayerMode.raster,
+              ),
+                // ) :
+                // VectorTileLayer(
+                //   tileProviders: TileProviders({
+                //     'protomaps': snapshot.data!
+                //   }),
+                //   theme: ProtomapsThemes.lightV4(logger: const Logger.console()),
+                //   layerMode: VectorTileLayerMode.raster,
+                // ),
+              
+              // VectorTileLayer(
+              //   tileProviders: style!.providers,
+              //   theme: style!.theme,
+              //   tileOffset: TileOffset.DEFAULT,
+              //   // layerMode: VectorTileLayerMode.raster,
+              // ),
+              PolylineLayer(
+                polylines: new_polylinesToDisplay,
+              ),
+              MarkerLayer(markers: new_staticMarkersToDisplay),
+            ],
+          );
+        }
+      )
+      
+       : Text("No style (yet!)")
     );
   }
 

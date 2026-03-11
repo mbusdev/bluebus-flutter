@@ -277,6 +277,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _updateAvailableRoutes(busProvider.routes);
     _cacheRouteOverlays(busProvider.routes);
 
+    _universalController.setBusRouteLines(busProvider.routes);
+
     // update the map with previously selected routes.
     if (_selectedRoutes.isNotEmpty) {
       _updateDisplayedRoutes();
@@ -1078,6 +1080,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           availableRoutes: _availableRoutes,
           initialSelectedRoutes: _selectedRoutes,
           onApply: (Set<String> newSelection) async {
+            debugPrint("onApply!");
+
+            _universalController.setRouteFilter(newSelection);
+
             if (newSelection.difference(_selectedRoutes).isNotEmpty ||
                 _selectedRoutes.difference(newSelection).isNotEmpty) {
               setState(() {
@@ -1968,11 +1974,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("Rebuilding...");
     // Only update bus markers when buses change
-    final busProvider = Provider.of<BusProvider>(context);
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (busProvider.buses.isNotEmpty) {
-        _updateDisplayedBuses(busProvider.buses);
+        // _updateDisplayedBuses(busProvider.buses); // This was causing a build loop
       }
     });
 
@@ -2039,7 +2046,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                 UniversalMapWidget(
                   universalController: _universalController,
-                  onStopClicked: (BusStop stop) {},
+                  onStopClicked: (BusStop stop) {
+                    _showStopSheet(stop.id, stop.name, stop.location.latitude, stop.location.longitude);
+                  },
                   onBusClicked: (Bus b) {}
                   ),
             
