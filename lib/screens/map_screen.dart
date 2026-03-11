@@ -2138,7 +2138,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       ),
                                     ),
                                     Text(
-                                      'bus2',
+                                      'bus',
                                       style: TextStyle(
                                         color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,
                                         fontWeight: FontWeight.w800,
@@ -2171,30 +2171,41 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
 
                                         (NEW_BUTTON_SHOW_TIME.isBefore(DateTime.now()) && NEW_BUTTON_HIDE_TIME.isAfter(DateTime.now())) ? 
-                                        FloatingActionButton(
-                                          onPressed: () async {
-                                            // switch to settings menu
-                                            // with the MaterialPagesRoute animation
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute<void>(
-                                                builder: (context) => NewFeaturesScreen(),
-                                              ),
-                                            );
-                                          },
 
-                                          // final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-10 0:00:00Z");
-                                          // final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-16 0:00:00Z");
-                                          heroTag: 'new_fab',
-                                          elevation: 0,
-                                          child: Text(
-                                            "New!",
-                                            style: TextStyle(
-                                              color: getColor(context, ColorType.mapButtonIcon),
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18.0)
-                                          ),
-                                        ) : SizedBox.shrink()
+
+                                          CustomPaint(
+                                            foregroundPainter: ProgressCirclePainter(
+                                              startTime: NEW_BUTTON_SHOW_TIME,
+                                              endTime: NEW_BUTTON_HIDE_TIME,
+                                              currentTime: DateTime.now()
+                                            ),
+                                            child: FloatingActionButton(
+                                              onPressed: () async {
+                                                // switch to settings menu
+                                                // with the MaterialPagesRoute animation
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute<void>(
+                                                    builder: (context) => NewFeaturesScreen(),
+                                                  ),
+                                                );
+                                              },
+
+                                              // final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-10 0:00:00Z");
+                                              // final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-16 0:00:00Z");
+                                              heroTag: 'new_fab',
+                                              elevation: 0,
+                                              child: Text(
+                                                "New!",
+                                                style: TextStyle(
+                                                  color: getColor(context, ColorType.mapButtonIcon),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18.0)
+                                                ),
+                                              )
+                                            )
+
+                                         : SizedBox.shrink()
                                         
                                         ,
 

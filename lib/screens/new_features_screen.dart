@@ -8,11 +8,58 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
+class ProgressCirclePainter extends CustomPainter {
+
+  DateTime startTime;
+  DateTime endTime;
+  DateTime currentTime;
+
+  ProgressCirclePainter({
+    required this.startTime,
+    required this.endTime,
+    required this.currentTime
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+
+    double percentage = 1 - (currentTime.millisecondsSinceEpoch - startTime.millisecondsSinceEpoch)
+        / (endTime.millisecondsSinceEpoch - startTime.millisecondsSinceEpoch);
+    double pi = 3.1415926;
+
+    var paint = Paint()
+      ..color = maizeBusYellow
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+    
+    // canvas.drawCircle(
+    //   Offset(size.width / 2, size.height / 2),
+    //   size.width / 2, paint);
+
+    canvas.drawArc(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      -0.5 * pi,
+      2 * pi * percentage,
+      false, paint);
+
+    // TODO: implement paint
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    // TODO: implement shouldRepaint
+    // throw UnimplementedError();
+    return false;
+  }
+
+}
+
 class NewFeaturesScreen extends StatefulWidget {
   const NewFeaturesScreen({super.key});
 
   @override
   State<NewFeaturesScreen> createState() => _NewFeaturesScreenState();
+
 }
 
 class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
