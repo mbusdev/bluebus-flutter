@@ -2218,11 +2218,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       SizedBox(height: 30.0,),
                       _journeyOverlayActive || _isOffline
                         ? SizedBox.shrink()
-                        : SizedBox(
-                          height: 0,
+                        : Expanded(
                           child: OverflowBox(
                             maxHeight: double.infinity,
-                            alignment: Alignment.topCenter,
+                            alignment: Alignment.topRight,
                             child: ReminderWidgets()
                           )
                         ),
