@@ -22,7 +22,6 @@ dependencies:
   font_awesome_flutter: ^10.12.0
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
-  mapbox_maps_flutter: ^2.12.0
   url_launcher: ^6.3.2
   flutter_local_notifications: ^19.5.0
   flutter_svg: ^2.2.3
@@ -30,6 +29,7 @@ dependencies:
   firebase_core: ^4.4.0
   firebase_messaging: ^16.1.1
   flutter_staggered_animations: ^1.1.1
+  youtube_player_flutter: ^9.1.3
 
 dev_dependencies:
   flutter_test:

@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
+import 'package:bluebus/screens/new_features_screen.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/dialog.dart';
@@ -38,6 +39,9 @@ import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
+
+final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-11 00:00:00Z");
+final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-20 00:00:00Z");
 
 // Function to calculate rotation angle between two geographical points
 // (used for bus stop icon orientation)
@@ -2145,9 +2149,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 ),
               
                                 SizedBox(
-                                  width: 45,
+                                  // width: 45,
+                                  width: 105,
                                   height: 45,
                                   child: FittedBox(
+                                    alignment: Alignment.centerRight,
                                     child: DecoratedBox(
                                       decoration: BoxDecoration(
                                         boxShadow: [
@@ -2159,25 +2165,74 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         ],
                                         borderRadius: BorderRadius.circular(25)
                                       ),
-                                      child: FloatingActionButton(
-                                        onPressed: () async {
-                                          // switch to settings menu
-                                          // with the MaterialPagesRoute animation
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute<void>(
-                                              builder: (context) => Settings(),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+
+
+                                        (NEW_BUTTON_SHOW_TIME.isBefore(DateTime.now()) && NEW_BUTTON_HIDE_TIME.isAfter(DateTime.now())) ? 
+
+
+                                          CustomPaint(
+                                            foregroundPainter: ProgressCirclePainter(
+                                              startTime: NEW_BUTTON_SHOW_TIME,
+                                              endTime: NEW_BUTTON_HIDE_TIME,
+                                              currentTime: DateTime.now()
                                             ),
-                                          );
-                                        },
-                                        heroTag: 'settings_fab',
-                                        elevation: 0,
-                                        child: Icon(
-                                          Icons.menu,
-                                          color: getColor(context, ColorType.mapButtonIcon),
-                                          size: 28,
+                                            child: FloatingActionButton(
+                                              onPressed: () async {
+                                                // switch to settings menu
+                                                // with the MaterialPagesRoute animation
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute<void>(
+                                                    builder: (context) => NewFeaturesScreen(),
+                                                  ),
+                                                );
+                                              },
+
+                                              // final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-10 0:00:00Z");
+                                              // final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-16 0:00:00Z");
+                                              heroTag: 'new_fab',
+                                              elevation: 0,
+                                              child: Text(
+                                                "New!",
+                                                style: TextStyle(
+                                                  color: getColor(context, ColorType.mapButtonIcon),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18.0)
+                                                ),
+                                              )
+                                            )
+
+                                         : SizedBox.shrink()
+                                        
+                                        ,
+
+                                        SizedBox(width: 15,),
+
+                                        FloatingActionButton(
+                                          onPressed: () async {
+                                            // switch to settings menu
+                                            // with the MaterialPagesRoute animation
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute<void>(
+                                                builder: (context) => Settings(),
+                                              ),
+                                            );
+                                          },
+                                          heroTag: 'settings_fab',
+                                          elevation: 0,
+                                          child: Icon(
+                                            Icons.menu,
+                                            color: getColor(context, ColorType.mapButtonIcon),
+                                            size: 28,
+                                          ),
                                         ),
-                                      ),
+                                      ])
+                                      
+                                      
                                     ),
                                   ),
                                 ),
