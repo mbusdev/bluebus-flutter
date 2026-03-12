@@ -79,11 +79,13 @@ class _ReminderWidgetsState extends State<ReminderWidgets> {
   /// tell the widget to fetch new reminder data, also used to initialize prefs during startup
   void _resetDataFuture() {
     setState(() {
-      dataFuture = initPrefs().then((void _) => IncomingBusReminderService.getActiveRemindersNoSetup());
+      dataFuture = initPrefs().then(
+        (void _) => IncomingBusReminderService.getActiveRemindersNoSetup(),
+      );
     });
   }
 
-  /// are reminders collasped? (assume true if unsure)
+  /// are reminders collapsed? (assume true if unsure)
   bool collapsed() {
     return prefs?.getBool(reminderWidgetsCollapsedKey) ?? true;
   }
@@ -280,7 +282,13 @@ class ReminderWidgetCard extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(30)),
         color: getColor(context, reminderWidgetBg),
         boxShadow: [
-          getInfoCardShadow(context),
+          isDarkMode(context)
+              ? getInfoCardShadow(context)
+              : BoxShadow(
+                  color: Color.fromRGBO(38, 114, 181, 0.36),
+                  blurRadius: 2,
+                  offset: Offset(0, 2),
+                ),
           // BoxShadow(
           //   blurRadius: 20.0,
           //   offset: Offset(0, 8),
