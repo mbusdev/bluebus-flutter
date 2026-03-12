@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class ProgressCirclePainter extends CustomPainter {
@@ -69,10 +70,19 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
       initialVideoId: 'dQw4w9WgXcQ',
       flags: const YoutubePlayerFlags(
         controlsVisibleAtStart: true,
-        autoPlay: false,
+        autoPlay: true,
+        showLiveFullscreenButton: false,
       )
     );
 
+  }
+
+  // Function to handle URL launching
+  Future<void> _launchYouTube() async {
+    final Uri url = Uri.parse('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
   }
 
   @override
@@ -94,19 +104,9 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
               children: [
                 // Settings title and x button
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // title 
-                    Text(
-                      'New features!',
-                      style: TextStyle(
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 30,
-                      ),
-                    ),
-        
+                    Spacer(),
                     // close button
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -139,8 +139,8 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
                   TextSpan(
                     style: const TextStyle(fontSize: 20),
                     children: [
-                      const TextSpan(text: "For the past semester, the maizebus team has been redesigning the app to ease your campus navigation experience."),
-                      const TextSpan(text: "\n\nMade with love and caffeine. See what's new!", style: TextStyle(fontWeight: FontWeight.bold))
+                      const TextSpan(text: "Over the past semester, we've been working to once again revolutionize the way students travel."),
+                      const TextSpan(text: " Come see what's new!", style: TextStyle(fontWeight: FontWeight.bold))
                     ]
                   )
                 ),
@@ -158,6 +158,26 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
                   controller: _controller,
                 ),
                 
+                const SizedBox(height: 25,),
+
+                Center(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      shape: const StadiumBorder(), 
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      backgroundColor: maizeBusBlue,
+                    ),
+                    onPressed: _launchYouTube,
+                    child: const Text(
+                      'Watch on YouTube',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                )
 
               ],
             ),
