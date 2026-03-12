@@ -71,14 +71,14 @@ const Color maizeBusBlueDarkMode = Color.fromARGB(255, 80, 150, 210);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {
-  primary, secondary, opposite, background,backgroundGradientStart,
+  primary, secondary, opposite, background, backgroundGradientStart,
 
   mapButtonPrimary, mapButtonSecondary,
   mapButtonIcon, mapButtonShadow,
 
   inputBackground, inputText,
 
-  highlighted, dim,
+  highlighted, dim, error,
   shadow,
   
   grayed, sliderButton,
@@ -105,6 +105,7 @@ const Map<ColorType, Color> lightColors = {
 
   ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),
   ColorType.dim: Color.fromARGB(255, 215, 228, 241),
+  ColorType.error: Color.fromARGB(255, 242, 41, 41),
 
   ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
   
@@ -137,6 +138,7 @@ const Map<ColorType, Color> darkColors = {
 
   ColorType.highlighted: Color.fromARGB(255, 49, 129, 199),
   ColorType.dim: Color.fromARGB(255, 47, 54, 60),
+  ColorType.error: Color.fromARGB(255, 255, 114, 114),
 
   ColorType.shadow: Color.fromARGB(95, 68, 68, 68),
   
@@ -253,6 +255,43 @@ class TrapezoidClipReversed extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> oldClipper) {
     return false; 
   }
+}
+
+// TEXT
+enum TextType {
+  modalHeader, logo, bold, normal, small, sectionHeader    
+}
+
+TextStyle getTextStyle(TextType type, Color? color) {
+  double size, height;
+  FontWeight weight;
+  switch (type) {
+    case TextType.modalHeader:
+      size = 30;
+      weight = FontWeight.w700;
+      height = 30;
+    case TextType.logo:
+      size = 30;
+      weight = FontWeight.w800;
+      height = 30;
+    case TextType.bold:
+      size = 18;
+      weight = FontWeight.w700;
+      height = 20;
+    case TextType.normal:
+      size = 16;
+      weight = FontWeight.w400;
+      height = 20;
+    case TextType.small:
+      size = 14;
+      weight = FontWeight.w400;
+      height = 20;
+    case TextType.sectionHeader:
+      size = 22;
+      weight = FontWeight.w700;
+      height = 26.4;
+  }
+  return TextStyle(color: color, fontFamily: 'Urbanist', fontSize: size, fontWeight: weight, height: height / size);
 }
 
 // THEMES

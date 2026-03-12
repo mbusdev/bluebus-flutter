@@ -52,6 +52,7 @@ class MainApp extends StatelessWidget {
           // Show onboarding on first run (terms acceptance). OnboardingDecider
           // will display the welcome + terms flow if needed, otherwise the map.
           home: const OnboardingDecider(),
+          // home: Scaffold(body: Center(child: StylesheetText()))
         )
       )
     );

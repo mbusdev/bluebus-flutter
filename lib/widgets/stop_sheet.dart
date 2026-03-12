@@ -3,6 +3,7 @@ import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/dialog.dart';
+import 'package:bluebus/widgets/refresh_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../constants.dart';
@@ -518,37 +519,9 @@ class _StopSheetState extends State<StopSheet> {
                                                         ),
                                                       ),
                                                       SizedBox(width: 5),
-                                                      InkWell(
-                                                        customBorder: CircleBorder(),
-                                                        onTap: () {
-                                                          _refreshData();
-                                                        },
-                                                        child: SizedBox(
-                                                          width: 30,
-                                                          height: 30,
-                                                          child:
-                                                              (snapshot.connectionState ==
-                                                                  ConnectionState.waiting)
-                                                              ? Align( // For some bizarre reason this is required to get the CircularProgressIndicator to conform to the size of the ConstrainedBox
-                                                                  alignment: Alignment.center,
-                                                                  child: ConstrainedBox(
-                                                                    constraints:
-                                                                        BoxConstraints.tightFor(
-                                                                          width: 15,
-                                                                          height: 15,
-                                                                        ),
-                                                                    child:
-                                                                        CircularProgressIndicator(
-                                                                          color: getColor(
-                                                                            context,
-                                                                            ColorType.opposite,
-                                                                          ),
-                                                                          strokeWidth: 2.5,
-                                                                        ),
-                                                                  ),
-                                                                )
-                                                              : Icon(Icons.refresh),
-                                                        ),
+                                                      RefreshButton(
+                                                        loading: snapshot.connectionState == ConnectionState.waiting,
+                                                        onTap: _refreshData
                                                       ),
                                                     ],
                                                   ),
@@ -860,10 +833,11 @@ class ReminderForm extends StatefulWidget {
 class _ReminderFormState extends State<ReminderForm> {
 
   Future<List<({ String stpid, String rtid, int? eta })>>? reminderInfoFuture;
+  /// ones that have an active reminder set
+  Set<String> activeRtids = {};
   /// ones that have been selected to be added / removed
   Set<String> rtidsToChange = {};
   int reminderThresh = 5;
-  String? rtidToRemove;
 
   // exists to ensure the notification button isn't pressed multiple times 
   // while waiting for the response
@@ -871,7 +845,6 @@ class _ReminderFormState extends State<ReminderForm> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return FutureBuilder(
       future: reminderInfoFuture,
       builder: (context, snapshot) {
@@ -893,8 +866,8 @@ class _ReminderFormState extends State<ReminderForm> {
           );
         }
         
-        final dataForAllStops = snapshot.data;
-        if (dataForAllStops == null) {
+        final activeRemindersForAllStops = snapshot.data;
+        if (activeRemindersForAllStops == null) {
           // Wait for the current build frame to finish before showing dialogs/popping
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pop(context);
@@ -909,26 +882,16 @@ class _ReminderFormState extends State<ReminderForm> {
         }
         
 
-        final dataForThisStop = dataForAllStops.where((x) => x.stpid == widget.stpid);
-        
+        final activeRemindersForThisStop = activeRemindersForAllStops.where((x) => x.stpid == widget.stpid);
+        // which icons to show (active reminders + active routes)
         final routesToShow = widget.activeRoutes;
 
-        for (final reminder in dataForThisStop) {
-          rtidsToChange.add(reminder.rtid);
-          if (routesToShow.contains(reminder.rtid)) {
-            continue;
+        for (final reminder in activeRemindersForThisStop) {
+          activeRtids.add(reminder.rtid);
+          if (!routesToShow.contains(reminder.rtid)) {
+            routesToShow.add(reminder.rtid);
           }
-
-          routesToShow.add(reminder.rtid);
-          
-          
-          print(reminder.rtid);
         }
-
-        if (rtidToRemove != null) {
-          rtidsToChange.remove(rtidToRemove);
-        }
-        rtidToRemove = null;
 
         return Column(
           spacing: 0,
@@ -974,7 +937,6 @@ class _ReminderFormState extends State<ReminderForm> {
                   ),
                   Wrap( //icons
                     alignment: WrapAlignment.center,
-                    //mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 0,
                     runSpacing: 0,
                     children: routesToShow.map((rtid) {
@@ -1020,12 +982,12 @@ class _ReminderFormState extends State<ReminderForm> {
                               ),
                               
                               Checkbox(
-                                value: rtidsToChange.contains(rtid),
+                                value: activeRtids.contains(rtid) != rtidsToChange.contains(rtid),
                                 side: BorderSide(
                                   color: getColor(context, ColorType.highlighted)
                                 ),
                                 activeColor: getColor(context, ColorType.highlighted),
-                                onChanged: (bool? value){}
+                                onChanged: (_) {},
                               )
                             ]
                           ),
@@ -1034,7 +996,7 @@ class _ReminderFormState extends State<ReminderForm> {
                             onTap: () {
                               setState(() {
                                 if (rtidsToChange.contains(rtid)) {
-                                  rtidToRemove = rtid;
+                                  rtidsToChange.remove(rtid);
                                 } else {
                                   rtidsToChange.add(rtid);
                                 }
@@ -1097,8 +1059,6 @@ class _ReminderFormState extends State<ReminderForm> {
                     },
                     min: 3.0,
                     max: 20.0,
-                    
-                    //divisions: 9,
                   ),
                 ],
               )
@@ -1119,21 +1079,21 @@ class _ReminderFormState extends State<ReminderForm> {
                       
                         List<RemindersModification> modifications = [];
                         for (String rtid in routesToShow) {
-                          final bool alreadyActive = dataForThisStop.map((x) => x.rtid).contains(rtid);
-                          final bool pressed = rtidsToChange.contains(rtid);
+                          final bool keepOrAdd = rtidsToChange.contains(rtid) != activeRtids.contains(rtid);
+                          final bool shouldRemove = rtidsToChange.contains(rtid) && activeRtids.contains(rtid);
 
-                          if (alreadyActive) {
+                          if (shouldRemove) {
                             modifications.add(RemoveReminder(stpid: widget.stpid, rtid: rtid));
                           }
-                          if (pressed) {
+                          if (keepOrAdd) {
                             modifications.add(AddReminder(stpid: widget.stpid, rtid: rtid, thresh: reminderThresh));
                           }
                         }
 
                         try {
                           await IncomingBusReminderService.modifyReminders(modifications);                  
-                          Navigator.pop(context);
                           if (!context.mounted) return;
+                          Navigator.pop(context);
                         } on Exception catch (e) {
                           showDialog(
                             context: context,
@@ -1167,7 +1127,6 @@ class _ReminderFormState extends State<ReminderForm> {
   
   @override
   void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
     super.didChangeDependencies();
     reminderInfoFuture ??= IncomingBusReminderService.getActiveReminders();
   }
