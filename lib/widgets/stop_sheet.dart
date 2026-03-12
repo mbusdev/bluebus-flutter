@@ -690,7 +690,7 @@ class _StopSheetState extends State<StopSheet> {
                                             borderRadius: BorderRadius.circular(30),
                                           ),
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          elevation: 3
+                                          elevation: 0
                                         ),
                                         icon: Icon(
                                           Icons.directions, 
@@ -734,7 +734,7 @@ class _StopSheetState extends State<StopSheet> {
                                           minimumSize: Size(0,0),
                                           fixedSize: Size(40,40),
                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          elevation: 3
+                                          elevation: 0
                                         ),
                                         child: Icon(
                                           (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
@@ -782,7 +782,7 @@ class _StopSheetState extends State<StopSheet> {
                                           minimumSize: Size(0,0),
                                           fixedSize: Size(40,40),
                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          elevation: 3
+                                          elevation: 0
                                         ),
                                         child: Icon(
                                           (arrivingBuses.isEmpty)? Icons.notifications_off_outlined : Icons.notifications_none,

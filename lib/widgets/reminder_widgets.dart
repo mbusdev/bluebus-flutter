@@ -282,18 +282,11 @@ class ReminderWidgetCard extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(30)),
         color: getColor(context, reminderWidgetBg),
         boxShadow: [
-          isDarkMode(context)
-              ? getInfoCardShadow(context)
-              : BoxShadow(
-                  color: Color.fromRGBO(38, 114, 181, 0.36),
-                  blurRadius: 2,
-                  offset: Offset(0, 2),
-                ),
-          // BoxShadow(
-          //   blurRadius: 20.0,
-          //   offset: Offset(0, 8),
-          //   color: getColor(context, ColorType.shadow),
-          // ),
+          BoxShadow(
+            color: getColor(context, ColorType.mapButtonShadow).withAlpha(40), // making it a little less strong
+            blurRadius: 10,
+            offset: Offset(0, 6)
+          )
         ],
       ),
       padding: EdgeInsetsDirectional.all(15),

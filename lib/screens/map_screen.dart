@@ -2163,86 +2163,91 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   height: 45,
                                   child: FittedBox(
                                     alignment: Alignment.centerRight,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: getColor(context, ColorType.mapButtonShadow),
-                                            blurRadius: 10,
-                                            offset: Offset(0, 6)
-                                          )
-                                        ],
-                                        borderRadius: BorderRadius.circular(25)
-                                      ),
-                                      child: Row(
+                                    child: Row(
                                         mainAxisAlignment: MainAxisAlignment.end,
                                         children: [
-
-
+                                          
                                         (NEW_BUTTON_SHOW_TIME.isBefore(DateTime.now()) && NEW_BUTTON_HIDE_TIME.isAfter(DateTime.now())) ? 
-
-
                                           CustomPaint(
                                             foregroundPainter: ProgressCirclePainter(
                                               startTime: NEW_BUTTON_SHOW_TIME,
                                               endTime: NEW_BUTTON_HIDE_TIME,
                                               currentTime: DateTime.now()
                                             ),
-                                            child: FloatingActionButton(
-                                              onPressed: () async {
-                                                // switch to settings menu
-                                                // with the MaterialPagesRoute animation
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute<void>(
-                                                    builder: (context) => NewFeaturesScreen(),
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: getColor(context, ColorType.mapButtonShadow),
+                                                    blurRadius: 10,
+                                                    offset: Offset(0, 6)
+                                                  )
+                                                ],
+                                                borderRadius: BorderRadius.circular(25)
+                                              ),
+                                              child: FloatingActionButton(
+                                                onPressed: () async {
+                                                  // switch to settings menu
+                                                  // with the MaterialPagesRoute animation
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute<void>(
+                                                      builder: (context) => NewFeaturesScreen(),
+                                                    ),
+                                                  );
+                                                },
+                                              
+                                                // final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-10 0:00:00Z");
+                                                // final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-16 0:00:00Z");
+                                                heroTag: 'new_fab',
+                                                elevation: 0,
+                                                child: Text(
+                                                  "New!",
+                                                  style: TextStyle(
+                                                    color: getColor(context, ColorType.mapButtonIcon),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 18.0)
                                                   ),
-                                                );
-                                              },
-
-                                              // final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-10 0:00:00Z");
-                                              // final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-16 0:00:00Z");
-                                              heroTag: 'new_fab',
-                                              elevation: 0,
-                                              child: Text(
-                                                "New!",
-                                                style: TextStyle(
-                                                  color: getColor(context, ColorType.mapButtonIcon),
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 18.0)
                                                 ),
-                                              )
+                                            )
                                             )
 
-                                         : SizedBox.shrink()
-                                        
-                                        ,
+                                         : SizedBox.shrink(),
 
                                         SizedBox(width: 15,),
 
-                                        FloatingActionButton(
-                                          onPressed: () async {
-                                            // switch to settings menu
-                                            // with the MaterialPagesRoute animation
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute<void>(
-                                                builder: (context) => Settings(),
-                                              ),
-                                            );
-                                          },
-                                          heroTag: 'settings_fab',
-                                          elevation: 0,
-                                          child: Icon(
-                                            Icons.menu,
-                                            color: getColor(context, ColorType.mapButtonIcon),
-                                            size: 28,
+                                        DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: getColor(context, ColorType.mapButtonShadow),
+                                                blurRadius: 10,
+                                                offset: Offset(0, 6)
+                                              )
+                                            ],
+                                            borderRadius: BorderRadius.circular(25)
+                                          ),
+                                          child: FloatingActionButton(
+                                            onPressed: () async {
+                                              // switch to settings menu
+                                              // with the MaterialPagesRoute animation
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute<void>(
+                                                  builder: (context) => Settings(),
+                                                ),
+                                              );
+                                            },
+                                            heroTag: 'settings_fab',
+                                            elevation: 0,
+                                            child: Icon(
+                                              Icons.menu,
+                                              color: getColor(context, ColorType.mapButtonIcon),
+                                              size: 28,
+                                            ),
                                           ),
                                         ),
                                       ])
-                                      
-                                      
-                                    ),
                                   ),
                                 ),
                               ],
