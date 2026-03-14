@@ -152,7 +152,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
                             Text(
                               (widget.busProvider.containsBus(widget.vehicleId))
                                   ? " • Live"
-                                  : " • Estimated",
+                                  : " • Scheduled",
                               style: TextStyle(
                                 fontSize: 16.0,
                               ),

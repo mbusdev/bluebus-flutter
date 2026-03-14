@@ -67,7 +67,7 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
     super.initState();
 
     _controller = YoutubePlayerController(
-      initialVideoId: 'dQw4w9WgXcQ',
+      initialVideoId: 'SNKIDXdWUFQ',
       flags: const YoutubePlayerFlags(
         controlsVisibleAtStart: true,
         autoPlay: true,
@@ -79,7 +79,7 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
 
   // Function to handle URL launching
   Future<void> _launchYouTube() async {
-    final Uri url = Uri.parse('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    final Uri url = Uri.parse('https://www.youtube.com/watch?v=SNKIDXdWUFQ');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       throw Exception('Could not launch $url');
     }
