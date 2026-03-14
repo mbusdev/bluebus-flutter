@@ -1,4 +1,5 @@
 import 'package:bluebus/constants.dart';
+import 'package:bluebus/innerShadow.dart';
 import 'package:flutter/material.dart';
 // custom widget that lets you select between multiple segments by sliding OR tapping and looks nice
 class MaizebusSlidingSegmentedControl extends StatefulWidget {
@@ -18,8 +19,8 @@ class MaizebusSlidingSegmentedControl extends StatefulWidget {
     required this.labels,
     required this.onSelectionChanged,
     this.selectedIndex = 0,
-    this.backgroundColor = ColorType.grayed,
-    this.thumbColor = ColorType.sliderButton,
+    this.backgroundColor = ColorType.sliderBackground,
+    this.thumbColor = ColorType.sliderButton, //slider bg color
     this.labelStyle,
     this.selectedLabelStyle,
     this.height = 50,
@@ -63,7 +64,9 @@ class _MaizebusSlidingSegmentedControlState
       decoration: BoxDecoration(
         color: getColor(context, widget.backgroundColor),
         borderRadius: BorderRadius.circular(25),
-        boxShadow: widget.shadows
+        boxShadow: widget.shadows,
+        
+        
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -85,6 +88,8 @@ class _MaizebusSlidingSegmentedControlState
             },
             child: Stack(
               children: [
+                //inner shadow?
+                
                 // the animated thumb
                 AnimatedAlign(
                   alignment: Alignment(
@@ -124,17 +129,11 @@ class _MaizebusSlidingSegmentedControlState
                           duration: const Duration(milliseconds: 200),
                           style: isSelected
                               ? (widget.selectedLabelStyle ??
-                                  TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: getColor(context, ColorType.opposite),
-                                    fontSize: 14,
-                                  ))
+                                  getTextStyle(TextType.bold, getColor(context, ColorType.opposite))
+                                )
                               : (widget.labelStyle ??
-                                  TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  )),
+                                  getTextStyle(TextType.normal, getColor(context, ColorType.opposite))
+                                ),
                           child: Text(label),
                         ),
                       ),
