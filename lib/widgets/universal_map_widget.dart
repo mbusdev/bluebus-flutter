@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:bluebus/models/bus.dart';
@@ -29,8 +30,8 @@ import 'package:path_provider/path_provider.dart';
 class UniversalMapController {
   UniversalMapWidgetState? _widget;
   List<BusRouteLine>? routesToApply; // Used for when MapScreen's _loadAllData calls setBusRouteLines before the UniversalMapWidget is created. The routes are temporarily stored here before being passed to the widget when it's available
-  List<Bus>? newBusesToApply;
-  List<Bus>? changedBusesToApply;
+  // List<Bus>? newBusesToApply;
+  // List<Bus>? changedBusesToApply;
 
   void setBusRouteLines(List<BusRouteLine> allLinesIn) {
     if (_widget == null) {
@@ -47,11 +48,11 @@ class UniversalMapController {
       _widget?.regeneratePolylines();
       routesToApply = null;
     }
-    if (newBusesToApply != null) {
-      widget.updateBusPositions(newBusesToApply!, changedBusesToApply!);
-      newBusesToApply = null;
-      changedBusesToApply = null;
-    }
+    // if (newBusesToApply != null) {
+    //   widget.updateBusPositions(newBusesToApply!, changedBusesToApply!);
+    //   newBusesToApply = null;
+    //   changedBusesToApply = null;
+    // }
   }
 
   // TODO: Add a setFavoriteStops method
@@ -65,18 +66,26 @@ class UniversalMapController {
     _widget?.selectedRoutes = selectedRoutes;
     _widget?.regeneratePolylines();
     _widget?.regenerateStaticMarkers();
+    _widget?.regenerateBusMarkers;
     debugPrint("Finished setting route filter!");
   }
 
-  void updateBusPositions(List<Bus> newBuses, List<Bus> changedBuses) {
-    debugPrint("Inside the controller, got updateBusPositions call. widget = ${_widget}");
-    final widget = _widget;
-    if (widget == null) {
-      newBusesToApply = newBuses;
-      changedBusesToApply = changedBuses;
-      return;
-    }
-    widget.updateBusPositions(newBuses, changedBuses);
+  // void updateBusPositions(List<Bus> newBuses, List<Bus> changedBuses) {
+  //   debugPrint("Inside the controller, got updateBusPositions call. widget = ${_widget}");
+  //   final widget = _widget;
+  //   if (widget == null) {
+  //     newBusesToApply = newBuses;
+  //     changedBusesToApply = changedBuses;
+  //     return;
+  //   }
+  //   widget.updateBusPositions(newBuses, changedBuses);
+  // }
+
+  void updateDisplayedBuses(List<Bus> buses) {
+    debugPrint("Inside universal controller, got updateDisplayedBuses call");
+    _widget?.busesToDisplay = buses;
+    _widget?.regenerateBusMarkers();
+    
   }
   
   
@@ -142,6 +151,9 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
   Map<String,Bus> liveBuses = {};
   Map<String,Marker> animatableMarkersToDisplay = {};
 
+  List<Bus> busesToDisplay = [];
+  List<Marker> busMarkersToDisplay = [];
+
   Style? style;
 
   void loadCustomMarkers() {
@@ -149,6 +161,7 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
     imageService.loadCustomMarkers(() {
       regeneratePolylines();
       regenerateStaticMarkers();
+      regenerateBusMarkers();
     });
   }
 
@@ -248,6 +261,8 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
     // TODO: Maybe update route bus icons? Use _loadRouteBusIcon in the MapImageService
 
     setState(() {
+      new_staticMarkersToDisplay.clear();
+
       _allLines.forEach((BusRouteLine line) {
         if (selectedRoutes.contains(line.routeId)) {
 
@@ -274,7 +289,6 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
               )
 
               // NEXT STEPS TODO: Get the bitmaps working for icons! We can even do cool click animations!!!!!
-              // Also figure out what's causing the vector map crash
 
               // Marker(
               //   markerId: MarkerId('stop_${stop.id}_${line.points.hashCode}'),
@@ -337,6 +351,62 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
     
   }
 
+  void regenerateBusMarkers() {
+
+    debugPrint("Got regenerateBusMarkers() call, and we have ${busesToDisplay.length} buses to display");
+
+    // TODO: Implement this
+    setState(() {
+      busMarkersToDisplay.clear();
+
+      busesToDisplay.forEach((Bus bus) {
+
+        // BitmapDescriptor? busIcon;
+        //   if (_routeBusIcons.containsKey(bus.routeId)) {
+        //     busIcon = _routeBusIcons[bus.routeId];
+        //   } else if (_busIcon != null) {
+        //     busIcon = _busIcon;
+        //   } else {
+        //     busIcon = BitmapDescriptor.defaultMarkerWithHue(
+        //       _colorToHue(routeColor),
+        //     );
+        //   }
+
+        busMarkersToDisplay.add(
+          Marker(
+            // point: LatLongNew.LatLng(stop.location.latitude, stop.location.longitude),
+            point: LatLongNew.LatLng(bus.position.latitude, bus.position.longitude),
+            width: 20,
+            height: 20,
+            child: GestureDetector(
+              onTap: () {
+                // widget.onStopClicked(stop);
+                widget.onBusClicked(bus);
+              },
+              child: SizedBox(
+                width: 20.0,
+                height: 20.0,
+                // child: Image.asset("assets/bus_stop.png", width: 2.0, height: 2.0)
+                child: Transform.rotate(
+                  angle: bus.heading * (math.pi / 180),
+                  child: Image.asset("assets/unknownbus.png", width: 20.0, height: 20.0),
+                )
+                
+              ),
+            )
+            
+          )
+
+        );
+
+    
+      });
+
+
+      // debugPrint("FINISHED ADDING BUSES, NOW HAVE ${busMarkersToDisplay.length} MARKERS");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint("Is dark mode? ${isDarkMode(context)}");
@@ -371,7 +441,7 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
                 tileProviders: TileProviders({
                   'protomaps': snapshot.data!
                 }),
-                theme: ProtomapsThemes.lightV4(logger: const Logger.console()),
+                theme: ProtomapsThemes.lightV4(),//ProtomapsThemes.lightV4(logger: const Logger.console()),
                 // TODO: Figure out how to erase the cache for switching between light and dark modes
                 layerMode: VectorTileLayerMode.raster,
               ),
@@ -394,6 +464,7 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
                 polylines: new_polylinesToDisplay,
               ),
               MarkerLayer(markers: new_staticMarkersToDisplay),
+              MarkerLayer(markers: busMarkersToDisplay)
             ],
           );
         }
@@ -416,29 +487,29 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
   //   // );
   // }
   
-  void updateBusPositions(List<Bus> newBuses, List<Bus> changedBuses) {
-    debugPrint("Got updateBusPositions call! newBuses has ${newBuses.length}, changedBuses has ${changedBuses.length}");
+  // void updateBusPositions(List<Bus> newBuses, List<Bus> changedBuses) {
+  //   debugPrint("Got updateBusPositions call! newBuses has ${newBuses.length}, changedBuses has ${changedBuses.length}");
 
-    setState(() {
-      changedBuses.forEach((Bus b) {
-        debugPrint("Updating changed bus ${b.id} ${b.position}");
-        if (!liveBuses.containsKey(b.id)) {
-          newBuses.add(b);
-          return; // If we don't have a record of this bus, treat it like a new bus
-        }
+  //   setState(() {
+  //     changedBuses.forEach((Bus b) {
+  //       debugPrint("Updating changed bus ${b.id} ${b.position}");
+  //       if (!liveBuses.containsKey(b.id)) {
+  //         newBuses.add(b);
+  //         return; // If we don't have a record of this bus, treat it like a new bus
+  //       }
 
-        // animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
+  //       // animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
 
-      });
+  //     });
 
-      newBuses.forEach((Bus b) {
-        debugPrint("Updating new bus ${b.id} ${b.position}");
-        // animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
-      });
+  //     newBuses.forEach((Bus b) {
+  //       debugPrint("Updating new bus ${b.id} ${b.position}");
+  //       // animatableMarkersToDisplay[b.id] = getMarkerForBus(b);
+  //     });
 
-    });
+  //   });
 
-  }
+  // }
 }
 
 class UniversalMapWidget extends StatefulWidget {

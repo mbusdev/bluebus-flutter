@@ -202,7 +202,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // moving this here fixes loading bug
     await RouteColorService.initialize();
 
-    if (!isCurrentVersionEqualOrHigher(startupData.version)) {
+    if (!isCurrentVersionEqualOrHigher(startupData.version) && false) {
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -866,6 +866,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
+
+    debugPrint("Got _updateDisplayedBuses call inside map_screen");
+
+    _universalController.updateDisplayedBuses(allBuses);
+    // FUTURE: Add filtering to this list
+
     // null case or error contacting server case
     if (allBuses == []) return;
 
