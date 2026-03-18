@@ -1,5 +1,4 @@
 import 'package:bluebus/constants.dart';
-import 'package:bluebus/innerShadow.dart';
 import 'package:flutter/material.dart';
 // custom widget that lets you select between multiple segments by sliding OR tapping and looks nice
 class MaizebusSlidingSegmentedControl extends StatefulWidget {

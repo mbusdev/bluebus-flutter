@@ -40,8 +40,8 @@ import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
 
-final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-11 00:00:00Z");
-final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-20 00:00:00Z");
+final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
+final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
 
 // Function to calculate rotation angle between two geographical points
 // (used for bus stop icon orientation)

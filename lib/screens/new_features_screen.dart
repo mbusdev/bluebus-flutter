@@ -67,7 +67,7 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
     super.initState();
 
     _controller = YoutubePlayerController(
-      initialVideoId: 'SNKIDXdWUFQ',
+      initialVideoId: 'UYNbFFihqIw',
       flags: const YoutubePlayerFlags(
         controlsVisibleAtStart: true,
         autoPlay: true,
@@ -79,7 +79,7 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
 
   // Function to handle URL launching
   Future<void> _launchYouTube() async {
-    final Uri url = Uri.parse('https://www.youtube.com/watch?v=SNKIDXdWUFQ');
+    final Uri url = Uri.parse('https://www.youtube.com/watch?v=UYNbFFihqIw');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       throw Exception('Could not launch $url');
     }
@@ -126,9 +126,9 @@ class _NewFeaturesScreenState extends State<NewFeaturesScreen> {
                     ),
                     children: [
                       const TextSpan(text: 'Welcome to '),
-                      const TextSpan(text: 'maize', style: TextStyle(color: maizeBusYellow)),
-                      TextSpan(text: 'bus', style: TextStyle(color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue)),
-                      const TextSpan(text: ' 2.0!')
+                      const TextSpan(text: 'maize', style: TextStyle(color: maizeBusYellow, fontWeight: FontWeight.w800)),
+                      TextSpan(text: 'bus', style: TextStyle(color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,fontWeight: FontWeight.w800)),
+                      const TextSpan(text: ' 2!')
                     ]
                   )
                 ),
