@@ -38,6 +38,7 @@ import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 //import 'dart:convert';
 
 final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
@@ -89,6 +90,8 @@ class MaizeBusCore extends StatefulWidget {
 class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
   late Journey currDisplayed;
+  ScreenRadius? screenRadius;
+  bool screenRadiusLoaded = false;
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -239,6 +242,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme(); // load user theme data
 
+    screenRadius = await ScreenCornerRadius.get(); // load screen radius
+    screenRadiusLoaded = true;
+    
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
@@ -2016,42 +2022,38 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       final mediaQueryData = MediaQuery.of(context);
       final double flutterSafeAreaTop = mediaQueryData.padding.top;
       final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
-      // then, changing them based on phone
-      if (Platform.isIOS) {
-        if (flutterSafeAreaBottom == 0) {
-          // rectangle iphone
-          globalBottomPadding = 10;
-          globalLeftRightPadding = 10;
-          globalTopPadding = 20;
-        } else {
-          // round iphone
-          globalBottomPadding = 30;
-          globalLeftRightPadding = 30;
-          globalTopPadding = flutterSafeAreaTop;
-        }
+
+      // screen buttons are 45 by 45 (diameter)
+      // so they have a radius of 45/2 = 22.5
+      // so for perfectly spaced buttons, we 
+      // need to do screen radius - 22.5           
+      double perfectPadding = (screenRadius?.bottomLeft ?? 0) - 22.5;
+
+      if (Platform.isIOS) perfectPadding -= 9; // the -9 just makes it look more pretty on ios 
+
+      globalTopPadding = flutterSafeAreaTop;
+
+      // if we're padding less than 3 then its too rectangle.
+      // default to just keeping it out of the safe area
+      if (perfectPadding < 3){
+        globalBottomPadding = flutterSafeAreaBottom + 10;
+        globalLeftRightPadding = 10;
+
+      } else if ((perfectPadding < flutterSafeAreaBottom) && !Platform.isIOS) {
+        // if the buttons are in the safe area, act rectangular
+        // but not for iOS, because safe area isn't real on iOS
+        globalBottomPadding = flutterSafeAreaBottom + 10;
+        globalLeftRightPadding = 10;
+
       } else {
-        // andoird
-
-        if (flutterSafeAreaBottom < 30) {
-          // in this case, 30 from the bottom is fine because
-          // it's over the safe area. this usually works
-          // for round bottom phones like the google pixel
-
-          globalBottomPadding = 30;
-          globalLeftRightPadding = 30;
-          globalTopPadding = flutterSafeAreaTop;
-        } else {
-          // this case, it's over 30. probably means
-          // a rectangle android. so no need to make
-          // it like 30
-
-          globalBottomPadding = flutterSafeAreaBottom + 15;
-          globalLeftRightPadding = 15;
-          globalTopPadding = flutterSafeAreaTop;
-        }
+        // perfect padding is perfect! it keeps the buttons
+        // out of the safe area so we'll just use them 
+        globalBottomPadding = perfectPadding;
+        globalLeftRightPadding = perfectPadding;
       }
 
-      globallPaddingHasBeenSet = true;
+      // only set this to true if we've loaded the screen radius
+      globallPaddingHasBeenSet = screenRadiusLoaded;
     }
 
     return FutureBuilder(
@@ -2315,9 +2317,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                 ),
                                                               );
                                                             },
-
-                                                            // final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-10 0:00:00Z");
-                                                            // final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-16 0:00:00Z");
                                                             heroTag: 'new_fab',
                                                             elevation: 0,
                                                             child: Text(
@@ -2374,7 +2373,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                     heroTag: 'settings_fab',
                                                     elevation: 0,
                                                     child: Icon(
-                                                      Icons.menu,
+                                                      Icons.settings,
                                                       color: getColor(
                                                         context,
                                                         ColorType.mapButtonIcon,
@@ -2425,7 +2424,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                             Spacer(),
 
-                            // temp row (might add settings button to it later)
                             (!_journeyOverlayActive)
                                 ? Padding(
                                     padding: const EdgeInsets.only(bottom: 20),
