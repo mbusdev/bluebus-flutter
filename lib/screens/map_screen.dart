@@ -268,8 +268,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (startupData.persistantMessageTitle != '') {
       showMaizebusOKDialog(
         contextIn: context,
-        title: Text(startupData.persistantMessageTitle),
-        content: Text(startupData.persistantMessage),
+        title: startupData.persistantMessageTitle,
+        content: startupData.persistantMessage,
       );
     }
 
@@ -1810,8 +1810,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 } else {
                   showMaizebusOKDialog(
                     contextIn: context,
-                    title: const Text("Error"),
-                    content: const Text("Couldn't load stop."),
+                    title: "Error",
+                    content: "Couldn't load stop.",
                   );
                 }
               },
@@ -1836,8 +1836,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             } else {
               showMaizebusOKDialog(
                 contextIn: context,
-                title: const Text('Error'),
-                content: const Text('Couldn\'t load stop.'),
+                title: 'Error',
+                content: 'Couldn\'t load stop.',
               );
             }
           },
