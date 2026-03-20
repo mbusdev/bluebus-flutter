@@ -2373,7 +2373,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                     heroTag: 'settings_fab',
                                                     elevation: 0,
                                                     child: Icon(
-                                                      Icons.settings,
+                                                      Icons.menu
                                                       color: getColor(
                                                         context,
                                                         ColorType.mapButtonIcon,
