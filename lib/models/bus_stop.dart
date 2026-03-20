@@ -1,4 +1,5 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../constants.dart';
 
 class BusStop {
   final String id;
@@ -13,7 +14,7 @@ class BusStop {
   factory BusStop.fromJson(Map<String, dynamic> json, String routeId, double rotation, bool isRide) {
     return BusStop(
       id: json['stpid'] ?? '',
-      name: json['stpnm'] ?? '',
+      name: normalizeStopName(json['stpnm'] ?? ''),
       location: LatLng(json['lat']?.toDouble() ?? 0, json['lon']?.toDouble() ?? 0),
       routeId: routeId,
       rotation: rotation, 
@@ -33,7 +34,7 @@ class BusStopWithPrediction {
   factory BusStopWithPrediction.fromJson(Map<String, dynamic> json) {
     return BusStopWithPrediction(
       id: json['stpid'] ?? '',
-      name: json['stpnm'] ?? '',
+      name: normalizeStopName(json['stpnm'] ?? ''),
       prediction: json['prdctdn'] as String,
       busRouteCode: json['rt'] ?? ''
     );
@@ -52,7 +53,7 @@ class BusWithPrediction {
   factory BusWithPrediction.fromJson(Map<String, dynamic> json) {
     return BusWithPrediction(
       id: json['rt'] ?? '',
-      destination: json['des'] ?? '',
+      destination: normalizeStopName(json['des'] ?? ''),
       prediction: json['prdctdn'] as String,
       direction: json['rtdir'] as String,
       vehicleId: json['vid'] ?? 'none'

@@ -50,6 +50,13 @@ const Map<String, String> fallback_code_to_name = {
   'NES': 'North-East Shuttle',
 };
 
+final _whitespacePattern = RegExp(r'\s+');
+
+String normalizeStopName(String rawStopName) {
+  // Collapse any sequence of whitespace to a single space and trim edges.
+  return rawStopName.replaceAll(_whitespacePattern, ' ').trim();
+}
+
 String getPrettyRouteName(String code) {
   for (Map<String, String> route in globalAvailableRoutes) {
     if (route['id'] == code) {
