@@ -6,93 +6,98 @@ bool isRide(String? s) {
   if (s != null && int.tryParse(s) != null) {
     // busID is numeric, so it's a ride bus
     return true;
-  } 
+  }
   return false;
 }
-
-enum RouteIconType { normal, outlined, normalWithWhiteBorder }
 
 class RouteIcon extends StatelessWidget {
   const RouteIcon({
     super.key,
     required this.rtid,
-    required this.size,
+    required this.width,
+    required this.height,
     required this.fontSize,
-    this.type = RouteIconType.normal,
   });
 
+  /// Match aspect ratio of medium but with a custom size
+  /// The other set sizes have different aspect ratios!
   factory RouteIcon.sized(
     String rtid,
-    int size, {
+    double size, {
     Key? key,
-    RouteIconType type = RouteIconType.normal,
   }) {
     return RouteIcon(
       key: key,
       rtid: rtid,
-      size: size,
+      width: isRide(rtid) ? size * 1.125 : size,
+      height: isRide(rtid) ? size * 0.875 : size,
       fontSize: (size / 2).floor(),
-      type: type,
     );
   }
 
   factory RouteIcon.small(
     String rtid, {
     Key? key,
-    RouteIconType type = RouteIconType.normal,
   }) {
-    return RouteIcon.sized(rtid, 35, key: key, type: type);
+    return RouteIcon(
+      rtid: rtid,
+      key: key,
+      width: isRide(rtid) ? 40 : 35,
+      height: isRide(rtid) ? 30 : 35,
+      fontSize: 17,
+    );
   }
 
-  factory RouteIcon.medium(String rtid, {Key? key, RouteIconType type = RouteIconType.normal}) {
-    return RouteIcon.sized(rtid, 40, key: key, type: type);
+  factory RouteIcon.smallWithLargerFont(
+    String rtid, {
+    Key? key,
+  }) {
+    return RouteIcon(
+      rtid: rtid,
+      key: key,
+      width: isRide(rtid) ? 40 : 35,
+      height: isRide(rtid) ? 30 : 35,
+      fontSize: 18,
+    );
   }
 
-  factory RouteIcon.large(String rtid, {Key? key, RouteIconType type = RouteIconType.normal}) {
-    return RouteIcon.sized(rtid, 60, key: key, type: type);
+  factory RouteIcon.medium(
+    String rtid, {
+    Key? key,
+  }) {
+    return RouteIcon.sized(rtid, 40, key: key);  // 45 x 35 for theride
+  }
+
+  factory RouteIcon.large(
+    String rtid, {
+    Key? key,
+  }) {
+    return RouteIcon(
+      rtid: rtid,
+      width: isRide(rtid) ? 78 : 60,
+      height: isRide(rtid) ? 55 : 60,
+      fontSize: 30,
+      key: key,
+    );
   }
 
   final String rtid;
-  final int size;
+  final double width, height;
   final int fontSize;
-  final RouteIconType type;
 
   @override
   Widget build(BuildContext context) {
-    final sizeWithBorder = switch (type) {
-      RouteIconType.normalWithWhiteBorder => size + 2,
-      _ => size
-    }.toDouble();
-    final bgColor = switch (type) {
-      RouteIconType.outlined => null,
-      _ => RouteColorService.getRouteColor(rtid),
-    };
-    final fgColor = switch (type) {
-      RouteIconType.outlined => RouteColorService.getRouteColor(rtid),
-      _ => RouteColorService.getContrastingColor(rtid),
-    };
-    final border = switch (type) {
-      RouteIconType.normal => null,
-      RouteIconType.outlined => Border.all(color: fgColor, width: 2.0),
-      // Its a weight 2 centered border in the figma but occlusion makes it look like a weight 1 outside border
-      RouteIconType.normalWithWhiteBorder => Border.all(color: Color(0xFFFFFFFF), width: 1.0),
-    };
+    final bgColor = RouteColorService.getRouteColor(rtid);
+    final fgColor = RouteColorService.getContrastingColor(rtid);
 
-    return Container( // 45, 35
-      width: isRide(rtid)? sizeWithBorder * 1.125 : sizeWithBorder,
-      height: isRide(rtid)? sizeWithBorder * 0.875 : sizeWithBorder,
-      decoration: isRide(rtid)? 
-        BoxDecoration(
-          shape: BoxShape.rectangle,
-          borderRadius: BorderRadius.circular(sizeWithBorder/2),
-          color: bgColor,
-          border: border,
-        )
-        : BoxDecoration(
-            shape: BoxShape.circle,
-            color: bgColor,
-            border: border,
-          ),
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        shape: BoxShape.rectangle,
+        color: bgColor,
+        borderRadius: BorderRadius.circular(9999),
+      ),
       alignment: Alignment.center,
       child: MediaQuery(
         data: MediaQuery.of(

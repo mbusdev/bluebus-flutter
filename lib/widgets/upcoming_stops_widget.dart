@@ -147,14 +147,6 @@ String futureTime(String minutesInFuture) {
   return DateFormat('h:mm a').format(futureTime);
 }
 
-bool isRide(String? s) {
-  if (s != null && int.tryParse(s) != null) {
-    // busID is numeric, so it's a ride bus
-    return true;
-  } 
-  return false;
-}
-
 // TODO: Make KEY_STOPS an API call!
 
 const Color UPCOMING_STOP_COLOR = Color.fromARGB(255, 85, 119, 130);
@@ -808,54 +800,4 @@ class UpcomingStopsWidget extends StatefulWidget {
     this.onBusStopClick,
     required this.childIfNoUpcomingStopsFound,
   });
-}
-
-Widget rideIcon(Color color, String id){
-  return Container( // Bus circular icon
-    width: 50,
-    height: 35,
-    decoration: BoxDecoration(
-      shape: BoxShape.rectangle,
-      borderRadius: BorderRadius.circular(39), // should be 27.5 (55 divided by 2) but 39 works too
-      color: color,
-    ),
-    alignment: Alignment.center,
-    child: Text(
-      id,
-      style: TextStyle(
-        color: RouteColorService.getContrastingColor(
-          id,
-        ),
-        fontSize: 18,
-        fontWeight: FontWeight.w900,
-        letterSpacing: -1,
-      ),
-      textAlign: TextAlign.center,
-    ),
-  );
-}
-
-Widget michiganBusIcon(Color color, String id){
-  return Container( // Bus circular icon
-    width: 35,
-    height: 35,
-    decoration: BoxDecoration(
-      shape: BoxShape.rectangle,
-      borderRadius: BorderRadius.circular(39), // should be 27.5 (55 divided by 2) but 39 works too
-      color: color,
-    ),
-    alignment: Alignment.center,
-    child: Text(
-      id,
-      style: TextStyle(
-        color: RouteColorService.getContrastingColor(
-          id,
-        ),
-        fontSize: 18,
-        fontWeight: FontWeight.w900,
-        letterSpacing: -1,
-      ),
-      textAlign: TextAlign.center,
-    ),
-  );
 }

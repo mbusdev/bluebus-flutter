@@ -1,5 +1,6 @@
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/innerShadow.dart';
+import 'package:bluebus/widgets/route_icon.dart';
 import 'package:bluebus/widgets/upcoming_stops_widget.dart';
 import 'package:flutter/material.dart';
 import '../models/journey.dart';
@@ -226,29 +227,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                     ...busIDs.map((busID) {
                       return Padding(
                         padding: const EdgeInsets.only(right: 3),
-                        child: Container(
-                          width: 35,
-                          height: 35,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: RouteColorService.getRouteColor(busID),
-                          ),
-                          alignment: Alignment.center,
-                          child: MediaQuery(
-                            // media query prevents text scaling
-                            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                            child: Text(
-                              busID,
-                              style: TextStyle(
-                                color: RouteColorService.getContrastingColor(busID),
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -1,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
+                        child: RouteIcon.smallWithLargerFont(busID),
                       );
                     }),
                   ],
@@ -609,29 +588,7 @@ class _JourneyBodyState extends State<JourneyBody> {
                   Row(
                     children: [
                       // icon
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: RouteColorService.getRouteColor(leg.rt!),
-                        ),
-                        alignment: Alignment.center,
-                        child: MediaQuery(
-                          // media query prevents text scaling
-                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                          child: Text(
-                            leg.rt!,
-                            style: TextStyle(
-                              color: RouteColorService.getContrastingColor(leg.rt!),
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -1,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+                      RouteIcon.medium(leg.rt!),
 
                       SizedBox(width: 10),
 
