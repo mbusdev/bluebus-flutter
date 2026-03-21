@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
@@ -254,6 +255,7 @@ class ExpandableStopWidget extends StatefulWidget {
 class _StopSheetState extends State<StopSheet> {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
   bool? _isFavorited;
+  Timer? _refreshTimer;
 
   // for select bus stops with images
   late bool imageBusStop;
@@ -292,12 +294,23 @@ class _StopSheetState extends State<StopSheet> {
     if (widget.stopID == "N553") {
       imagePath = "assets/PierpontNorthwood.jpg";
     }
+    
+    // Start auto-refresh every 30 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _refreshData();
+    });
   }
 
   void _refreshData() {
     setState(() {
       loadedStopData = fetchStopData(widget.stopID);
     });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
