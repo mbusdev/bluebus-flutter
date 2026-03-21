@@ -53,8 +53,8 @@ const Map<String, String> fallback_code_to_name = {
 final _whitespacePattern = RegExp(r'\s+');
 
 String normalizeStopName(String rawStopName) {
-  // Collapse any sequence of whitespace to a single space and trim edges.
-  return rawStopName.replaceAll(_whitespacePattern, ' ').trim();
+  // Remove random characters (add them to list if needed), collapse whitespace to a single space, and trim edges.
+  return rawStopName.replaceAll('%', '').replaceAll(_whitespacePattern, ' ').trim();
 }
 
 String getPrettyRouteName(String code) {
