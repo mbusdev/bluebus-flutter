@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/models/bus.dart';
+import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,7 +17,7 @@ class MapImageService {
   // BitmapDescriptor? stopIcon;
   BitmapDescriptor stopIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
   BitmapDescriptor? favStopIcon;
-    final Map<String, BitmapDescriptor> _routeBusIcons = {};
+  final Map<String, Uint8List> _routeBusIcons = {};
 
   Future<void> loadCustomMarkers(Function() onCompleted) async {
     try {
@@ -68,39 +69,42 @@ class MapImageService {
       // }
     } catch (e) {
       // Fallback to default markers if custom loading fails
-      stopIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueAzure,
-      );
+      // stopIcon = BitmapDescriptor.defaultMarkerWithHue(
+      //   BitmapDescriptor.hueAzure,
+      // );
     }
   }
 
-  BitmapDescriptor getIconForBus(Bus bus) {
-    if (_routeBusIcons.containsKey(bus.routeId)) {
-      return _routeBusIcons[bus.routeId]!;
-    } else if (busIcon != null) {
-      return busIcon!;
-    } else {
-      final routeColor = bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-      return BitmapDescriptor.defaultMarkerWithHue(
-        _colorToHue(routeColor),
-      );
-    }
-  }
+  // BitmapDescriptor getIconForBus(Bus bus) {
+  //   if (_routeBusIcons.containsKey(bus.routeId)) {
+  //     return _routeBusIcons[bus.routeId]!;
+  //   } else if (busIcon != null) {
+  //     return busIcon!;
+  //   } else {
+  //     final routeColor = bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
+  //     return BitmapDescriptor.defaultMarkerWithHue(
+  //       _colorToHue(routeColor),
+  //     );
+  //   }
+  // }
 
   Future<void> _loadRouteSpecificBusIcons() async {
+
     try {
       if (!RouteColorService.isInitialized) {
         await RouteColorService.initialize();
       }
 
-      // Check if we need to update cached assets based on version
+      // Check if we need to sqe cached assets based on version
       final shouldRefreshAssets = await _shouldRefreshCachedAssets();
 
       final routeIds = RouteColorService.definedRouteIds;
 
       for (final routeId in routeIds) {
+        // debugPrint("Loading bus icons for route ${routeId}");
         // Try to load from cache first if not forcing refresh
         if (!shouldRefreshAssets) {
+          // debugPrint("    Loading cached icon...");
           final cachedIcon = await _loadCachedBusIcon(routeId);
           if (cachedIcon != null) {
             _routeBusIcons[routeId] = cachedIcon;
@@ -111,16 +115,18 @@ class MapImageService {
         // Load from backend if cache miss or forcing refresh
         final imageUrl = RouteColorService.getRouteImageUrl(routeId);
         if (imageUrl != null) {
+          // debugPrint("    Cache missing, loading from backend...");
           await _loadRouteBusIcon(routeId, imageUrl);
         } else {
-          _setFallbackBusIcon(routeId);
+          // _setFallbackBusIcon(routeId);
         }
       }
     } catch (e) {
       // Fallback to default bus icon
-      busIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueYellow,
-      );
+      // debugPrint("Error (around line 122): " + e.toString());
+      // busIcon = BitmapDescriptor.defaultMarkerWithHue(
+      //   BitmapDescriptor.hueYellow,
+      // );
     }
   }
 
@@ -146,7 +152,7 @@ class MapImageService {
     }
   }
 
-    Future<int> getFrontEndImageVer() async {
+  Future<int> getFrontEndImageVer() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     final int counter = prefs.getInt('imageVer') ?? 0;
@@ -181,15 +187,19 @@ class MapImageService {
   }
 
     // Load cached bus icon from SharedPreferences
-  Future<BitmapDescriptor?> _loadCachedBusIcon(String routeId) async {
+  Future<Uint8List?> _loadCachedBusIcon(String routeId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedBytes = prefs.getString('bus_icon_$routeId');
+      final cachedBytes = prefs.getString('new_bus_icon_$routeId');
+      
       if (cachedBytes != null) {
+        // debugPrint("    Cache check--bytes IS NOT null");
         final bytes = base64.decode(cachedBytes);
-        return BitmapDescriptor.fromBytes(bytes);
+        return bytes;
       }
+      // debugPrint("    Cache check--bytes IS null");
     } catch (e) {
+      // debugPrint("    Cache error: ${e.toString()}");
       // Return null on error
     }
     return null;
@@ -200,68 +210,96 @@ class MapImageService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final base64String = base64.encode(bytes);
-      await prefs.setString('bus_icon_$routeId', base64String);
+      await prefs.setString('new_bus_icon_$routeId', base64String);
     } catch (e) {
       // Ignore cache save errors
     }
   }
 
-    Future<void> _loadRouteBusIcon(String routeId, String imageUrl) async {
+
+  // THIS IS WHAT WE NEED
+  Future<void> _loadRouteBusIcon(String routeId, String imageUrl) async {
     try {
       final response = await http.get(Uri.parse(imageUrl));
 
       if (response.statusCode == 200) {
         final imageBytes = response.bodyBytes;
+        _routeBusIcons[routeId] = imageBytes;
+        _cacheBusIcon(routeId, imageBytes); // Save it in the cache for later!
 
-        // Adjust bus icon size here
-        try {
-          final codec = await ui.instantiateImageCodec(
-            imageBytes,
-            targetWidth: 125,
-            targetHeight: 125,
-          );
-          final frame = await codec.getNextFrame();
-          final data = await frame.image.toByteData(
-            format: ui.ImageByteFormat.png,
-          );
+        // // Adjust bus icon size here
+        // try {
+        //   final codec = await ui.instantiateImageCodec(
+        //     imageBytes,
+        //     targetWidth: 125,
+        //     targetHeight: 125,
+        //   );
+        //   final frame = await codec.getNextFrame();
+        //   final data = await frame.image.toByteData(
+        //     format: ui.ImageByteFormat.png,
+        //   );
 
-          if (data != null) {
-            final processedBytes = data.buffer.asUint8List();
-            _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(
-              processedBytes,
-            );
+        //   if (data != null) {
+        //     final processedBytes = data.buffer.asUint8List();
+        //     _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(
+        //       processedBytes,
+        //     );
 
-            // Cache the processed icon for future use
-            await _cacheBusIcon(routeId, processedBytes);
-          } else {
-            _setFallbackBusIcon(routeId);
-          }
-        } catch (codecError) {
-          _setFallbackBusIcon(routeId);
-        }
+        //     // Cache the processed icon for future use
+        //     await _cacheBusIcon(routeId, processedBytes);
+        //   } else {
+        //     _setFallbackBusIcon(routeId);
+        //   }
+        // } catch (codecError) {
+        //   _setFallbackBusIcon(routeId);
+        // }
       } else {
         // Set fallback icon for this route
-        _setFallbackBusIcon(routeId);
+        // _setFallbackBusIcon(routeId);
       }
     } catch (e) {
       // Set fallback icon for this route
-      _setFallbackBusIcon(routeId);
+      // _setFallbackBusIcon(routeId);
     }
   }
 
-    // Set a fallback bus icon for a route
-  void _setFallbackBusIcon(String routeId) {
-    try {
-      final routeColor = RouteColorService.getRouteColor(routeId);
-      _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(
-        _colorToHue(routeColor),
-      );
-    } catch (e) {
-      // error handling
+  // // Set a fallback bus icon for a route
+  // void _setFallbackBusIcon(String routeId) {
+  //   try {
+  //     final routeColor = RouteColorService.getRouteColor(routeId);
+  //     _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(
+  //       _colorToHue(routeColor),
+  //     );
+  //   } catch (e) {
+  //     // error handling
+  //   }
+  // }
+
+  void ensureCachedBusIconsForRoutes(List<BusRouteLine> routes) {
+    for (final r in routes) {
+
+      // Load bus icon for this route if not already loaded
+      if (!_routeBusIcons.containsKey(r.routeId)) {
+        final imageUrl = RouteColorService.getRouteImageUrl(r.routeId);
+        if (imageUrl != null) {
+          _loadRouteBusIcon(r.routeId, imageUrl);
+        }
+      }
     }
+
+    // debugPrint("BUS ICONS: We now have ${_routeBusIcons.length} icons cached");
+    
   }
 
-    /// Convert a Color to a BitmapDescriptor hue value
+  bool busIconExists(String routeId) {
+    return _routeBusIcons.containsKey(routeId);
+  }
+
+  Uint8List getBusIconBytes(String routeId) {
+    return _routeBusIcons[routeId]!;
+  }
+
+  // Convert a Color to a BitmapDescriptor hue value
   double _colorToHue(Color color) {
     final hsl = HSLColor.fromColor(color);
     return hsl.hue;

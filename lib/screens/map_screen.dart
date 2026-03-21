@@ -136,6 +136,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void initState() {
     super.initState();
     _setupConnectivityMonitoring();
+    // _updateDisplayedBuses(
+    //   Provider.of<BusProvider>(context, listen: false).buses,
+    // );
+    // final busProvider = Provider.of<BusProvider>(context, listen: true);
+    // busProvider.addListener(() {
+    //   debugPrint("busProvider listener fired!");
+    //   _updateDisplayedBuses(busProvider.buses);
+    // });
   }
 
   Future<void> _setupConnectivityMonitoring() async {
@@ -873,85 +881,85 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // FUTURE: Add filtering to this list
 
     // null case or error contacting server case
-    if (allBuses == []) return;
+    // if (allBuses == []) return;
 
-    final selectedBusMarkers = allBuses
-        .where((bus) => _selectedRoutes.contains(bus.routeId))
-        .map((bus) {
-          // Use backend color if available, otherwise fallback to service
-          final routeColor =
-              bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
+    // final selectedBusMarkers = allBuses
+    //     .where((bus) => _selectedRoutes.contains(bus.routeId))
+    //     .map((bus) {
+    //       // Use backend color if available, otherwise fallback to service
+    //       final routeColor =
+    //           bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
 
-          // Use route specific bus icon if available, otherwise fallback to default
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+    //       // Use route specific bus icon if available, otherwise fallback to default
+    //       BitmapDescriptor? busIcon;
+    //       if (_routeBusIcons.containsKey(bus.routeId)) {
+    //         busIcon = _routeBusIcons[bus.routeId];
+    //       } else if (_busIcon != null) {
+    //         busIcon = _busIcon;
+    //       } else {
+    //         busIcon = BitmapDescriptor.defaultMarkerWithHue(
+    //           _colorToHue(routeColor),
+    //         );
+    //       }
 
-          return Marker(
-            flat: true,
-            markerId: MarkerId('bus_${bus.id}'),
-            consumeTapEvents: true,
-            position: bus.position,
-            icon: busIcon!,
-            rotation: bus.heading,
-            anchor: const Offset(0.5, 0.5), // Center the icon on the position
-            onTap: () {
-              try {
-                Haptics.vibrate(HapticsType.light);
-              } catch (e) { }
-              _showBusSheet(bus.id);
-            },
-          );
-        })
-        .toSet();
+    //       return Marker(
+    //         flat: true,
+    //         markerId: MarkerId('bus_${bus.id}'),
+    //         consumeTapEvents: true,
+    //         position: bus.position,
+    //         icon: busIcon!,
+    //         rotation: bus.heading,
+    //         anchor: const Offset(0.5, 0.5), // Center the icon on the position
+    //         onTap: () {
+    //           try {
+    //             Haptics.vibrate(HapticsType.light);
+    //           } catch (e) { }
+    //           _showBusSheet(bus.id);
+    //         },
+    //       );
+    //     })
+    //     .toSet();
 
-    // Update journey bus markers if journey is active
-    if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
-      _displayedJourneyBusMarkers.clear();
-      for (final bus in allBuses) {
-        // Show buses that are on routes used in the journey
-        if (_activeJourneyBusIds.contains(bus.id)) {
-          final routeColor =
-              bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+    // // Update journey bus markers if journey is active
+    // if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
+    //   _displayedJourneyBusMarkers.clear();
+    //   for (final bus in allBuses) {
+    //     // Show buses that are on routes used in the journey
+    //     if (_activeJourneyBusIds.contains(bus.id)) {
+    //       final routeColor =
+    //           bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
+    //       BitmapDescriptor? busIcon;
+    //       if (_routeBusIcons.containsKey(bus.routeId)) {
+    //         busIcon = _routeBusIcons[bus.routeId];
+    //       } else if (_busIcon != null) {
+    //         busIcon = _busIcon;
+    //       } else {
+    //         busIcon = BitmapDescriptor.defaultMarkerWithHue(
+    //           _colorToHue(routeColor),
+    //         );
+    //       }
 
-          _displayedJourneyBusMarkers.add(
-            Marker(
-              flat: true,
-              markerId: MarkerId('journey_bus_${bus.id}'),
-              consumeTapEvents: true,
-              position: bus.position,
-              icon: busIcon!,
-              rotation: bus.heading,
-              anchor: const Offset(0.5, 0.5),
-              onTap: () => _showBusSheet(bus.id),
-            ),
-          );
-        }
-      }
-    }
+    //       _displayedJourneyBusMarkers.add(
+    //         Marker(
+    //           flat: true,
+    //           markerId: MarkerId('journey_bus_${bus.id}'),
+    //           consumeTapEvents: true,
+    //           position: bus.position,
+    //           icon: busIcon!,
+    //           rotation: bus.heading,
+    //           anchor: const Offset(0.5, 0.5),
+    //           onTap: () => _showBusSheet(bus.id),
+    //         ),
+    //       );
+    //     }
+    //   }
+    // }
 
     
-    setState(() {
-      _displayedBusMarkers = selectedBusMarkers;
-      _updateAllDisplayedMarkers();
-    });
+    // setState(() {
+    //   _displayedBusMarkers = selectedBusMarkers;
+    //   _updateAllDisplayedMarkers();
+    // });
   }
 
   void _updateAllDisplayedMarkers() {
@@ -1977,6 +1985,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
     }
   }
+
+  NEXT STEPS TODO: Figure out how to get the BusProvider listener to work without crashing the entire app, and get the listener callback to call updateDisplayedBuses() inside the universalController (the UniversalMapController will get it to the _BusMarkerLayer where it needs to go)
 
   @override
   Widget build(BuildContext context) {

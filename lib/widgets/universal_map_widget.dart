@@ -83,11 +83,17 @@ class UniversalMapController {
 
   void updateDisplayedBuses(List<Bus> buses) {
     debugPrint("Inside universal controller, got updateDisplayedBuses call");
-    _widget?.busesToDisplay = buses;
-    _widget?.regenerateBusMarkers();
+    _widget?._busMarkersToDisplayNotifier.value = List.from(
+          buses.where((Bus b) {return _widget?.selectedRoutes?.contains(b.routeId) ?? false;})
+        );
+    // _widget?.busesToDisplay =
+    //   List.from(
+    //       buses.where((Bus b) {return _widget?.selectedRoutes?.contains(b.routeId) ?? false;})
+    //     );
+    // _widget?.regenerateBusMarkers();
     
   }
-  
+  // NEXT STEPS TODO: Get the buses to live-update
   
 
   // Future<void> loadCustomMarkers() async {
@@ -135,6 +141,83 @@ class UniversalMapController {
 //             .toSet();
 //       }
 
+
+class _BusMarkerLayerState extends State<_BusMarkerLayer> {
+
+  // List<Marker> busMarkers = [];
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  
+
+  // }
+  
+
+  @override
+  Widget build(BuildContext context) {
+    // return MarkerLayer(markers: busMarkers);
+    return ValueListenableBuilder<List<Bus>>(
+      valueListenable: widget.busMarkersToDisplayNotifier,
+      builder: (context, List<Bus> buses, child) {
+        debugPrint("Got valueListenable change notification!");
+
+        return MarkerLayer(
+          markers: buses.map((bus) => Marker(
+            // point: LatLongNew.LatLng(stop.location.latitude, stop.location.longitude),
+            point: LatLongNew.LatLng(bus.position.latitude, bus.position.longitude),
+            width: 40,
+            height: 40,
+            child: GestureDetector(
+              onTap: () {
+                // widget.onStopClicked(stop);
+                widget.onBusClicked(bus);
+              },
+              child: Transform.rotate(
+                  angle: bus.heading * (math.pi / 180),
+                  child: widget.imageService.busIconExists(bus.routeId) ?
+                      Image.memory(widget.imageService.getBusIconBytes(bus.routeId)) :
+                      Image.asset("assets/unknownbus.png", width: 20.0, height: 20.0),
+                )
+              // child: SizedBox(
+              //   width: 20.0,
+              //   height: 20.0,
+              //   // child: Image.asset("assets/bus_stop.png", width: 2.0, height: 2.0)
+              //   child: Transform.rotate(
+              //     angle: bus.heading * (math.pi / 180),
+              //     child: Image.asset("assets/unknownbus.png", width: 20.0, height: 20.0),
+              //   )
+                
+              // ),
+            )
+            
+          )).toList()
+        );
+      },
+    );
+  }
+  // MarkerLayer(markers: busMarkersToDisplay)
+
+
+
+}
+
+class _BusMarkerLayer extends StatefulWidget {
+
+  MapImageService imageService;
+  Function(Bus bus) onBusClicked;
+  ValueNotifier<List<Bus>> busMarkersToDisplayNotifier;
+
+  _BusMarkerLayer({
+    required this.imageService,
+    required this.onBusClicked,
+    required this.busMarkersToDisplayNotifier
+  });
+
+  State<_BusMarkerLayer> createState() => _BusMarkerLayerState();
+
+}
+
 class UniversalMapWidgetState extends State<UniversalMapWidget> {
   //final _controller = Completer<GoogleMapController>();
   // final 
@@ -152,7 +235,10 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
   Map<String,Marker> animatableMarkersToDisplay = {};
 
   List<Bus> busesToDisplay = [];
-  List<Marker> busMarkersToDisplay = [];
+  // List<Marker> busMarkersToDisplay = [];
+  final ValueNotifier<List<Bus>> _busMarkersToDisplayNotifier = ValueNotifier([]);
+
+  // final ValueNotifier<List<Bus>> _busMarkersNotifier = ValueNotifier([]);
 
   Style? style;
 
@@ -263,6 +349,8 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
     setState(() {
       new_staticMarkersToDisplay.clear();
 
+      imageService.ensureCachedBusIconsForRoutes(_allLines);
+
       _allLines.forEach((BusRouteLine line) {
         if (selectedRoutes.contains(line.routeId)) {
 
@@ -352,59 +440,73 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
   }
 
   void regenerateBusMarkers() {
+    // This isn't needed anymore (I don't think so, at least)
 
     debugPrint("Got regenerateBusMarkers() call, and we have ${busesToDisplay.length} buses to display");
 
+    // _busMarkersToDisplayNotifier.value.clear();
+    // busesToDisplay.forEach((Bus bus) {
+
+    // })
+
     // TODO: Implement this
-    setState(() {
-      busMarkersToDisplay.clear();
+    // setState(() {
+    //   // busMarkersToDisplay.clear();
+    //   _busMarkersToDisplayNotifier.value.clear();
 
-      busesToDisplay.forEach((Bus bus) {
+    //   busesToDisplay.forEach((Bus bus) {
 
-        // BitmapDescriptor? busIcon;
-        //   if (_routeBusIcons.containsKey(bus.routeId)) {
-        //     busIcon = _routeBusIcons[bus.routeId];
-        //   } else if (_busIcon != null) {
-        //     busIcon = _busIcon;
-        //   } else {
-        //     busIcon = BitmapDescriptor.defaultMarkerWithHue(
-        //       _colorToHue(routeColor),
-        //     );
-        //   }
+    //     // BitmapDescriptor? busIcon;
+    //     //   if (_routeBusIcons.containsKey(bus.routeId)) {
+    //     //     busIcon = _routeBusIcons[bus.routeId];
+    //     //   } else if (_busIcon != null) {
+    //     //     busIcon = _busIcon;
+    //     //   } else {
+    //     //     busIcon = BitmapDescriptor.defaultMarkerWithHue(
+    //     //       _colorToHue(routeColor),
+    //     //     );
+    //     //   }
 
-        busMarkersToDisplay.add(
-          Marker(
-            // point: LatLongNew.LatLng(stop.location.latitude, stop.location.longitude),
-            point: LatLongNew.LatLng(bus.position.latitude, bus.position.longitude),
-            width: 20,
-            height: 20,
-            child: GestureDetector(
-              onTap: () {
-                // widget.onStopClicked(stop);
-                widget.onBusClicked(bus);
-              },
-              child: SizedBox(
-                width: 20.0,
-                height: 20.0,
-                // child: Image.asset("assets/bus_stop.png", width: 2.0, height: 2.0)
-                child: Transform.rotate(
-                  angle: bus.heading * (math.pi / 180),
-                  child: Image.asset("assets/unknownbus.png", width: 20.0, height: 20.0),
-                )
+    //     // busMarkersToDisplay.add(
+    //     _busMarkersToDisplayNotifier.value.add(
+    //       Marker(
+    //         // point: LatLongNew.LatLng(stop.location.latitude, stop.location.longitude),
+    //         point: LatLongNew.LatLng(bus.position.latitude, bus.position.longitude),
+    //         width: 40,
+    //         height: 40,
+    //         child: GestureDetector(
+    //           onTap: () {
+    //             // widget.onStopClicked(stop);
+    //             widget.onBusClicked(bus);
+    //           },
+    //           child: Transform.rotate(
+    //               angle: bus.heading * (math.pi / 180),
+    //               child: imageService.busIconExists(bus.routeId) ?
+    //                   Image.memory(imageService.getBusIconBytes(bus.routeId)) :
+    //                   Image.asset("assets/unknownbus.png", width: 20.0, height: 20.0),
+    //             )
+    //           // child: SizedBox(
+    //           //   width: 20.0,
+    //           //   height: 20.0,
+    //           //   // child: Image.asset("assets/bus_stop.png", width: 2.0, height: 2.0)
+    //           //   child: Transform.rotate(
+    //           //     angle: bus.heading * (math.pi / 180),
+    //           //     child: Image.asset("assets/unknownbus.png", width: 20.0, height: 20.0),
+    //           //   )
                 
-              ),
-            )
+    //           // ),
+    //         )
             
-          )
+    //       )
 
-        );
+    //     );
 
     
-      });
+    //   });
 
 
-      // debugPrint("FINISHED ADDING BUSES, NOW HAVE ${busMarkersToDisplay.length} MARKERS");
-    });
+    //   // debugPrint("FINISHED ADDING BUSES, NOW HAVE ${busMarkersToDisplay.length} MARKERS");
+    // });
   }
 
   @override
@@ -464,7 +566,12 @@ class UniversalMapWidgetState extends State<UniversalMapWidget> {
                 polylines: new_polylinesToDisplay,
               ),
               MarkerLayer(markers: new_staticMarkersToDisplay),
-              MarkerLayer(markers: busMarkersToDisplay)
+              // MarkerLayer(markers: busMarkersToDisplay)
+              _BusMarkerLayer(
+                imageService: imageService,
+                onBusClicked: widget.onBusClicked,
+                busMarkersToDisplayNotifier: _busMarkersToDisplayNotifier
+              )
             ],
           );
         }
