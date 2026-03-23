@@ -1,7 +1,7 @@
 import 'package:bluebus/services/bus_info_service.dart';
+import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
-import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
 import 'package:intl/intl.dart';
                           
@@ -19,15 +19,6 @@ String format(String text) {
 
   // Capitalize the first character and lowercase the rest
   return text[0].toUpperCase() + text.substring(1).toLowerCase();
-}
-
-/// lets you check if a bus is the ride (checks if id is numeric)
-bool isRide(String? s) {
-  if (s != null && int.tryParse(s) != null) {
-    // busID is numeric, so it's a ride bus
-    return true;
-  } 
-  return false;
 }
 
 class MiniStopSheet extends StatefulWidget {
@@ -126,36 +117,7 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                           children: [
                             Row(
                               children: [
-                                Container(
-                                  width: isRide(bus.id) ? 45 : 40,
-                                  height: isRide(bus.id) ? 35 : 40, 
-                                  decoration: isRide(bus.id) ? 
-                                    // ride icon
-                                    BoxDecoration(
-                                      shape: BoxShape.rectangle,
-                                      borderRadius: BorderRadius.circular(20),
-                                      color: RouteColorService.getRouteColor(bus.id),
-                                    ) :
-                                    // michigan icon
-                                    BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: RouteColorService.getRouteColor(bus.id),
-                                    ),
-                                  alignment: Alignment.center,
-                                  child: MediaQuery(
-                                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                    child: Text(
-                                      bus.id,
-                                      style: TextStyle(
-                                        color: RouteColorService.getContrastingColor(bus.id), 
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: -1,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
+                                RouteIcon.medium(bus.id),
                                 
                                 SizedBox(width: 15,),
                 

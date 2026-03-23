@@ -4,6 +4,7 @@ import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/refresh_button.dart';
+import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../constants.dart';
@@ -11,14 +12,6 @@ import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
 import 'package:intl/intl.dart';
 import 'upcoming_stops_widget.dart';
-
-bool isRide(String? s) {
-  if (s != null && int.tryParse(s) != null) {
-    // busID is numeric, so it's a ride bus
-    return true;
-  } 
-  return false;
-}
 
 class StopSheet extends StatefulWidget {
   final String stopID;
@@ -88,36 +81,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
               child: Row(
                 children: [
-                  Container( // Circular icon on the left (with the bus code, e.g. "NW")
-                    width: isRide(widget.busId) ? 45 : 40,
-                    height: isRide(widget.busId) ? 35 : 40, 
-                    decoration: isRide(widget.busId) ? 
-                      // ride icon
-                      BoxDecoration(
-                        shape: BoxShape.rectangle,
-                        borderRadius: BorderRadius.circular(20),
-                        color: RouteColorService.getRouteColor(widget.busId),
-                      ) :
-                      // michigan icon
-                      BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: RouteColorService.getRouteColor(widget.busId),
-                      ),
-                      alignment: Alignment.center,
-                      child: MediaQuery(
-                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                        child: Text(
-                          widget.busId,
-                          style: TextStyle(
-                            color: RouteColorService.getContrastingColor(widget.busId), 
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                  ),
+                  RouteIcon.medium(widget.busId),
 
                   SizedBox(width: 15),
 
@@ -950,36 +914,7 @@ class _ReminderFormState extends State<ReminderForm> {
                                 height: 10,
                                 width: 60,
                               ),
-                              Container(
-                                width: isRide(rtid) ? 45 : 40,
-                                height: isRide(rtid) ? 35 : 40, 
-                                decoration: isRide(rtid) ? 
-                                  // ride icon
-                                  BoxDecoration(
-                                    shape: BoxShape.rectangle,
-                                    borderRadius: BorderRadius.circular(20),
-                                    color: RouteColorService.getRouteColor(rtid),
-                                  ) :
-                                  // michigan icon
-                                  BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: RouteColorService.getRouteColor(rtid),
-                                  ),
-                                alignment: Alignment.center,
-                                child: MediaQuery(
-                                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                  child: Text(
-                                    rtid,
-                                    style: TextStyle(
-                                      color: RouteColorService.getContrastingColor(rtid), 
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
+                              RouteIcon.medium(rtid),
                               
                               Checkbox(
                                 value: activeRtids.contains(rtid) != rtidsToChange.contains(rtid),
