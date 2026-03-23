@@ -105,7 +105,7 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                         GestureDetector(
                           onTap: () {
                             widget.onUnfavorite();
-                          }
+                          },
                           child: Icon(Icons.delete_outline)
                         )
                       ],
