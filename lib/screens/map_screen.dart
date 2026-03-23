@@ -335,7 +335,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final stopList = jsonDecode(response.body) as List<dynamic>;
 
         return stopList.map((stop) {
-          final name = stop['name'] as String;
+          final name = normalizeStopName(stop['name'] as String);
           final aliases = [
             name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
           ];
