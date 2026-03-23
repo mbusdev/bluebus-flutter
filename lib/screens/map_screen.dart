@@ -307,10 +307,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     busProvider.startBusUpdates();
     busProvider.startRouteUpdates();
     await Future.delayed(const Duration(milliseconds: 180));
-
-    // Center map on user's location on startup if available
-    
-
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -1927,6 +1923,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           );
           return null;
         }
+        else {
+          //Center map once right after user grants location permissions
+          _centerOnLocation(true);
+        }
       }
 
       if (permission == LocationPermission.deniedForever) {
@@ -1942,7 +1942,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
 
       Position? position = await Geolocator.getLastKnownPosition();
-      _centerOnLocation(true);
       return position;
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
