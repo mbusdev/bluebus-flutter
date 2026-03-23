@@ -106,9 +106,7 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
                           onTap: () {
                             widget.onUnfavorite();
                           },
-                          // changed this icon from a trash to a close
-                          // because I think it looks better
-                          child: Icon(Icons.close)
+                          child: Icon(Icons.delete_outline
                         )
                       ],
                     ),
