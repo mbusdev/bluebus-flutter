@@ -19,6 +19,7 @@ import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geodesy/geodesy.dart' as geodesy;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -134,6 +135,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final Map<String, Set<Marker>> _routeStopMarkers = {};
   // Whether a journey search overlay is currently active (shows only journey path)
   bool _journeyOverlayActive = false;
+  /// Whether detailed navigation is active
+  bool _navigationActive = false;
+  /// handle to cancel position updates with
+  StreamSubscription<Position>? _navigationPositionSubscription;
+  int? _navigationCurrLeg;
+  LatLng? _navigationPointOnLeg;
+  LatLng? _navigationPointOnLegStart;
+  LatLng? _navigationPointOnLegEnd;
+
   // maximum allowed distance (meters) from a stop to a candidate polyline point
   static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
@@ -1786,6 +1796,144 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
+  /// convert from a google maps `LatLng` to a geodesy `LatLng`
+  geodesy.LatLng _toGeodesy(LatLng x) {
+    return geodesy.LatLng(x.latitude, x.longitude);
+  }
+
+  /// convert from a geodesy `LatLng` to a google maps `LatLng`
+  LatLng _fromGeodesy(geodesy.LatLng x) {
+    return LatLng(x.latitude, x.longitude);
+  }
+
+  /// find the point on `poly` that is closest to `point`
+  (LatLng?, LatLng?, LatLng?) _projectPointToPolyline(LatLng point, List<LatLng> poly) {
+    // TODO: consider optimizations since this will be called frequently during navigation
+    LatLng? prev, bestPoint, bestStart, bestEnd;
+    final geo = geodesy.Geodesy();
+    var bestDistance = double.infinity;
+    for (final curr in poly) {
+      if (prev != null) {
+        final projected = _projectPointToSegment(point, prev, curr);
+        final distance = geo.greatCircleDistanceBetweenTwoGeoPoints(
+          projected.latitude, projected.longitude, point.latitude, point.longitude
+        );
+        if (distance < bestDistance) {
+          bestPoint = projected;          
+          bestStart = prev;
+          bestEnd = curr;
+          bestDistance = distance.toDouble();
+        }
+      }
+      prev = curr;
+    }
+    return (bestPoint, bestStart, bestEnd);
+  }
+
+  /// closest point on a line segment
+  LatLng _projectPointToSegment(LatLng point, LatLng segA, LatLng segB) {
+    final p = _toGeodesy(point);
+    final a = _toGeodesy(segA);
+    final b = _toGeodesy(segB);
+    final geo = geodesy.Geodesy();
+    final aDist = geo.greatCircleDistanceBetweenTwoGeoPoints(p.latitude, p.longitude, a.latitude, a.longitude);
+    final bDist = geo.greatCircleDistanceBetweenTwoGeoPoints(p.latitude, p.longitude, b.latitude, b.longitude);
+    // is the closest point to the line actually in the segment
+    final notPastA = _angleBearingToBearing(
+      geo.bearingBetweenTwoGeoPoints(a, b).toDouble(),
+      geo.bearingBetweenTwoGeoPoints(a, p).toDouble()
+    ) <= 90.0;
+    final notPastB = _angleBearingToBearing(
+      geo.bearingBetweenTwoGeoPoints(b, a).toDouble(),
+      geo.bearingBetweenTwoGeoPoints(b, p).toDouble()
+    ) <= 90.0;
+    if (notPastA && notPastB) {
+      print("loc: ${p.toString()}");
+      print("${_fromGeodesy(geo.projectPointOntoGeodesicLine(p, a, b))} is between ${a.toString()} and ${b.toString()}");
+      print("a -> b : ${geo.bearingBetweenTwoGeoPoints(a, b)}");
+      print("a -> p : ${geo.bearingBetweenTwoGeoPoints(a, p)}");
+      print("angle : ${_angleBearingToBearing(geo.bearingBetweenTwoGeoPoints(a, b).toDouble(),geo.bearingBetweenTwoGeoPoints(a, p).toDouble())}");
+      print("b -> a : ${geo.bearingBetweenTwoGeoPoints(b, a)}");
+      print("b -> p : ${geo.bearingBetweenTwoGeoPoints(b, p)}");
+      print("angle : ${_angleBearingToBearing(geo.bearingBetweenTwoGeoPoints(b, a).toDouble(),geo.bearingBetweenTwoGeoPoints(b, p).toDouble())}");
+      return _fromGeodesy(geo.projectPointOntoGeodesicLine(p, a, b));
+    } else if (aDist < bDist) {
+      return segA;
+    } else {
+      return segB;
+    }
+  }
+
+  /// in degrees
+  double _angleBearingToBearing(double b1, double b2) {
+    return 180.0 - (180.0 - (b1 - b2).abs() % 360.0).abs();
+  }
+
+  void _startNavigation() {
+    // TODO
+    setState(() {
+      _navigationPositionSubscription = Geolocator.getPositionStream()
+        .listen(
+          (pos) async {
+            print("Got position ${pos.toString()}");
+            final posLatLng = LatLng(pos.latitude, pos.longitude);
+            // move camera to follow location
+            final mapController = _mapController;
+            if (mapController != null) {
+              final zoom = await mapController.getZoomLevel();
+              mapController.animateCamera(
+                CameraUpdate.newCameraPosition(CameraPosition(
+                  target: posLatLng,
+                  // tilt: 45.0,
+                  tilt: 0.0,
+                  zoom: zoom,
+                  bearing: pos.heading,
+                )),
+                duration: Duration(seconds: 1)
+              );
+            }
+            // update marker
+            final legIdx = _navigationCurrLeg;
+            if (legIdx != null && legIdx < currDisplayed.legs.length) {
+              final leg = currDisplayed.legs[legIdx];
+              final walkingPath = leg.pathCoords;
+              if (walkingPath != null) {
+                final projectInfo = _projectPointToPolyline(posLatLng, walkingPath);
+                _navigationPointOnLeg = projectInfo.$1;
+                _navigationPointOnLegStart = projectInfo.$2;
+                _navigationPointOnLegEnd = projectInfo.$3;
+                print("got point: ${_navigationPointOnLeg.toString()}");
+              } else {
+                print("walking path was null");
+                _navigationPointOnLeg = null;
+              }
+            } else {
+              print("leg was not found");
+              _navigationPointOnLeg = null;
+            }
+          },
+          onError: (err) {
+            print("Failed to get position: ${err.toString()}");
+          },
+          onDone: () {
+            print("Position stream done");
+          },
+        );
+      _navigationActive = true;
+      _navigationCurrLeg = 0;
+    });
+  }
+
+  void _stopNavigation() {
+    // TODO
+    setState(() {
+      _navigationPositionSubscription?.cancel();
+      _navigationActive = false;
+      _navigationPointOnLeg = null;
+      _navigationCurrLeg = null;
+    });
+  }
+
   void _showBusSheet(String busID) {
     showModalBottomSheet(
       context: context,
@@ -2054,6 +2202,16 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       globallPaddingHasBeenSet = true;
     }
 
+    final polylines = _journeyOverlayActive
+      ? _displayedJourneyPolylines
+      : _displayedPolylines.union(_displayedJourneyPolylines);
+    final Set<Marker> navigationMarkers = [
+      (_navigationPointOnLeg, "pol"), (_navigationPointOnLegStart, "pols"), (_navigationPointOnLegEnd, "pole")
+    ]
+      .where((x) => x.$1 != null)
+      .map((x) => Marker(markerId: MarkerId("nav-marker-${x.$2}"), position: x.$1!))
+      .toSet();
+
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
@@ -2089,11 +2247,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       Platform.isIOS
                           ? MapWidget(
                               initialCenter: _defaultCenter,
-                              polylines: _journeyOverlayActive
-                                  ? _displayedJourneyPolylines
-                                  : _displayedPolylines.union(
-                                      _displayedJourneyPolylines,
-                                    ),
+                              polylines: polylines,
                               markers: _journeyOverlayActive
                                   ? _displayedJourneyMarkers
                                         .union(_displayedJourneyBusMarkers)
@@ -2102,6 +2256,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                               ? {_searchLocationMarker!}
                                               : {},
                                         )
+                                        .union(navigationMarkers)
                                   : _allDisplayedStopMarkers,
                               darkMapStyle: _darkMapStyle,
                               lightMapStyle: _lightMapStyle,
@@ -2115,11 +2270,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             )
                           : AndroidMap(
                               initialCenter: _defaultCenter,
-                              polylines: _journeyOverlayActive
-                                  ? _displayedJourneyPolylines
-                                  : _displayedPolylines.union(
-                                      _displayedJourneyPolylines,
-                                    ),
+                              polylines: polylines,
                               staticMarkers: _journeyOverlayActive
                                   ? _displayedJourneyMarkers.union(
                                       _searchLocationMarker != null
@@ -2137,6 +2288,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               lightMapStyle: _lightMapStyle,
                               dynamicMarkers: _journeyOverlayActive
                                   ? _displayedJourneyBusMarkers
+                                      .union(navigationMarkers)
                                   : _displayedBusMarkers,
                               onMapCreated: _onMapCreated,
                               onCameraMove: _onCameraMove,
@@ -2625,7 +2777,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ),
                                         ),
                                         child: ElevatedButton.icon(
-                                          onPressed: _clearJourneyOverlays,
+                                          onPressed: () {
+                                            _stopNavigation();
+                                            _clearJourneyOverlays();
+                                          },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: getColor(
                                               context,
@@ -2663,6 +2818,45 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ), // The text on the right
                                         ),
                                       ),
+                                      _navigationActive
+                                        ? Padding(
+                                          padding: const EdgeInsets.only(left: 20.0),
+                                          child: ElevatedButton.icon(
+                                              icon: Icon(
+                                                Icons.stop,
+                                                color: getColor(context, ColorType.importantButtonText)),
+                                              label: Text(
+                                                "Stop",
+                                                style: getTextStyle(TextType.normal,
+                                                getColor(context, ColorType.importantButtonText))
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: getColor(context, ColorType.importantButtonBackground)
+                                              ),
+                                              onPressed: () {
+                                                _stopNavigation();
+                                              },
+                                            ),
+                                          )
+                                        : Padding(
+                                          padding: const EdgeInsets.only(left: 20.0),
+                                          child: ElevatedButton.icon(
+                                              icon: Icon(
+                                                Icons.directions,
+                                                color: getColor(context, ColorType.importantButtonText)),
+                                              label: Text(
+                                                "Nav",
+                                                style: getTextStyle(TextType.normal,
+                                                getColor(context, ColorType.importantButtonText))
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: getColor(context, ColorType.importantButtonBackground)
+                                              ),
+                                              onPressed: () {
+                                                _startNavigation();
+                                              },
+                                            ),
+                                        )
                                     ],
                                   )
                                 // else, main buttons row
