@@ -76,6 +76,30 @@ class IncomingBusReminderService {
     await _unsetReminder(token: token, stpid: stpid, rtid: rtid);
   }
 
+  static Future<void> checkReminders(
+    List<RemindersModification> modifications,
+  ) async {
+    // TODO: avoid excessive setup work
+    await _completeSetup();
+    final token = _serverToken();
+    if (token == null) throw Exception("missing token");
+
+    // List for checking if every reminder modification has been set
+    List<bool> added = List.generate(modifications.length, (i) => modifications[i] is RemoveReminder);
+
+    for (final reminder in await _activeReminders(token: token)) {
+      for (int i = 0; i < modifications.length; ++i) {
+        if (reminder.stpid == modifications[i].encode()["stpid"] && reminder.rtid == modifications[i].encode()["rtid"]) {
+          added[i] = modifications[i] is AddReminder;
+          if (added[i] is RemoveReminder) throw Exception("backend not updated");
+          break;
+        }
+      }
+    }
+
+    if (added.contains(false)) throw Exception("backend not updated");
+  }
+
   static Future<void> modifyReminders(
     List<RemindersModification> modifications,
   ) async {
