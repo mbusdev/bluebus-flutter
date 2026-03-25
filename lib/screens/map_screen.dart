@@ -104,6 +104,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   Set<Polyline> _displayedPolylines = {};
   Set<Marker> _displayedStopMarkers = {};
+  Set<Marker> _displayedFavoriteStopMarkers = {};
   Set<Marker> _displayedBusMarkers = {};
   // Journey overlays for search results
   Set<Polyline> _displayedJourneyPolylines = {};
@@ -771,14 +772,16 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
         _routeStopMarkers[routeKey] = r.stops
-            .map(
-              (stop) => Marker(
+            .map((stop) {
+              final isFavorite = _favoriteStops.contains(stop.id);
+
+              final marker = Marker(
                 markerId: MarkerId(
                   'stop_${stop.id}_${Object.hashAll(r.points)}',
                 ),
                 position: stop.location,
                 flat: true,
-                icon: _favoriteStops.contains(stop.id)
+                icon: isFavorite
                     ? (stop.isRide
                           ? _favRideStopIcon ??
                                 BitmapDescriptor.defaultMarkerWithHue(
@@ -812,9 +815,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 },
                 rotation: stop.rotation,
                 anchor: Offset(0.5, 0.5),
-              ),
-            )
-            .toSet();
+              );
+              
+              // add created stop marker to the favorited markers if it is favorited
+              if (isFavorite) _displayedFavoriteStopMarkers.add(marker);
+              return marker;
+            }).toSet();
       }
     }
   }
@@ -853,7 +859,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _routeStopMarkers.forEach((routeKey, markers) {
       final updated = markers.map((m) {
         if (m.markerId.value.startsWith('stop_${stpid}_')) {
-          return Marker(
+          final marker = Marker(
             flat: true,
             markerId: m.markerId,
             position: m.position,
@@ -872,6 +878,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             rotation: m.rotation,
             anchor: m.anchor,
           );
+
+          // add or remove the marker from the displayed favorite stops
+          if (!favored) {
+            _displayedFavoriteStopMarkers.remove(m);
+          } else {
+            _displayedFavoriteStopMarkers.add(marker);
+          }
+
+          return marker;
         }
         return m;
       }).toSet();
@@ -1010,6 +1025,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _updateAllDisplayedMarkers() {
     _allDisplayedStopMarkers = _displayedStopMarkers
+        .union(_displayedFavoriteStopMarkers)
         .union(_displayedBusMarkers)
         .union(_displayedJourneyMarkers)
         .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
@@ -1078,6 +1094,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _refreshCachedStopMarkers() {
     // Clear cached stop markers so they'll be recreated with the new icons
     _routeStopMarkers.clear();
+    // also clear persistent favorited stop markers to be refreshed in _cacheRouteOverlays(..)
+    _displayedFavoriteStopMarkers.clear();
     // Re-cache all route overlays with the new icons
     _cacheRouteOverlays(
       Provider.of<BusProvider>(context, listen: false).routes,
@@ -2129,6 +2147,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           : {},
                                     )
                                   : _displayedStopMarkers
+                                        .union(_displayedFavoriteStopMarkers)
                                         .union(_displayedJourneyMarkers)
                                         .union(
                                           _searchLocationMarker != null
