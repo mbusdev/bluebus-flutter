@@ -1092,7 +1092,6 @@ class _ReminderFormState extends State<ReminderForm> {
 
                         try {
                           await IncomingBusReminderService.modifyReminders(modifications);                  
-                          await IncomingBusReminderService.checkReminders(modifications);                  
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         } on Exception {
