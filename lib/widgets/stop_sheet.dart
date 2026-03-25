@@ -1095,11 +1095,11 @@ class _ReminderFormState extends State<ReminderForm> {
                           await IncomingBusReminderService.checkReminders(modifications);                  
                           if (!context.mounted) return;
                           Navigator.pop(context);
-                        } on Exception catch (e) {
+                        } on Exception {
                           showDialog(
                             context: context,
                             builder: (context) => SimpleDialog(
-                              title: Text("Notification request couldn't be sent\n")),
+                              title: Text("Notification request\n couldn't be sent\n", textAlign: TextAlign.center,)),
                           );
                         }
                         setState(() => _isProcessing = false);
