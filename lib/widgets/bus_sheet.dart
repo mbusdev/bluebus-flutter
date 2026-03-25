@@ -1,6 +1,7 @@
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:bluebus/widgets/dialog.dart';
 import '../constants.dart';
 import '../models/bus.dart';
 import '../services/route_color_service.dart';
@@ -47,7 +48,22 @@ class _BusSheetState extends State<BusSheet> {
   Widget build(BuildContext context) {
     // There was a really weird bug where _BusSheetState would get a busID that doesn't exist so currBus would be null.
     // This accounts for that.
-    if (currBus == null) return Text("Bus not found");
+    // ISSUE: Currently creates a very off aligned blank text screen
+    // TO DO: Replace with a pop up widget that simply says "No wifi oops"
+    if (currBus == null) { 
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+
+        Navigator.of(context).pop();
+
+        showMaizebusOKDialog(
+          contextIn: context,
+          title: const Text("Uh Oh!"),
+          content: const Text("Unable to fetch bus data. Looks like you aren't connected to the internet!"),
+        );
+      });
+    }
+
 
     final bus = currBus!;
 
