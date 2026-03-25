@@ -736,7 +736,9 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
         child: Container(
           width: double.infinity,
           height: widget.isExpanded ? null : 0,
-          child: (rowElements.length > 0)
+          child: (!widget.isExpanded)
+            ? const SizedBox()
+            : (rowElements.length > 0)
               ? Column(
                   children: [
                     ...rowElements,
