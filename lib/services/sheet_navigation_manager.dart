@@ -16,6 +16,60 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
+// class BackStackStep {
+//   SheetNavigationManager? navigationManager;
+//   void recall() {} 
+// }
+
+// class BusSheetBackStackStep {
+//   SheetNavigationManager? navigationManager;
+//   String busId;
+//   BusSheetBackStackStep({
+//     required this.navigationManager,
+//     required this.busId
+//   });
+//   void recall() {
+//     navigationManager?.showBusSheet(busId);
+//   }
+// }
+
+// class StopSheetBackStackStep {
+//   SheetNavigationManager? navigationManager;
+//   String stopID;
+//   String stopName;
+//   double lat;
+//   double long;
+
+//   StopSheetBackStackStep({
+//     required this.navigationManager,
+//     required this.stopID,
+//     required this.stopName,
+//     required this.lat,
+//     required this.long
+//   });
+
+//   void recall() {
+
+//   }
+// }
+
+class SheetNavigator extends StatelessWidget {
+  final Widget initialSheet;
+  SheetNavigator({
+    required this.initialSheet
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(builder: (context) => initialSheet);
+      },
+    );
+  }
+
+}
+
 class SheetNavigationManager {
   PersistentBottomSheetController? _bottomSheetController;
 
@@ -38,6 +92,9 @@ class SheetNavigationManager {
   Function(String stpid) onUnfavorite;
   Future<void> Function(String stpid, String name) removeFavoriteStop;
 
+  // List<BackStackStep> backStack;
+  // bool was_sheet_closed_programatically = false; // Flag to know whether the last-closed sheet was closed programatically (e.g. while executing a back gesture) versus if the user swiped it away
+
   SheetNavigationManager({
     required this.context,
     required this.addFavoriteStop,
@@ -59,6 +116,10 @@ class SheetNavigationManager {
     _bottomSheetController!.close();
     _bottomSheetController = null;
   }
+
+  // void onAnySheetDismissed() {
+  //   backStack.clear();
+  // }
 
   void showBuildingSheet(Location place) {
     // Show red pin at the location
@@ -212,27 +273,64 @@ class SheetNavigationManager {
     );
   }
 
-  void showBusSheet(String busID) {
+  // void onAnySheetClosed() {
+
+  //   was_sheet_closed_programatically = false; // Reset to our default assumption that the user closed the sheet, unless this flag is set to true
+  // }
+
+  // TODO: Add a flag to show whether the modal was closed programatically
+  //    i.e. before closing the model programatically on line 262, set this variable
+  //    and then in onClosing check it. If the user swiped it away, clear the back stack
+
+  void showBusSheetFromSheet(String busID, BuildContext parentContext, ScrollController scrollController) {
+    Navigator.of(parentContext).push(
+      MaterialPageRoute(builder: (context) => 
+        BusSheet(
+          busID: busID,
+          scrollController: scrollController,
+          onSelectStop: (name, id) {
+            
+            // Navigator.pop(context); // Close the current modal
+            LatLng? latLong = getLatLongFromStopID(id);
+            if (latLong != null) {
+              // showStopSheet(id, name, latLong.latitude, latLong.longitude);
+              showStopSheetFromSheet(id, name, latLong.latitude, latLong.longitude, context, scrollController);
+            } else {
+              showMaizebusOKDialog(
+                contextIn: context,
+                title: const Text("Error"),
+                content: const Text("Couldn't load stop."),
+              );
+            }
+          },
+        )
+      )
+    );
+  }
+
+  void showBusSheetFromMap(String busID) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       isDismissible: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        child: DraggableScrollableSheet(
+        builder: (context) => SheetNavigator(
+        initialSheet: DraggableScrollableSheet(
           initialChildSize: 0.85,
           maxChildSize: 0.85,
           snap: true,
-
+        
           builder: (BuildContext context, ScrollController scrollController) {
             return BusSheet(
               busID: busID,
               scrollController: scrollController,
               onSelectStop: (name, id) {
-                Navigator.pop(context); // Close the current modal
+                
+                // Navigator.pop(context); // Close the current modal
                 LatLng? latLong = getLatLongFromStopID(id);
                 if (latLong != null) {
-                  showStopSheet(id, name, latLong.latitude, latLong.longitude);
+                  // showStopSheet(id, name, latLong.latitude, latLong.longitude);
+                  showStopSheetFromSheet(id, name, latLong.latitude, latLong.longitude, context, scrollController);
                 } else {
                   showMaizebusOKDialog(
                     contextIn: context,
@@ -243,7 +341,7 @@ class SheetNavigationManager {
               },
             );
           },
-        ),
+        )
       ),
     );
   }
@@ -262,30 +360,29 @@ class SheetNavigationManager {
     );
   }
 
-  void showStopSheet(
+  void showStopSheetFromSheet(
     String stopID,
     String stopName,
     double lat,
     double long,
+    BuildContext parentContext, // Context needed to reference the "shell" outside this stop sheet that switches between contents
+    ScrollController scrollController
   ) {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
-    showModalBottomSheet(
-      context: context,
-      isDismissible: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return StopSheet(
+    Navigator.of(parentContext).push(
+      MaterialPageRoute(builder: (context) => 
+        StopSheet(
           stopID: stopID,
           stopName: stopName,
           onFavorite: addFavoriteStop,
           onUnFavorite: removeFavoriteStop,
           showBusSheet: (busId) {
             // When someone clicks "See all stops for this bus" this callback runs
-            debugPrint("Got 'See all stops' click for Bus ${busId}");
-            Navigator.pop(context); // Close the current modal
-            showBusSheet(busId);
+            // debugPrint("Got 'See all stops' click for Bus ${busId}");
+            // Navigator.pop(context); // Close the current modal
+            // showBusSheetFromMap(busId);
+            showBusSheetFromSheet(busId, parentContext, scrollController);
           },
           busProvider: busProvider,
           onGetDirections: () {
@@ -300,8 +397,65 @@ class SheetNavigationManager {
               false,
             );
           },
-        );
-      },
+        )
+      )
+    );
+  }
+
+  void showStopSheetFromMap(
+    String stopID,
+    String stopName,
+    double lat,
+    double long,
+  ) {
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SheetNavigator(initialSheet: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.85,
+        snap: true,
+        builder: (BuildContext context, ScrollController scrollController) {
+          return SheetNavigator(
+            initialSheet: StopSheet(
+            stopID: stopID,
+            stopName: stopName,
+            onFavorite: addFavoriteStop,
+            onUnFavorite: removeFavoriteStop,
+            showBusSheet: (busId) {
+              // When someone clicks "See all stops for this bus" this callback runs
+              debugPrint("Got 'See all stops' click for Bus ${busId}");
+              // Navigator.pop(context); // Close the current modal
+              // showBusSheetFromMap(busId);
+              // TODO: Fix this here
+              showBusSheetFromSheet(busId, context, scrollController);
+            },
+            busProvider: busProvider,
+            onGetDirections: () {
+              Map<String, double>? start;
+              Map<String, double>? end = {'lat': lat, 'lon': long};
+
+              showDirectionsSheet(
+                start,
+                end,
+                "Current Location",
+                stopName,
+                false,
+              );
+            },
+          )
+          );
+        }
+        
+      )
+      )
+      
+      
+      ,
     ).then((_) {});
   }
 

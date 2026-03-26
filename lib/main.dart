@@ -9,6 +9,8 @@ import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
 import 'providers/theme_provider.dart';
 
+// TODO: Add descriptive comments to everything
+
 // This function initializes the Flutter app and runs the MainApp widget
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

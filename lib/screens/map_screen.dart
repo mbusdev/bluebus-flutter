@@ -812,7 +812,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     Haptics.vibrate(HapticsType.light);
                   } catch (e) {}
 
-                  sheetNavigationManager?.showStopSheet(
+                  sheetNavigationManager?.showStopSheetFromMap(
                     stop.id,
                     stop.name,
                     stop.location.latitude,
@@ -977,7 +977,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               try {
                 Haptics.vibrate(HapticsType.light);
               } catch (e) {}
-              sheetNavigationManager?.showBusSheet(bus.id);
+              sheetNavigationManager?.showBusSheetFromMap(bus.id);
               // _showBusSheet(bus.id);
             },
           );
@@ -1013,7 +1013,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               rotation: bus.heading,
               anchor: const Offset(0.5, 0.5),
               // onTap: () => _showBusSheet(bus.id),
-              onTap: () => sheetNavigationManager?.showBusSheet(bus.id)
+              onTap: () => sheetNavigationManager?.showBusSheetFromMap(bus.id)
             ),
           );
         }
@@ -1140,7 +1140,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       rotation: bus.heading,
       anchor: const Offset(0.5, 0.5),
       // onTap: () => _showBusSheet(bus.id),
-      onTap: () => sheetNavigationManager?.showBusSheet(bus.id)
+      onTap: () => sheetNavigationManager?.showBusSheetFromMap(bus.id)
     );
   }
 
@@ -1707,7 +1707,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           searchCoordinates.latitude,
           searchCoordinates.longitude,
         );
-        sheetNavigationManager?.showStopSheet(
+        sheetNavigationManager?.showStopSheetFromMap(
           stopID,
           location.name,
           searchCoordinates.latitude,
@@ -1740,7 +1740,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void onSelectStop(name, id) {
     LatLng? latLong = getLatLongFromStopID(id);
     if (latLong != null) {
-      sheetNavigationManager?.showStopSheet(id, name, latLong.latitude, latLong.longitude);
+      sheetNavigationManager?.showStopSheetFromMap(id, name, latLong.latitude, latLong.longitude);
     } else {
       showMaizebusOKDialog(
         contextIn: context,
