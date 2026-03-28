@@ -103,8 +103,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
 
   Set<Polyline> _displayedPolylines = {};
-  Set<Marker> _displayedStopMarkers = {};
-  Set<Marker> _displayedFavoriteStopMarkers = {};
+  Map<String, Marker> _displayedStopMarkers = {}; // maps from stopID to marker
+  Map<String, Marker> _displayedFavoriteStopMarkers = {};
   Set<Marker> _displayedBusMarkers = {};
   // Journey overlays for search results
   Set<Polyline> _displayedJourneyPolylines = {};
@@ -136,7 +136,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
-  final Map<String, Set<Marker>> _routeStopMarkers = {};
+  final Map<String, Map<String, Marker>> _routeStopMarkers = {}; // maps from route to a map of stopID to marker
   // Whether a journey search overlay is currently active (shows only journey path)
   bool _journeyOverlayActive = false;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
@@ -772,57 +772,59 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
-        _routeStopMarkers[routeKey] = r.stops
-            .map((stop) {
-              final isFavorite = _favoriteStops.contains(stop.id);
+        _routeStopMarkers[routeKey] = {};
+        for (final stop in r.stops) { // iterate through all stops in this route
+          final isFavorite = _favoriteStops.contains(stop.id);
+          
+          final marker = Marker(
+            markerId: MarkerId(
+              'stop_${stop.id}_${Object.hashAll(r.points)}',
+            ),
+            position: stop.location,
+            flat: true,
+            icon: isFavorite
+                ? (stop.isRide
+                      ? _favRideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _favStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            ))
+                : (stop.isRide
+                      ? _rideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _stopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )),
+            consumeTapEvents: true,
+            onTap: () {
+              try {
+                Haptics.vibrate(HapticsType.light);
+              } catch (e) {}
 
-              final marker = Marker(
-                markerId: MarkerId(
-                  'stop_${stop.id}_${Object.hashAll(r.points)}',
-                ),
-                position: stop.location,
-                flat: true,
-                icon: isFavorite
-                    ? (stop.isRide
-                          ? _favRideStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )
-                          : _favStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                ))
-                    : (stop.isRide
-                          ? _rideStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )
-                          : _stopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )),
-                consumeTapEvents: true,
-                onTap: () {
-                  try {
-                    Haptics.vibrate(HapticsType.light);
-                  } catch (e) {}
-
-                  _showStopSheet(
-                    stop.id,
-                    stop.name,
-                    stop.location.latitude,
-                    stop.location.longitude,
-                  );
-                },
-                rotation: stop.rotation,
-                anchor: Offset(0.5, 0.5),
+              _showStopSheet(
+                stop.id,
+                stop.name,
+                stop.location.latitude,
+                stop.location.longitude,
               );
-              
-              // add created stop marker to the favorited markers if it is favorited
-              if (isFavorite) _displayedFavoriteStopMarkers.add(marker);
-              _stopIsRide[stop.id] = stop.isRide;
-              return marker;
-            }).toSet();
+            },
+            rotation: stop.rotation,
+            anchor: Offset(0.5, 0.5),
+          );
+          _routeStopMarkers[routeKey]?[stop.id] = marker;
+
+          // gets first marker of this stop and adds it to the favorited stop markers 
+          if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
+            _displayedFavoriteStopMarkers[stop.id] = marker;
+          }
+          _stopIsRide[stop.id] = stop.isRide;
+        }
       }
     }
   }
@@ -860,62 +862,71 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // Update all routeStopMarkers entries that match this stop id
     final isRide = _stopIsRide[stpid] ?? false;
     _routeStopMarkers.forEach((routeKey, markers) {
-      final updated = markers.map((m) {
-        if (m.markerId.value.startsWith('stop_${stpid}_')) {
-          final marker = Marker(
-            flat: true,
-            markerId: m.markerId,
-            position: m.position,
-            icon: favored
-                    ? (isRide
-                          ? _favRideStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )
-                          : _favStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                ))
-                    : (isRide
-                          ? _rideStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )
-                          : _stopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )),
-            consumeTapEvents: m.consumeTapEvents,
-            onTap: m.onTap,
-            rotation: m.rotation,
-            anchor: m.anchor,
-          );
+      // if marker does not exist in this route, return
+      if (!markers.containsKey(stpid)) return;
 
-          // add or remove the marker from the displayed favorite stops
-          if (!favored) {
-            _displayedFavoriteStopMarkers.remove(m);
-          } else {
-            _displayedFavoriteStopMarkers.add(marker);
-          }
+      final m = markers[stpid]!; // get old marker
+      final newMarker = Marker(
+        flat: true,
+        markerId: m.markerId,
+        position: m.position,
+        icon: favored
+                ? (isRide
+                      ? _favRideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _favStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            ))
+                : (isRide
+                      ? _rideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _stopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )),
+        consumeTapEvents: m.consumeTapEvents,
+        onTap: m.onTap,
+        rotation: m.rotation,
+        anchor: m.anchor,
+      );
 
-          return marker;
-        }
-        return m;
-      }).toSet();
-      _routeStopMarkers[routeKey] = updated;
+      // gets first marker of this stop id and adds it to the favorited stop markers 
+      if (favored && !_displayedFavoriteStopMarkers.containsKey(stpid)) {
+        _displayedFavoriteStopMarkers[stpid] = newMarker;
+      }
+
+      markers[stpid] = newMarker; // set as new marker
     });
+
+    // remove favorite stop marker if not favored
+    if (!favored) {
+      _displayedFavoriteStopMarkers.remove(stpid);
+    }
 
     // If displayed, update displayed markers as well
     setState(() {
       // Rebuild displayed stop markers based on current selected routes
-      final selectedStopMarkers = <Marker>{};
+      final selectedStopMarkers = <String, Marker>{};
       for (final routeId in _selectedRoutes) {
         final routeVariants = _routePolylines.keys.where(
           (key) => key.startsWith('${routeId}_'),
         );
         for (final routeKey in routeVariants) {
           final stops = _routeStopMarkers[routeKey];
-          if (stops != null) selectedStopMarkers.addAll(stops);
+          if (stops == null) continue;
+
+          // iterate through and add the stop markers
+          // if they are not already in the selected stop markesr
+          stops.forEach((key, value) {
+            if (!selectedStopMarkers.containsKey(key)) {
+              selectedStopMarkers[key] = value;
+            }
+          });
         }
       }
       _displayedStopMarkers = selectedStopMarkers;
@@ -925,7 +936,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
-    final selectedStopMarkers = <Marker>{};
+    final selectedStopMarkers = <String, Marker>{};
 
     for (final routeId in _selectedRoutes) {
       // Find all variants of this route
@@ -937,9 +948,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final polyline = _routePolylines[routeKey];
         if (polyline != null) selectedPolylines.add(polyline);
         final stops = _routeStopMarkers[routeKey];
-        if (stops != null) {
-          selectedStopMarkers.addAll(stops);
-        }
+        if (stops == null) continue;
+          
+        stops.forEach((key, value) {
+          if (!selectedStopMarkers.containsKey(key)) {
+            selectedStopMarkers[key] = value;
+          }
+        });
       }
     }
 
@@ -1036,8 +1051,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateAllDisplayedMarkers() {
-    _allDisplayedStopMarkers = _displayedStopMarkers
-        .union(_displayedFavoriteStopMarkers)
+    _allDisplayedStopMarkers = _displayedStopMarkers.values.toSet()
+        .union(_displayedFavoriteStopMarkers.values.toSet())
         .union(_displayedBusMarkers)
         .union(_displayedJourneyMarkers)
         .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
@@ -2158,8 +2173,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ? {_searchLocationMarker!}
                                           : {},
                                     )
-                                  : _displayedStopMarkers
-                                        .union(_displayedFavoriteStopMarkers)
+                                  : _displayedStopMarkers.values.toSet()
+                                        .union(_displayedFavoriteStopMarkers.values.toSet())
                                         .union(_displayedJourneyMarkers)
                                         .union(
                                           _searchLocationMarker != null
