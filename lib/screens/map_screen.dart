@@ -5,6 +5,7 @@ import 'dart:math' as Math;
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/models/navigation.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/screens/new_features_screen.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
@@ -1810,14 +1811,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   (LatLng?, LatLng?, LatLng?) _projectPointToPolyline(LatLng point, List<LatLng> poly) {
     // TODO: consider optimizations since this will be called frequently during navigation
     LatLng? prev, bestPoint, bestStart, bestEnd;
-    final geo = geodesy.Geodesy();
     var bestDistance = double.infinity;
     for (final curr in poly) {
       if (prev != null) {
         final projected = _projectPointToSegment(point, prev, curr);
-        final distance = geo.greatCircleDistanceBetweenTwoGeoPoints(
-          projected.latitude, projected.longitude, point.latitude, point.longitude
-        );
+        final distance = _haversineDistanceMeters(projected, point);
         if (distance < bestDistance) {
           bestPoint = projected;          
           bestStart = prev;
@@ -1830,14 +1828,49 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     return (bestPoint, bestStart, bestEnd);
   }
 
+  Vec3 _latLngToEuclideanUnitSphere(LatLng x) {
+    // test?
+    final phi = (180.0 - (x.latitude + 90.0)) * Math.pi / 180.0;
+    final theta = x.longitude * Math.pi / 180.0;
+    return Vec3(
+      Math.sin(phi) * Math.cos(theta),
+      Math.sin(phi) * Math.sin(theta),
+      Math.cos(phi)
+    );
+  }
+
+  LatLng _euclideanUnitSphereToLatLng(Vec3 p) {
+    // test?
+    return LatLng((180.0 - Math.acos(p.z) * 180.0 / Math.pi) - 90.0, Math.atan2(p.y, p.x) * 180.0 / Math.pi);
+  }
+
+  (Vec3, Vec3, Vec3) _orthonormalBasis(Vec3 a, Vec3 b) {
+    final u1 = a.normalize();
+    return (u1, (b - u1.scale(b * u1)).normalize(), a.cross(b).normalize());
+  }
+
+  LatLng _projectPointToGreatCircle(LatLng point, LatLng segA, LatLng segB) {
+    final a = _latLngToEuclideanUnitSphere(segA);
+    final b = _latLngToEuclideanUnitSphere(segB);
+    final p = _latLngToEuclideanUnitSphere(point);
+    final basisB = _orthonormalBasis(a, b);
+    final a_B = Vec3(1.0, 0.0, 0.0);
+    final b_B = Vec3(b * basisB.$1, b * basisB.$2, 0.0);
+    final pProj_B = Vec3(p * basisB.$1, p * basisB.$2, 0.0);
+    final pProj =
+      basisB.$1.scale(pProj_B.x) + basisB.$2.scale(pProj_B.y) + basisB.$3.scale(pProj_B.z);
+    return _euclideanUnitSphereToLatLng(pProj);
+  }
+
   /// closest point on a line segment
   LatLng _projectPointToSegment(LatLng point, LatLng segA, LatLng segB) {
+    // TODO: stop using geodesy
     final p = _toGeodesy(point);
     final a = _toGeodesy(segA);
     final b = _toGeodesy(segB);
     final geo = geodesy.Geodesy();
-    final aDist = geo.greatCircleDistanceBetweenTwoGeoPoints(p.latitude, p.longitude, a.latitude, a.longitude);
-    final bDist = geo.greatCircleDistanceBetweenTwoGeoPoints(p.latitude, p.longitude, b.latitude, b.longitude);
+    final aDist = _haversineDistanceMeters(point, segA);
+    final bDist = _haversineDistanceMeters(point, segB);
     // is the closest point to the line actually in the segment
     final notPastA = _angleBearingToBearing(
       geo.bearingBetweenTwoGeoPoints(a, b).toDouble(),
@@ -1849,14 +1882,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ) <= 90.0;
     if (notPastA && notPastB) {
       print("loc: ${p.toString()}");
-      print("${_fromGeodesy(geo.projectPointOntoGeodesicLine(p, a, b))} is between ${a.toString()} and ${b.toString()}");
+      print("${_projectPointToGreatCircle(point, segA, segB)} is between ${a.toString()} and ${b.toString()}");
       print("a -> b : ${geo.bearingBetweenTwoGeoPoints(a, b)}");
       print("a -> p : ${geo.bearingBetweenTwoGeoPoints(a, p)}");
       print("angle : ${_angleBearingToBearing(geo.bearingBetweenTwoGeoPoints(a, b).toDouble(),geo.bearingBetweenTwoGeoPoints(a, p).toDouble())}");
       print("b -> a : ${geo.bearingBetweenTwoGeoPoints(b, a)}");
       print("b -> p : ${geo.bearingBetweenTwoGeoPoints(b, p)}");
       print("angle : ${_angleBearingToBearing(geo.bearingBetweenTwoGeoPoints(b, a).toDouble(),geo.bearingBetweenTwoGeoPoints(b, p).toDouble())}");
-      return _fromGeodesy(geo.projectPointOntoGeodesicLine(p, a, b));
+      return _projectPointToGreatCircle(point, segA, segB);
     } else if (aDist < bDist) {
       return segA;
     } else {
@@ -1884,8 +1917,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               mapController.animateCamera(
                 CameraUpdate.newCameraPosition(CameraPosition(
                   target: posLatLng,
-                  // tilt: 45.0,
-                  tilt: 0.0,
+                  tilt: 45.0,
+                  // tilt: 0.0,
                   zoom: zoom,
                   bearing: pos.heading,
                 )),
@@ -1900,8 +1933,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               if (walkingPath != null) {
                 final projectInfo = _projectPointToPolyline(posLatLng, walkingPath);
                 _navigationPointOnLeg = projectInfo.$1;
-                _navigationPointOnLegStart = projectInfo.$2;
-                _navigationPointOnLegEnd = projectInfo.$3;
+                // _navigationPointOnLegStart = projectInfo.$2;
+                // _navigationPointOnLegEnd = projectInfo.$3;
                 print("got point: ${_navigationPointOnLeg.toString()}");
               } else {
                 print("walking path was null");
