@@ -91,8 +91,8 @@ class IncomingBusReminderService {
 
     for (final reminder in await _activeReminders(token: token)) {
       for (int i = 0; i < modifications.length; ++i) {
-        if (reminder.stpid == modifications[i].encode()["stpid"] && reminder.rtid == modifications[i].encode()["rtid"]) {
-          if (added[i] is RemoveReminder) throw Exception("backend not updated");
+        if (reminder.stpid == modifications[i].stopID && reminder.rtid == modifications[i].routeID) {
+          if (modifications[i] is RemoveReminder) throw Exception("backend not updated");
           added[i] = modifications[i] is AddReminder;
           break;
         }
@@ -241,6 +241,8 @@ Future<void> _notifyMeLater({required String token}) async {
 
 /// Used in the `modifyReminders` method of `IncomingBusReminderService`
 sealed class RemindersModification {
+  String get stopID;
+  String get routeID;
   Map<String, dynamic> encode();
 }
 
@@ -249,6 +251,14 @@ class AddReminder extends RemindersModification {
 
   String stpid, rtid;
   int thresh;
+
+  @override
+  String get stopID => stpid;
+
+  @override
+  String get routeID => rtid;
+
+  int get threshold => thresh;
 
   @override
   Map<String, dynamic> encode() {
@@ -260,6 +270,8 @@ class RemoveReminder extends RemindersModification {
   RemoveReminder({required this.stpid, required this.rtid});
 
   String stpid, rtid;
+  String get stopID => stpid;
+  String get routeID => rtid;
 
   @override
   Map<String, dynamic> encode() {
