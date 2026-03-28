@@ -120,6 +120,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
+  Map<String, bool> _stopIsRide = {};
 
   // Custom marker icons
   BitmapDescriptor? _busIcon;
@@ -819,6 +820,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               
               // add created stop marker to the favorited markers if it is favorited
               if (isFavorite) _displayedFavoriteStopMarkers.add(marker);
+              _stopIsRide[stop.id] = stop.isRide;
               return marker;
             }).toSet();
       }
@@ -856,6 +858,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Update cached markers for a specific stop id to reflect favorite/unfavorite
   void _setStopFavorited(String stpid, bool favored) {
     // Update all routeStopMarkers entries that match this stop id
+    final isRide = _stopIsRide[stpid] ?? false;
     _routeStopMarkers.forEach((routeKey, markers) {
       final updated = markers.map((m) {
         if (m.markerId.value.startsWith('stop_${stpid}_')) {
@@ -864,15 +867,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             markerId: m.markerId,
             position: m.position,
             icon: favored
-                ? (_favStopIcon ??
-                      _stopIcon ??
-                      BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueAzure,
-                      ))
-                : (_stopIcon ??
-                      BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueAzure,
-                      )),
+                    ? (isRide
+                          ? _favRideStopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                )
+                          : _favStopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                ))
+                    : (isRide
+                          ? _rideStopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                )
+                          : _stopIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                )),
             consumeTapEvents: m.consumeTapEvents,
             onTap: m.onTap,
             rotation: m.rotation,
