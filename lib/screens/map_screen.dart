@@ -97,7 +97,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
   bool? _userLocVisible;
-  static final LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
+  static const _defaultCenter = LatLng(42.276463, -83.7374598);
   static LatLng startLatLng = _defaultCenter;
 
   Set<Polyline> _displayedPolylines = {};
@@ -239,15 +239,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme(); 
-    try {
-        final pos = await Geolocator.getCurrentPosition().timeout(
-        Duration(seconds: 3),
-            );
-            startLatLng = LatLng(pos.latitude, pos.longitude);
-          } catch (e) {
-           
-          }// load user theme data
 
+    //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
+    Position? pos = await Geolocator.getLastKnownPosition();
+    if (pos != null){
+      startLatLng = LatLng(pos.latitude, pos.longitude);
+    }
+
+            
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
