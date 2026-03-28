@@ -64,11 +64,10 @@ class _BusSheetState extends State<BusSheet> {
     // This accounts for that.
     // Update: Fixed the blank text "bus not found", should 
 
-    if (currBus == null) return Text("Not Found Bus");
+    if (currBus == null) return Text("Bus Not Found");
 
     final bus = currBus!;
 
-    debugPrint("    currBus is ${currBus?.routeId}");
     return Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
