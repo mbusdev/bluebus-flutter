@@ -48,8 +48,7 @@ class _BusSheetState extends State<BusSheet> {
   Widget build(BuildContext context) {
     // There was a really weird bug where _BusSheetState would get a busID that doesn't exist so currBus would be null.
     // This accounts for that.
-    // ISSUE: Currently creates a very off aligned blank text screen
-    // TO DO: Replace with a pop up widget that simply says "No wifi oops"
+    // Update: Fixed the blank text "bus not found", should 
     if (currBus == null) { 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
@@ -61,8 +60,8 @@ class _BusSheetState extends State<BusSheet> {
           title: const Text("Uh Oh!"),
           content: const Text("Unable to fetch bus data. Looks like you aren't connected to the internet!"),
         );
-      });
-    }
+      }); 
+    } // bus not found
 
 
     final bus = currBus!;
