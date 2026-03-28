@@ -818,13 +818,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     stop.location.latitude,
                     stop.location.longitude,
                   );
-
-                  // _showStopSheet(
-                  //   stop.id,
-                  //   stop.name,
-                  //   stop.location.latitude,
-                  //   stop.location.longitude,
-                  // );
                 },
                 rotation: stop.rotation,
                 anchor: Offset(0.5, 0.5),
@@ -978,7 +971,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 Haptics.vibrate(HapticsType.light);
               } catch (e) {}
               sheetNavigationManager?.showBusSheetFromMap(bus.id);
-              // _showBusSheet(bus.id);
             },
           );
         })
@@ -1012,7 +1004,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               icon: busIcon!,
               rotation: bus.heading,
               anchor: const Offset(0.5, 0.5),
-              // onTap: () => _showBusSheet(bus.id),
               onTap: () => sheetNavigationManager?.showBusSheetFromMap(bus.id)
             ),
           );
@@ -1139,7 +1130,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       icon: icon,
       rotation: bus.heading,
       anchor: const Offset(0.5, 0.5),
-      // onTap: () => _showBusSheet(bus.id),
       onTap: () => sheetNavigationManager?.showBusSheetFromMap(bus.id)
     );
   }
@@ -1713,12 +1703,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           searchCoordinates.latitude,
           searchCoordinates.longitude,
         );
-        // _showStopSheet(
-        //   stopID,
-        //   location.name,
-        //   searchCoordinates.latitude,
-        //   searchCoordinates.longitude,
-        // );
       } else {
         _centerOnLocation(
           false,
@@ -1730,7 +1714,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           location.latlng!.longitude
         );
         sheetNavigationManager?.showBuildingSheet(location);
-        // _showBuildingSheet(location);
       }
     } else {
       // Location has no coordinates
@@ -2421,7 +2404,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           onPressed: () {
                                             sheetNavigationManager?.showJourneySheetOnReopen(currDisplayed);
                                           },
-                                          // onPressed: _showJourneySheetOnReopen,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: getColor(
                                               context,
@@ -2548,9 +2530,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                   _selectedRoutes,
                                                   canVibrate
                                                 );
-                                                // _showBusRoutesModal(
-                                                //   busProvider.routes,
-                                                // );
                                               },
                                               heroTag: 'routes_fab',
                                               elevation:
@@ -2599,7 +2578,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                   );
                                                 }
                                                 sheetNavigationManager?.showFavoritesSheet();
-                                                // _showFavoritesSheet();
                                               },
                                               heroTag: 'favorites_fab',
                                               elevation: 0,
@@ -2647,7 +2625,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                   );
                                                 }
                                                 sheetNavigationManager?.showSearchSheet();
-                                                // _showSearchSheet();
                                               },
                                               style: ElevatedButton.styleFrom(
                                                 alignment: Alignment.centerLeft,
