@@ -97,7 +97,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
   bool? _userLocVisible;
-  static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
+  static final LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
+  static LatLng startLatLng = _defaultCenter;
 
   Set<Polyline> _displayedPolylines = {};
   Set<Marker> _displayedStopMarkers = {};
@@ -237,7 +238,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Future<void> _loadAllData() async {
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
-    await theme.loadTheme(); // load user theme data
+    await theme.loadTheme(); 
+    try {
+        final pos = await Geolocator.getCurrentPosition().timeout(
+        Duration(seconds: 3),
+            );
+            startLatLng = LatLng(pos.latitude, pos.longitude);
+          } catch (e) {
+           
+          }// load user theme data
 
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
@@ -1081,7 +1090,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    _centerOnLocation(true);
   }
 
   void _onCameraMove(CameraPosition position) async {
@@ -2094,7 +2102,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       // underlying map layer (different ios and android)
                       Platform.isIOS
                           ? MapWidget(
-                              initialCenter: _defaultCenter,
+                              initialCenter: startLatLng,
                               polylines: _journeyOverlayActive
                                   ? _displayedJourneyPolylines
                                   : _displayedPolylines.union(
@@ -2120,7 +2128,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               mapToolbarEnabled: true,
                             )
                           : AndroidMap(
-                              initialCenter: _defaultCenter,
+                              initialCenter: startLatLng,
                               polylines: _journeyOverlayActive
                                   ? _displayedJourneyPolylines
                                   : _displayedPolylines.union(
