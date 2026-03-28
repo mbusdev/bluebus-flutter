@@ -41,14 +41,6 @@ class _BusSheetState extends State<BusSheet> {
   @override
   void initState() {
     super.initState();
-    futureBusStops = fetchNextBusStops(widget.busID);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // There was a really weird bug where _BusSheetState would get a busID that doesn't exist so currBus would be null.
-    // This accounts for that.
-    // Update: Fixed the blank text "bus not found", should 
     if (currBus == null) { 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
@@ -58,11 +50,21 @@ class _BusSheetState extends State<BusSheet> {
         showMaizebusOKDialog(
           contextIn: context,
           title: const Text("Uh Oh!"),
-          content: const Text("Unable to fetch bus data. Looks like you aren't connected to the internet!"),
+          content: const Text("Unable to fetch bus data. Please check your internet connection and try again."),
         );
       }); 
-    } // bus not found
+    } else { 
+      futureBusStops = fetchNextBusStops(widget.busID);
+    }
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    // There was a really weird bug where _BusSheetState would get a busID that doesn't exist so currBus would be null.
+    // This accounts for that.
+    // Update: Fixed the blank text "bus not found", should 
+
+    if (currBus == null) return Text("Not Found Bus");
 
     final bus = currBus!;
 
