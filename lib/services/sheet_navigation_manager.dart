@@ -16,49 +16,13 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
-// class BackStackStep {
-//   SheetNavigationManager? navigationManager;
-//   void recall() {} 
-// }
-
-// class BusSheetBackStackStep {
-//   SheetNavigationManager? navigationManager;
-//   String busId;
-//   BusSheetBackStackStep({
-//     required this.navigationManager,
-//     required this.busId
-//   });
-//   void recall() {
-//     navigationManager?.showBusSheet(busId);
-//   }
-// }
-
-// class StopSheetBackStackStep {
-//   SheetNavigationManager? navigationManager;
-//   String stopID;
-//   String stopName;
-//   double lat;
-//   double long;
-
-//   StopSheetBackStackStep({
-//     required this.navigationManager,
-//     required this.stopID,
-//     required this.stopName,
-//     required this.lat,
-//     required this.long
-//   });
-
-//   void recall() {
-
-//   }
-// }
-
+// SheetNavigator is a custom widget that allows multiple sheets to be displayed, one after another.
+// Useful if the user is navigating through many Sheets (e.g. BusSheet to StopSheet to BusSheet)
+// SheetNavigator manages its back stack, so the Android back button (and whatever back buttons you add to the UI) go backwards through history with a nice card animation
 class SheetNavigatorState extends State<SheetNavigator> {
   List<Widget> _stack = [];
-  int oldStackLength = 0; // Used to track the reverse animation
+  int oldStackLength = 0;
   bool isGoingBackwards = false;
-
-  // NEXT STEPS TODO: Make isGoingBackwards a *state variable*. Every time a widget is pushed or popped, update the isGoingBackwards variable
 
   void pushWidget(Widget sheet) {
     setState(() {
@@ -76,12 +40,10 @@ class SheetNavigatorState extends State<SheetNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    
     return PopScope(
       canPop: _stack.length <= 1,
       onPopInvokedWithResult: (didPop, result) {
-        // debugPrint("Pop invoked!");
-        
+        // When the Android back button is pressed (or the current widget gets closed programatically), it's routed here and SheetNavigator takes the current sheet off the back stack 
         if (!didPop) {
           setState(() {
             oldStackLength = _stack.length;
@@ -89,63 +51,55 @@ class SheetNavigatorState extends State<SheetNavigator> {
             isGoingBackwards = true;
           });
         }
-        // isGoingBackwards = oldStackLength > _stack.length;
         
       }, child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            final isEntering = child.key == ValueKey(_stack.length);
-            
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: 
-                // NEXT STEPS TODO: Figure out these animations
-                isGoingBackwards ? (
-                  isEntering ?
-                  const Offset(-1, 0.0) : const Offset(1, 0.0)
-                ) : isEntering ?
-                  const Offset(1, 0.0) : const Offset(-1, 0.0),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(
-                  parent: animation,
-                  curve: (isGoingBackwards && !isEntering) ? Curves.easeInOut : Curves.ease
-                )
-              ),
-              child: child,
-            );
-          },
-          layoutBuilder: (currentChild, previousChildren) {
-            if (isGoingBackwards) {
-              return Stack(
-                children: [
-                  if (currentChild != null) currentChild,
-                  ...previousChildren,
-                  
-                ]
-              );
-            }
+        duration: const Duration(milliseconds: 400),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          final isEntering = child.key == ValueKey(_stack.length);
+          
+          return SlideTransition(
+            // All this logic serves to make the forward and backward card animations look nice
+            position: Tween<Offset>(
+              begin: 
+              isGoingBackwards ? (
+                isEntering ?
+                const Offset(-1, 0.0) : const Offset(1, 0.0)
+              ) : isEntering ?
+                const Offset(1, 0.0) : const Offset(-1, 0.0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: (isGoingBackwards && !isEntering) ? Curves.easeInOut : Curves.ease
+              )
+            ),
+            child: child,
+          );
+        },
+        layoutBuilder: (currentChild, previousChildren) {
+          if (isGoingBackwards) {
+            // If the user is going backwards through the back stack, display the stack in reverse order so it looks like the top card is lifting off the stack
             return Stack(
               children: [
+                if (currentChild != null) currentChild,
                 ...previousChildren,
-                if (currentChild != null) currentChild
               ]
             );
-          },
-          child: KeyedSubtree(
-            key: ValueKey(_stack.length),
-            child: SizedBox.expand(child: _stack.last),
-          )
-          
+          }
+          return Stack( // Forward order
+            children: [
+              ...previousChildren,
+              if (currentChild != null) currentChild
+            ]
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(_stack.length),
+          child: SizedBox.expand(child: _stack.last),
         )
-      );
-    // return Navigator(
-    //   onGenerateRoute: (settings) {
-    //     return MaterialPageRoute(
-    //       builder: (context) => initialSheet
-    //     );
-    //   },
-    // );
+        
+      )
+    );
   }
 
 }
@@ -162,10 +116,17 @@ class SheetNavigator extends StatefulWidget {
   State<StatefulWidget> createState() => SheetNavigatorState();
 }
 
+// SheetNavigationManager is responsible for all the sheets that open up from the map screen.
+// This code used to all live in map_screen.dart, but it was very unweildy, so I
+// wrapped this into its own class whose job it is to manage which sheets are shown when.
+// All map_screen has to do is provide some callbacks (onSelectJourney, onSelectStop, etc)
+// and SheetNavigationManager figures out the history, back stack, DraggableScrollableSheet stuff, etc.
 class SheetNavigationManager {
   PersistentBottomSheetController? _bottomSheetController;
 
   BuildContext context;
+
+  // These are all callbacks that BusSheet, StopSheet, etc. pass back to map_screen
   Future<void> Function(String stpid, String name) addFavoriteStop;
   Function(
     Location location,
@@ -183,9 +144,6 @@ class SheetNavigationManager {
   Function(String name, String id) onSelectStop;
   Function(String stpid) onUnfavorite;
   Future<void> Function(String stpid, String name) removeFavoriteStop;
-
-  // List<BackStackStep> backStack;
-  // bool was_sheet_closed_programatically = false; // Flag to know whether the last-closed sheet was closed programatically (e.g. while executing a back gesture) versus if the user swiped it away
 
   SheetNavigationManager({
     required this.context,
@@ -209,13 +167,7 @@ class SheetNavigationManager {
     _bottomSheetController = null;
   }
 
-  // void onAnySheetDismissed() {
-  //   backStack.clear();
-  // }
-
   void showBuildingSheet(Location place) {
-    // Show red pin at the location
-    // _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
 
     _bottomSheetController = showBottomSheet(
       context: context,
@@ -365,56 +317,15 @@ class SheetNavigationManager {
     );
   }
 
-  // void onAnySheetClosed() {
-
-  //   was_sheet_closed_programatically = false; // Reset to our default assumption that the user closed the sheet, unless this flag is set to true
-  // }
-
-  // TODO: Add a flag to show whether the modal was closed programatically
-  //    i.e. before closing the model programatically on line 262, set this variable
-  //    and then in onClosing check it. If the user swiped it away, clear the back stack
-
-  // void showBusSheetFromSheet(String busID, BuildContext parentContext, ScrollController scrollController) {
-  //   Navigator.of(parentContext).push(
-  //     PageRouteBuilder(
-  //       opaque: false,
-  //       pageBuilder: (context, animation, secondaryAnimation) => 
-  //       BusSheet(
-  //         busID: busID,
-  //         scrollController: scrollController,
-  //         onSelectStop: (name, id) {
-            
-  //           // Navigator.pop(context); // Close the current modal
-  //           LatLng? latLong = getLatLongFromStopID(id);
-  //           if (latLong != null) {
-  //             // showStopSheet(id, name, latLong.latitude, latLong.longitude);
-  //             showStopSheetFromSheet(id, name, latLong.latitude, latLong.longitude, context, scrollController);
-  //           } else {
-  //             showMaizebusOKDialog(
-  //               contextIn: context,
-  //               title: const Text("Error"),
-  //               content: const Text("Couldn't load stop."),
-  //             );
-  //           }
-  //         },
-  //       )
-  //     )
-  //   );
-  // }
-
   BusSheet getBusSheet(String busID, ScrollController scrollController, Function(Widget) pushNewSheet) {
     return BusSheet(
       busID: busID,
       scrollController: scrollController,
       onSelectStop: (name, id) {
-        
-        // Navigator.pop(context); // Close the current modal
+        // When the user clicks on a specific bus stop to open the details (StopSheet) page
         LatLng? latLong = getLatLongFromStopID(id);
         if (latLong != null) {
-          // showStopSheet(id, name, latLong.latitude, latLong.longitude);
           pushNewSheet(getStopSheet(id, name, latLong.latitude, latLong.longitude, pushNewSheet, scrollController));
-
-          // showStopSheetFromSheet(id, name, latLong.latitude, latLong.longitude, context, scrollController);
         } else {
           showMaizebusOKDialog(
             contextIn: context,
@@ -432,27 +343,20 @@ class SheetNavigationManager {
       isScrollControlled: true,
       isDismissible: true,
       backgroundColor: Colors.transparent,
-        // builder: (context) => SheetNavigator(
-        // initialSheet: 
-        builder: (context) => DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          maxChildSize: 0.85,
-          snap: true,
-        
-          builder: 
-          
-          (BuildContext context, ScrollController scrollController) {
-            return Container(
-            
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.85,
+        snap: true,
+        builder: (BuildContext context, ScrollController scrollController) {
+          return Container(
             child: SheetNavigator(
               scrollController: scrollController,
               getInitialSheetFromOutside: (ScrollController scrollControllerLocal, Function(Widget) pushNewSheet) => getBusSheet(busID, scrollControllerLocal, pushNewSheet)
             )
-            );
-          },
-        )
-      );
-    // );
+          );
+        },
+      )
+    );
   }
 
   void showFavoritesSheet() {
@@ -469,50 +373,6 @@ class SheetNavigationManager {
     );
   }
 
-  // void showStopSheetFromSheet(
-  //   String stopID,
-  //   String stopName,
-  //   double lat,
-  //   double long,
-  //   BuildContext parentContext, // Context needed to reference the "shell" outside this stop sheet that switches between contents
-  //   ScrollController scrollController
-  // ) {
-  //   final busProvider = Provider.of<BusProvider>(context, listen: false);
-
-  //   Navigator.of(parentContext).push(
-  //     PageRouteBuilder(
-  //       opaque: false,
-  //       pageBuilder: (context, animation, secondaryAnimation) =>
-  //     // MaterialPageRoute(builder: (context) => 
-  //       StopSheet(
-  //         stopID: stopID,
-  //         stopName: stopName,
-  //         onFavorite: addFavoriteStop,
-  //         onUnFavorite: removeFavoriteStop,
-  //         showBusSheet: (busId) {
-  //           // When someone clicks "See all stops for this bus" this callback runs
-  //           // debugPrint("Got 'See all stops' click for Bus ${busId}");
-  //           // Navigator.pop(context); // Close the current modal
-  //           // showBusSheetFromMap(busId);
-  //           showBusSheetFromSheet(busId, parentContext, scrollController);
-  //         },
-  //         busProvider: busProvider,
-  //         onGetDirections: () {
-  //           Map<String, double>? start;
-  //           Map<String, double>? end = {'lat': lat, 'lon': long};
-
-  //           showDirectionsSheet(
-  //             start,
-  //             end,
-  //             "Current Location",
-  //             stopName,
-  //             false,
-  //           );
-  //         },
-  //       )
-  //     )
-  //   );
-  // }
 
   StopSheet getStopSheet(String stopID, String stopName, double lat, double long, Function(Widget) pushSheet, ScrollController scrollControllerLocal) {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
@@ -525,11 +385,6 @@ class SheetNavigationManager {
       scrollController: scrollControllerLocal,
       showBusSheet: (busId) {
         // When someone clicks "See all stops for this bus" this callback runs
-        debugPrint("Got 'See all stops' click for Bus ${busId}");
-        // Navigator.pop(context); // Close the current modal
-        // showBusSheetFromMap(busId);
-        // TODO: Fix this here
-        // showBusSheetFromSheet(busId, context, scrollController);
         pushSheet(getBusSheet(busId, scrollControllerLocal, pushSheet));
       },
       busProvider: busProvider,
@@ -548,20 +403,18 @@ class SheetNavigationManager {
     );
   }
 
+  // Shows a stop sheet from the map by creating a new DraggableScrollableSheet
   void showStopSheetFromMap(
     String stopID,
     String stopName,
     double lat,
     double long,
   ) {
-    
-
     showModalBottomSheet(
       context: context,
       isDismissible: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      // builder: (context) => SheetNavigator(initialSheet: 
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.85,
         maxChildSize: 0.85,
@@ -574,14 +427,9 @@ class SheetNavigationManager {
             }
           );
           
-          
         }
         
       )
-      // )
-      
-      
-      ,
     ).then((_) {});
   }
 
