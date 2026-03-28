@@ -56,11 +56,14 @@ import 'package:provider/provider.dart';
 class SheetNavigatorState extends State<SheetNavigator> {
   List<Widget> _stack = [];
   int oldStackLength = 0; // Used to track the reverse animation
+  bool isGoingBackwards = false;
+
+  // NEXT STEPS TODO: Make isGoingBackwards a *state variable*. Every time a widget is pushed or popped, update the isGoingBackwards variable
 
   void pushWidget(Widget sheet) {
-    // debugPrint("GOT PUSHWIDGET CALL! ${sheet}");
     setState(() {
       _stack.add(sheet);
+      isGoingBackwards = false;
     });
   }
 
@@ -78,30 +81,55 @@ class SheetNavigatorState extends State<SheetNavigator> {
       canPop: _stack.length <= 1,
       onPopInvokedWithResult: (didPop, result) {
         // debugPrint("Pop invoked!");
+        
         if (!didPop) {
-          setState(() {_stack.removeLast();});
+          setState(() {
+            oldStackLength = _stack.length;
+            _stack.removeLast();
+            isGoingBackwards = true;
+          });
         }
+        // isGoingBackwards = oldStackLength > _stack.length;
+        
       }, child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
           transitionBuilder: (Widget child, Animation<double> animation) {
             final isEntering = child.key == ValueKey(_stack.length);
-            final isGoingBackwards = oldStackLength > _stack.length;
-            oldStackLength = _stack.length;
-
+            
             return SlideTransition(
               position: Tween<Offset>(
                 begin: 
-                NEXT STEPS TODO: Figure out these animations
+                // NEXT STEPS TODO: Figure out these animations
                 isGoingBackwards ? (
                   isEntering ?
-                  const Offset(-1, 0.0) :
-                  const Offset(1, 0.0)
+                  const Offset(-1, 0.0) : const Offset(1, 0.0)
                 ) : isEntering ?
-                  const Offset(1, 0.0) :
-                  const Offset(-1, 0.0),
+                  const Offset(1, 0.0) : const Offset(-1, 0.0),
                 end: Offset.zero,
-              ).animate(CurvedAnimation(parent: animation, curve: Curves.ease)),
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: (isGoingBackwards && !isEntering) ? Curves.easeInOut : Curves.ease
+                )
+              ),
               child: child,
+            );
+          },
+          layoutBuilder: (currentChild, previousChildren) {
+            if (isGoingBackwards) {
+              return Stack(
+                children: [
+                  if (currentChild != null) currentChild,
+                  ...previousChildren,
+                  
+                ]
+              );
+            }
+            return Stack(
+              children: [
+                ...previousChildren,
+                if (currentChild != null) currentChild
+              ]
             );
           },
           child: KeyedSubtree(
@@ -494,6 +522,7 @@ class SheetNavigationManager {
       stopName: stopName,
       onFavorite: addFavoriteStop,
       onUnFavorite: removeFavoriteStop,
+      scrollController: scrollControllerLocal,
       showBusSheet: (busId) {
         // When someone clicks "See all stops for this bus" this callback runs
         debugPrint("Got 'See all stops' click for Bus ${busId}");
@@ -534,8 +563,8 @@ class SheetNavigationManager {
       backgroundColor: Colors.transparent,
       // builder: (context) => SheetNavigator(initialSheet: 
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        maxChildSize: 0.95,
+        initialChildSize: 0.85,
+        maxChildSize: 0.85,
         snap: true,
         builder: (BuildContext context, ScrollController scrollController) {
           return SheetNavigator(
