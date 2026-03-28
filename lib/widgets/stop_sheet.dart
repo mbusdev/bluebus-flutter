@@ -252,10 +252,11 @@ class ExpandableStopWidget extends StatefulWidget {
   });
 }
 
-class _StopSheetState extends State<StopSheet> {
+class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
   late Future<(List<BusWithPrediction>, bool)> loadedStopData;
   bool? _isFavorited;
   Timer? _refreshTimer;
+  bool _isInBackground = false;
 
   // for select bus stops with images
   late bool imageBusStop;
@@ -264,6 +265,7 @@ class _StopSheetState extends State<StopSheet> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     loadedStopData = fetchStopData(widget.stopID);
     imageBusStop =
         (widget.stopID == "C250") ||
@@ -296,20 +298,58 @@ class _StopSheetState extends State<StopSheet> {
     }
     
     // Start auto-refresh every 30 seconds
+    _startRefreshTimer();
+  }
+
+  void _startRefreshTimer() {
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      _refreshData();
+      if (!_isInBackground) {
+        _refreshData();
+      }
     });
   }
 
+  void _stopRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _isInBackground = true;
+        _stopRefreshTimer();
+        break;
+      case AppLifecycleState.resumed:
+        _isInBackground = false;
+        // Refresh immediately when app comes to foreground
+        _refreshData();
+        _startRefreshTimer();
+        break;
+      case AppLifecycleState.detached:
+        _stopRefreshTimer();
+        break;
+      case AppLifecycleState.hidden:
+        // Handle hidden state if needed
+        break;
+    }
+  }
+
   void _refreshData() {
-    setState(() {
-      loadedStopData = fetchStopData(widget.stopID);
-    });
+    if (!_isInBackground) {
+      setState(() {
+        loadedStopData = fetchStopData(widget.stopID);
+      });
+    }
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    _stopRefreshTimer();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
