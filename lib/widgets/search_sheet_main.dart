@@ -35,6 +35,7 @@ class LocationSearchBar extends HookWidget {
     }, [focusNode]);
     final searchQuery = useState('');
 
+    // Parse Buildings
     final locations = useMemoized(() async {
       final allLocs = [...globalBuildingLocs, ...globalStopLocs];
       return allLocs;
