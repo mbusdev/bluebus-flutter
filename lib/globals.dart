@@ -2,6 +2,7 @@ import 'constants.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 List<Location> globalStopLocs = [];
+List<Location> globalBuildingLocs = [];
 
 // the global app padding
 // don't modify these here, instead use the helper function in map_screen.dart that sets these based on phone type and safe area insets
