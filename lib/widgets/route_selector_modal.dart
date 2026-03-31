@@ -665,27 +665,34 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                         // bottom gradient
                         Align(
                           alignment: Alignment.bottomCenter,
-                          child: Container(
-                            height: globalBottomPadding + 50,
+                          child: IgnorePointer(
+                            child: Container(
+                            
+                            height: globalBottomPadding + 100,
                             decoration: BoxDecoration(
+                              
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
+                                
                                 colors: [
-                                  getColor(context, ColorType.backgroundGradientStart),  
-                                  getColor(context, ColorType.background),       
+                                  getColor(context, ColorType.background).withAlpha(0),
+                                  getColor(context, ColorType.background).withAlpha((255*0.8).toInt()),  
+                                  getColor(context, ColorType.background).withAlpha((255*0.95).toInt()),       
                                 ],
-                                stops: [0, 1]
+                                stops: [0, 0.5, 1]
                               ),
                             ),
                           ),
+                          )
+                          
                         ),
                     
                         // Slider
                         Positioned(
                           bottom: globalBottomPadding,
                           child: MaizebusSlidingSegmentedControl(
-                            labels: ['University', 'The Ride'], 
+                            labels: ['University', 'TheRide'], 
                             selectedIndex: _currentIndex,
                             onSelectionChanged: (int index) {
                               // first, set the new index
@@ -703,7 +710,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                             width: 250,
                             // kelevation uses flutter's default shadows - 
                             // the same ones used in elevated button
-                            shadows: kElevationToShadow[3],
+                            //shadows: kElevationToShadow[3],
+                            //shadows: [getInfoCardShadow(context)]
                           ),
                         )
                       ],

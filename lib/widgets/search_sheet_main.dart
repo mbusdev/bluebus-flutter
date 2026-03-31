@@ -35,97 +35,11 @@ class LocationSearchBar extends HookWidget {
     }, [focusNode]);
     final searchQuery = useState('');
 
-    final refreshKey = useState(0);
-
+    // Parse Buildings
     final locations = useMemoized(() async {
-      try {
-        final buildingResponse = await http.get(
-          Uri.parse(BACKEND_URL + '/getBuildingLocations'),
-        );
-        List<Location> buildingLocs = [];
-        if (buildingResponse.statusCode == 200 &&
-            buildingResponse.body.trim().isNotEmpty &&
-            buildingResponse.body.trim() != '{}') {
-          final buildingLocations =
-              jsonDecode(buildingResponse.body) as List<dynamic>;
-          buildingLocs = buildingLocations.map((building) {
-            final name = building['buildingName'] as String;
-            final abbrev = building['abbrev'] as String?;
-            final altName = building['altName'] as String?;
-            final lat = building['lat'] as double;
-            final long = building['long'] as double;
-            return Location(
-              name,
-              (abbrev != null) ? abbrev : "",
-              [if (abbrev != null) abbrev, if (altName != null) altName],
-              false,
-              latlng: LatLng(lat, long),
-            );
-          }).toList();
-        }
-
-        // TODO: this code is DUPLICATED. We need to refactor to avoid duplication.
-        // LOADS BOTH STOP TYPES
-        final uriStops = Uri.parse(BACKEND_URL + '/getAllStops');
-        final uriRideStops = Uri.parse(BACKEND_URL + '/getAllRideStops');
-
-        // Calling in parallel
-        final responses = await Future.wait([
-          http.get(uriStops),
-          http.get(uriRideStops),
-        ]);
-
-        // Helper function to parse a response into a List<Location>
-        // This prevents copying/pasting the parsing logic.
-        List<Location> parseLocations(http.Response response) {
-          if (response.statusCode == 200 &&
-              response.body.trim().isNotEmpty &&
-              response.body.trim() != '{}') {
-            
-            final stopList = jsonDecode(response.body) as List<dynamic>;
-            
-            return stopList.map((stop) {
-              final name = stop['name'] as String;
-              final aliases = [
-                name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
-              ];
-              final stopId = stop['stpid'] as String?;
-              final lat = stop['lat'] as double?;
-              final lon = stop['lon'] as double?;
-              
-              return Location(
-                name,
-                (stopId != null) ? stopId : "",
-                aliases,
-                true,
-                stopId: stopId,
-                latlng: (lat != null && lon != null) ? LatLng(lat, lon) : null,
-              );
-            }).toList();
-          }
-          return []; // Return empty list if call failed or body is empty
-        }
-
-        // parse both and merge
-        List<Location> stopLocs = [
-          ...parseLocations(responses[0]),
-          ...parseLocations(responses[1]),
-        ];
-
-        globalStopLocs = stopLocs;
-
-        final allLocs = [...buildingLocs, ...stopLocs];
-        if (allLocs.isEmpty) {
-          refreshKey.value++;
-        }
-
-        return allLocs;
-      } catch (e) {
-        print('Failed to fetch locations: $e');
-        refreshKey.value++;
-        return <Location>[];
-      }
-    }, [refreshKey.value]);
+      final allLocs = [...globalBuildingLocs, ...globalStopLocs];
+      return allLocs;
+    }, []);
 
     Map<String, Set<Location>> buildNgramIndex(
       List<Location> locations, {
@@ -207,15 +121,13 @@ class LocationSearchBar extends HookWidget {
         SizedBox(
           height: 50,
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(56),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(56)),
             child: TextField(
               textAlignVertical: TextAlignVertical.center,
               textInputAction: TextInputAction.go,
-              style:  TextStyle(
+              style: TextStyle(
                 color: getColor(context, ColorType.opposite).withAlpha(204),
-                fontSize: 22
+                fontSize: 22,
               ),
               autofocus: true,
               controller: controller,
@@ -312,12 +224,16 @@ class LocationSearchBar extends HookWidget {
                         ? Icon(
                             Icons.hail,
                             size: 40,
-                            color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
+                            color: isDarkMode(context)
+                                ? Color.fromARGB(150, 255, 255, 255)
+                                : Color.fromARGB(150, 0, 0, 0),
                           )
                         : Icon(
                             Icons.business_rounded,
                             size: 40,
-                            color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
+                            color: isDarkMode(context)
+                                ? Color.fromARGB(150, 255, 255, 255)
+                                : Color.fromARGB(150, 0, 0, 0),
                           ),
                     onTap: () {
                       controller.text = loc.name;
@@ -372,7 +288,7 @@ class _SearchSheetState extends State<SearchSheet> {
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
-        boxShadow: [SheetBoxShadow]
+        boxShadow: [SheetBoxShadow],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +337,7 @@ class _SearchSheetState extends State<SearchSheet> {
                     color: getColor(context, ColorType.inputText),
                   ),
                 ),
-                
+
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(56.0)),
                   borderSide: BorderSide(color: Colors.transparent, width: 0),

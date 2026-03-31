@@ -313,11 +313,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // LOADS BOTH STOP TYPES
     final uriStops = Uri.parse(BACKEND_URL + '/getAllStops');
     final uriRideStops = Uri.parse(BACKEND_URL + '/getAllRideStops');
+    final uriBuildings = Uri.parse(BACKEND_URL + '/getBuildingLocations');
 
     // Calling in parallel
     final responses = await Future.wait([
       http.get(uriStops),
       http.get(uriRideStops),
+      http.get(uriBuildings),
     ]);
 
     // Helper function to parse a response into a List<Location>
@@ -355,6 +357,28 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       ...parseLocations(responses[0]),
       ...parseLocations(responses[1]),
     ];
+
+    final buildingResponse = responses[2];
+    if (buildingResponse.statusCode == 200 &&
+        buildingResponse.body.trim().isNotEmpty &&
+        buildingResponse.body.trim() != '{}') {
+      final buildingLocations =
+          jsonDecode(buildingResponse.body) as List<dynamic>;
+      globalBuildingLocs = buildingLocations.map((building) {
+        final name = building['buildingName'] as String;
+        final abbrev = building['abbrev'] as String?;
+        final altName = building['altName'] as String?;
+        final lat = building['lat'] as double;
+        final long = building['long'] as double;
+        return Location(
+          name,
+          (abbrev != null) ? abbrev : "",
+          [if (abbrev != null) abbrev, if (altName != null) altName],
+          false,
+          latlng: LatLng(lat, long),
+        );
+      }).toList();
+    }
 
     globalStopLocs = stopLocs;
   }

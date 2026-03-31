@@ -81,7 +81,7 @@ enum ColorType {
   highlighted, dim, error,
   shadow,
   
-  grayed, sliderButton,
+  sliderBackground, sliderButton,
 
   // info card colors (in route selector, favorites sheet, etc.)
   infoCardColor, infoCardHighlighted,
@@ -109,8 +109,8 @@ const Map<ColorType, Color> lightColors = {
 
   ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
   
-  ColorType.grayed: Color.fromARGB(255, 224, 224, 224),
   ColorType.sliderButton: Colors.white,
+  ColorType.sliderBackground: Color.fromARGB(255, 200, 228, 255), 
 
   ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255), 
   ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),  
@@ -142,8 +142,8 @@ const Map<ColorType, Color> darkColors = {
 
   ColorType.shadow: Color.fromARGB(95, 68, 68, 68),
   
-  ColorType.grayed: Color.fromARGB(255, 5, 19, 32),
-  ColorType.sliderButton: Color.fromARGB(255, 33, 71, 105),
+  ColorType.sliderButton: Color.fromARGB(255, 32, 33, 34),
+  ColorType.sliderBackground: Color.fromARGB(255, 33, 71, 105),
 
   ColorType.infoCardColor: Color.fromARGB(255, 47, 54, 60),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),
@@ -275,7 +275,7 @@ TextStyle getTextStyle(TextType type, Color? color) {
       weight = FontWeight.w800;
       height = 30;
     case TextType.bold:
-      size = 18;
+      size = 16;
       weight = FontWeight.w700;
       height = 20;
     case TextType.normal:
