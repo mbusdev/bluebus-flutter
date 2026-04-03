@@ -838,8 +838,8 @@ class _ReminderFormState extends State<ReminderForm> {
             
             showMaizebusOKDialog(
               contextIn: context,
-              title: Text("Failed to load reminders"),
-              content: Text("Make sure you have the notification permission enabled in settings. If this error is persistent, please send us feedback through the feedback form in the settings page"),
+              title: "Failed to load reminders",
+              content: "Make sure you have the notification permission enabled in settings. If this error is persistent, please send us feedback through the feedback form in the settings page",
             );
           });
           return SizedBox.shrink();
