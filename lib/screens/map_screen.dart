@@ -100,7 +100,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
   bool? _userLocVisible;
-  static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
+  static const _defaultCenter = LatLng(42.276463, -83.7374598);
+  static LatLng startLatLng = _defaultCenter;
 
   Set<Polyline> _displayedPolylines = {};
   Set<Marker> _displayedStopMarkers = {};
@@ -240,11 +241,18 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Future<void> _loadAllData() async {
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
-    await theme.loadTheme(); // load user theme data
+    await theme.loadTheme(); 
 
     screenRadius = await ScreenCornerRadius.get(); // load screen radius
     screenRadiusLoaded = true;
     
+    //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
+    Position? pos = await Geolocator.getLastKnownPosition();
+    if (pos != null){
+      startLatLng = LatLng(pos.latitude, pos.longitude);
+    }
+
+            
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
@@ -278,6 +286,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         content: startupData.persistantMessage,
       );
     }
+    
 
     // loading all this data in parallel
     await Future.wait([
@@ -1927,6 +1936,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           );
           return null;
         }
+        else {
+          //Center map once right after user grants location permissions
+          _centerOnLocation(true);
+        }
       }
 
       if (permission == LocationPermission.deniedForever) {
@@ -2090,7 +2103,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       // underlying map layer (different ios and android)
                       Platform.isIOS
                           ? MapWidget(
-                              initialCenter: _defaultCenter,
+                              initialCenter: startLatLng,
                               polylines: _journeyOverlayActive
                                   ? _displayedJourneyPolylines
                                   : _displayedPolylines.union(
@@ -2116,7 +2129,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               mapToolbarEnabled: true,
                             )
                           : AndroidMap(
-                              initialCenter: _defaultCenter,
+                              initialCenter: startLatLng,
                               polylines: _journeyOverlayActive
                                   ? _displayedJourneyPolylines
                                   : _displayedPolylines.union(
