@@ -16,19 +16,98 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
+// This whole Factory thing is kind of a mess
+//  * In order for SheetNavigator to show two sheets at a time
+
+abstract class NavigableSheet extends Widget {
+  // These scroll controller methods are necessary so that when two widgets occupy the same Sheet
+  // (i.e. when one sheet is displayed on top of another via SheetNavigator), both Sheets don't
+  // fight over the scroll controller and make scrolling janky. The SheetNavigator feeds a "dummy"
+  // scroll controller when this sheet is displayed behind something else.
+  void setShouldUseScrollController(bool shouldUseScrollControler);
+  // void setCustomScrollController(ScrollController newScrollController);
+  // void clearCustomScrollController();
+}
+
 // SheetNavigator is a custom widget that allows multiple sheets to be displayed, one after another.
 // Useful if the user is navigating through many Sheets (e.g. BusSheet to StopSheet to BusSheet)
 // SheetNavigator manages its back stack, so the Android back button (and whatever back buttons you add to the UI) go backwards through history with a nice card animation
 class SheetNavigatorState extends State<SheetNavigator> {
-  List<Widget> _stack = [];
+  List<NavigableSheet> _stack = [];
   int oldStackLength = 0;
   bool isGoingBackwards = false;
+  int numSteps = 0; // Used for the Dismissable key
+  bool shouldAnimate = true; // Used to prevent a "double animation" happening after the user swipes away a sheet
 
-  void pushWidget(Widget sheet) {
+  void pushWidget(NavigableSheet sheet) {
     setState(() {
+      shouldAnimate = true;
       _stack.add(sheet);
       isGoingBackwards = false;
+      numSteps++;
+      updateScrollControllers();
     });
+  }
+
+  void popWidget() {
+    setState(() {
+      oldStackLength = _stack.length;
+      _stack.removeLast();
+      isGoingBackwards = true;
+      numSteps++;
+      updateScrollControllers();
+    });
+  }
+
+  void updateScrollControllers() {
+    // debugPrint("******* UPDATING SCROLL CONTROLLERS");
+    // _stack.last.setShouldUseScrollController(true);
+    // // _stack.last.setCustomScrollController(widget.scrollController);
+    // if (_stack.length > 1) {
+    //   _stack[_stack.length - 2].setShouldUseScrollController(false);
+    //   // _stack[_stack.length - 2].setCustomScrollController(ScrollController());
+    //   // Give the background element a dummy ScrollController so it doesn't fight the user when
+    //   // trying to close the modal
+    // }
+  }
+
+  void popWidgetNoAnimation() {
+    // shouldAnimate = false;
+    // popWidget(); // setState() called inside here
+    debugPrint("popWidgetNoAnimation call!");
+    
+    setState(() {shouldAnimate = false;});
+    setState(() {
+      oldStackLength = _stack.length;
+      _stack.removeLast();
+      isGoingBackwards = true;
+      numSteps++;
+      updateScrollControllers();
+    });
+
+    
+    // WidgetsBinding.instance.addPostFrameCallback((Duration d) {
+    //   debugPrint("Post-frame callback reached!");
+    //   setState(() {
+    //     oldStackLength = _stack.length;
+    //     _stack.removeLast();
+    //     isGoingBackwards = true;
+    //     numSteps++;
+    //   });
+    // });
+
+    
+
+    // WidgetsBinding.instance.addPostFrameCallback((Duration d) {
+    //   debugPrint("Post-frame callback reached!");
+    //   setState(() {
+    //     oldStackLength = _stack.length;
+    //     _stack.removeLast();
+    //     isGoingBackwards = true;
+    //     numSteps++;
+    //   });
+    // });
+    
   }
 
   @override
@@ -37,35 +116,38 @@ class SheetNavigatorState extends State<SheetNavigator> {
     _stack.add(widget.getInitialSheetFromOutside(widget.scrollController, pushWidget));
   }
 
-
   @override
   Widget build(BuildContext context) {
+    
+
     return PopScope(
       canPop: _stack.length <= 1,
       onPopInvokedWithResult: (didPop, result) {
         // When the Android back button is pressed (or the current widget gets closed programatically), it's routed here and SheetNavigator takes the current sheet off the back stack 
         if (!didPop) {
-          setState(() {
-            oldStackLength = _stack.length;
-            _stack.removeLast();
-            isGoingBackwards = true;
-          });
+          shouldAnimate = true; // User clicked back button so we need a back animation
+          popWidget();
         }
         
       }, child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400),
+        duration: Duration(milliseconds: 400),
         transitionBuilder: (Widget child, Animation<double> animation) {
+          debugPrint("Building transition, shouldAnimate is ${shouldAnimate}");
           final isEntering = child.key == ValueKey(_stack.length);
           
           return SlideTransition(
             // All this logic serves to make the forward and backward card animations look nice
             position: Tween<Offset>(
               begin: 
-              isGoingBackwards ? (
-                isEntering ?
-                const Offset(-1, 0.0) : const Offset(1, 0.0)
-              ) : isEntering ?
-                const Offset(1, 0.0) : const Offset(-1, 0.0),
+              !shouldAnimate ? (
+                Offset.zero
+              )
+              : isGoingBackwards ? (
+                  isEntering ?
+                    const Offset(-1, 0.0) : const Offset(1, 0.0)
+                ) : isEntering ?
+                  const Offset(1, 0.0)
+                  : const Offset(-1, 0.0),
               end: Offset.zero,
             ).animate(
               CurvedAnimation(
@@ -95,17 +177,38 @@ class SheetNavigatorState extends State<SheetNavigator> {
         },
         child: KeyedSubtree(
           key: ValueKey(_stack.length),
-          child: SizedBox.expand(child: _stack.last),
+          child: _stack.length > 1 ? 
+            Stack(
+              children: [
+                // IgnorePointer(
+                //   child: SizedBox.expand(child: _stack[_stack.length - 2])
+                // ),
+                //SizedBox.expand(),
+                SizedBox.expand(child: (_stack.length - 2 >= 0) ? _stack[_stack.length - 2] : null),
+                Dismissible(
+                  key: ValueKey(numSteps),
+                  direction: DismissDirection.startToEnd,
+                  onDismissed: (DismissDirection d) {
+                    popWidgetNoAnimation();
+                  },
+                  child: SizedBox.expand(child: _stack.last)
+                )
+              ]
+
+  // NEXT STEPS TODO: Figure out why the stacked sheets fight scrolling so much. Do they both hang on to the same ScrollController?
+
+            )
+            : SizedBox.expand(child: _stack.last)
+          ),
         )
-        
-      )
-    );
+      );
+    //);
   }
 
 }
 
 class SheetNavigator extends StatefulWidget {
-  final Function(ScrollController, Function(Widget)) getInitialSheetFromOutside;
+  final Function(ScrollController, Function(NavigableSheet)) getInitialSheetFromOutside;
   final ScrollController scrollController;
   SheetNavigator({
     required this.scrollController,
@@ -317,7 +420,7 @@ class SheetNavigationManager {
     );
   }
 
-  BusSheet getBusSheet(String busID, ScrollController scrollController, Function(Widget) pushNewSheet) {
+  BusSheet getBusSheet(String busID, ScrollController scrollController, Function(NavigableSheet) pushNewSheet) {
     return BusSheet(
       busID: busID,
       scrollController: scrollController,
@@ -351,7 +454,7 @@ class SheetNavigationManager {
           return Container(
             child: SheetNavigator(
               scrollController: scrollController,
-              getInitialSheetFromOutside: (ScrollController scrollControllerLocal, Function(Widget) pushNewSheet) => getBusSheet(busID, scrollControllerLocal, pushNewSheet)
+              getInitialSheetFromOutside: (ScrollController scrollControllerLocal, Function(NavigableSheet) pushNewSheet) => getBusSheet(busID, scrollControllerLocal, pushNewSheet)
             )
           );
         },
@@ -374,7 +477,7 @@ class SheetNavigationManager {
   }
 
 
-  StopSheet getStopSheet(String stopID, String stopName, double lat, double long, Function(Widget) pushSheet, ScrollController scrollControllerLocal) {
+  StopSheet getStopSheet(String stopID, String stopName, double lat, double long, Function(NavigableSheet) pushSheet, ScrollController scrollControllerLocal) {
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     return StopSheet(
@@ -422,7 +525,7 @@ class SheetNavigationManager {
         builder: (BuildContext context, ScrollController scrollController) {
           return SheetNavigator(
             scrollController: scrollController,
-            getInitialSheetFromOutside: (ScrollController scrollControllerLocal, Function(Widget) pushSheet) {
+            getInitialSheetFromOutside: (ScrollController scrollControllerLocal, Function(NavigableSheet) pushSheet) {
               return getStopSheet(stopID, stopName, lat, long, pushSheet, scrollControllerLocal);
             }
           );

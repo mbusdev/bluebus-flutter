@@ -2,6 +2,7 @@ import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
+import 'package:bluebus/services/sheet_navigation_manager.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/refresh_button.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,7 @@ bool isRide(String? s) {
   return false;
 }
 
-class StopSheet extends StatefulWidget {
+class StopSheet extends StatefulWidget implements NavigableSheet {
   final String stopID;
   final String stopName;
   final Future<void> Function(String, String) onFavorite;
@@ -29,9 +30,15 @@ class StopSheet extends StatefulWidget {
   final void Function(String) showBusSheet;
   final BusProvider busProvider;
   final ScrollController scrollController; // Scroll controller of the DraggableScrollableSheet (the parent Widget)
+  // final GlobalKey<_StopSheetState> stateKey;
 
-  StopSheet({
-    Key? key,
+  @override
+  void setShouldUseScrollController(bool shouldUseScrollController) {
+    // debugPrint("BusSheet: Got setCustomScrollController call with ${newScrollController}");
+    // stateKey.currentState?.setShouldUseScrollController(shouldUseScrollController);
+  }
+
+  const StopSheet({super.key, 
     required this.stopID,
     required this.stopName,
     required this.onFavorite,
@@ -40,7 +47,48 @@ class StopSheet extends StatefulWidget {
     required this.showBusSheet,
     required this.busProvider,
     required this.scrollController
-  }) : super(key: key);
+  });
+
+  // StopSheet._({
+  //   required this.stateKey,
+  //   required this.stopID,
+  //   required this.stopName,
+  //   required this.onFavorite,
+  //   required this.onUnFavorite,
+  //   required this.onGetDirections,
+  //   required this.showBusSheet,
+  //   required this.busProvider,
+  //   required this.scrollController
+  // }) : super(key: stateKey);
+
+  // Yes, I know this is a mess. I'm sorry.
+  // The reason this needs to be here:
+  // * When used in a SheetNavigator, two sheets are displayed on top of each other for smooth transitions
+  // * If both sheets are using the ScrollController, they fight each other and make it difficult for the user to swipe the sheet away
+  // * Thus, SheetNavigationManager needs to call StopSheet.setShouldUseScrollController to tell it whether it should use the scroll controller (i.e. if it's in the foreground) or not
+  // * Unfortunately, in order to make StopSheet able to call a method inside StopSheetState, Flutter requires that you have a GlobalKey<_StopSheetState>, and for that you need to make a factory. Womp womp.
+  // factory StopSheet({
+  //   required String stopID,
+  //   required String stopName,
+  //   required Future<void> Function(String, String) onFavorite,
+  //   required Future<void> Function(String, String) onUnFavorite,
+  //   required Function() onGetDirections,
+  //   required Function(String) showBusSheet,
+  //   required BusProvider busProvider,
+  //   required ScrollController scrollController,
+  // }) {
+  //   final key = GlobalKey<_StopSheetState>();
+  //   return StopSheet._(
+  //     stateKey: key,
+  //     stopID: stopID,
+  //     stopName: stopName,
+  //     onFavorite: onFavorite,
+  //     onUnFavorite: onUnFavorite,
+  //     onGetDirections: onGetDirections,
+  //     showBusSheet: showBusSheet,
+  //     busProvider: busProvider,
+  //     scrollController: scrollController);
+  // }
 
   @override
   State<StopSheet> createState() => _StopSheetState();
@@ -261,6 +309,29 @@ class _StopSheetState extends State<StopSheet> {
   late bool imageBusStop;
   late String imagePath;
 
+  bool shouldUseScrollControler = true;
+
+  // The shouldUseScrollControler parameter necessary so that when two widgets occupy the same Sheet
+  // (i.e. when one sheet is displayed on top of another via SheetNavigator), both Sheets don't
+  // fight over the scroll controller and make scrolling janky. The SheetNavigator feeds a "dummy"
+  // scroll controller when this sheet is displayed behind something else
+  void setShouldUseScrollController(bool shouldUseScrollControlerIn) {
+    // debugPrint("StopSheet: INSIDE: setShouldUseScrollController() call: $shouldUseScrollControlerIn");
+    // setState(() {
+    //   shouldUseScrollControler = shouldUseScrollControlerIn;
+    // });
+  }
+  ScrollController? getScrollController() {
+    return null;
+    if (!shouldUseScrollControler) {
+      return null;
+    }
+    debugPrint("    customScrollController is null, returning the vanilla one");
+    return widget.scrollController;
+  }
+
+
+
   @override
   void initState() {
     super.initState();
@@ -304,6 +375,8 @@ class _StopSheetState extends State<StopSheet> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("StopSheet: Building...");
+    // return Text("It÷ works!");
     return Stack(
         children: [
           // stacking the sheet on top of a gesture detector so you can close it by tapping out of it
@@ -356,7 +429,7 @@ class _StopSheetState extends State<StopSheet> {
               // with a lil simple math
               double heightOfImage = (imageBusStop)? ((MediaQuery.sizeOf(context).width) * 0.54345703125) : 0;
 
-              double paddingBelowButtons = globalBottomPadding;
+              double paddingBelowButtons = globalBottomPadding; // TODO: Figure out why these buttons are pushed so far down
 
               // return DraggableScrollableSheet(
               //   initialChildSize: initialSize,
@@ -381,7 +454,8 @@ class _StopSheetState extends State<StopSheet> {
                     // overflow box lets the stuff inside not shrink when page is being closed
                     child: OverflowBox(
                       alignment: Alignment.topCenter,
-                      maxHeight: MediaQuery.of(context).size.height * initialSize, 
+                      maxHeight: null,
+                      // maxHeight: MediaQuery.of(context).size.height * initialSize, 
                       // In this stack, 
                       // First (bottom) layer is image, which sometimes doesn't exist
                       // Second layer is another stack. Inside that stack is: 
@@ -416,7 +490,9 @@ class _StopSheetState extends State<StopSheet> {
                                   Expanded(
                                     child: SingleChildScrollView(
                                       physics: const ClampingScrollPhysics(),
-                                      controller: widget.scrollController,
+                                      // controller: widget.scrollController,
+                                      // controller: getScrollController(),
+                                      controller: null,
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -575,7 +651,8 @@ class _StopSheetState extends State<StopSheet> {
                                                             mainAxisSize: MainAxisSize.max,
                                                             children: [
                                                               ListView.separated(
-                                                                controller: widget.scrollController,
+                                                                // controller: widget.scrollController,\
+                                                                // controller: getScrollController(),
                                                                 shrinkWrap: true,
                                                                 physics:
                                                                     NeverScrollableScrollPhysics(),
@@ -619,7 +696,7 @@ class _StopSheetState extends State<StopSheet> {
                                                                 },
                                                               ),
                       
-                                                              SizedBox(height: paddingBelowButtons + 20,)
+                                                              SizedBox(height: paddingBelowButtons + 40,) // The +40 allows enough space for "See all stops for this bus" button to be clickable
                                                             ],
                                                           ),
                                                         ],

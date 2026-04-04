@@ -1,5 +1,6 @@
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
+import 'package:bluebus/services/sheet_navigation_manager.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../models/bus.dart';
@@ -15,27 +16,65 @@ bool isNumber(String? s) {
   return false;
 }
 
-class BusSheet extends StatefulWidget {
+class BusSheet extends StatefulWidget implements NavigableSheet {
   final String busID;
   final ScrollController scrollController;
   final void Function(String name, String id) onSelectStop;
+  final GlobalKey<_BusSheetState> stateKey;
 
-  const BusSheet({
-    Key? key,
+  BusSheet._({
+    // Key? key,
+    // Key? stateKey,
+    required this.stateKey,
     required this.busID,
     required this.onSelectStop,
     required this.scrollController,
-  }) : super(key: key);
+  }) : super(key: stateKey);
+
+  factory BusSheet({
+    required String busID,
+    required void Function(String, String) onSelectStop,
+    required ScrollController scrollController,
+  }) {
+    final key = GlobalKey<_BusSheetState>();
+    return BusSheet._(stateKey: key, busID: busID, onSelectStop: onSelectStop, scrollController: scrollController);
+  }
 
   @override
   State<BusSheet> createState() {
     return _BusSheetState();
+  }
+  
+  @override
+  void setShouldUseScrollController(bool shouldUseScrollController) {
+    // debugPrint("BusSheet: Got setCustomScrollController call with ${newScrollController}");
+    stateKey.currentState?.setShouldUseScrollController(shouldUseScrollController);
   }
 }
 
 class _BusSheetState extends State<BusSheet> {
   late Bus? currBus = BusRepository.getBus(widget.busID);
   late Future<List<BusStopWithPrediction>> futureBusStops;
+  bool shouldUseScrollControler = true;
+
+  // The shouldUseScrollControler parameter necessary so that when two widgets occupy the same Sheet
+  // (i.e. when one sheet is displayed on top of another via SheetNavigator), both Sheets don't
+  // fight over the scroll controller and make scrolling janky. The SheetNavigator feeds a "dummy"
+  // scroll controller when this sheet is displayed behind something else
+  void setShouldUseScrollController(bool shouldUseScrollControlerIn) {
+    debugPrint("BusSheet: INSIDE: setShouldUseScrollController() call: $shouldUseScrollControlerIn");
+    setState(() {
+      shouldUseScrollControler = shouldUseScrollControlerIn;
+    });
+  }
+  ScrollController? getScrollController() {
+    if (!shouldUseScrollControler) {
+      debugPrint("getScrollController() call, returning null");
+      return null;
+    }
+    debugPrint("getScrollController call(), returning the vanilla one");
+    return widget.scrollController;
+  }
   
   @override
   void initState() {
@@ -49,10 +88,13 @@ class _BusSheetState extends State<BusSheet> {
     // This accounts for that.
     if (currBus == null) return Text("Bus not found");
 
+    // return Text("HI");
+
+    debugPrint("BusSheet: Building...");
+
     final bus = currBus!;
 
-    debugPrint("    currBus is ${currBus?.routeId}");
-    return Container(
+    Widget output = Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
         borderRadius: const BorderRadius.only(
@@ -71,7 +113,9 @@ class _BusSheetState extends State<BusSheet> {
           bottom: 0,
         ),
         child: SingleChildScrollView(
-          controller: widget.scrollController,
+          // controller: widget.scrollController,
+          // controller: getScrollController(),
+          controller: null,
 
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -116,6 +160,8 @@ class _BusSheetState extends State<BusSheet> {
         ),
       ),
     );
+    debugPrint("BusSheet: Finished building");
+    return output;
   }
 }
 
