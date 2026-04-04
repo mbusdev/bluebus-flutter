@@ -16,65 +16,27 @@ bool isNumber(String? s) {
   return false;
 }
 
-class BusSheet extends StatefulWidget implements NavigableSheet {
+class BusSheet extends StatefulWidget {
   final String busID;
-  final ScrollController scrollController;
+  ScrollController? scrollController;
   final void Function(String name, String id) onSelectStop;
-  final GlobalKey<_BusSheetState> stateKey;
 
-  BusSheet._({
-    // Key? key,
-    // Key? stateKey,
-    required this.stateKey,
+  BusSheet({
     required this.busID,
     required this.onSelectStop,
-    required this.scrollController,
-  }) : super(key: stateKey);
-
-  factory BusSheet({
-    required String busID,
-    required void Function(String, String) onSelectStop,
-    required ScrollController scrollController,
-  }) {
-    final key = GlobalKey<_BusSheetState>();
-    return BusSheet._(stateKey: key, busID: busID, onSelectStop: onSelectStop, scrollController: scrollController);
-  }
+    this.scrollController, // Note: scrollController should be null ONLY if it's inside a SheetNavigator (in which case the SheetNavigator provides it through SheetNavigationContext).
+  });
 
   @override
   State<BusSheet> createState() {
     return _BusSheetState();
   }
   
-  @override
-  void setShouldUseScrollController(bool shouldUseScrollController) {
-    // debugPrint("BusSheet: Got setCustomScrollController call with ${newScrollController}");
-    stateKey.currentState?.setShouldUseScrollController(shouldUseScrollController);
-  }
 }
 
 class _BusSheetState extends State<BusSheet> {
   late Bus? currBus = BusRepository.getBus(widget.busID);
   late Future<List<BusStopWithPrediction>> futureBusStops;
-  bool shouldUseScrollControler = true;
-
-  // The shouldUseScrollControler parameter necessary so that when two widgets occupy the same Sheet
-  // (i.e. when one sheet is displayed on top of another via SheetNavigator), both Sheets don't
-  // fight over the scroll controller and make scrolling janky. The SheetNavigator feeds a "dummy"
-  // scroll controller when this sheet is displayed behind something else
-  void setShouldUseScrollController(bool shouldUseScrollControlerIn) {
-    debugPrint("BusSheet: INSIDE: setShouldUseScrollController() call: $shouldUseScrollControlerIn");
-    setState(() {
-      shouldUseScrollControler = shouldUseScrollControlerIn;
-    });
-  }
-  ScrollController? getScrollController() {
-    if (!shouldUseScrollControler) {
-      debugPrint("getScrollController() call, returning null");
-      return null;
-    }
-    debugPrint("getScrollController call(), returning the vanilla one");
-    return widget.scrollController;
-  }
   
   @override
   void initState() {
@@ -94,16 +56,16 @@ class _BusSheetState extends State<BusSheet> {
 
     final bus = currBus!;
 
-    Widget output = Container(
+    Widget output = AnimatedContainer(
+      duration: Duration(milliseconds: 500),
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
-        boxShadow: [
-          SheetBoxShadow
-        ]
+        boxShadow: (SheetNavigationContext.of(context) != null && !SheetNavigationContext.of(context)!.shouldShowShadow) ? null : [SheetBoxShadow]
+        
       ),
       child: Padding(
         padding: const EdgeInsets.only(
@@ -115,7 +77,7 @@ class _BusSheetState extends State<BusSheet> {
         child: SingleChildScrollView(
           // controller: widget.scrollController,
           // controller: getScrollController(),
-          controller: null,
+          controller: widget.scrollController ?? SheetNavigationContext.of(context)?.scrollController,
 
           child: Column(
             mainAxisSize: MainAxisSize.min,

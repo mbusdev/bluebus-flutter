@@ -21,7 +21,7 @@ bool isRide(String? s) {
   return false;
 }
 
-class StopSheet extends StatefulWidget implements NavigableSheet {
+class StopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
   final Future<void> Function(String, String) onFavorite;
@@ -29,14 +29,7 @@ class StopSheet extends StatefulWidget implements NavigableSheet {
   final void Function() onGetDirections;
   final void Function(String) showBusSheet;
   final BusProvider busProvider;
-  final ScrollController scrollController; // Scroll controller of the DraggableScrollableSheet (the parent Widget)
-  // final GlobalKey<_StopSheetState> stateKey;
-
-  @override
-  void setShouldUseScrollController(bool shouldUseScrollController) {
-    // debugPrint("BusSheet: Got setCustomScrollController call with ${newScrollController}");
-    // stateKey.currentState?.setShouldUseScrollController(shouldUseScrollController);
-  }
+  final ScrollController? scrollController; // Scroll controller of the DraggableScrollableSheet (the parent Widget)
 
   const StopSheet({super.key, 
     required this.stopID,
@@ -46,49 +39,9 @@ class StopSheet extends StatefulWidget implements NavigableSheet {
     required this.onGetDirections,
     required this.showBusSheet,
     required this.busProvider,
-    required this.scrollController
+    this.scrollController // Note: scrollController should be null ONLY if it's inside a SheetNavigator (in which case the SheetNavigator provides it through SheetNavigationContext).
   });
 
-  // StopSheet._({
-  //   required this.stateKey,
-  //   required this.stopID,
-  //   required this.stopName,
-  //   required this.onFavorite,
-  //   required this.onUnFavorite,
-  //   required this.onGetDirections,
-  //   required this.showBusSheet,
-  //   required this.busProvider,
-  //   required this.scrollController
-  // }) : super(key: stateKey);
-
-  // Yes, I know this is a mess. I'm sorry.
-  // The reason this needs to be here:
-  // * When used in a SheetNavigator, two sheets are displayed on top of each other for smooth transitions
-  // * If both sheets are using the ScrollController, they fight each other and make it difficult for the user to swipe the sheet away
-  // * Thus, SheetNavigationManager needs to call StopSheet.setShouldUseScrollController to tell it whether it should use the scroll controller (i.e. if it's in the foreground) or not
-  // * Unfortunately, in order to make StopSheet able to call a method inside StopSheetState, Flutter requires that you have a GlobalKey<_StopSheetState>, and for that you need to make a factory. Womp womp.
-  // factory StopSheet({
-  //   required String stopID,
-  //   required String stopName,
-  //   required Future<void> Function(String, String) onFavorite,
-  //   required Future<void> Function(String, String) onUnFavorite,
-  //   required Function() onGetDirections,
-  //   required Function(String) showBusSheet,
-  //   required BusProvider busProvider,
-  //   required ScrollController scrollController,
-  // }) {
-  //   final key = GlobalKey<_StopSheetState>();
-  //   return StopSheet._(
-  //     stateKey: key,
-  //     stopID: stopID,
-  //     stopName: stopName,
-  //     onFavorite: onFavorite,
-  //     onUnFavorite: onUnFavorite,
-  //     onGetDirections: onGetDirections,
-  //     showBusSheet: showBusSheet,
-  //     busProvider: busProvider,
-  //     scrollController: scrollController);
-  // }
 
   @override
   State<StopSheet> createState() => _StopSheetState();
@@ -309,29 +262,6 @@ class _StopSheetState extends State<StopSheet> {
   late bool imageBusStop;
   late String imagePath;
 
-  bool shouldUseScrollControler = true;
-
-  // The shouldUseScrollControler parameter necessary so that when two widgets occupy the same Sheet
-  // (i.e. when one sheet is displayed on top of another via SheetNavigator), both Sheets don't
-  // fight over the scroll controller and make scrolling janky. The SheetNavigator feeds a "dummy"
-  // scroll controller when this sheet is displayed behind something else
-  void setShouldUseScrollController(bool shouldUseScrollControlerIn) {
-    // debugPrint("StopSheet: INSIDE: setShouldUseScrollController() call: $shouldUseScrollControlerIn");
-    // setState(() {
-    //   shouldUseScrollControler = shouldUseScrollControlerIn;
-    // });
-  }
-  ScrollController? getScrollController() {
-    return null;
-    if (!shouldUseScrollControler) {
-      return null;
-    }
-    debugPrint("    customScrollController is null, returning the vanilla one");
-    return widget.scrollController;
-  }
-
-
-
   @override
   void initState() {
     super.initState();
@@ -438,7 +368,8 @@ class _StopSheetState extends State<StopSheet> {
               //   snap: true,
               //   snapSizes: [initialSize],
               //   builder: (BuildContext context, ScrollController scrollController) {
-                  return Container(
+                  return AnimatedContainer(
+                    duration: Duration(milliseconds: 500),
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: getColor(context, ColorType.background),
@@ -446,9 +377,10 @@ class _StopSheetState extends State<StopSheet> {
                         topLeft: Radius.circular(30),
                         topRight: Radius.circular(30),
                       ),
-                      boxShadow: [
-                        SheetBoxShadow
-                      ]
+                      boxShadow: (SheetNavigationContext.of(context) != null && !SheetNavigationContext.of(context)!.shouldShowShadow) ? null : [SheetBoxShadow]
+                      // boxShadow: [
+                      //   SheetBoxShadow
+                      // ]
                     ),
 
                     // overflow box lets the stuff inside not shrink when page is being closed
@@ -492,7 +424,7 @@ class _StopSheetState extends State<StopSheet> {
                                       physics: const ClampingScrollPhysics(),
                                       // controller: widget.scrollController,
                                       // controller: getScrollController(),
-                                      controller: null,
+                                      controller: widget.scrollController ?? SheetNavigationContext.of(context)?.scrollController,
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -653,6 +585,7 @@ class _StopSheetState extends State<StopSheet> {
                                                               ListView.separated(
                                                                 // controller: widget.scrollController,\
                                                                 // controller: getScrollController(),
+                                                                controller: widget.scrollController ?? SheetNavigationContext.of(context)?.scrollController,
                                                                 shrinkWrap: true,
                                                                 physics:
                                                                     NeverScrollableScrollPhysics(),
