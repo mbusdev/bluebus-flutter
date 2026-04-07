@@ -414,8 +414,8 @@ class SheetNavigationManager {
         } else {
           showMaizebusOKDialog(
             contextIn: context,
-            title: const Text("Error"),
-            content: const Text("Couldn't load stop."),
+            title: "Error",
+            content: "Couldn't load stop.",
           );
         }
       },
