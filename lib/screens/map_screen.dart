@@ -1913,14 +1913,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                     // If showing a persistent bottom sheet, close it.
                     // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
-                    // if (_bottomSheetController != null) {
-                    //   _bottomSheetController!.close();
-                    //   _bottomSheetController = null;
-                    //   _removeSearchLocationMarker();
-                    // }
-                    if (sheetNavigationManager!.isBottomSheetControllerAlive()) {
-                      
-                    }
                   },
                   child: Stack(
                     children: [

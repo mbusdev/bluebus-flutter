@@ -25,7 +25,7 @@ class StopSheet extends StatefulWidget {
   final BusProvider busProvider;
   final ScrollController? scrollController; // Scroll controller of the DraggableScrollableSheet (the parent Widget)
 
-  const StopSheet({super.key, 
+  const StopSheet({ 
     required this.stopID,
     required this.stopName,
     required this.onFavorite,
