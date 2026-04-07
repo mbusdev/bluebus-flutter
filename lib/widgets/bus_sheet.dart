@@ -36,8 +36,9 @@ class BusSheet extends StatefulWidget {
 
 class _BusSheetState extends State<BusSheet> {
   late Bus? currBus = BusRepository.getBus(widget.busID);
-  late Future<List<BusStopWithPrediction>> futureBusStops;
-  
+  late Future<List<BusStopWithPrediction>> futureBusStops;  
+
+
   @override
   void initState() {
     super.initState();
@@ -50,10 +51,6 @@ class _BusSheetState extends State<BusSheet> {
     // This accounts for that.
     if (currBus == null) return Text("Bus not found");
 
-    // return Text("HI");
-
-    debugPrint("BusSheet: Building...");
-
     final bus = currBus!;
 
     Widget output = AnimatedContainer(
@@ -64,7 +61,7 @@ class _BusSheetState extends State<BusSheet> {
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
-        boxShadow: (SheetNavigationContext.of(context) != null && !SheetNavigationContext.of(context)!.shouldShowShadow) ? null : [SheetBoxShadow]
+        boxShadow: [SheetBoxLeftShadow]
         
       ),
       child: Padding(
@@ -75,8 +72,6 @@ class _BusSheetState extends State<BusSheet> {
           bottom: 0,
         ),
         child: SingleChildScrollView(
-          // controller: widget.scrollController,
-          // controller: getScrollController(),
           controller: widget.scrollController ?? SheetNavigationContext.of(context)?.scrollController,
 
           child: Column(
@@ -122,7 +117,6 @@ class _BusSheetState extends State<BusSheet> {
         ),
       ),
     );
-    debugPrint("BusSheet: Finished building");
     return output;
   }
 }
