@@ -16,6 +16,7 @@ import 'upcoming_stops_widget.dart';
 class StopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
+  final bool isFavorite;
   final Future<void> Function(String, String) onFavorite;
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
@@ -26,6 +27,7 @@ class StopSheet extends StatefulWidget {
     Key? key,
     required this.stopID,
     required this.stopName,
+    required this.isFavorite,
     required this.onFavorite,
     required this.onUnFavorite,
     required this.onGetDirections,
@@ -216,8 +218,8 @@ class ExpandableStopWidget extends StatefulWidget {
 }
 
 class _StopSheetState extends State<StopSheet> {
-  late Future<(List<BusWithPrediction>, bool)> loadedStopData;
-  bool? _isFavorited;
+  late Future<List<BusWithPrediction>> loadedStopData;
+  late bool _isFavorite;
 
   // for select bus stops with images
   late bool imageBusStop;
@@ -227,6 +229,7 @@ class _StopSheetState extends State<StopSheet> {
   void initState() {
     super.initState();
     loadedStopData = fetchStopData(widget.stopID);
+    _isFavorite = widget.isFavorite;
     imageBusStop =
         (widget.stopID == "C250") ||
         (widget.stopID == "N406") ||
@@ -284,13 +287,10 @@ class _StopSheetState extends State<StopSheet> {
             List<BusWithPrediction> arrivingBuses = [];
 
             if (snapshot.hasData) {
-              arrivingBuses = snapshot.data!.$1;
+              arrivingBuses = snapshot.data!;
               arrivingBuses.sort(
                 (lhs, rhs) => (int.tryParse(lhs.prediction) ?? 0).compareTo(int.tryParse(rhs.prediction) ?? 0)
               );
-              if (_isFavorited == null) {
-                _isFavorited = snapshot.data!.$2;
-              }
             }
 
             double initialSize = 0.9;
@@ -675,11 +675,8 @@ class _StopSheetState extends State<StopSheet> {
                                             
                                       ElevatedButton(
                                         onPressed: () {
-                                          // Read the current state
-                                          final bool currentStatus = _isFavorited ?? false;
-                                            
                                           // Call the appropriate function
-                                          if (currentStatus){
+                                          if (_isFavorite){
                                             widget.onUnFavorite(widget.stopID, widget.stopName);
                                           } else {
                                             widget.onFavorite(widget.stopID, widget.stopName);
@@ -687,7 +684,7 @@ class _StopSheetState extends State<StopSheet> {
                                             
                                           // Update the UI immediately
                                           setState(() {
-                                            _isFavorited = !currentStatus;
+                                            _isFavorite = !_isFavorite;
                                           });
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -701,8 +698,8 @@ class _StopSheetState extends State<StopSheet> {
                                           elevation: 0
                                         ),
                                         child: Icon(
-                                          (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
+                                          (_isFavorite ?? false)?  Icons.favorite : Icons.favorite_border, 
+                                          color: (_isFavorite ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
                                           size: 20,
                                         ), 
                                       ),

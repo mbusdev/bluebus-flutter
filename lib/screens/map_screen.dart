@@ -1916,6 +1916,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return StopSheet(
           stopID: stopID,
           stopName: stopName,
+          isFavorite: _favoriteStops.contains(stopID),
           onFavorite: _addFavoriteStop,
           onUnFavorite: _removeFavoriteStop,
           showBusSheet: (busId) {
