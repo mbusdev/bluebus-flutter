@@ -592,8 +592,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                       onPressed: () {
                                         showMaizebusOKDialog(
                                           contextIn: context,
-                                          title: const Text("Route Selector"),
-                                          content: const Text("Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route"),
+                                          title: "Route Selector",
+                                          content: "Tap a route to show it on the map. Drag and drop to reorder routes. Long press to select only that route",
                                         );
                                       },
                                       style: IconButton.styleFrom(

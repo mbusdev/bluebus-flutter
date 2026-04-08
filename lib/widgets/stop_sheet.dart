@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
@@ -216,10 +217,12 @@ class ExpandableStopWidget extends StatefulWidget {
     required this.busProvider,
   });
 }
-
-class _StopSheetState extends State<StopSheet> {
+  
+class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
   late Future<List<BusWithPrediction>> loadedStopData;
   late bool _isFavorite;
+  Timer? _refreshTimer;
+  bool _isInBackground = false;
 
   // for select bus stops with images
   late bool imageBusStop;
@@ -228,6 +231,7 @@ class _StopSheetState extends State<StopSheet> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     loadedStopData = fetchStopData(widget.stopID);
     _isFavorite = widget.isFavorite;
     imageBusStop =
@@ -259,12 +263,61 @@ class _StopSheetState extends State<StopSheet> {
     if (widget.stopID == "N553") {
       imagePath = "assets/PierpontNorthwood.jpg";
     }
+    
+    // Start auto-refresh every 30 seconds
+    _startRefreshTimer();
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (!_isInBackground) {
+        _refreshData();
+      }
+    });
+  }
+
+  void _stopRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _isInBackground = true;
+        _stopRefreshTimer();
+        break;
+      case AppLifecycleState.resumed:
+        _isInBackground = false;
+        // Refresh immediately when app comes to foreground
+        _refreshData();
+        _startRefreshTimer();
+        break;
+      case AppLifecycleState.detached:
+        _stopRefreshTimer();
+        break;
+      case AppLifecycleState.hidden:
+        // Handle hidden state if needed
+        break;
+    }
   }
 
   void _refreshData() {
-    setState(() {
-      loadedStopData = fetchStopData(widget.stopID);
-    });
+    if (!_isInBackground) {
+      setState(() {
+        loadedStopData = fetchStopData(widget.stopID);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopRefreshTimer();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -835,8 +888,8 @@ class _ReminderFormState extends State<ReminderForm> {
             
             showMaizebusOKDialog(
               contextIn: context,
-              title: Text("Failed to load reminders"),
-              content: Text("Make sure you have the notification permission enabled in settings. If this error is persistent, please send us feedback through the feedback form in the settings page"),
+              title: "Failed to load reminders",
+              content: "Make sure you have the notification permission enabled in settings. If this error is persistent, please send us feedback through the feedback form in the settings page",
             );
           });
           return SizedBox.shrink();
