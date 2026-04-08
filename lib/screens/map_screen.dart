@@ -600,7 +600,25 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             targetHeight: 125,
           );
           final frame = await codec.getNextFrame();
-          final data = await frame.image.toByteData(
+
+          // Apply color tint for specific routes
+          final routeColor = RouteColorService.getRouteColor(routeId);
+          final recorder = ui.PictureRecorder();
+          final canvas = Canvas(recorder);
+          // Pass 1: tint the whole icon blue
+          canvas.drawImage(frame.image, Offset.zero, Paint()
+            ..colorFilter = ColorFilter.mode(routeColor, BlendMode.srcIn));
+
+          // Pass 2: draw original on top with Luminosity —
+          // keeps the blue hue but restores brightness so text stays visible
+          canvas.drawImage(frame.image, Offset.zero, Paint()
+            ..blendMode = BlendMode.luminosity);
+          final picture = recorder.endRecording();
+          final tinted = await picture.toImage(
+            frame.image.width,
+            frame.image.height,
+          );
+          final data = await tinted.toByteData(
             format: ui.ImageByteFormat.png,
           );
 
