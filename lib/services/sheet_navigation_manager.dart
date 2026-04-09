@@ -131,7 +131,7 @@ class SheetNavigatorState extends State<SheetNavigator> {
           boxShadow: [SheetBoxShadow] // Shadow that sits behind all the sheets in the SheetNavigator
         ),
         child: AnimatedSwitcher(
-          duration: Duration(milliseconds: 400),
+          duration: Duration(milliseconds: 300),
           transitionBuilder: (Widget child, Animation<double> animation) {
             final isEntering = child.key == ValueKey(_stack.length);
             
@@ -144,7 +144,7 @@ class SheetNavigatorState extends State<SheetNavigator> {
                 )
                 : isGoingBackwards ? (
                     isEntering ?
-                      const Offset(-1, 0.0) : const Offset(1, 0.0)
+                      const Offset(0, 0.0) : const Offset(1, 0.0)
                   ) : isEntering ?
                     const Offset(1, 0.0)
                     : const Offset(0, 0.0),
