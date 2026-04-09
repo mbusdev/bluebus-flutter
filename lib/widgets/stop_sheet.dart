@@ -541,6 +541,7 @@ class _StopSheetState extends State<StopSheet> {
                                                       crossAxisAlignment:
                                                           CrossAxisAlignment.start,
                                                       children: [
+                                                        (arrivingBuses.isEmpty)
                                                             ?
                                                               Center(
                                                                 child: Column(
@@ -1115,11 +1116,13 @@ class _ReminderFormState extends State<ReminderForm> {
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         } on Exception {
-                          showMaizebusOKDialog(
-                            contextIn: context,
-                            title: Text("Failed to set reminders"),
-                            content: Text("If this error is persistent, please send us feedback through the feedback form in the settings page"),
-                          );
+                          if (context.mounted) {
+                            showMaizebusOKDialog(
+                              contextIn: context,
+                              title: Text("Failed to set reminders"),
+                              content: Text("If this error is persistent, please send us feedback through the feedback form in the settings page"),
+                            );
+                          }
                         }
                         setState(() => _isProcessing = false);
                       },
