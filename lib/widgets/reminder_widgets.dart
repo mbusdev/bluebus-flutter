@@ -209,67 +209,64 @@ class _ReminderWidgetsState extends State<ReminderWidgets> {
             children.addAll(
               // the dismissible widgets that show each reminder, swiping left deletes the reminder
               reminders.map(
-                (r) => ClipRRect(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.all(Radius.circular(30)),
-                            color: Colors.red,
-                          ),
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.only(right: 20.0),
-                          child: Icon(Icons.delete, color: Colors.white),
+                (r) => Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.all(Radius.circular(30)),
+                          color: Colors.red,
                         ),
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.only(right: 20.0),
+                        child: Icon(Icons.delete, color: Colors.white),
                       ),
-                      Dismissible(
-                        key: Key('${r.stpid}|${r.rtid}'),
-                        direction: DismissDirection.endToStart,
-                        background: const SizedBox.shrink(),
-                        // when the user swipes enough to dismiss
-                        // try to remove the reminder from the service
-                        // if it fails put the widget back
-                        confirmDismiss: (direction) async {
-                          try {
-                            await IncomingBusReminderService.removeReminder(
-                              r.stpid,
-                              r.rtid,
-                            );
-                            return true;
-                          } catch (e) {
-                            if (kDebugMode) {
-                              print('Failed to remove reminder: $e');
-                            }
-                            return false;
+                    ),
+                    Dismissible(
+                      key: Key('${r.stpid}|${r.rtid}'),
+                      direction: DismissDirection.endToStart,
+                      background: const SizedBox.shrink(),
+                      // when the user swipes enough to dismiss
+                      // try to remove the reminder from the service
+                      // if it fails put the widget back
+                      confirmDismiss: (direction) async {
+                        try {
+                          await IncomingBusReminderService.removeReminder(
+                            r.stpid,
+                            r.rtid,
+                          );
+                          return true;
+                        } catch (e) {
+                          if (kDebugMode) {
+                            print('Failed to remove reminder: $e');
                           }
-                        },
-                        // if the reminder was successfully removed from the service
-                        // also remove it from the local list so the widget disappears immediately
-                        onDismissed: (_) {
-                          // Remove from local list immediately so the dismissed
-                          // widget leaves the tree before the async refresh.
-                          setState(() {
-                            reminders.removeWhere(
-                              (x) => x.stpid == r.stpid && x.rtid == r.rtid,
-                            );
-                          });
-                          _resetDataFuture();
-                        },
-                        // the actual reminder widget
-                        child: ReminderWidget(
-                          stpid: r.stpid,
-                          rtid: r.rtid,
-                          stopName: getStopNameFromID(r.stpid),
-                          eta: r.eta,
-                          onDismissed: _resetDataFuture,
-                        ),
+                          return false;
+                        }
+                      },
+                      // if the reminder was successfully removed from the service
+                      // also remove it from the local list so the widget disappears immediately
+                      onDismissed: (_) {
+                        // Remove from local list immediately so the dismissed
+                        // widget leaves the tree before the async refresh.
+                        setState(() {
+                          reminders.removeWhere(
+                            (x) => x.stpid == r.stpid && x.rtid == r.rtid,
+                          );
+                        });
+                        _resetDataFuture();
+                      },
+                      // the actual reminder widget
+                      child: ReminderWidget(
+                        stpid: r.stpid,
+                        rtid: r.rtid,
+                        stopName: getStopNameFromID(r.stpid),
+                        eta: r.eta,
+                        onDismissed: _resetDataFuture,
                       ),
+                    ),
                     ],
                   ),
                 ),
-              ),
             );
           }
         }
