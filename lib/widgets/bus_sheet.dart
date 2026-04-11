@@ -50,8 +50,8 @@ class _BusSheetState extends State<BusSheet> {
 
         showMaizebusOKDialog(
           contextIn: context,
-          title: "Uh Oh!",
-          content: "Unable to fetch bus data. Please check your internet connection and try again.",
+          title: const Text("Uh Oh!"),
+          content: const Text("Unable to fetch bus data. Please check your internet connection and try again."),
         );
       }); 
     } else { 

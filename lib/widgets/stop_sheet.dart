@@ -17,7 +17,6 @@ import 'upcoming_stops_widget.dart';
 class StopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
-  final bool isFavorite;
   final Future<void> Function(String, String) onFavorite;
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
@@ -28,7 +27,6 @@ class StopSheet extends StatefulWidget {
     Key? key,
     required this.stopID,
     required this.stopName,
-    required this.isFavorite,
     required this.onFavorite,
     required this.onUnFavorite,
     required this.onGetDirections,
@@ -217,10 +215,10 @@ class ExpandableStopWidget extends StatefulWidget {
     required this.busProvider,
   });
 }
-  
+
 class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
-  late Future<List<BusWithPrediction>> loadedStopData;
-  late bool _isFavorite;
+  late Future<(List<BusWithPrediction>, bool)> loadedStopData;
+  bool? _isFavorited;
   Timer? _refreshTimer;
   bool _isInBackground = false;
 
@@ -233,7 +231,6 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     loadedStopData = fetchStopData(widget.stopID);
-    _isFavorite = widget.isFavorite;
     imageBusStop =
         (widget.stopID == "C250") ||
         (widget.stopID == "N406") ||
@@ -340,10 +337,13 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
             List<BusWithPrediction> arrivingBuses = [];
 
             if (snapshot.hasData) {
-              arrivingBuses = snapshot.data!;
+              arrivingBuses = snapshot.data!.$1;
               arrivingBuses.sort(
                 (lhs, rhs) => (int.tryParse(lhs.prediction) ?? 0).compareTo(int.tryParse(rhs.prediction) ?? 0)
               );
+              if (_isFavorited == null) {
+                _isFavorited = snapshot.data!.$2;
+              }
             }
 
             double initialSize = 0.9;
@@ -728,8 +728,11 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
                                             
                                       ElevatedButton(
                                         onPressed: () {
+                                          // Read the current state
+                                          final bool currentStatus = _isFavorited ?? false;
+                                            
                                           // Call the appropriate function
-                                          if (_isFavorite){
+                                          if (currentStatus){
                                             widget.onUnFavorite(widget.stopID, widget.stopName);
                                           } else {
                                             widget.onFavorite(widget.stopID, widget.stopName);
@@ -737,7 +740,7 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
                                             
                                           // Update the UI immediately
                                           setState(() {
-                                            _isFavorite = !_isFavorite;
+                                            _isFavorited = !currentStatus;
                                           });
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -751,8 +754,8 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
                                           elevation: 0
                                         ),
                                         child: Icon(
-                                          (_isFavorite ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorite ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
+                                          (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
+                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
                                           size: 20,
                                         ), 
                                       ),
