@@ -220,8 +220,8 @@ class ExpandableStopWidget extends StatefulWidget {
 }
 
 class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
-  late Future<(List<BusWithPrediction>, bool)> loadedStopData;
-  bool? _isFavorited;
+  late Future<List<BusWithPrediction>> loadedStopData;
+  bool _isFavorited = false;
   Timer? _refreshTimer;
   bool _isInBackground = false;
 
@@ -266,6 +266,9 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
     
     // Start auto-refresh every 30 seconds
     _startRefreshTimer();
+
+    // check and update _isFavorited with status of isFavorited or not
+    _checkIsFavorited();
   }
 
   void _startRefreshTimer() {
@@ -279,6 +282,15 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
   void _stopRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+  }
+
+  void _checkIsFavorited() async {
+    // check if stop is favorited
+    if (await stopIsFavorited(widget.stopID)) {
+      setState(() {
+        _isFavorited = true;
+      });
+    }
   }
 
   @override
@@ -340,13 +352,10 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
               List<BusWithPrediction> arrivingBuses = [];
 
               if (snapshot.hasData) {
-                arrivingBuses = snapshot.data!.$1;
+                arrivingBuses = snapshot.data!;
                 arrivingBuses.sort(
                   (lhs, rhs) => (int.tryParse(lhs.prediction) ?? 0).compareTo(int.tryParse(rhs.prediction) ?? 0)
                 );
-                if (_isFavorited == null) {
-                  _isFavorited = snapshot.data!.$2;
-                }
               }
 
               // we know image dimensions, so we can use the width to find the height
@@ -710,7 +719,7 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
                                     ElevatedButton(
                                       onPressed: () {
                                         // Read the current state
-                                        final bool currentStatus = _isFavorited ?? false;
+                                        final bool currentStatus = _isFavorited;
                                           
                                         // Call the appropriate function
                                         if (currentStatus){

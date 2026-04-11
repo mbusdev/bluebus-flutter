@@ -40,7 +40,7 @@ class MiniStopSheet extends StatefulWidget {
 }
 
 class _MiniStopSheetState extends State<MiniStopSheet> {
-  late Future<(List<BusWithPrediction>, bool)> loadedStopData;
+  late Future<List<BusWithPrediction>> loadedStopData;
 
   @override
   void initState() {
@@ -64,7 +64,7 @@ class _MiniStopSheetState extends State<MiniStopSheet> {
           List<BusWithPrediction> arrivingBuses = [];
           
           if (snapshot.hasData){
-            arrivingBuses = snapshot.data!.$1;
+            arrivingBuses = snapshot.data!;
           }
           
           if (snapshot.hasData) {
