@@ -1901,6 +1901,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               );
             }
           },
+          onSelectBuilding: (Location location) {
+            _showBuildingSheet(location);
+          },
+          onBuildingGetDirections: (Location location) {
+            Map<String, double>? start;
+            Map<String, double>? end = {
+              'lat': location.latlng!.latitude,
+              'lon': location.latlng!.longitude,
+            };
+            _showDirectionsSheet(
+              start,
+              end,
+              "Current Location",
+              location.name,
+              false,
+            );
+          },
           onUnfavorite: (stpid) {
             // update in memory and marker icons immediately
             setState(() {
