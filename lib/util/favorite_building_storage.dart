@@ -5,7 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../constants.dart';
 
 const String kFavoriteBuildingsPrefsKey = 'favorite_buildings';
-
+// Function to get the storage id for a building
 String favoriteBuildingStorageId(Location b) {
   final ll = b.latlng;
   if (ll != null) {
@@ -14,6 +14,7 @@ String favoriteBuildingStorageId(Location b) {
   return 'name:${b.name}';
 }
 
+// Function to encode a building into a string
 String encodeFavoriteBuilding(Location b) {
   final ll = b.latlng;
   return jsonEncode({
@@ -25,7 +26,7 @@ String encodeFavoriteBuilding(Location b) {
   });
 }
 
-/// Stable id for a row in [kFavoriteBuildingsPrefsKey], whether JSON or legacy plain id.
+//Checks if the stored string is a valid favorite building entry, if not return null.
 String? favoriteBuildingEntryId(String stored) {
   try {
     final m = jsonDecode(stored) as Map<String, dynamic>;
@@ -54,7 +55,7 @@ class FavoriteBuildingEntry {
     required this.lat,
     required this.lon,
   });
-
+// Function to convert a building to a location
   Location? toLocation() {
     if (lat == null || lon == null) return null;
     return Location(
@@ -66,7 +67,7 @@ class FavoriteBuildingEntry {
     );
   }
 }
-
+// Function to decode a building from a string
 FavoriteBuildingEntry? decodeFavoriteBuildingEntry(String stored) {
   try {
     final m = jsonDecode(stored) as Map<String, dynamic>;
@@ -84,7 +85,7 @@ FavoriteBuildingEntry? decodeFavoriteBuildingEntry(String stored) {
     return _decodeLegacyFavoriteBuildingEntry(stored);
   }
 }
-
+//if the json fails since its not a json then this function cehcks is this old geo: format pulls the lat and lon so that the UI can display.
 FavoriteBuildingEntry? _decodeLegacyFavoriteBuildingEntry(String stored) {
   if (!stored.startsWith('geo:')) return null;
   final rest = stored.substring(4);
