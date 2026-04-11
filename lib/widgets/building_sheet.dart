@@ -26,8 +26,8 @@ void sendEmailWithSender(BuildContext context, String emailSubject, String email
 void showFallbackOptions(BuildContext context) {
   showMaizebusOKDialog(
     contextIn: context,
-    title: const Text("Email-Send failed"),
-    content: const Text("Unable to reach the email app on your device. You can still send us feedback by manually emailing contact@maizebus.com"),
+    title: "Email-Send failed",
+    content: "Unable to reach the email app on your device. You can still send us feedback by manually emailing contact@maizebus.com",
   );
 }
 

@@ -32,12 +32,7 @@ Future<List<BusStopWithPrediction>> fetchNextBusStops(String busID) async {
 }
 
 // for bus stops
-Future<(List<BusWithPrediction>, bool)> fetchStopData(String stopID) async {
-
-  final prefs = await SharedPreferences.getInstance();
-  final list = prefs.getStringList('favorite_stops') ?? <String>[];
-  bool toReturn = list.contains(stopID);
-
+Future<List<BusWithPrediction>> fetchStopData(String stopID) async {
   Uri url;
 
   if (int.tryParse(stopID) != null) {
@@ -53,7 +48,7 @@ Future<(List<BusWithPrediction>, bool)> fetchStopData(String stopID) async {
   if (response.statusCode == 200) {
     final Map<String, dynamic> data = json.decode(response.body);
     final List<dynamic> predictions = data['bustime-response']['prd'];
-    return (predictions.map((json) => BusWithPrediction.fromJson(json)).toList(), toReturn);
+    return predictions.map((json) => BusWithPrediction.fromJson(json)).toList();
   } else {
     throw Exception('Failed to load bus stops');
   }

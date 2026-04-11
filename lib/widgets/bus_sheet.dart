@@ -2,6 +2,7 @@ import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:bluebus/widgets/dialog.dart';
 import '../constants.dart';
 import '../models/bus.dart';
 import '../services/route_color_service.dart';
@@ -41,18 +42,33 @@ class _BusSheetState extends State<BusSheet> {
   @override
   void initState() {
     super.initState();
-    futureBusStops = fetchNextBusStops(widget.busID);
+    if (currBus == null) { 
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+
+        Navigator.of(context).pop();
+
+        showMaizebusOKDialog(
+          contextIn: context,
+          title: "Uh Oh!",
+          content: "Unable to fetch bus data. Please check your internet connection and try again.",
+        );
+      }); 
+    } else { 
+      futureBusStops = fetchNextBusStops(widget.busID);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     // There was a really weird bug where _BusSheetState would get a busID that doesn't exist so currBus would be null.
     // This accounts for that.
-    if (currBus == null) return Text("Bus not found");
+    // Update: Fixed the blank text "bus not found", should 
+
+    if (currBus == null) return Text("Bus Not Found");
 
     final bus = currBus!;
 
-    debugPrint("    currBus is ${currBus?.routeId}");
     return Container(
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
