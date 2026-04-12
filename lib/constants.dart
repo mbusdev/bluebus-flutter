@@ -178,6 +178,12 @@ Color getColor(BuildContext context, ColorType type) {
   return isDarkMode(context) ? darkColors[type]! : lightColors[type]!;
 }
 
+/// Convert a Color to a BitmapDescriptor hue value
+double colorToHue(Color color) {
+  final hsl = HSLColor.fromColor(color);
+  return hsl.hue;
+}
+
 BoxShadow infoCardShadowLight = BoxShadow(
   color: Color.fromARGB(80, 38, 114, 181),
   blurRadius: 5,
@@ -431,3 +437,4 @@ const SheetBoxShadow = BoxShadow(
   blurRadius: 100.0,
   spreadRadius: 40.0,
 );
+

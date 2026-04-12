@@ -50,6 +50,8 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
     michiganRoutes = [];
     rideRoutes = [];
 
+    // debugPrint("******* widget.availableRoutes is ${widget.availableRoutes.length}");
+
     // Loop through the source once and sort
     for (var route in widget.availableRoutes) {
       if (route['id'] != null && int.tryParse(route['id']!) != null) {
