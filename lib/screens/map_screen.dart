@@ -39,6 +39,7 @@ import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
+import 'package:bluebus/floorplan_api.dart';
 
 final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
 final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
@@ -235,6 +236,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+    final plans = await FloorPlanApi.fetchFloorPlans();
+
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme(); // load user theme data
