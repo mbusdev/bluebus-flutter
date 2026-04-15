@@ -283,15 +283,41 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
             } else if (journeyload.hasData) {
               final journeys = journeyload.data!;
       
-              return JourneyResultsWidget(
-                journeys: journeys,
-                start: widget.originName,
-                end: widget.destName,
-                origin: widget.origin,
-                dest: widget.dest,
-                onChangeSelection: widget.onChangeSelection,
-                onSelectJourney: widget.onSelectJourney,
-                scrollController: widget.scrollController,
+              return Stack(
+                children: [
+                  JourneyResultsWidget(
+                    journeys: journeys,
+                    start: widget.originName,
+                    end: widget.destName,
+                    origin: widget.origin,
+                    dest: widget.dest,
+                    onChangeSelection: widget.onChangeSelection,
+                    onSelectJourney: widget.onSelectJourney,
+                    scrollController: widget.scrollController,
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: (){print("hi");},
+                    icon: Icon(
+                      color: getColor(
+                        context,
+                        ColorType.importantButtonText,
+                      ),
+                      Icons.arrow_right,
+                      size: 18,
+                    ), // The icon on the left
+                    label: Text(
+                      '[TEMP] go',
+                      style: TextStyle(
+                        color: getColor(
+                          context,
+                          ColorType.importantButtonText,
+                        ),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ), // The text on the right
+                  ),
+                ],
               );
             } else if (journeyload.hasError) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
