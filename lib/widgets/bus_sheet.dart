@@ -1,5 +1,6 @@
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
+import 'package:bluebus/services/sheet_navigation_manager.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:bluebus/widgets/dialog.dart';
@@ -19,26 +20,27 @@ bool isNumber(String? s) {
 
 class BusSheet extends StatefulWidget {
   final String busID;
-  final ScrollController scrollController;
+  ScrollController? scrollController;
   final void Function(String name, String id) onSelectStop;
 
-  const BusSheet({
-    Key? key,
+  BusSheet({
     required this.busID,
     required this.onSelectStop,
-    required this.scrollController,
-  }) : super(key: key);
+    this.scrollController, // Note: scrollController should be null ONLY if it's inside a SheetNavigator (in which case the SheetNavigator provides it through SheetNavigationContext).
+  });
 
   @override
   State<BusSheet> createState() {
     return _BusSheetState();
   }
+  
 }
 
 class _BusSheetState extends State<BusSheet> {
   late Bus? currBus = BusRepository.getBus(widget.busID);
-  late Future<List<BusStopWithPrediction>> futureBusStops;
-  
+  late Future<List<BusStopWithPrediction>> futureBusStops;  
+
+
   @override
   void initState() {
     super.initState();
@@ -69,16 +71,16 @@ class _BusSheetState extends State<BusSheet> {
 
     final bus = currBus!;
 
-    return Container(
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 500),
       decoration: BoxDecoration(
         color: getColor(context, ColorType.background),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
-        boxShadow: [
-          SheetBoxShadow
-        ]
+        boxShadow: [SheetBoxLeftShadow]
+        
       ),
       child: Padding(
         padding: const EdgeInsets.only(
@@ -88,7 +90,7 @@ class _BusSheetState extends State<BusSheet> {
           bottom: 0,
         ),
         child: SingleChildScrollView(
-          controller: widget.scrollController,
+          controller: widget.scrollController ?? SheetNavigationContext.of(context)?.scrollController,
 
           child: Column(
             mainAxisSize: MainAxisSize.min,

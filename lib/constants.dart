@@ -422,6 +422,7 @@ class Loadpoint {
   Loadpoint(this.message, this.step);
 }
 
+// Standard shadow behind a sheet
 const SheetBoxShadow = BoxShadow(
   color: Color.fromRGBO(0, 0, 0, 0.2),
   offset: const Offset(
@@ -431,3 +432,19 @@ const SheetBoxShadow = BoxShadow(
   blurRadius: 100.0,
   spreadRadius: 40.0,
 );
+
+// Modified shadow that only appears behind the left side of a sheet
+// This is used for sheets inside a SheetNavigator so the foreground
+// sheet stands out from the background sheet.
+// The SheetBoxShadow is applied behind everything, but the only shadow
+// applied to the sheets inside the navigator is SheetBoxLeftShadow
+const SheetBoxLeftShadow = BoxShadow(
+  color: Color.fromRGBO(0, 0, 0, 0.2),
+  offset: const Offset(
+    0.0,
+    30.0,
+  ),
+  blurRadius: 40.0,
+  spreadRadius: 0.0,
+);
+

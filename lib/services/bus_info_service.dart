@@ -53,3 +53,9 @@ Future<List<BusWithPrediction>> fetchStopData(String stopID) async {
     throw Exception('Failed to load bus stops');
   }
 }
+
+Future<bool> stopIsFavorited(String stopID) async {
+  final prefs = await SharedPreferences.getInstance();
+  final list = prefs.getStringList('favorite_stops') ?? <String>[];
+  return list.contains(stopID);
+}

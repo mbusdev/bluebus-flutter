@@ -436,9 +436,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     var result;
 
     try {
-      debugPrint("Loading data......");
       result = await fetchNextBusStops(widget.vehicleId!);
-      debugPrint("    Got result! $result");
     } catch (e) {
       debugPrint("Error getting stops: $e");
       return;
@@ -487,9 +485,6 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
         }
 
         if (filter_check_passed) {
-          debugPrint(
-            "    ${result[i].name} found after both conditions met, adding...",
-          );
           results_filtered.add(result[i]);
         }
       }
@@ -506,7 +501,7 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     });
   }
 
-  GestureDetector getUpcomingStopRow( // TODO: Add a lineTopColor and lineBottomColor attribute to the constructor and pass those in from the loop (so that it works when the bus color changes)
+  Material getUpcomingStopRow( // TODO: Add a lineTopColor and lineBottomColor attribute to the constructor and pass those in from the loop (so that it works when the bus color changes)
     int lineTopStyle,
     int lineBottomStyle,
     bool isKeyStop,
@@ -537,50 +532,53 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     }
     
 
-    return GestureDetector(
-      onTap: () {
-        onBusStopClick?.call(stop.name, stop.id);
-      },
-      child: Row(
-        children: [
-          CustomPaint(
-            size: const Size(40, 40),
-            painter: UpcomingStopIconPainter(
-              lineTopStyle,
-              lineBottomStyle,
-              isKeyStop,
-              // widget.color,
-              topColor,
-              isDarkMode(context)
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: (onBusStopClick == null) ? null : () { // If onTap is null, the "ripple" effect won't show.
+          onBusStopClick?.call(stop.name, stop.id);
+        },
+        child: Row(
+          children: [
+            CustomPaint(
+              size: const Size(40, 40),
+              painter: UpcomingStopIconPainter(
+                lineTopStyle,
+                lineBottomStyle,
+                isKeyStop,
+                // widget.color,
+                topColor,
+                isDarkMode(context)
+              ),
             ),
-          ),
-          Expanded(
-            child: Text(
-              stop.name,
+            Expanded(
+              child: Text(
+                stop.name,
+                style: TextStyle(
+                  fontSize: 15.0,
+                  fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
+                  height: 1.15,
+                ),
+                
+              ),
+            ),
+
+            SizedBox(width: 15),
+
+            (stop.prediction != null) ? Text(
+              predictionText, 
               style: TextStyle(
                 fontSize: 15.0,
-                fontWeight: isKeyStop ? FontWeight.bold : FontWeight.normal,
-                height: 1.15,
-              ),
-              
-            ),
-          ),
+              )
+            ) : 
+            SizedBox.shrink(),
 
-          SizedBox(width: 15),
-
-          (stop.prediction != null) ? Text(
-            predictionText, 
-            style: TextStyle(
-              fontSize: 15.0,
-            )
-          ) : 
-          SizedBox.shrink(),
-
-          (onBusStopClick != null)
-              ? const Icon(Icons.chevron_right, color: Colors.grey, size: 20)
-              : const SizedBox.shrink(),
-        ],
-      ),
+            (onBusStopClick != null)
+                ? const Icon(Icons.chevron_right, color: Colors.grey, size: 20)
+                : const SizedBox.shrink(),
+          ],
+        ),
+      )
     );
   }
 

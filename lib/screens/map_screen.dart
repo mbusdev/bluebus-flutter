@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/screens/new_features_screen.dart';
+import 'package:bluebus/services/sheet_navigation_manager.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/dialog.dart';
@@ -158,7 +159,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   int _routesFingerprint = 0;
 
   // store persistent bottom sheet controller
-  PersistentBottomSheetController? _bottomSheetController;
+  // PersistentBottomSheetController? _bottomSheetController;
+  SheetNavigationManager? sheetNavigationManager;
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -175,6 +177,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void initState() {
     super.initState();
     _setupConnectivityMonitoring();
+
+    sheetNavigationManager = SheetNavigationManager(
+      context: context,
+      addFavoriteStop: _addFavoriteStop,
+      onDirectionsChangeSelection: onDirectionsChangeSelection,
+      onSelectJourney: onSelectJourney,
+      onDirectionsResolved: onDirectionsResolved,
+      onRouteSelectorApply: onRouteSelectorApply,
+      onSearch: onSearch,
+      onSelectStop: onSelectStop,
+      onUnfavorite: onUnfavorite,
+      removeFavoriteStop: _removeFavoriteStop
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
@@ -816,7 +831,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 Haptics.vibrate(HapticsType.light);
               } catch (e) {}
 
-              _showStopSheet(
+              sheetNavigationManager?.showStopSheetFromMap(
                 stop.id,
                 stop.name,
                 stop.location.latitude,
@@ -1012,7 +1027,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               try {
                 Haptics.vibrate(HapticsType.light);
               } catch (e) {}
-              _showBusSheet(bus.id);
+              sheetNavigationManager?.showBusSheetFromMap(bus.id);
             },
           );
         })
@@ -1046,7 +1061,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               icon: busIcon!,
               rotation: bus.heading,
               anchor: const Offset(0.5, 0.5),
-              onTap: () => _showBusSheet(bus.id),
+              onTap: () => sheetNavigationManager?.showBusSheetFromMap(bus.id)
             ),
           );
         }
@@ -1175,242 +1190,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       icon: icon,
       rotation: bus.heading,
       anchor: const Offset(0.5, 0.5),
-      onTap: () => _showBusSheet(bus.id),
+      onTap: () => sheetNavigationManager?.showBusSheetFromMap(bus.id)
     );
   }
 
-  void _showBusRoutesModal(List<BusRouteLine> allRouteLines) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return RouteSelectorModal(
-          availableRoutes: _availableRoutes,
-          initialSelectedRoutes: _selectedRoutes,
-          onApply: (Set<String> newSelection) async {
-            if (newSelection.difference(_selectedRoutes).isNotEmpty ||
-                _selectedRoutes.difference(newSelection).isNotEmpty) {
-              setState(() {
-                _selectedRoutes.clear();
-                _selectedRoutes.addAll(newSelection);
-              });
-              _updateDisplayedRoutes();
+  
 
-              // Save the new selection
-              await _saveSelectedRoutes();
-            }
-          },
-          canVibrate: canVibrate,
-        );
-      },
-    );
-  }
-
-  void _showSearchSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return SearchSheet(
-          onSearch: (Location location, bool isBusStop, String stopID) {
-            final searchCoordinates = location.latlng;
-
-            // Clear any existing search location marker first
-            _removeSearchLocationMarker();
-
-            // null-proofing
-            if (searchCoordinates != null) {
-              if (isBusStop) {
-                _centerOnLocation(
-                  false,
-                  searchCoordinates.latitude,
-                  searchCoordinates.longitude,
-                );
-                _showStopSheet(
-                  stopID,
-                  location.name,
-                  searchCoordinates.latitude,
-                  searchCoordinates.longitude,
-                );
-              } else {
-                _centerOnLocation(
-                  false,
-                  searchCoordinates.latitude,
-                  searchCoordinates.longitude,
-                );
-                _showBuildingSheet(location);
-              }
-            } else {
-              // Location has no coordinates
-            }
-          },
-        );
-      },
-    );
-  }
-
-  void _showBuildingSheet(Location place) {
-    // Show red pin at the location
-    _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
-
-    _bottomSheetController = showBottomSheet(
-      context: context,
-      enableDrag: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return BuildingSheet(
-          building: place,
-          onGetDirections: (Location location) {
-            Map<String, double>? start;
-            Map<String, double>? end = {
-              'lat': place.latlng!.latitude,
-              'lon': place.latlng!.longitude,
-            };
-
-            _showDirectionsSheet(
-              start,
-              end,
-              "Current Location",
-              place.name,
-              false,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showDirectionsSheet(
-    Map<String, double>? start,
-    Map<String, double>? end,
-    String startLoc,
-    String endLoc,
-    bool dontUseLocation,
-  ) {
-    _bottomSheetController = showBottomSheet(
-      context: context,
-      enableDrag: true,
-
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.5,
-          maxChildSize: 0.9,
-          minChildSize: 0,
-          expand: false,
-          snap: true,
-          snapSizes: [0.5, 0.9],
-          builder: (context, scrollController) {
-            return DirectionsSheet(
-              origin: start,
-              dest: end,
-              useOrigin: dontUseLocation,
-              originName: startLoc,
-              destName: endLoc, // true = start changed, false = end changed
-              onChangeSelection: (Location location, bool startChanged) {
-                // Clear any existing search location marker before showing new destination
-                _removeSearchLocationMarker();
-
-                if (startChanged) {
-                  // Show red pin for new start location if it's a building (not bus stop)
-                  if (!location.isBusStop) {
-                    _showSearchLocationMarker(
-                      location.latlng!.latitude,
-                      location.latlng!.longitude,
-                    );
-                  }
-
-                  _showDirectionsSheet(
-                    {
-                      'lat': location.latlng!.latitude,
-                      'lon': location.latlng!.longitude,
-                    },
-                    end,
-                    location.name,
-                    endLoc,
-                    true,
-                  );
-                } else {
-                  // Show red pin for new destination if it's a building (non-bus stop)
-                  if (!location.isBusStop) {
-                    _showSearchLocationMarker(
-                      location.latlng!.latitude,
-                      location.latlng!.longitude,
-                    );
-                  }
-
-                  _showDirectionsSheet(
-                    start,
-                    {
-                      'lat': location.latlng!.latitude,
-                      'lon': location.latlng!.longitude,
-                    },
-                    startLoc,
-                    location.name,
-                    dontUseLocation,
-                  );
-                }
-              },
-              onSelectJourney: (journey) {
-                _displayJourneyOnMap(
-                  journey,
-                  getColor(context, ColorType.opposite),
-                );
-              },
-              onResolved: (orig, dest) {
-                // Cache resolved coordinates for virtual origin/destination resolution
-                _lastJourneyRequestOrigin = orig;
-                _lastJourneyRequestDest = dest;
-              },
-              scrollController: scrollController,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  _showJourneySheetOnReopen() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.9,
-          minChildSize: 0,
-          maxChildSize: 0.9,
-          snap: true,
-          expand: false,
-
-          builder: (BuildContext context, ScrollController scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: getColor(context, ColorType.background),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.all(20),
-                shrinkWrap: true,
-                children: [
-                  Text(
-                    'Steps',
-                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
-                  ),
-                  SizedBox(height: 15),
-                  JourneyBody(journey: currDisplayed),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
+  
   // Display a Journey on the map
   void _displayJourneyOnMap(Journey journey, Color walkLineColor) async {
     currDisplayed = journey;
@@ -1846,111 +1632,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
-  void _showBusSheet(String busID) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          maxChildSize: 0.85,
-          snap: true,
-
-          builder: (BuildContext context, ScrollController scrollController) {
-            return BusSheet(
-              busID: busID,
-              scrollController: scrollController,
-              onSelectStop: (name, id) {
-                Navigator.pop(context); // Close the current modal
-                LatLng? latLong = getLatLongFromStopID(id);
-                if (latLong != null) {
-                  _showStopSheet(id, name, latLong.latitude, latLong.longitude);
-                } else {
-                  showMaizebusOKDialog(
-                    contextIn: context,
-                    title: "Error",
-                    content: "Couldn't load stop.",
-                  );
-                }
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  void _showFavoritesSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return FavoritesSheet(
-          onSelectStop: (name, id) {
-            LatLng? latLong = getLatLongFromStopID(id);
-            if (latLong != null) {
-              _showStopSheet(id, name, latLong.latitude, latLong.longitude);
-            } else {
-              showMaizebusOKDialog(
-                contextIn: context,
-                title: 'Error',
-                content: 'Couldn\'t load stop.',
-              );
-            }
-          },
-          onUnfavorite: (stpid) {
-            // update in memory and marker icons immediately
-            setState(() {
-              _favoriteStops.remove(stpid);
-            });
-            _setStopFavorited(stpid, false);
-          },
-        );
-      },
-    );
-  }
-
-  void _showStopSheet(String stopID, String stopName, double lat, double long) {
-    final busProvider = Provider.of<BusProvider>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      isDismissible: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return StopSheet(
-          stopID: stopID,
-          stopName: stopName,
-          isFavorite: _favoriteStops.contains(stopID),
-          onFavorite: _addFavoriteStop,
-          onUnFavorite: _removeFavoriteStop,
-          showBusSheet: (busId) {
-            // When someone clicks "See all stops for this bus" this callback runs
-            debugPrint("Got 'See all stops' click for Bus ${busId}");
-            Navigator.pop(context); // Close the current modal
-            _showBusSheet(busId);
-          },
-          busProvider: busProvider,
-          onGetDirections: () {
-            Map<String, double>? start;
-            Map<String, double>? end = {'lat': lat, 'lon': long};
-
-            _showDirectionsSheet(
-              start,
-              end,
-              "Current Location",
-              stopName,
-              false,
-            );
-          },
-        );
-      },
-    ).then((_) {});
-  }
+  
 
   // lighter function for when we need to get location
   // over and over without constantly doing a full
@@ -2065,6 +1747,144 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
+  void onSearch(Location location, bool isBusStop, String stopID) {
+    final searchCoordinates = location.latlng;
+
+    // Clear any existing search location marker first
+    _removeSearchLocationMarker();
+
+    // null-proofing
+    if (searchCoordinates != null) {
+      if (isBusStop) {
+        _centerOnLocation(
+          false,
+          searchCoordinates.latitude,
+          searchCoordinates.longitude,
+        );
+        sheetNavigationManager?.showStopSheetFromMap(
+          stopID,
+          location.name,
+          searchCoordinates.latitude,
+          searchCoordinates.longitude,
+        );
+      } else {
+        _centerOnLocation(
+          false,
+          searchCoordinates.latitude,
+          searchCoordinates.longitude,
+        );
+        _showSearchLocationMarker(
+          location.latlng!.latitude,
+          location.latlng!.longitude
+        );
+        sheetNavigationManager?.showBuildingSheet(location);
+      }
+    } else {
+      // Location has no coordinates
+    }
+  }
+
+  void onSelectStop(name, id) {
+    LatLng? latLong = getLatLongFromStopID(id);
+    if (latLong != null) {
+      sheetNavigationManager?.showStopSheetFromMap(id, name, latLong.latitude, latLong.longitude);
+    } else {
+      showMaizebusOKDialog(
+        contextIn: context,
+        title: "Error",
+        content: 'Couldn\'t load stop.',
+      );
+    }
+  }
+
+  void onUnfavorite(String stpid) {
+    // update in memory and marker icons immediately
+    setState(() {
+      _favoriteStops.remove(stpid);
+    });
+    _setStopFavorited(stpid, false);
+  }
+
+  void onRouteSelectorApply(Set<String> newSelection) async {
+    if (newSelection.difference(_selectedRoutes).isNotEmpty ||
+        _selectedRoutes.difference(newSelection).isNotEmpty) {
+      setState(() {
+        _selectedRoutes.clear();
+        _selectedRoutes.addAll(newSelection);
+      });
+      _updateDisplayedRoutes();
+
+      // Save the new selection
+      await _saveSelectedRoutes();
+    }
+  }
+
+  void onDirectionsChangeSelection(
+    Location location,
+    bool startChanged,
+    Map<String, double>? start,
+    Map<String, double>? end,
+    String startLoc,
+    String endLoc,
+    bool dontUseLocation
+    ) {
+    // Clear any existing search location marker before showing new destination
+    _removeSearchLocationMarker();
+
+    if (startChanged) {
+      // Show red pin for new start location if it's a building (not bus stop)
+      if (!location.isBusStop) {
+        _showSearchLocationMarker(
+          location.latlng!.latitude,
+          location.latlng!.longitude,
+        );
+      }
+
+      sheetNavigationManager?.showDirectionsSheet(
+        {
+          'lat': location.latlng!.latitude,
+          'lon': location.latlng!.longitude,
+        },
+        end,
+        location.name,
+        endLoc,
+        true,
+      );
+    } else {
+      // Show red pin for new destination if it's a building (non-bus stop)
+      if (!location.isBusStop) {
+        _showSearchLocationMarker(
+          location.latlng!.latitude,
+          location.latlng!.longitude,
+        );
+      }
+
+      sheetNavigationManager?.showDirectionsSheet(
+        start,
+        {
+          'lat': location.latlng!.latitude,
+          'lon': location.latlng!.longitude,
+        },
+        startLoc,
+        location.name,
+        dontUseLocation,
+      );
+    }
+  }
+
+  void onSelectJourney(Journey journey) {
+    _displayJourneyOnMap(
+      journey,
+      getColor(context, ColorType.opposite),
+    );
+  }
+
+  void onDirectionsResolved(Map<String, double> orig, Map<String, double> dest) {
+    // Cache resolved coordinates for virtual origin/destination resolution
+    _lastJourneyRequestOrigin = orig;
+    _lastJourneyRequestDest = dest;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Only update bus markers when buses change
@@ -2138,11 +1958,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                     // If showing a persistent bottom sheet, close it.
                     // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
-                    if (_bottomSheetController != null) {
-                      _bottomSheetController!.close();
-                      _bottomSheetController = null;
-                      _removeSearchLocationMarker();
-                    }
                   },
                   child: Stack(
                     children: [
@@ -2635,7 +2450,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ),
                                         ),
                                         child: ElevatedButton.icon(
-                                          onPressed: _showJourneySheetOnReopen,
+                                          onPressed: () {
+                                            sheetNavigationManager?.showJourneySheetOnReopen(currDisplayed);
+                                          },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: getColor(
                                               context,
@@ -2756,8 +2573,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                     HapticsType.light,
                                                   );
                                                 }
-                                                _showBusRoutesModal(
+                                                sheetNavigationManager?.showBusRoutesModal(
                                                   busProvider.routes,
+                                                  _availableRoutes,
+                                                  _selectedRoutes,
+                                                  canVibrate
                                                 );
                                               },
                                               heroTag: 'routes_fab',
@@ -2806,7 +2626,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                     HapticsType.light,
                                                   );
                                                 }
-                                                _showFavoritesSheet();
+                                                sheetNavigationManager?.showFavoritesSheet();
                                               },
                                               heroTag: 'favorites_fab',
                                               elevation: 0,
@@ -2853,7 +2673,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                     HapticsType.light,
                                                   );
                                                 }
-                                                _showSearchSheet();
+                                                sheetNavigationManager?.showSearchSheet();
                                               },
                                               style: ElevatedButton.styleFrom(
                                                 alignment: Alignment.centerLeft,
