@@ -958,6 +958,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
+    debugPrint("****** Updating displayed buses");
     // // null case or error contacting server case
     // if (allBuses == []) return;
 
