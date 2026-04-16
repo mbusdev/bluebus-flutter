@@ -18,6 +18,7 @@ import 'upcoming_stops_widget.dart';
 class StopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
+  final bool isFavorite;
   final Future<void> Function(String, String) onFavorite;
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
@@ -28,6 +29,7 @@ class StopSheet extends StatefulWidget {
   const StopSheet({ 
     required this.stopID,
     required this.stopName,
+    required this.isFavorite,
     required this.onFavorite,
     required this.onUnFavorite,
     required this.onGetDirections,
@@ -218,7 +220,7 @@ class ExpandableStopWidget extends StatefulWidget {
     required this.busProvider,
   });
 }
-
+  
 class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
   late Future<List<BusWithPrediction>> loadedStopData;
   bool _isFavorited = false;
@@ -234,6 +236,7 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     loadedStopData = fetchStopData(widget.stopID);
+    _isFavorite = widget.isFavorite;
     imageBusStop =
         (widget.stopID == "C250") ||
         (widget.stopID == "N406") ||
