@@ -38,6 +38,7 @@ import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 //import 'dart:convert';
 
 final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
@@ -89,6 +90,8 @@ class MaizeBusCore extends StatefulWidget {
 class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
   late Journey currDisplayed;
+  ScreenRadius? screenRadius;
+  bool screenRadiusLoaded = false;
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -97,10 +100,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   CameraPosition? _currentCameraPos;
   bool? _userLocVisible;
-  static const LatLng _defaultCenter = LatLng(42.276463, -83.7374598);
+  static const _defaultCenter = LatLng(42.276463, -83.7374598);
+  static LatLng startLatLng = _defaultCenter;
 
   Set<Polyline> _displayedPolylines = {};
-  Set<Marker> _displayedStopMarkers = {};
+  Map<String, Marker> _displayedStopMarkers = {}; // maps from stopID to marker
+  Map<String, Marker> _displayedFavoriteStopMarkers = {};
   Set<Marker> _displayedBusMarkers = {};
   // Journey overlays for search results
   Set<Polyline> _displayedJourneyPolylines = {};
@@ -116,6 +121,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
+  Map<String, bool> _stopIsRide = {};
 
   // Custom marker icons
   BitmapDescriptor? _busIcon;
@@ -131,7 +137,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
-  final Map<String, Set<Marker>> _routeStopMarkers = {};
+  final Map<String, Map<String, Marker>> _routeStopMarkers = {}; // maps from route to a map of stopID to marker
   // Whether a journey search overlay is currently active (shows only journey path)
   bool _journeyOverlayActive = false;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
@@ -237,8 +243,18 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Future<void> _loadAllData() async {
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
-    await theme.loadTheme(); // load user theme data
+    await theme.loadTheme(); 
 
+    screenRadius = await ScreenCornerRadius.get(); // load screen radius
+    screenRadiusLoaded = true;
+    
+    //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
+    Position? pos = await Geolocator.getLastKnownPosition();
+    if (pos != null){
+      startLatLng = LatLng(pos.latitude, pos.longitude);
+    }
+
+            
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
@@ -268,10 +284,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (startupData.persistantMessageTitle != '') {
       showMaizebusOKDialog(
         contextIn: context,
-        title: Text(startupData.persistantMessageTitle),
-        content: Text(startupData.persistantMessage),
+        title: startupData.persistantMessageTitle,
+        content: startupData.persistantMessage,
       );
     }
+    
 
     // loading all this data in parallel
     await Future.wait([
@@ -329,7 +346,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final stopList = jsonDecode(response.body) as List<dynamic>;
 
         return stopList.map((stop) {
-          final name = stop['name'] as String;
+          final name = normalizeStopName(stop['name'] as String);
           final aliases = [
             name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join(),
           ];
@@ -764,51 +781,59 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
-        _routeStopMarkers[routeKey] = r.stops
-            .map(
-              (stop) => Marker(
-                markerId: MarkerId(
-                  'stop_${stop.id}_${Object.hashAll(r.points)}',
-                ),
-                position: stop.location,
-                flat: true,
-                icon: _favoriteStops.contains(stop.id)
-                    ? (stop.isRide
-                          ? _favRideStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )
-                          : _favStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                ))
-                    : (stop.isRide
-                          ? _rideStopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )
-                          : _stopIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
-                                )),
-                consumeTapEvents: true,
-                onTap: () {
-                  try {
-                    Haptics.vibrate(HapticsType.light);
-                  } catch (e) {}
+        _routeStopMarkers[routeKey] = {};
+        for (final stop in r.stops) { // iterate through all stops in this route
+          final isFavorite = _favoriteStops.contains(stop.id);
+          
+          final marker = Marker(
+            markerId: MarkerId(
+              'stop_${stop.id}_${Object.hashAll(r.points)}',
+            ),
+            position: stop.location,
+            flat: true,
+            icon: isFavorite
+                ? (stop.isRide
+                      ? _favRideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _favStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            ))
+                : (stop.isRide
+                      ? _rideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _stopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )),
+            consumeTapEvents: true,
+            onTap: () {
+              try {
+                Haptics.vibrate(HapticsType.light);
+              } catch (e) {}
 
-                  _showStopSheet(
-                    stop.id,
-                    stop.name,
-                    stop.location.latitude,
-                    stop.location.longitude,
-                  );
-                },
-                rotation: stop.rotation,
-                anchor: Offset(0.5, 0.5),
-              ),
-            )
-            .toSet();
+              _showStopSheet(
+                stop.id,
+                stop.name,
+                stop.location.latitude,
+                stop.location.longitude,
+              );
+            },
+            rotation: stop.rotation,
+            anchor: Offset(0.5, 0.5),
+          );
+          _routeStopMarkers[routeKey]?[stop.id] = marker;
+
+          // gets first marker of this stop and adds it to the favorited stop markers 
+          if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
+            _displayedFavoriteStopMarkers[stop.id] = marker;
+          }
+          _stopIsRide[stop.id] = stop.isRide;
+        }
       }
     }
   }
@@ -844,45 +869,73 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Update cached markers for a specific stop id to reflect favorite/unfavorite
   void _setStopFavorited(String stpid, bool favored) {
     // Update all routeStopMarkers entries that match this stop id
+    final isRide = _stopIsRide[stpid] ?? false;
     _routeStopMarkers.forEach((routeKey, markers) {
-      final updated = markers.map((m) {
-        if (m.markerId.value.startsWith('stop_${stpid}_')) {
-          return Marker(
-            flat: true,
-            markerId: m.markerId,
-            position: m.position,
-            icon: favored
-                ? (_favStopIcon ??
-                      _stopIcon ??
-                      BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueAzure,
-                      ))
-                : (_stopIcon ??
-                      BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueAzure,
-                      )),
-            consumeTapEvents: m.consumeTapEvents,
-            onTap: m.onTap,
-            rotation: m.rotation,
-            anchor: m.anchor,
-          );
-        }
-        return m;
-      }).toSet();
-      _routeStopMarkers[routeKey] = updated;
+      // if marker does not exist in this route, return
+      if (!markers.containsKey(stpid)) return;
+
+      final m = markers[stpid]!; // get old marker
+      final newMarker = Marker(
+        flat: true,
+        markerId: m.markerId,
+        position: m.position,
+        icon: favored
+                ? (isRide
+                      ? _favRideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _favStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            ))
+                : (isRide
+                      ? _rideStopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )
+                      : _stopIcon ??
+                            BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueAzure,
+                            )),
+        consumeTapEvents: m.consumeTapEvents,
+        onTap: m.onTap,
+        rotation: m.rotation,
+        anchor: m.anchor,
+      );
+
+      // gets first marker of this stop id and adds it to the favorited stop markers 
+      if (favored && !_displayedFavoriteStopMarkers.containsKey(stpid)) {
+        _displayedFavoriteStopMarkers[stpid] = newMarker;
+      }
+
+      markers[stpid] = newMarker; // set as new marker
     });
+
+    // remove favorite stop marker if not favored
+    if (!favored) {
+      _displayedFavoriteStopMarkers.remove(stpid);
+    }
 
     // If displayed, update displayed markers as well
     setState(() {
       // Rebuild displayed stop markers based on current selected routes
-      final selectedStopMarkers = <Marker>{};
+      final selectedStopMarkers = <String, Marker>{};
       for (final routeId in _selectedRoutes) {
         final routeVariants = _routePolylines.keys.where(
           (key) => key.startsWith('${routeId}_'),
         );
         for (final routeKey in routeVariants) {
           final stops = _routeStopMarkers[routeKey];
-          if (stops != null) selectedStopMarkers.addAll(stops);
+          if (stops == null) continue;
+
+          // iterate through and add the stop markers
+          // if they are not already in the selected stop markesr
+          stops.forEach((key, value) {
+            if (!selectedStopMarkers.containsKey(key)) {
+              selectedStopMarkers[key] = value;
+            }
+          });
         }
       }
       _displayedStopMarkers = selectedStopMarkers;
@@ -892,7 +945,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _updateDisplayedRoutes() {
     final selectedPolylines = <Polyline>{};
-    final selectedStopMarkers = <Marker>{};
+    final selectedStopMarkers = <String, Marker>{};
 
     for (final routeId in _selectedRoutes) {
       // Find all variants of this route
@@ -904,9 +957,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final polyline = _routePolylines[routeKey];
         if (polyline != null) selectedPolylines.add(polyline);
         final stops = _routeStopMarkers[routeKey];
-        if (stops != null) {
-          selectedStopMarkers.addAll(stops);
-        }
+        if (stops == null) continue;
+          
+        stops.forEach((key, value) {
+          if (!selectedStopMarkers.containsKey(key)) {
+            selectedStopMarkers[key] = value;
+          }
+        });
       }
     }
 
@@ -1003,7 +1060,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateAllDisplayedMarkers() {
-    _allDisplayedStopMarkers = _displayedStopMarkers
+    _allDisplayedStopMarkers = _displayedStopMarkers.values.toSet()
+        .union(_displayedFavoriteStopMarkers.values.toSet())
         .union(_displayedBusMarkers)
         .union(_displayedJourneyMarkers)
         .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
@@ -1072,6 +1130,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _refreshCachedStopMarkers() {
     // Clear cached stop markers so they'll be recreated with the new icons
     _routeStopMarkers.clear();
+    // also clear persistent favorited stop markers to be refreshed in _cacheRouteOverlays(..)
+    _displayedFavoriteStopMarkers.clear();
     // Re-cache all route overlays with the new icons
     _cacheRouteOverlays(
       Provider.of<BusProvider>(context, listen: false).routes,
@@ -1810,8 +1870,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 } else {
                   showMaizebusOKDialog(
                     contextIn: context,
-                    title: const Text("Error"),
-                    content: const Text("Couldn't load stop."),
+                    title: "Error",
+                    content: "Couldn't load stop.",
                   );
                 }
               },
@@ -1836,8 +1896,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             } else {
               showMaizebusOKDialog(
                 contextIn: context,
-                title: const Text('Error'),
-                content: const Text('Couldn\'t load stop.'),
+                title: 'Error',
+                content: 'Couldn\'t load stop.',
               );
             }
           },
@@ -1865,6 +1925,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return StopSheet(
           stopID: stopID,
           stopName: stopName,
+          isFavorite: _favoriteStops.contains(stopID),
           onFavorite: _addFavoriteStop,
           onUnFavorite: _removeFavoriteStop,
           showBusSheet: (busId) {
@@ -1920,6 +1981,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             ),
           );
           return null;
+        }
+        else {
+          //Center map once right after user grants location permissions
+          _centerOnLocation(true);
         }
       }
 
@@ -2016,42 +2081,38 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       final mediaQueryData = MediaQuery.of(context);
       final double flutterSafeAreaTop = mediaQueryData.padding.top;
       final double flutterSafeAreaBottom = mediaQueryData.padding.bottom;
-      // then, changing them based on phone
-      if (Platform.isIOS) {
-        if (flutterSafeAreaBottom == 0) {
-          // rectangle iphone
-          globalBottomPadding = 10;
-          globalLeftRightPadding = 10;
-          globalTopPadding = 20;
-        } else {
-          // round iphone
-          globalBottomPadding = 30;
-          globalLeftRightPadding = 30;
-          globalTopPadding = flutterSafeAreaTop;
-        }
+
+      // screen buttons are 45 by 45 (diameter)
+      // so they have a radius of 45/2 = 22.5
+      // so for perfectly spaced buttons, we 
+      // need to do screen radius - 22.5           
+      double perfectPadding = (screenRadius?.bottomLeft ?? 0) - 22.5;
+
+      if (Platform.isIOS) perfectPadding -= 9; // the -9 just makes it look more pretty on ios 
+
+      globalTopPadding = flutterSafeAreaTop;
+
+      // if we're padding less than 3 then its too rectangle.
+      // default to just keeping it out of the safe area
+      if (perfectPadding < 3){
+        globalBottomPadding = flutterSafeAreaBottom + 10;
+        globalLeftRightPadding = 10;
+
+      } else if ((perfectPadding < flutterSafeAreaBottom) && !Platform.isIOS) {
+        // if the buttons are in the safe area, act rectangular
+        // but not for iOS, because safe area isn't real on iOS
+        globalBottomPadding = flutterSafeAreaBottom + 10;
+        globalLeftRightPadding = 10;
+
       } else {
-        // andoird
-
-        if (flutterSafeAreaBottom < 30) {
-          // in this case, 30 from the bottom is fine because
-          // it's over the safe area. this usually works
-          // for round bottom phones like the google pixel
-
-          globalBottomPadding = 30;
-          globalLeftRightPadding = 30;
-          globalTopPadding = flutterSafeAreaTop;
-        } else {
-          // this case, it's over 30. probably means
-          // a rectangle android. so no need to make
-          // it like 30
-
-          globalBottomPadding = flutterSafeAreaBottom + 15;
-          globalLeftRightPadding = 15;
-          globalTopPadding = flutterSafeAreaTop;
-        }
+        // perfect padding is perfect! it keeps the buttons
+        // out of the safe area so we'll just use them 
+        globalBottomPadding = perfectPadding;
+        globalLeftRightPadding = perfectPadding;
       }
 
-      globallPaddingHasBeenSet = true;
+      // only set this to true if we've loaded the screen radius
+      globallPaddingHasBeenSet = screenRadiusLoaded;
     }
 
     return FutureBuilder(
@@ -2088,7 +2149,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       // underlying map layer (different ios and android)
                       Platform.isIOS
                           ? MapWidget(
-                              initialCenter: _defaultCenter,
+                              initialCenter: startLatLng,
                               polylines: _journeyOverlayActive
                                   ? _displayedJourneyPolylines
                                   : _displayedPolylines.union(
@@ -2114,7 +2175,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               mapToolbarEnabled: true,
                             )
                           : AndroidMap(
-                              initialCenter: _defaultCenter,
+                              initialCenter: startLatLng,
                               polylines: _journeyOverlayActive
                                   ? _displayedJourneyPolylines
                                   : _displayedPolylines.union(
@@ -2126,7 +2187,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ? {_searchLocationMarker!}
                                           : {},
                                     )
-                                  : _displayedStopMarkers
+                                  : _displayedStopMarkers.values.toSet()
+                                        .union(_displayedFavoriteStopMarkers.values.toSet())
                                         .union(_displayedJourneyMarkers)
                                         .union(
                                           _searchLocationMarker != null
@@ -2315,9 +2377,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                 ),
                                                               );
                                                             },
-
-                                                            // final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-10 0:00:00Z");
-                                                            // final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-16 0:00:00Z");
                                                             heroTag: 'new_fab',
                                                             elevation: 0,
                                                             child: Text(
@@ -2425,7 +2484,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                             Spacer(),
 
-                            // temp row (might add settings button to it later)
                             (!_journeyOverlayActive)
                                 ? Padding(
                                     padding: const EdgeInsets.only(bottom: 20),

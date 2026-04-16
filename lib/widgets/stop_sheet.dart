@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/bus_provider.dart';
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/refresh_button.dart';
+import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,17 +15,10 @@ import '../models/bus_stop.dart';
 import 'package:intl/intl.dart';
 import 'upcoming_stops_widget.dart';
 
-bool isRide(String? s) {
-  if (s != null && int.tryParse(s) != null) {
-    // busID is numeric, so it's a ride bus
-    return true;
-  } 
-  return false;
-}
-
 class StopSheet extends StatefulWidget {
   final String stopID;
   final String stopName;
+  final bool isFavorite;
   final Future<void> Function(String, String) onFavorite;
   final Future<void> Function(String, String) onUnFavorite;
   final void Function() onGetDirections;
@@ -34,6 +29,7 @@ class StopSheet extends StatefulWidget {
     Key? key,
     required this.stopID,
     required this.stopName,
+    required this.isFavorite,
     required this.onFavorite,
     required this.onUnFavorite,
     required this.onGetDirections,
@@ -89,36 +85,7 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
               child: Row(
                 children: [
-                  Container( // Circular icon on the left (with the bus code, e.g. "NW")
-                    width: isRide(widget.busId) ? 45 : 40,
-                    height: isRide(widget.busId) ? 35 : 40, 
-                    decoration: isRide(widget.busId) ? 
-                      // ride icon
-                      BoxDecoration(
-                        shape: BoxShape.rectangle,
-                        borderRadius: BorderRadius.circular(20),
-                        color: RouteColorService.getRouteColor(widget.busId),
-                      ) :
-                      // michigan icon
-                      BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: RouteColorService.getRouteColor(widget.busId),
-                      ),
-                      alignment: Alignment.center,
-                      child: MediaQuery(
-                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                        child: Text(
-                          widget.busId,
-                          style: TextStyle(
-                            color: RouteColorService.getContrastingColor(widget.busId), 
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                  ),
+                  RouteIcon.medium(widget.busId),
 
                   SizedBox(width: 15),
 
@@ -251,10 +218,12 @@ class ExpandableStopWidget extends StatefulWidget {
     required this.busProvider,
   });
 }
-
-class _StopSheetState extends State<StopSheet> {
-  late Future<(List<BusWithPrediction>, bool)> loadedStopData;
-  bool? _isFavorited;
+  
+class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
+  late Future<List<BusWithPrediction>> loadedStopData;
+  late bool _isFavorite;
+  Timer? _refreshTimer;
+  bool _isInBackground = false;
 
   // for select bus stops with images
   late bool imageBusStop;
@@ -263,8 +232,10 @@ class _StopSheetState extends State<StopSheet> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     loadedStopData = fetchStopData(widget.stopID);
     imageBusStop = true;
+    _isFavorite = widget.isFavorite;
 
     switch (widget.stopID) {
       case "C250":
@@ -292,12 +263,61 @@ class _StopSheetState extends State<StopSheet> {
         imageBusStop = false;
         break;
     }
+    
+    // Start auto-refresh every 30 seconds
+    _startRefreshTimer();
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (!_isInBackground) {
+        _refreshData();
+      }
+    });
+  }
+
+  void _stopRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _isInBackground = true;
+        _stopRefreshTimer();
+        break;
+      case AppLifecycleState.resumed:
+        _isInBackground = false;
+        // Refresh immediately when app comes to foreground
+        _refreshData();
+        _startRefreshTimer();
+        break;
+      case AppLifecycleState.detached:
+        _stopRefreshTimer();
+        break;
+      case AppLifecycleState.hidden:
+        // Handle hidden state if needed
+        break;
+    }
   }
 
   void _refreshData() {
-    setState(() {
-      loadedStopData = fetchStopData(widget.stopID);
-    });
+    if (!_isInBackground) {
+      setState(() {
+        loadedStopData = fetchStopData(widget.stopID);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopRefreshTimer();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -320,11 +340,10 @@ class _StopSheetState extends State<StopSheet> {
             List<BusWithPrediction> arrivingBuses = [];
 
             if (snapshot.hasData) {
-              arrivingBuses = snapshot.data!.$1;
+              arrivingBuses = snapshot.data!;
               arrivingBuses.sort(
                 (lhs, rhs) => (int.tryParse(lhs.prediction) ?? 0).compareTo(int.tryParse(rhs.prediction) ?? 0)
               );
-              _isFavorited ??= snapshot.data!.$2;
             }
 
             double initialSize = 0.9;
@@ -709,11 +728,8 @@ class _StopSheetState extends State<StopSheet> {
                                             
                                       ElevatedButton(
                                         onPressed: () {
-                                          // Read the current state
-                                          final bool currentStatus = _isFavorited ?? false;
-                                            
                                           // Call the appropriate function
-                                          if (currentStatus){
+                                          if (_isFavorite){
                                             widget.onUnFavorite(widget.stopID, widget.stopName);
                                           } else {
                                             widget.onFavorite(widget.stopID, widget.stopName);
@@ -721,7 +737,7 @@ class _StopSheetState extends State<StopSheet> {
                                             
                                           // Update the UI immediately
                                           setState(() {
-                                            _isFavorited = !currentStatus;
+                                            _isFavorite = !_isFavorite;
                                           });
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -735,8 +751,8 @@ class _StopSheetState extends State<StopSheet> {
                                           elevation: 0
                                         ),
                                         child: Icon(
-                                          (_isFavorited ?? false)?  Icons.favorite : Icons.favorite_border, 
-                                          color: (_isFavorited ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
+                                          (_isFavorite ?? false)?  Icons.favorite : Icons.favorite_border, 
+                                          color: (_isFavorite ?? false)? Colors.red : getColor(context, ColorType.secondaryButtonText),
                                           size: 20,
                                         ), 
                                       ),
@@ -894,8 +910,8 @@ class _ReminderFormState extends State<ReminderForm> {
             
             showMaizebusOKDialog(
               contextIn: context,
-              title: Text("Failed to load reminders"),
-              content: Text("Make sure you have the notification permission enabled in settings. If this error is persistent, please send us feedback through the feedback form in the settings page"),
+              title: "Failed to load reminders",
+              content: "Make sure you have the notification permission enabled in settings. If this error is persistent, please send us feedback through the feedback form in the settings page",
             );
           });
           return SizedBox.shrink();
@@ -970,36 +986,7 @@ class _ReminderFormState extends State<ReminderForm> {
                                 height: 10,
                                 width: 60,
                               ),
-                              Container(
-                                width: isRide(rtid) ? 45 : 40,
-                                height: isRide(rtid) ? 35 : 40, 
-                                decoration: isRide(rtid) ? 
-                                  // ride icon
-                                  BoxDecoration(
-                                    shape: BoxShape.rectangle,
-                                    borderRadius: BorderRadius.circular(20),
-                                    color: RouteColorService.getRouteColor(rtid),
-                                  ) :
-                                  // michigan icon
-                                  BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: RouteColorService.getRouteColor(rtid),
-                                  ),
-                                alignment: Alignment.center,
-                                child: MediaQuery(
-                                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                  child: Text(
-                                    rtid,
-                                    style: TextStyle(
-                                      color: RouteColorService.getContrastingColor(rtid), 
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
+                              RouteIcon.medium(rtid),
                               
                               Checkbox(
                                 value: activeRtids.contains(rtid) != rtidsToChange.contains(rtid),

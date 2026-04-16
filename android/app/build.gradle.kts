@@ -38,9 +38,7 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
+    // REMOVED compilerOptions from here because it was causing "Unresolved reference"
 
     defaultConfig {
         applicationId = "com.ishankumar.maizebus"
@@ -73,11 +71,14 @@ android {
     }
 }
 
+// BULLETPROOF FIX: Configure Kotlin compiler tasks directly at the bottom of the file
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
+}
+
 dependencies {
-    // the following two might be needed if issues happen
-    // https://pub.dev/packages/flutter_local_notifications#-android-setup
-    // implementation("androidx.window:window:1.0.0")
-    // implementation("androidx.window:window-java:1.0.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
 }

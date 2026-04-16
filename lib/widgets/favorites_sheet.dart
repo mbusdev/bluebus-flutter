@@ -160,8 +160,8 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                   
                                   showMaizebusOKDialog(
                                     contextIn: context,
-                                    title: const Text("No Favorites"),
-                                    content: const Text("Hit the heart icon on a stop to add it to your favorites and see it here!"),
+                                    title: "No Favorites",
+                                    content: "Hit the heart icon on a stop to add it to your favorites and see it here!",
                                   );
                                 });
                   
