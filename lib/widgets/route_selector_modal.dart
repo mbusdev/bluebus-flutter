@@ -4,10 +4,10 @@ import 'package:bluebus/globals.dart';
 import 'package:bluebus/innerShadow.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:bluebus/widgets/dialog.dart';
+import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/route_color_service.dart';
 import '../constants.dart';
 
 // Selecting routes
@@ -375,29 +375,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                               Expanded(
                                                 child: ListTile(
                                                   contentPadding: EdgeInsets.only(left: 10, right: 0), 
-                                                  leading: Container(
-                                                    width: 35,
-                                                    height: 35,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: RouteColorService.getRouteColor(route['id']!), 
-                                                    ),
-                                                    alignment: Alignment.center,
-                                                    child: MediaQuery(
-                                                      // media query prevents text scaling
-                                                      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                                      child: Text(
-                                                        route['id']!,
-                                                        style: TextStyle(
-                                                          color: RouteColorService.getContrastingColor(route['id']!), 
-                                                          fontSize: 17,
-                                                          fontWeight: FontWeight.w900,
-                                                          letterSpacing: -1,
-                                                        ),
-                                                        textAlign: TextAlign.center,
-                                                      ),
-                                                    ),
-                                                  ),
+                                                  leading: RouteIcon.small(route['id']!),
                                                   title: Text(
                                                     route['name'] ?? route['id']!,
                                                     style: TextStyle(
@@ -519,30 +497,7 @@ class _RouteSelectorModalState extends State<RouteSelectorModal> {
                                                 child: ListTile(
                                                   contentPadding: EdgeInsets.only(left: 8, right: 0), 
                                                   minTileHeight: 40,
-                                                  leading: Container(
-                                                    width: 40,
-                                                    height: 30,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.rectangle,
-                                                      borderRadius: BorderRadius.circular(15), 
-                                                      color: RouteColorService.getRouteColor(route['id']!), 
-                                                    ),
-                                                    alignment: Alignment.center,
-                                                    child: MediaQuery(
-                                                      // media query prevents text scaling
-                                                      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                                                      child: Text(
-                                                        route['id']!,
-                                                        style: TextStyle(
-                                                          color: RouteColorService.getContrastingColor(route['id']!), 
-                                                          fontSize: 17,
-                                                          fontWeight: FontWeight.w900,
-                                                          letterSpacing: -1,
-                                                        ),
-                                                        textAlign: TextAlign.center,
-                                                      ),
-                                                    ),
-                                                  ),
+                                                  leading: RouteIcon.small(route['id']!),
                                                   title: Text(
                                                     route['name'] ?? route['id']!,
                                                     style: TextStyle(

@@ -1,5 +1,6 @@
 import 'package:bluebus/services/bus_info_service.dart';
 import 'package:bluebus/services/bus_repository.dart';
+import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import '../constants.dart';
@@ -145,30 +146,7 @@ Widget michiganBusHeader(Bus bus, BuildContext context) {
     ),
     child: Row(
       children: [
-        Container( // Bus circular icon
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: bus.routeColor,
-          ),
-          alignment: Alignment.center,
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-            child: Text(
-              bus.routeId,
-              style: TextStyle(
-                color: RouteColorService.getContrastingColor(
-                  bus.routeId,
-                ),
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -1,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
+        RouteIcon.large(bus.routeId),
 
         SizedBox(width: 15),
 
@@ -218,31 +196,7 @@ Widget theRideHeader(Bus bus, BuildContext context) {
     ),
     child: Row(
       children: [
-        Container( // Bus circular icon
-          width: 78,
-          height: 55,
-          decoration: BoxDecoration(
-            shape: BoxShape.rectangle,
-            borderRadius: BorderRadius.circular(39), // should be 27.5 (55 divided by 2) but 39 works too
-            color: bus.routeColor,
-          ),
-          alignment: Alignment.center,
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-            child: Text(
-              bus.routeId,
-              style: TextStyle(
-                color: RouteColorService.getContrastingColor(
-                  bus.routeId,
-                ),
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -1,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
+        RouteIcon.large(bus.routeId),
 
         SizedBox(width: 15),
 
