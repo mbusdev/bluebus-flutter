@@ -8,6 +8,7 @@ import 'package:bluebus/widgets/refresh_button.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants.dart';
 import '../services/route_color_service.dart';
 import '../models/bus_stop.dart';
@@ -233,35 +234,34 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     loadedStopData = fetchStopData(widget.stopID);
+    imageBusStop = true;
     _isFavorite = widget.isFavorite;
-    imageBusStop =
-        (widget.stopID == "C250") ||
-        (widget.stopID == "N406") ||
-        (widget.stopID == "N405") ||
-        (widget.stopID == "N550") ||
-        (widget.stopID == "N551") ||
-        (widget.stopID == "N553") ||
-        (widget.stopID == "C251");
-    if (widget.stopID == "C250") {
-      imagePath = "assets/CCTC.jpg";
-    }
-    if (widget.stopID == "C251") {
-      imagePath = "assets/CCTC_Ruthven.jpg";
-    }
-    if (widget.stopID == "N406") {
-      imagePath = "assets/FXB_outbound.jpg";
-    }
-    if (widget.stopID == "N405") {
-      imagePath = "assets/FXB_inbound.jpg";
-    }
-    if (widget.stopID == "N550") {
-      imagePath = "assets/Pierpont.jpg";
-    }
-    if (widget.stopID == "N551") {
-      imagePath = "assets/PierpontBursley.jpg";
-    }
-    if (widget.stopID == "N553") {
-      imagePath = "assets/PierpontNorthwood.jpg";
+
+    switch (widget.stopID) {
+      case "C250":
+        imagePath = "assets/CCTC.jpg";
+        break;
+      case "C251":
+        imagePath = "assets/CCTC_Ruthven.jpg";
+        break;
+      case "N406":
+        imagePath = "assets/FXB_outbound.jpg";
+        break;
+      case "N405":
+        imagePath = "assets/FXB_inbound.jpg";
+        break;
+      case "N550":
+        imagePath = "assets/Pierpont.jpg";
+        break;
+      case "N551":
+        imagePath = "assets/PierpontBursley.jpg";
+        break;
+      case "N553":
+        imagePath = "assets/PierpontNorthwood.jpg";
+        break;
+      default:
+        imageBusStop = false;
+        break;
     }
     
     // Start auto-refresh every 30 seconds
@@ -560,7 +560,7 @@ class _StopSheetState extends State<StopSheet> with WidgetsBindingObserver {
                                                       crossAxisAlignment:
                                                           CrossAxisAlignment.start,
                                                       children: [
-                                                        (arrivingBuses.length == 0)
+                                                        (arrivingBuses.isEmpty)
                                                             ?
                                                               Center(
                                                                 child: Column(
@@ -851,14 +851,36 @@ class _ReminderFormState extends State<ReminderForm> {
   Set<String> activeRtids = {};
   /// ones that have been selected to be added / removed
   Set<String> rtidsToChange = {};
-  int reminderThresh = 5;
+  int reminderThresh = -1;
 
   // exists to ensure the notification button isn't pressed multiple times 
   // while waiting for the response
   bool _isProcessing = false;
 
+  // Save reminder threshold to persistent storage
+  Future<void> _saveReminderThreshold() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('reminder_thresh', reminderThresh);
+  }
+
+  // Load reminder threshold from persistent storage
+  Future<int> _loadReminderThreshold() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedThresh = prefs.getInt('reminder_thresh') ?? 5;
+    return savedThresh;
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (reminderThresh < 0) {
+      _loadReminderThreshold().then((int savedThresh) {
+        setState(() {
+          reminderThresh = savedThresh;
+        });
+      }).catchError((error, stack) {
+        
+      });
+    }
     return FutureBuilder(
       future: reminderInfoFuture,
       builder: (context, snapshot) {
@@ -1061,6 +1083,7 @@ class _ReminderFormState extends State<ReminderForm> {
                       onPressed: _isProcessing ? null : () async {
                         // is processing lets us make sure no one spams the button
                         setState(() => _isProcessing = true);
+                        await _saveReminderThreshold();
                       
                         List<RemindersModification> modifications = [];
                         for (String rtid in routesToShow) {
@@ -1079,12 +1102,14 @@ class _ReminderFormState extends State<ReminderForm> {
                           await IncomingBusReminderService.modifyReminders(modifications);                  
                           if (!context.mounted) return;
                           Navigator.pop(context);
-                        } on Exception catch (e) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => SimpleDialog(
-                              title: Text("Failed!\n${e.toString()}")),
-                          );
+                        } on Exception {
+                          if (context.mounted) {
+                            showMaizebusOKDialog(
+                              contextIn: context,
+                              title: Text("Failed to set reminders"),
+                              content: Text("If this error is persistent, please send us feedback through the feedback form in the settings page"),
+                            );
+                          }
                         }
                         setState(() => _isProcessing = false);
                       },
