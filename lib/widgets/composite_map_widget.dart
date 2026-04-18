@@ -47,7 +47,7 @@ abstract class CompositeMapLayer {
   void setOnUpdate(Function() fn);
   void dispose() {}
 }
-
+// TODO: Extend the MapController back to map_screen.dart so it can move the camera and stuff
 class BaseRoutesLayer extends CompositeMapLayer {
   @override
   bool isVisible = true;
@@ -147,7 +147,7 @@ class BaseRoutesLayer extends CompositeMapLayer {
       // Use backend color if available, otherwise fallback to service
       final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
 
-      if (!markersCache.containsKey(routeKey)) {
+      if (!markersCache.containsKey(routeKey)) { // Prevent duplicate copies of the same stop on top of each other
         markersCache[routeKey] = {};
         for (final stop in r.stops) { // iterate through all stops in this route
           // TODO: Implement favorite stops
@@ -208,6 +208,8 @@ class BaseRoutesLayer extends CompositeMapLayer {
 
   void reloadPolylines() {
 
+    polylinesCache.clear();
+
     for (final r in routesCache) {
       if (!selectedRoutes.contains(r.routeId)) continue; // Skip deselected routes
 
@@ -216,7 +218,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
       // Use backend color if available, otherwise fallback to service
       final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
 
-      //   TODO: Implement this
       if (!polylinesCache.containsKey(routeKey)) {
         polylinesCache[routeKey] = Polyline(
           polylineId: PolylineId(routeKey),
@@ -256,13 +257,23 @@ class BusAnimationState {
   BitmapDescriptor busIcon;
   MarkerId markerId;
   int lastUpdated = 0;
+
   LatLng? lastInterpolatedPosition;
+  double? lastInterpolatedHeading;
+  LatLng? fromPosition;
+  double? fromHeading;
+  LatLng? toPosition;
+  double? toHeading;
+
   BusAnimationState({
     required this.bus,
     required this.busIcon,
     required this.markerId,
     this.lastUpdated = 0
-  });
+  }) {
+    toHeading = bus.heading;
+    toPosition = bus.position;
+  }
 }
 class LiveBusesLayer extends CompositeMapLayer {
   @override
@@ -283,7 +294,7 @@ class LiveBusesLayer extends CompositeMapLayer {
   late Animation<double> animation;
   int nextAnimationFrameTime = 0;
   int animationStartedTime = 0;
-  static const int FRAME_DURATION = 70; // Frame duration in ms for animations
+  static const int FRAME_DURATION = 100; // Frame duration in ms for animations
   static const int ANIMATION_DURATION = 8000; //4000; // Animation duration in ms
 
   AnimationController? controller;
@@ -308,8 +319,6 @@ class LiveBusesLayer extends CompositeMapLayer {
     debugPrint("******* Initting with animation controller!!");
     tickerProvider = tickerProviderIn;
     controller = AnimationController(duration: const Duration(milliseconds: ANIMATION_DURATION), vsync: tickerProvider!);
-    // controller?.repeat();
-    // NEXT STEPS TODO: Finish the AnimationController integration into Project SmoothBus!
 
   }
 
@@ -372,15 +381,14 @@ class LiveBusesLayer extends CompositeMapLayer {
           );
 
           busAnimationCache[busId]?.lastInterpolatedPosition = interpolatedPosition;
-          // NEXT STEPS TODO: Okay, so the problem right now is that some buses' animation cycles aren't done before we get new bus position data, so it creates a weird "jump". I'd like to find some way of animating between the last interpolated position and updating the new position. So maybe store the last interpolated position somewhere and when new data comes in, check if the bus is animating--if it's still in the middle of its animation, set the old position to the last interpolated position instead of the old bus position.
-          // * Or we could just do that every time--the last interpolated position should equal the final position if the bus animation is complete.
-          // * So probably save the last interpolated position inside the BusAnimationState and whenever the new data comes in, it sets the oldPosition to be the old interpolatedPosition and sets the newPosition to be whatever was received from the API
+          // TODO: Figure out why the buses are still jumpy? They might not be anymore actually
 
           // NOTE: Combined with the "has the bus moved at all" check, this might cause problems if the bus is staying still at a stop light? Double check this
 
           double headingDelta = (busAnimationCache[busId]!.bus.heading - busAnimationCache[busId]!.prevBus!.heading);
 
           if (headingDelta.abs() > (360 + headingDelta).abs()) {
+            // Might need to fix this
             headingDelta = 360 + headingDelta; // Turn the tightest direction possible
           }
 
@@ -390,6 +398,9 @@ class LiveBusesLayer extends CompositeMapLayer {
             interpolatedHeading = animatedPercentage * (busAnimationCache[busId]!.bus.heading - busAnimationCache[busId]!.prevBus!.heading) + busAnimationCache[busId]!.prevBus!.heading;
           }
         }
+
+        busAnimationCache[busId]?.lastInterpolatedHeading = interpolatedHeading;
+        busAnimationCache[busId]?.lastInterpolatedPosition = interpolatedPosition;
 
         return Marker(
           flat: true,
@@ -541,7 +552,15 @@ class LiveBusesLayer extends CompositeMapLayer {
 
           busAnimationCache[bus.id]?.prevBus = busAnimationCache[bus.id]?.bus;
           busAnimationCache[bus.id]?.bus = bus;
+
+          busAnimationCache[bus.id]?.fromPosition = busAnimationCache[bus.id]?.lastInterpolatedPosition;
+          busAnimationCache[bus.id]?.fromHeading = busAnimationCache[bus.id]?.lastInterpolatedHeading;
+          busAnimationCache[bus.id]?.toPosition = bus.position;
+          busAnimationCache[bus.id]?.toHeading = bus.heading;
+
         } else {
+          // If we get here, the previous position either doesn't exist or is too old. Create a new BusAnimationState from scratch
+
           busAnimationCache[bus.id] = BusAnimationState(
             bus: bus,
             busIcon: MapImageService.getBusIcon(bus),
@@ -589,6 +608,24 @@ class LiveBusesLayer extends CompositeMapLayer {
 
 }
 
+class JourneyLayer extends CompositeMapLayer {
+  @override
+  bool isVisible = true;
+  @override
+  Set<Polyline> polylines = {};
+  @override
+  Set<Marker> markers = {};
+  @override
+  Function() onUpdate = () {};
+  
+  void setOnUpdate(Function() callback) {
+    debugPrint("****** got setOnUpdate call!");
+    onUpdate = callback;
+  }
+
+
+  
+}
 
 class CompositeMapWidget extends StatefulWidget {
   // final LatLongNew.LatLng initialCenter = LatLongNew.LatLng(42.277849, -83.7352536);
