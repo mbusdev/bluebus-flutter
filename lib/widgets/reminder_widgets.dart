@@ -412,7 +412,7 @@ class __DismissibleReminderState extends State<_DismissibleReminder>
     if (_dismissing) return;
     setState(() {
       _dragOffset = (_dragOffset + details.delta.dx).clamp(
-        -double.infinity,
+        -_rowWidth,
         0.0,
       );
     });
