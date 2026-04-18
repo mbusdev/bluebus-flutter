@@ -135,6 +135,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
 
+  /// Used when [Bus.heading] is in the west quadrant (see [_isHeadingWest]).
+  BitmapDescriptor? _busWestPlaceholderIcon;
+
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
   final Map<String, Map<String, Marker>> _routeStopMarkers = {}; // maps from route to a map of stopID to marker
@@ -409,6 +412,77 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
   }
 
+  /// Heading in degrees clockwise from north; west ≈ 225°–315° (270° = due west).
+  static bool _isHeadingWest(double headingDeg) {
+    var h = headingDeg % 360.0;
+    if (h < 0) h += 360.0;
+    return h >= 225.0 && h <= 315.0;
+  }
+
+  BitmapDescriptor _baseBusIconForRoute(Bus bus, Color routeColor) {
+    if (_routeBusIcons.containsKey(bus.routeId)) {
+      return _routeBusIcons[bus.routeId]!;
+    }
+    if (_busIcon != null) return _busIcon!;
+    return BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
+  }
+
+  /// Route bus art, or west placeholder when heading is west and placeholder is loaded.
+  BitmapDescriptor _busMarkerIconResolved(Bus bus, Color routeColor) {
+    final base = _baseBusIconForRoute(bus, routeColor);
+    if (_isHeadingWest(bus.heading) && _busWestPlaceholderIcon != null) {
+      return _busWestPlaceholderIcon!;
+    }
+    return base;
+  }
+
+  /// Optional [assets/bus_marker_placeholder.png]; otherwise a generated orange marker.
+  Future<void> _loadBusWestPlaceholderIcon() async {
+    try {
+      final data = await rootBundle.load('assets/bus_marker_placeholder.png');
+      final codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+        targetWidth: 125,
+        targetHeight: 125,
+      );
+      final frame = await codec.getNextFrame();
+      final png = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+      if (png != null) {
+        _busWestPlaceholderIcon = BitmapDescriptor.fromBytes(
+          png.buffer.asUint8List(),
+        );
+        return;
+      }
+    } catch (_) {
+      // Missing or invalid asset — use generated placeholder below.
+    }
+    _busWestPlaceholderIcon = await _generatedWestPlaceholderBusIcon();
+  }
+
+  Future<BitmapDescriptor> _generatedWestPlaceholderBusIcon() async {
+    const size = 125.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, size, size),
+    );
+    final fill = Paint()..color = const Color(0xFFE65100);
+    final rrect = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(8, 8, 109, 109),
+      const Radius.circular(20),
+    );
+    canvas.drawRRect(rrect, fill);
+    final stroke = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5;
+    canvas.drawRRect(rrect, stroke);
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(125, 125);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
+  }
+
   Future<void> _loadCustomMarkers() async {
     try {
       // Load stop icons
@@ -426,6 +500,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
       _getOn = await resizeImage(await rootBundle.load('assets/getOn.png'));
       _getOff = await resizeImage(await rootBundle.load('assets/getOff.png'));
+
+      await _loadBusWestPlaceholderIcon();
 
       // Load route specific bus icons
       await _loadRouteSpecificBusIcons();
@@ -978,9 +1054,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
-    // null case or error contacting server case
-    if (allBuses == []) return;
-
     final selectedBusMarkers = allBuses
         .where((bus) => _selectedRoutes.contains(bus.routeId))
         .map((bus) {
@@ -988,24 +1061,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           final routeColor =
               bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
 
-          // Use route specific bus icon if available, otherwise fallback to default
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+          final busIcon = _busMarkerIconResolved(bus, routeColor);
 
           return Marker(
             flat: true,
             markerId: MarkerId('bus_${bus.id}'),
             consumeTapEvents: true,
             position: bus.position,
-            icon: busIcon!,
+            icon: busIcon,
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
             onTap: () {
@@ -1026,16 +1089,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         if (_activeJourneyBusIds.contains(bus.id)) {
           final routeColor =
               bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+          final busIcon = _busMarkerIconResolved(bus, routeColor);
 
           _displayedJourneyBusMarkers.add(
             Marker(
@@ -1043,7 +1097,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               markerId: MarkerId('journey_bus_${bus.id}'),
               consumeTapEvents: true,
               position: bus.position,
-              icon: busIcon!,
+              icon: busIcon,
               rotation: bus.heading,
               anchor: const Offset(0.5, 0.5),
               onTap: () => _showBusSheet(bus.id),
@@ -1163,10 +1217,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Marker _createBusMarker(Bus bus) {
     final routeColor =
         bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-    final icon =
-        _routeBusIcons[bus.routeId] ??
-        _busIcon ??
-        BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
+    final icon = _busMarkerIconResolved(bus, routeColor);
     return Marker(
       flat: true,
       markerId: MarkerId('bus_${bus.id}'),
@@ -1900,6 +1951,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 content: 'Couldn\'t load stop.',
               );
             }
+          },
+          onSelectBuilding: (Location location) {
+            _showBuildingSheet(location);
+          },
+          onBuildingGetDirections: (Location location) {
+            Map<String, double>? start;
+            Map<String, double>? end = {
+              'lat': location.latlng!.latitude,
+              'lon': location.latlng!.longitude,
+            };
+            _showDirectionsSheet(
+              start,
+              end,
+              "Current Location",
+              location.name,
+              false,
+            );
           },
           onUnfavorite: (stpid) {
             // update in memory and marker icons immediately
