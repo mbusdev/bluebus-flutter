@@ -96,6 +96,8 @@ enum ColorType {
   // all the buttons except for the main map buttons
   importantButtonBackground, importantButtonText,
   secondaryButtonBackground, secondaryButtonText,
+
+  mapWalkingLine // Color for the walking line on the map
 }
 
 const Map<ColorType, Color> lightColors = {
@@ -105,7 +107,7 @@ const Map<ColorType, Color> lightColors = {
   ColorType.background: Colors.white,
   ColorType.backgroundGradientStart: Color.fromARGB(0, 255, 255, 255), // same as background but transparent
   
-  ColorType.mapButtonPrimary: maizeBusBlue, 
+  ColorType.mapButtonPrimary: Color.fromARGB(255, 11, 83, 148), 
   ColorType.mapButtonSecondary: Color.fromARGB(190, 255, 255, 255),
   ColorType.mapButtonIcon: Colors.white,
   ColorType.mapButtonShadow: Color.fromARGB(77, 133, 133, 133), 
@@ -129,6 +131,8 @@ const Map<ColorType, Color> lightColors = {
   ColorType.importantButtonText: Colors.white,
   ColorType.secondaryButtonBackground: Color.fromARGB(255, 215, 228, 241),
   ColorType.secondaryButtonText: maizeBusBlue,
+
+  ColorType.mapWalkingLine: Color.fromARGB(255, 7, 55, 97)
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -162,6 +166,8 @@ const Map<ColorType, Color> darkColors = {
   ColorType.importantButtonText: Colors.white,
   ColorType.secondaryButtonBackground: Color.fromARGB(255, 47, 54, 60),
   ColorType.secondaryButtonText: Color.fromARGB(255, 49, 129, 199),
+
+  ColorType.mapWalkingLine: Color.fromARGB(255, 178, 219, 255)
 };
 
 // returns true if the current theme is dark mode

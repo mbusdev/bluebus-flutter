@@ -135,7 +135,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Whether a journey search overlay is currently active (shows only journey path)
   bool _journeyOverlayActive = false;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
-  static const double _maxMatchDistanceMeters = 150.0;
+  // static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
   final Set<String> _activeJourneyBusIds = {};
   // route ids of routes used in the active journey
@@ -156,6 +156,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   final BaseRoutesLayer baseRoutesLayer = BaseRoutesLayer();
   final LiveBusesLayer liveBusesLayer = LiveBusesLayer();
+  final JourneyLayer journeyLayer = JourneyLayer();
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -174,6 +175,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _setupConnectivityMonitoring();
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
+    journeyLayer.init(_showBusSheet, _activeJourneyBusIds, _activeJourneyRoutes, context);
+
+    hideJourney(); // Hide the journey layer until we're ready to use it
     
 
     // TODO: Make sure this still works when moved to line 197
@@ -191,6 +195,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         _busProviderRef = Provider.of<BusProvider>(context, listen: false);
         _busProviderListener = () {
           liveBusesLayer.init(_busProviderRef?.buses ?? [], _selectedRoutes, onBusClicked); // TODO: Should this init be somewhere else? I need it to have access to the busProvider I think
+
 
           final routes = _busProviderRef?.routes ?? [];
           final newFp = _computeRoutesFingerprint(routes);
@@ -481,8 +486,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // _favRideStopIcon = await resizeImage(
       //   await rootBundle.load('assets/favbusStopRide.png'),
       // );
-      _getOn = await MapImageService.resizeImage(await rootBundle.load('assets/getOn.png'));
-      _getOff = await MapImageService.resizeImage(await rootBundle.load('assets/getOff.png'));
+      // _getOn = await MapImageService.resizeImage(await rootBundle.load('assets/getOn.png'));
+      // _getOff = await MapImageService.resizeImage(await rootBundle.load('assets/getOff.png'));
       // TODO: Move this into map_image_service.dart
 
       // Load route specific bus icons
@@ -691,6 +696,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         .map((r) => '${r.routeId}_${Object.hashAll(r.points)}')
         .toSet();
     final newRouteIds = routes.map((r) => r.routeId).toSet();
+
+    journeyLayer.setRoutesCache(routes);
 
     _routePolylines.removeWhere((key, _) {
       for (final id in newRouteIds) {
@@ -999,30 +1006,32 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     //     })
     //     .toSet();
 
+    journeyLayer.refreshLiveBusMarkers(allBuses);
+
     // Update journey bus markers if journey is active
-    if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
-      _displayedJourneyBusMarkers.clear();
-      for (final bus in allBuses) {
-        // Show buses that are on routes used in the journey
-        if (_activeJourneyBusIds.contains(bus.id)) {
-          BitmapDescriptor busIcon = MapImageService.getBusIcon(bus);
+    // if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
+    //   _displayedJourneyBusMarkers.clear();
+    //   for (final bus in allBuses) {
+    //     // Show buses that are on routes used in the journey
+    //     if (_activeJourneyBusIds.contains(bus.id)) {
+    //       BitmapDescriptor busIcon = MapImageService.getBusIcon(bus);
           
 
-          _displayedJourneyBusMarkers.add(
-            Marker(
-              flat: true,
-              markerId: MarkerId('journey_bus_${bus.id}'),
-              consumeTapEvents: true,
-              position: bus.position,
-              icon: busIcon!,
-              rotation: bus.heading,
-              anchor: const Offset(0.5, 0.5),
-              onTap: () => _showBusSheet(bus.id),
-            ),
-          );
-        }
-      }
-    }
+    //       _displayedJourneyBusMarkers.add(
+    //         Marker(
+    //           flat: true,
+    //           markerId: MarkerId('journey_bus_${bus.id}'),
+    //           consumeTapEvents: true,
+    //           position: bus.position,
+    //           icon: busIcon!,
+    //           rotation: bus.heading,
+    //           anchor: const Offset(0.5, 0.5),
+    //           onTap: () => _showBusSheet(bus.id),
+    //         ),
+    //       );
+    //     }
+    //   }
+    // }
 
     setState(() {
       // _displayedBusMarkers = selectedBusMarkers;
@@ -1127,6 +1136,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _showSearchSheet() {
+    debugPrint(">>>>>>> SHOWING SEARCH SHEEEEEET");
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1199,6 +1209,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       },
     );
+    _bottomSheetController?.closed.then((_) {hideJourney();});
   }
 
   void _showDirectionsSheet(
@@ -1273,10 +1284,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 }
               },
               onSelectJourney: (journey) {
-                _displayJourneyOnMap(
-                  journey,
-                  getColor(context, ColorType.opposite),
-                );
+
+                currDisplayed = journey;
+                showJourney();
+                journeyLayer.setJourney(journey, getColor(context, ColorType.opposite));
+
+                // TODO: Figure out how to change the visibility of the layers
+
+                // _displayJourneyOnMap(
+                //   journey,
+                //   getColor(context, ColorType.opposite),
+                // );
               },
               onResolved: (orig, dest) {
                 // Cache resolved coordinates for virtual origin/destination resolution
@@ -1289,9 +1307,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       },
     );
+    _bottomSheetController?.closed.then((_) {hideJourney();});
   }
 
   _showJourneySheetOnReopen() {
+    debugPrint(">>>>> Showing journey sheet on reopen");
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1327,7 +1347,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      debugPrint("***** Modal bottom sheet is complete!!");
+      hideJourney();
+    });
   }
  
   // TODO: Put this into composite_map_widget.dart
@@ -1351,439 +1374,97 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // }
 
   // Display a Journey on the map
-  void _displayJourneyOnMap(Journey journey, Color walkLineColor) async {
-    currDisplayed = journey;
+  // void _displayJourneyOnMap(Journey journey, Color walkLineColor) async {
+    
+  // }
 
-    // clear previous journey overlay
-    _displayedJourneyPolylines.clear();
-    _displayedJourneyMarkers.clear();
-    _activeJourneyBusIds.clear();
-    _activeJourneyRoutes.clear();
+  void showJourney() {
+    debugPrint("**** showJourney call");
+    journeyLayer.isVisible = true;
+    baseRoutesLayer.isVisible = false;
+    liveBusesLayer.isVisible = false;
+  }
 
-    final allPoints = <LatLng>[];
-
-    // First, analyze the journey to find which legs are bus and which are walking
-
-    for (int legIndex = 0; legIndex < journey.legs.length; legIndex++) {
-      final leg = journey.legs[legIndex];
-
-      // Determine if this is a walking or bus leg - walking legs don't have rt or trip
-      final bool isBusLeg = leg.rt != null && leg.trip != null;
-      // Determine leg type for processing
-
-      if (isBusLeg) {
-        // Add route ID and vehicle ID to active sets for bus filtering
-        if (leg.rt != null) {
-          _activeJourneyRoutes.add(leg.rt!);
-        }
-        if (leg.trip != null) {
-          _activeJourneyBusIds.add(leg.trip!.vid);
-        } // Try to find a cached route polyline segment that follows streets
-        final startLatLng = getLatLongFromStopID(leg.originID);
-        final endLatLng = getLatLongFromStopID(leg.destinationID);
-
-        bool usedRouteGeometry = false;
-        if (startLatLng != null && endLatLng != null) {
-          final routeVariants = _routePolylines.keys.where(
-            (key) => key.startsWith('${leg.rt}_'),
-          );
-
-          List<LatLng>? bestSegment;
-          double? bestLength;
-
-          for (final routeKey in routeVariants) {
-            final poly = _routePolylines[routeKey];
-            if (poly == null) continue;
-            final ptsList = poly.points;
-            if (ptsList.length < 2) continue;
-
-            final seg = _extractRouteSegment(ptsList, startLatLng, endLatLng);
-            if (seg != null && seg.length >= 2) {
-              // compute approximate length
-              double len = 0;
-              for (int i = 1; i < seg.length; i++) {
-                final a = seg[i - 1];
-                final b = seg[i];
-                final dx = a.latitude - b.latitude;
-                final dy = a.longitude - b.longitude;
-                len += dx * dx + dy * dy;
-              }
-              if (bestSegment == null || len < bestLength!) {
-                bestSegment = seg;
-                bestLength = len;
-              }
-            }
-          }
-
-          if (bestSegment != null) {
-            final polyline = Polyline(
-              polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
-              points: bestSegment,
-              color: RouteColorService.getRouteColor(leg.rt!),
-              width: 6,
-            );
-            _displayedJourneyPolylines.add(polyline);
-
-            // add stop markers at endpoints of the segment (boarding/getting off)
-            _displayedJourneyMarkers.addAll([
-              Marker(
-                flat: true,
-                markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),
-                position: bestSegment.first,
-                icon:
-                    _getOn ??
-                    BitmapDescriptor.defaultMarkerWithHue(
-                      colorToHue(RouteColorService.getRouteColor(leg.rt!)),
-                    ),
-              ),
-              Marker(
-                flat: true,
-                markerId: MarkerId(
-                  'journey_stop_${leg.destinationID}_$legIndex',
-                ),
-                position: bestSegment.last,
-                icon:
-                    _getOff ??
-                    BitmapDescriptor.defaultMarkerWithHue(
-                      colorToHue(RouteColorService.getRouteColor(leg.rt!)),
-                    ),
-              ),
-            ]);
-
-            allPoints.addAll(bestSegment);
-            usedRouteGeometry = true;
-          }
-        }
-
-        if (!usedRouteGeometry) {
-          // Fallback to simple path
-          final pts = <LatLng>[];
-          bool started = false;
-          for (final st in leg.trip!.stopTimes) {
-            if (st.stop == leg.originID) started = true;
-            if (started) {
-              final latlng = getLatLongFromStopID(st.stop);
-              if (latlng != null) {
-                pts.add(latlng);
-                allPoints.add(latlng);
-                _displayedJourneyMarkers.add(
-                  Marker(
-                    flat: true,
-                    markerId: MarkerId('journey_stop_${st.stop}_$legIndex'),
-                    position: latlng,
-                    icon:
-                        _stopIcon ??
-                        BitmapDescriptor.defaultMarkerWithHue(
-                          colorToHue(RouteColorService.getRouteColor(leg.rt!)),
-                        ),
-                  ),
-                );
-              }
-            }
-            if (st.stop == leg.destinationID && started) break;
-          }
-
-          if (pts.isNotEmpty) {
-            final poly = Polyline(
-              polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
-              points: pts,
-              color: RouteColorService.getRouteColor(leg.rt!),
-              width: 6,
-            );
-            _displayedJourneyPolylines.add(poly);
-          }
-        }
-      } else {
-        // Walking legs add a dotted line between origin and destination
-        // First try to get the locations from origin and destination IDs
-        LatLng? startLatLng = getLatLongFromStopID(leg.originID);
-        LatLng? endLatLng = getLatLongFromStopID(leg.destinationID);
-
-        // Walking leg information
-
-        // Locations were not found, could be a building or custom location
-        // In this case, we need to look for coordinates in previous/next legs
-        // Also handle virtual origin/destination from the directions request
-        if (startLatLng == null) {
-          // resolve virtual origin
-          if (leg.originID == 'VIRTUAL_ORIGIN' &&
-              _lastJourneyRequestOrigin != null) {
-            startLatLng = LatLng(
-              _lastJourneyRequestOrigin!['lat']!,
-              _lastJourneyRequestOrigin!['lon']!,
-            );
-          } else if (leg.originID == 'VIRTUAL_DESTINATION' &&
-              _lastJourneyRequestDest != null) {
-            startLatLng = LatLng(
-              _lastJourneyRequestDest!['lat']!,
-              _lastJourneyRequestDest!['lon']!,
-            );
-          }
-        }
-
-        // If still unresolved and this is a virtual origin, attempt to use device location
-        if (startLatLng == null && leg.originID == 'VIRTUAL_ORIGIN') {
-          try {
-            final pos = await Geolocator.getCurrentPosition().timeout(
-              Duration(seconds: 3),
-            );
-            startLatLng = LatLng(pos.latitude, pos.longitude);
-          } catch (e) {
-            // ignore GPS resolution failure
-          }
-        }
-
-        if (startLatLng == null && legIndex > 0) {
-          // Try to get end location from previous leg
-          final prevLeg = journey.legs[legIndex - 1];
-          startLatLng = getLatLongFromStopID(prevLeg.destinationID);
-        }
-
-        if (endLatLng == null) {
-          // resolve virtual destination
-          if (leg.destinationID == 'VIRTUAL_DESTINATION' &&
-              _lastJourneyRequestDest != null) {
-            endLatLng = LatLng(
-              _lastJourneyRequestDest!['lat']!,
-              _lastJourneyRequestDest!['lon']!,
-            );
-          } else if (leg.destinationID == 'VIRTUAL_ORIGIN' &&
-              _lastJourneyRequestOrigin != null) {
-            endLatLng = LatLng(
-              _lastJourneyRequestOrigin!['lat']!,
-              _lastJourneyRequestOrigin!['lon']!,
-            );
-          }
-        }
-
-        // If still unresolved and this is a virtual destination, attempt device location fallback
-        if (endLatLng == null && leg.destinationID == 'VIRTUAL_DESTINATION') {
-          try {
-            final pos = await Geolocator.getCurrentPosition().timeout(
-              Duration(seconds: 3),
-            );
-            endLatLng = LatLng(pos.latitude, pos.longitude);
-          } catch (e) {
-            print('Could not resolve VIRTUAL_DESTINATION via device GPS: $e');
-          }
-        }
-
-        if (endLatLng == null && legIndex < journey.legs.length - 1) {
-          // Try to get start location from next leg
-          final nextLeg = journey.legs[legIndex + 1];
-          endLatLng = getLatLongFromStopID(nextLeg.originID);
-        }
-
-        // Check if we have both coordinates before creating walking polyline
-        if (startLatLng != null && endLatLng != null) {
-          List<LatLng> pts = [];
-          if (leg.pathCoords != null && leg.pathCoords!.isNotEmpty) {
-            pts = leg.pathCoords!;
-          } else {
-            pts = [startLatLng, endLatLng];
-          }
-
-          // Create a dotted line for walking segments
-          final walkingPolyline = Polyline(
-            polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
-            points: pts,
-            color: walkLineColor, // Walk line color
-            width: 6, // line width
-            patterns: [
-              PatternItem.dash(30), // Longer dashes
-              PatternItem.gap(15), // Longer gaps
-            ],
-          );
-
-          _displayedJourneyPolylines.add(walkingPolyline);
-          allPoints.addAll([startLatLng, endLatLng]);
-
-          // Only add destination marker if this is the final leg of the journey
-          if (legIndex == journey.legs.length - 1) {
-            _displayedJourneyMarkers.add(
-              Marker(
-                flat: true,
-                markerId: MarkerId(
-                  'journey_final_destination_${journey.hashCode}',
-                ),
-                position: endLatLng,
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueRed,
-                ),
-              ),
-            );
-          }
-
-          // Add starting marker if this is the first leg of the journey
-          if (legIndex == 0) {
-            _displayedJourneyMarkers.add(
-              Marker(
-                flat: true,
-                markerId: MarkerId('journey_start_${journey.hashCode}'),
-                position: startLatLng,
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen,
-                ),
-              ),
-            );
-          } // doing this for now bc couldnt figure out marker stuff better
-        }
-      }
-    }
-
-    // mark that a journey overlay is active (this will hide other route polylines)
-    _journeyOverlayActive = true;
-
-    // Build bus markers for buses matching active journey routes
-    // Filter by route first, then optionally by specific vehicle ID if available
-    _displayedJourneyBusMarkers.clear();
-    final busProvider = Provider.of<BusProvider>(context, listen: false);
-    for (final bus in busProvider.buses) {
-      // Show buses that are on routes used in the journey
-      if (_activeJourneyRoutes.contains(bus.routeId)) {
-        _displayedJourneyBusMarkers.add(liveBusesLayer.createBusMarker(bus));
-      }
-    }
-
-    // Final debug check
-    // Journey display complete (silently updated internal state)
-
-    setState(() {
-      _updateAllDisplayedMarkers();
-    });
-
-    // Trying to move camera to include the journey bounds
-    if (_mapController != null && allPoints.isNotEmpty) {
-      try {
-        double south = allPoints.first.latitude;
-        double north = allPoints.first.latitude;
-        double west = allPoints.first.longitude;
-        double east = allPoints.first.longitude;
-        for (final p in allPoints) {
-          south = p.latitude < south ? p.latitude : south;
-          north = p.latitude > north ? p.latitude : north;
-          west = p.longitude < west ? p.longitude : west;
-          east = p.longitude > east ? p.longitude : east;
-        }
-
-        // Adjust bounds to position route in top 1/3 of screen (accounting for bottom sheet)
-        final latSpan = north - south;
-        final adjustedSouth =
-            south - (latSpan) * 2; // Much more padding to bottom
-        final adjustedNorth = north; // Less padding to top
-
-        final bounds = LatLngBounds(
-          southwest: LatLng(adjustedSouth, west),
-          northeast: LatLng(adjustedNorth, east),
-        );
-
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 80),
-        );
-      } catch (e) {
-        // fallback to center on first point higher up
-        if (allPoints.isNotEmpty) {
-          // Calculate center of route points
-          double centerLat = 0;
-          double centerLon = 0;
-          for (final p in allPoints) {
-            centerLat += p.latitude;
-            centerLon += p.longitude;
-          }
-          centerLat /= allPoints.length;
-          centerLon /= allPoints.length;
-
-          // Offset the center significantly north to place in top 1/3
-          final offsetLat = centerLat + 0.008; // Roughly 800m north
-
-          await _mapController!.animateCamera(
-            CameraUpdate.newCameraPosition(
-              CameraPosition(target: LatLng(offsetLat, centerLon), zoom: 13),
-            ),
-          );
-        }
-      }
-    }
+  void hideJourney() {
+    debugPrint("**** hideJourney call");
+    journeyLayer.isVisible = false;
+    baseRoutesLayer.isVisible = true;
+    liveBusesLayer.isVisible = true;
   }
 
   // Clear/hide the currently displayed journey overlays and return to normal route view
-  void _clearJourneyOverlays() {
-    if (!_journeyOverlayActive) return;
-    _displayedJourneyPolylines.clear();
-    _displayedJourneyMarkers.clear();
-    _displayedJourneyBusMarkers.clear();
-    _activeJourneyBusIds.clear();
-    _activeJourneyRoutes.clear();
-    _journeyOverlayActive = false;
-    // making sure to remove search location marker when clearing journey
-    _removeSearchLocationMarker();
-    setState(() {});
+  // void _clearJourneyOverlays() {
+  //   journeyLayer.clearJourney();
+  //   // if (!_journeyOverlayActive) return;
+  //   // _displayedJourneyPolylines.clear();
+  //   // _displayedJourneyMarkers.clear();
+  //   // _displayedJourneyBusMarkers.clear();
+  //   // _activeJourneyBusIds.clear();
+  //   // _activeJourneyRoutes.clear();
+  //   // _journeyOverlayActive = false;
+  //   // // making sure to remove search location marker when clearing journey
+  //   // _removeSearchLocationMarker();
+  //   // setState(() {});
+  // }
+
+  // // Haversine distance between two LatLngs in meters
+  // double _haversineDistanceMeters(LatLng a, LatLng b) {
+  //   const R = 6371000; // Earth radius in meters
+  //   final lat1 = a.latitude * math.pi / 180.0;
+  //   final lat2 = b.latitude * math.pi / 180.0;
+  //   final dLat = (b.latitude - a.latitude) * math.pi / 180.0;
+  //   final dLon = (b.longitude - a.longitude) * math.pi / 180.0;
+
+  //   final sa =
+  //       math.sin(dLat / 2) * math.sin(dLat / 2) +
+  //       math.cos(lat1) *
+  //           math.cos(lat2) *
+  //           math.sin(dLon / 2) *
+  //           math.sin(dLon / 2);
+  //   final c = 2 * math.atan2(math.sqrt(sa), math.sqrt(1 - sa));
+  //   return R * c;
+  // }
+
+  // // Find nearest index and its distance on polyline to target. Returns a pair [index, distanceMeters]
+  // List<dynamic> _nearestIndexAndDistanceOnPolyline(
+  //   List<LatLng> poly,
+  //   LatLng target,
+  // ) {
+  //   int bestIdx = 0;
+  //   double bestDist = double.infinity;
+  //   for (int i = 0; i < poly.length; i++) {
+  //     final p = poly[i];
+  //     final d = _haversineDistanceMeters(p, target);
+  //     if (d < bestDist) {
+  //       bestDist = d;
+  //       bestIdx = i;
+  //     }
+  //   }
+  //   return [bestIdx, bestDist];
+  // }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
   }
 
-  // Haversine distance between two LatLngs in meters
-  double _haversineDistanceMeters(LatLng a, LatLng b) {
-    const R = 6371000; // Earth radius in meters
-    final lat1 = a.latitude * math.pi / 180.0;
-    final lat2 = b.latitude * math.pi / 180.0;
-    final dLat = (b.latitude - a.latitude) * math.pi / 180.0;
-    final dLon = (b.longitude - a.longitude) * math.pi / 180.0;
-
-    final sa =
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) *
-            math.cos(lat2) *
-            math.sin(dLon / 2) *
-            math.sin(dLon / 2);
-    final c = 2 * math.atan2(math.sqrt(sa), math.sqrt(1 - sa));
-    return R * c;
+  void _onCameraMove(CameraPosition position) async {
+    _currentCameraPos = position;
   }
 
-  // Find nearest index and its distance on polyline to target. Returns a pair [index, distanceMeters]
-  List<dynamic> _nearestIndexAndDistanceOnPolyline(
-    List<LatLng> poly,
-    LatLng target,
-  ) {
-    int bestIdx = 0;
-    double bestDist = double.infinity;
-    for (int i = 0; i < poly.length; i++) {
-      final p = poly[i];
-      final d = _haversineDistanceMeters(p, target);
-      if (d < bestDist) {
-        bestDist = d;
-        bestIdx = i;
+  void _onCameraIdle() async {
+    // check if user location is within viewport bounds
+    LatLngBounds? viewportBounds = await _mapController?.getVisibleRegion();
+    if (viewportBounds != null) {
+      Position? pos = await _getLastKnownLocation();
+      if (pos != null) {
+        _userLocVisible = !viewportBounds.contains(
+          LatLng(pos.latitude, pos.longitude),
+        );
       }
     }
-    return [bestIdx, bestDist];
   }
 
-  // Helper to extract a contiguous segment from polyline points between two latlngs
-  // Return null if indices are invalid or segment is too short.
-  List<LatLng>? _extractRouteSegment(
-    List<LatLng> poly,
-    LatLng start,
-    LatLng end,
-  ) {
-    final sRes = _nearestIndexAndDistanceOnPolyline(poly, start);
-    final eRes = _nearestIndexAndDistanceOnPolyline(poly, end);
-    final si = sRes[0] as int;
-    final ei = eRes[0] as int;
-    final sDist = sRes[1] as double;
-    final eDist = eRes[1] as double;
 
-    // If either nearest point is too far from the stop, we consider this polyline not a match
-    if (sDist > _maxMatchDistanceMeters || eDist > _maxMatchDistanceMeters)
-      return null;
-
-    if (si == ei) return null;
-
-    // Ensure start < end in index space, if reversed, flip the sublist
-    if (si < ei) {
-      return poly.sublist(si, ei + 1);
-    } else {
-      final seg = poly.sublist(ei, si + 1);
-      return seg.reversed.toList();
-    }
-  }
 
   void _showBusSheet(String busID) {
     showModalBottomSheet(
@@ -1888,7 +1569,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           },
         );
       },
-    ).then((_) {});
+    ).then((_) { hideJourney(); }); // Hide any displayed journey when the sheet is closed
   }
 
   // lighter function for when we need to get location
@@ -2064,9 +1745,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   canPop: false,
                   onPopInvokedWithResult: (didPop, result) {
                     // when journey is showing and pop was attempted, clear journey
-                    if (_journeyOverlayActive) {
-                      _clearJourneyOverlays();
-                    }
+                    // if (_journeyOverlayActive) {
+                    //   _clearJourneyOverlays();
+                    // }
+                    hideJourney(); // Hide the journey if it's showing right now
 
                     // If showing a persistent bottom sheet, close it.
                     // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
@@ -2082,8 +1764,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         initialCenter: startLatLng,
                         mapLayers: [
                           baseRoutesLayer,
-                          liveBusesLayer
+                          liveBusesLayer,
+                          journeyLayer
                         ],
+                        onMapCreated: _onMapCreated,
                       ),
 
                       // underlying map layer (different ios and android)
@@ -2623,7 +2307,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ),
                                         ),
                                         child: ElevatedButton.icon(
-                                          onPressed: _clearJourneyOverlays,
+                                          onPressed: () {
+                                            hideJourney();
+                                            // _clearJourneyOverlays
+                                          },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: getColor(
                                               context,
