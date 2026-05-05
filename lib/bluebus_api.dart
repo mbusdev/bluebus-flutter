@@ -122,20 +122,20 @@ class BlueBusApi {
               if (isLast){
                 // use the previous 2 points to calculate rotation
                 double stopRotation = pointRotation(
-                  pointList[i - 2]['lat']?.toDouble() ?? 0,
-                  pointList[i - 2]['lon']?.toDouble() ?? 0,
-                  pointList[i - 1]['lat']?.toDouble() ?? 0,
-                  pointList[i - 1]['lon']?.toDouble() ?? 0,
+                  detourPointList[i - 2]['lat']?.toDouble() ?? 0,
+                  detourPointList[i - 2]['lon']?.toDouble() ?? 0,
+                  detourPointList[i - 1]['lat']?.toDouble() ?? 0,
+                  detourPointList[i - 1]['lon']?.toDouble() ?? 0,
                 );
                 detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
                 
               } else {
                 // use the next 2 points to calculate rotation
                 double stopRotation = pointRotation(
-                  pointList[i + 1]['lat']?.toDouble() ?? 0,
-                  pointList[i + 1]['lon']?.toDouble() ?? 0,
-                  pointList[i + 2]['lat']?.toDouble() ?? 0,
-                  pointList[i + 2]['lon']?.toDouble() ?? 0,
+                  detourPointList[i + 1]['lat']?.toDouble() ?? 0,
+                  detourPointList[i + 1]['lon']?.toDouble() ?? 0,
+                  detourPointList[i + 2]['lat']?.toDouble() ?? 0,
+                  detourPointList[i + 2]['lon']?.toDouble() ?? 0,
                 );
                 detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
               }
