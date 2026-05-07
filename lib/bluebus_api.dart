@@ -12,7 +12,7 @@ import 'services/route_color_service.dart';
 // (used for bus stop icon orientation)
 double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232;    // 180 / π
+  const double radToDeg = 57.29577951308232; // 180 / π
 
   double dLat = lat2 - lat1;
   double dLon = lon2 - lon1;
@@ -46,9 +46,9 @@ class BlueBusApi {
       for (final subroute in subroutes) {
         final points = <LatLng>[];
         final stops = <BusStop>[];
-        
+
         // Cast to list to be able to be able to get different elements
-        final pointList = subroute['pt'] as List; 
+        final pointList = subroute['pt'] as List;
 
         for (int i = 0; i < pointList.length; i++) {
           final point = pointList[i];
@@ -61,7 +61,7 @@ class BlueBusApi {
           );
           if (point['typ'] == 'S') {
             // get rotation of stop
-            if (isLast){
+            if (isLast) {
               // use the previous 2 points to calculate rotation
               double stopRotation = pointRotation(
                 pointList[i - 2]['lat']?.toDouble() ?? 0,
@@ -70,7 +70,6 @@ class BlueBusApi {
                 pointList[i - 1]['lon']?.toDouble() ?? 0,
               );
               stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
-              
             } else {
               // use the next 2 points to calculate rotation
               double stopRotation = pointRotation(
@@ -81,7 +80,6 @@ class BlueBusApi {
               );
               stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
             }
-
           }
         }
 
@@ -105,11 +103,12 @@ class BlueBusApi {
           final detourStops = <BusStop>[];
 
           // Cast to list to be able to be able to get different elements
-          final detourPointList = subroute['dtrpt'] as List; 
+          final detourPointList = subroute['dtrpt'] as List;
 
           for (int i = 0; i < detourPointList.length; i++) {
             final point = detourPointList[i];
-            final isLast = i == detourPointList.length - 1; // bool to check if last
+            final isLast =
+                i == detourPointList.length - 1; // bool to check if last
 
             detourPoints.add(
               LatLng(
@@ -119,25 +118,28 @@ class BlueBusApi {
             );
             if (point['typ'] == 'S') {
               // get rotation of stop
-              if (isLast){
+              if (isLast) {
                 // use the previous 2 points to calculate rotation
                 double stopRotation = pointRotation(
-                  pointList[i - 2]['lat']?.toDouble() ?? 0,
-                  pointList[i - 2]['lon']?.toDouble() ?? 0,
-                  pointList[i - 1]['lat']?.toDouble() ?? 0,
-                  pointList[i - 1]['lon']?.toDouble() ?? 0,
+                  detourPointList[i - 2]['lat']?.toDouble() ?? 0,
+                  detourPointList[i - 2]['lon']?.toDouble() ?? 0,
+                  detourPointList[i - 1]['lat']?.toDouble() ?? 0,
+                  detourPointList[i - 1]['lon']?.toDouble() ?? 0,
                 );
-                detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
-                
+                detourStops.add(
+                  BusStop.fromJson(point, routeId, stopRotation, false),
+                );
               } else {
                 // use the next 2 points to calculate rotation
                 double stopRotation = pointRotation(
-                  pointList[i + 1]['lat']?.toDouble() ?? 0,
-                  pointList[i + 1]['lon']?.toDouble() ?? 0,
-                  pointList[i + 2]['lat']?.toDouble() ?? 0,
-                  pointList[i + 2]['lon']?.toDouble() ?? 0,
+                  detourPointList[i + 1]['lat']?.toDouble() ?? 0,
+                  detourPointList[i + 1]['lon']?.toDouble() ?? 0,
+                  detourPointList[i + 2]['lat']?.toDouble() ?? 0,
+                  detourPointList[i + 2]['lon']?.toDouble() ?? 0,
                 );
-                detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
+                detourStops.add(
+                  BusStop.fromJson(point, routeId, stopRotation, false),
+                );
               }
             }
           }
@@ -160,7 +162,9 @@ class BlueBusApi {
   // Fetch all buses and their positions
   static Future<List<Bus>> fetchBuses() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/getVehiclePositions'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/getVehiclePositions'),
+      );
       if (response.statusCode != 200) throw Exception('Failed to load buses');
       final data = jsonDecode(response.body);
       final buses = <Bus>[];
@@ -185,10 +189,11 @@ class BlueBusApi {
       }
 
       return buses;
-    } catch (e){
-
+    } catch (e) {
       // on error return a blank list
       return [];
     }
   }
 }
+
+// TODO: Make bus routes have better fallback, so if one route fails to be processed it doesn't tank the rest of them
