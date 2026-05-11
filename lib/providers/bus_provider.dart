@@ -21,17 +21,17 @@ class BusProvider extends ChangeNotifier {
   BusProvider({required this.repository});
 
   void startRouteUpdates() {
-    loadRoutes();
+    loadRoutes((String r, String e) { }); // ignore sending any errors after the first call in map_screen.dart
 
     // reloads every 2 minutes
     _timer = Timer.periodic(const Duration(minutes: 2), (timer) {
-      loadRoutes();
+      loadRoutes((String r, String e) { });
     });
   }
 
-  Future<void> loadRoutes() async {
+  Future<void> loadRoutes(Function(String route, String error) onError) async {
     try {
-      _routes = await repository.fetchRoutes();
+      _routes = await repository.fetchRoutes(onError);
     } catch (e) {
       _error = e.toString();
       // let futureBuilder catch the error up in the chain
