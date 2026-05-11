@@ -9,6 +9,9 @@ import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/screens/new_features_screen.dart';
 import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/services/map_layers/base_routes_layer.dart';
+import 'package:bluebus/services/map_layers/journey_layer.dart';
+import 'package:bluebus/services/map_layers/live_buses_layer.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/composite_map_widget.dart';
@@ -68,8 +71,6 @@ double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   return angle;
 }
 
-
-
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
 
@@ -111,7 +112,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // In memory cache of favorited stop ids for quick lookup and immediate UI updates
   final Set<String> _favoriteStops = <String>{};
 
-
   Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
@@ -131,7 +131,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
-  final Map<String, Map<String, Marker>> _routeStopMarkers = {}; // maps from route to a map of stopID to marker
+  final Map<String, Map<String, Marker>> _routeStopMarkers =
+      {}; // maps from route to a map of stopID to marker
   // Whether a journey search overlay is currently active (shows only journey path)
   bool _journeyOverlayActive = false;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
@@ -175,27 +176,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _setupConnectivityMonitoring();
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
-    journeyLayer.init(_showBusSheet, _activeJourneyBusIds, _activeJourneyRoutes, context);
+    journeyLayer.init(
+      _showBusSheet,
+      _activeJourneyBusIds,
+      _activeJourneyRoutes,
+      context,
+    );
 
     hideJourney(); // Hide the journey layer until we're ready to use it
-    
-
-    // TODO: Make sure this still works when moved to line 197
-    // // Only update bus markers when buses change
-    // final busProvider = Provider.of<BusProvider>(context, listen: false);
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (busProvider.buses.isNotEmpty) {
-    //     _updateDisplayedBuses(busProvider.buses);
-    //   }
-    // });
-
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         _busProviderRef = Provider.of<BusProvider>(context, listen: false);
         _busProviderListener = () {
-          liveBusesLayer.init(_busProviderRef?.buses ?? [], _selectedRoutes, onBusClicked); // TODO: Should this init be somewhere else? I need it to have access to the busProvider I think
-
+          liveBusesLayer.init(
+            _busProviderRef?.buses ?? [],
+            _selectedRoutes,
+            onBusClicked,
+          ); // TODO: Should this init be somewhere else? I need it to have access to the busProvider I think
 
           final routes = _busProviderRef?.routes ?? [];
           final newFp = _computeRoutesFingerprint(routes);
@@ -272,7 +270,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // still keep context
   @override
   void didChangeDependencies() {
-    // debugPrint("******** Got didChangeDependencies call");
     super.didChangeDependencies();
     if (_dataLoadingFuture == null) {
       _dataLoadingFuture = _loadAllData();
@@ -280,35 +277,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
-
-    // debugPrint("******* Loading all data");
-
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
-    await theme.loadTheme(); 
-
-    // debugPrint("******* Loaded theme");
+    await theme.loadTheme();
 
     screenRadius = await ScreenCornerRadius.get(); // load screen radius
     screenRadiusLoaded = true;
 
-    // debugPrint("******* Loaded screenRadius");
-    
     //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
     LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
       // permission = await Geolocator.requestPermission();
       Position? pos = await Geolocator.getLastKnownPosition();
-      if (pos != null){
+      if (pos != null) {
         startLatLng = LatLng(pos.latitude, pos.longitude);
       }
     }
-    // debugPrint("******* Got geolocator position");
-    
 
-    // debugPrint("******* Loading canVibrate");
-
-            
     canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
@@ -342,11 +328,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         content: startupData.persistantMessage,
       );
     }
-    
-    // debugPrint("******* Loading all the data in parallel");
+
     // loading all this data in parallel
     await Future.wait([
-      _loadCustomMarkers(),
+      // _loadCustomMarkers(),
       busProvider.loadRoutes(),
       _loadSelectedRoutes(),
       _loadFavoriteStops(),
@@ -358,7 +343,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // await _loadRouteSpecificBusIcons();
     _updateAvailableRoutes(busProvider.routes);
     _cacheRouteOverlays(busProvider.routes);
-    
+
     debugPrint("******* Caching routes");
     baseRoutesLayer.cacheRoutes(busProvider.routes);
 
@@ -381,9 +366,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     busProvider.startBusUpdates();
     busProvider.startRouteUpdates();
     await Future.delayed(const Duration(milliseconds: 180));
-
-    // debugPrint("******* FINISHED ALL LOADING!!!!");
-    
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -470,115 +452,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
   }
 
-  Future<void> _loadCustomMarkers() async {
-    try {
-      // Load stop icons
-      // [These were moved to composite_map_widget.dart]
-      // _stopIcon = await resizeImage(
-      //   await rootBundle.load('assets/busStop.png'),
-      // );
-      // _rideStopIcon = await resizeImage(
-      //   await rootBundle.load('assets/busStopRide.png'),
-      // );
-      // _favStopIcon = await resizeImage(
-      //   await rootBundle.load('assets/favbusStop.png'),
-      // );
-      // _favRideStopIcon = await resizeImage(
-      //   await rootBundle.load('assets/favbusStopRide.png'),
-      // );
-      // _getOn = await MapImageService.resizeImage(await rootBundle.load('assets/getOn.png'));
-      // _getOff = await MapImageService.resizeImage(await rootBundle.load('assets/getOff.png'));
-      // TODO: Move this into map_image_service.dart
-
-      // Load route specific bus icons
-      // await _loadRouteSpecificBusIcons();
-      await MapImageService.loadData(); // TODO: This was already called inside loadAllData. Do we need to call it again?
-
-      // Refresh markers with new icons
-      if (mounted) {
-        _refreshAllMarkers();
-      }
-    } catch (e) {
-      // Fallback to default markers if custom loading fails
-      // _stopIcon = BitmapDescriptor.defaultMarkerWithHue(
-      //   BitmapDescriptor.hueAzure,
-      // );
-      // _rideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
-      //   BitmapDescriptor.hueAzure,
-      // );
-      // _favStopIcon = BitmapDescriptor.defaultMarkerWithHue(
-      //   BitmapDescriptor.hueAzure,
-      // );
-      // _favRideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
-      //   BitmapDescriptor.hueAzure,
-      // );
-    }
-  }
-
-  // // Load route specific bus icons from the backend
-  // Future<void> _loadRouteSpecificBusIcons() async {
-  //   try {
-  //     if (!RouteColorService.isInitialized) {
-  //       await RouteColorService.initialize();
-  //     }
-
-  //     // Check if we need to update cached assets based on version
-  //     final shouldRefreshAssets = await _shouldRefreshCachedAssets();
-
-  //     final routeIds = RouteColorService.definedRouteIds;
-
-  //     for (final routeId in routeIds) {
-  //       // Try to load from cache first if not forcing refresh
-  //       if (!shouldRefreshAssets) {
-  //         final cachedIcon = await _loadCachedBusIcon(routeId);
-  //         if (cachedIcon != null) {
-  //           _routeBusIcons[routeId] = cachedIcon;
-  //           continue;
-  //         }
-  //       }
-
-  //       // Load from backend if cache miss or forcing refresh
-  //       final imageUrl = RouteColorService.getRouteImageUrl(routeId);
-  //       if (imageUrl != null) {
-  //         await _loadRouteBusIcon(routeId, imageUrl);
-  //       } else {
-  //         _setFallbackBusIcon(routeId);
-  //       }
-  //     }
-  //   } catch (e) {
-  //     // Fallback to default bus icon
-  //     _busIcon = BitmapDescriptor.defaultMarkerWithHue(
-  //       BitmapDescriptor.hueYellow,
-  //     );
-  //   }
-  // }
-
-
-
-
-
-  // // Check if cached assets need to be refreshed based on backend version
-  // Future<bool> _shouldRefreshCachedAssets() async {
-  //   int frontEndVer;
-  //   frontEndVer = await getFrontEndImageVer();
-
-  //   try {
-  //     final backendImageVersion = await _getBackendImageVersion();
-  //     if (backendImageVersion == null) {
-  //       return true; // if you can't reach the server give up
-  //     }
-  //     if (int.parse(backendImageVersion) == frontEndVer) {
-  //       return false;
-  //     } else {
-  //       await setFrontEndImageVer(int.parse(backendImageVersion));
-  //       return true;
-  //     }
-  //   } catch (e) {
-  //     // On error, assume refresh needed
-  //     return true;
-  //   }
-  // }
-
   // Get minimum supported version from backend
   Future<StartupDataHolder?> _getStartupData() async {
     try {
@@ -608,42 +481,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
     return null;
   }
-
-  // // Get minimum supported version from backend
-  // Future<String?> _getBackendImageVersion() async {
-  //   try {
-  //     final response = await http.get(
-  //       Uri.parse('${BACKEND_URL}/getStartupInfo'),
-  //     );
-  //     if (response.statusCode == 200) {
-  //       final data = json.decode(response.body);
-  //       return data['bus_image_version'] as String?;
-  //     }
-  //   } catch (e) {
-  //     // Return null on error - will trigger refresh
-  //   }
-  //   return null;
-  // }
-
-  // // Load cached bus icon from SharedPreferences
-  // Future<BitmapDescriptor?> _loadCachedBusIcon(String routeId) async {
-  //   try {
-  //     final prefs = await SharedPreferences.getInstance();
-  //     final cachedBytes = prefs.getString('bus_icon_$routeId');
-  //     if (cachedBytes != null) {
-  //       final bytes = base64.decode(cachedBytes);
-  //       return BitmapDescriptor.fromBytes(bytes);
-  //     }
-  //   } catch (e) {
-  //     // Return null on error
-  //   }
-  //   return null;
-  // }
-
-
-
-
-
 
   Future<void> _loadFavoriteStops() async {
     try {
@@ -728,7 +565,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateAvailableRoutes(List<BusRouteLine> routes) {
-    // debugPrint("****** Got _updateAvailableRoutes call!!");
     final Map<String, String> routeIdToName = {};
     for (final r in routes) {
       if (!routeIdToName.containsKey(r.routeId)) {
@@ -764,13 +600,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
         _routeStopMarkers[routeKey] = {};
-        for (final stop in r.stops) { // iterate through all stops in this route
+        for (final stop in r.stops) {
+          // iterate through all stops in this route
           final isFavorite = _favoriteStops.contains(stop.id);
-          
+
           final marker = Marker(
-            markerId: MarkerId(
-              'stop_${stop.id}_${Object.hashAll(r.points)}',
-            ),
+            markerId: MarkerId('stop_${stop.id}_${Object.hashAll(r.points)}'),
             position: stop.location,
             flat: true,
             icon: isFavorite
@@ -810,8 +645,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           );
           _routeStopMarkers[routeKey]?[stop.id] = marker;
 
-          // gets first marker of this stop and adds it to the favorited stop markers 
-          if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
+          // gets first marker of this stop and adds it to the favorited stop markers
+          if (isFavorite &&
+              !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
             _displayedFavoriteStopMarkers[stop.id] = marker;
           }
           _stopIsRide[stop.id] = stop.isRide;
@@ -829,13 +665,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // update in memory cache and marker icons
       setState(() {
         _favoriteStops.add(stpid);
-        baseRoutesLayer.reload(); // Reload the markers to include the new favorite
+        baseRoutesLayer
+            .reload(); // Reload the markers to include the new favorite
       });
       _setStopFavorited(stpid, true);
     } else {}
-
-    
-
   }
 
   Future<void> _removeFavoriteStop(String stpid, String name) async {
@@ -847,7 +681,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // update in memory cache and marker icons
       setState(() {
         _favoriteStops.remove(stpid);
-        baseRoutesLayer.reload(); // Reload the markers to include the new favorite
+        baseRoutesLayer
+            .reload(); // Reload the markers to include the new favorite
       });
       _setStopFavorited(stpid, false);
     }
@@ -867,31 +702,31 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         markerId: m.markerId,
         position: m.position,
         icon: favored
-                ? (isRide
-                      ? _favRideStopIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueAzure,
-                            )
-                      : _favStopIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueAzure,
-                            ))
-                : (isRide
-                      ? _rideStopIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueAzure,
-                            )
-                      : _stopIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueAzure,
-                            )),
+            ? (isRide
+                  ? _favRideStopIcon ??
+                        BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueAzure,
+                        )
+                  : _favStopIcon ??
+                        BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueAzure,
+                        ))
+            : (isRide
+                  ? _rideStopIcon ??
+                        BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueAzure,
+                        )
+                  : _stopIcon ??
+                        BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueAzure,
+                        )),
         consumeTapEvents: m.consumeTapEvents,
         onTap: m.onTap,
         rotation: m.rotation,
         anchor: m.anchor,
       );
 
-      // gets first marker of this stop id and adds it to the favorited stop markers 
+      // gets first marker of this stop id and adds it to the favorited stop markers
       if (favored && !_displayedFavoriteStopMarkers.containsKey(stpid)) {
         _displayedFavoriteStopMarkers[stpid] = newMarker;
       }
@@ -925,8 +760,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           });
         }
       }
-      _displayedStopMarkers = selectedStopMarkers;
-      _updateAllDisplayedMarkers();
     });
   }
 
@@ -945,7 +778,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         if (polyline != null) selectedPolylines.add(polyline);
         final stops = _routeStopMarkers[routeKey];
         if (stops == null) continue;
-          
+
         stops.forEach((key, value) {
           if (!selectedStopMarkers.containsKey(key)) {
             selectedStopMarkers[key] = value;
@@ -954,99 +787,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
 
-    setState(() {
-      _displayedPolylines = selectedPolylines;
-      _displayedStopMarkers = selectedStopMarkers;
-      _updateAllDisplayedMarkers();
-    });
+    baseRoutesLayer.reload();
+    liveBusesLayer.reload();
+
     _updateDisplayedBuses(
       Provider.of<BusProvider>(context, listen: false).buses,
     );
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
-    debugPrint("****** Updating displayed buses");
-    // // null case or error contacting server case
-    // if (allBuses == []) return;
-
-    // final selectedBusMarkers = allBuses
-    //     .where((bus) => _selectedRoutes.contains(bus.routeId))
-    //     .map((bus) {
-    //       // Use backend color if available, otherwise fallback to service
-    //       final routeColor =
-    //           bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-
-    //       // Use route specific bus icon if available, otherwise fallback to default
-    //       BitmapDescriptor? busIcon;
-    //       if (_routeBusIcons.containsKey(bus.routeId)) {
-    //         busIcon = _routeBusIcons[bus.routeId];
-    //       } else if (_busIcon != null) {
-    //         busIcon = _busIcon;
-    //       } else {
-    //         busIcon = BitmapDescriptor.defaultMarkerWithHue(
-    //           _colorToHue(routeColor),
-    //         );
-    //       }
-
-    //       return Marker(
-    //         flat: true,
-    //         markerId: MarkerId('bus_${bus.id}'),
-    //         consumeTapEvents: true,
-    //         position: bus.position,
-    //         icon: busIcon!,
-    //         rotation: bus.heading,
-    //         anchor: const Offset(0.5, 0.5), // Center the icon on the position
-    //         onTap: () {
-    //           try {
-    //             Haptics.vibrate(HapticsType.light);
-    //           } catch (e) {}
-    //           _showBusSheet(bus.id);
-    //         },
-    //       );
-    //     })
-    //     .toSet();
-
     journeyLayer.refreshLiveBusMarkers(allBuses);
-
-    // Update journey bus markers if journey is active
-    // if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
-    //   _displayedJourneyBusMarkers.clear();
-    //   for (final bus in allBuses) {
-    //     // Show buses that are on routes used in the journey
-    //     if (_activeJourneyBusIds.contains(bus.id)) {
-    //       BitmapDescriptor busIcon = MapImageService.getBusIcon(bus);
-          
-
-    //       _displayedJourneyBusMarkers.add(
-    //         Marker(
-    //           flat: true,
-    //           markerId: MarkerId('journey_bus_${bus.id}'),
-    //           consumeTapEvents: true,
-    //           position: bus.position,
-    //           icon: busIcon!,
-    //           rotation: bus.heading,
-    //           anchor: const Offset(0.5, 0.5),
-    //           onTap: () => _showBusSheet(bus.id),
-    //         ),
-    //       );
-    //     }
-    //   }
-    // }
-
-    setState(() {
-      // _displayedBusMarkers = selectedBusMarkers;
-      _updateAllDisplayedMarkers(); // TODO: Do we still need this?
-
-      liveBusesLayer.reload();
-    });
-  }
-
-  void _updateAllDisplayedMarkers() {
-    _allDisplayedStopMarkers = _displayedStopMarkers.values.toSet()
-        .union(_displayedFavoriteStopMarkers.values.toSet())
-        .union(_displayedBusMarkers)
-        .union(_displayedJourneyMarkers)
-        .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
+    liveBusesLayer.reload();
   }
 
   // Show a red pin marker at search location
@@ -1064,16 +815,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _removeSearchLocationMarker() {
     _searchLocationMarker = null;
     setState(() {});
-  }
-
-  void _refreshAllMarkers() {
-    // TODO: Should all this be moved inside the MapImageService now that we're encapsulating everything in that?
-    final busProvider = Provider.of<BusProvider>(context, listen: false);
-    _refreshCachedStopMarkers();
-    // _refreshRouteBusIcons();
-    MapImageService.refreshRouteBusIcons(); 
-    _updateDisplayedRoutes();
-    _updateDisplayedBuses(busProvider.buses);
   }
 
   // Save selected routes to persistent storage
@@ -1101,10 +842,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       Provider.of<BusProvider>(context, listen: false).routes,
     );
   }
-
-
-
-
 
   void _showBusRoutesModal(List<BusRouteLine> allRouteLines) {
     showModalBottomSheet(
@@ -1136,7 +873,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _showSearchSheet() {
-    debugPrint(">>>>>>> SHOWING SEARCH SHEEEEEET");
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1209,7 +945,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       },
     );
-    _bottomSheetController?.closed.then((_) {hideJourney();});
+    _bottomSheetController?.closed.then((_) {
+      hideJourney();
+    });
   }
 
   void _showDirectionsSheet(
@@ -1284,10 +1022,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 }
               },
               onSelectJourney: (journey) {
-
                 currDisplayed = journey;
                 showJourney();
-                journeyLayer.setJourney(journey, getColor(context, ColorType.opposite));
+                journeyLayer.setJourney(
+                  journey,
+                  getColor(context, ColorType.opposite),
+                );
 
                 // TODO: Figure out how to change the visibility of the layers
 
@@ -1307,11 +1047,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       },
     );
-    _bottomSheetController?.closed.then((_) {hideJourney();});
+    _bottomSheetController?.closed.then((_) {
+      hideJourney();
+    });
   }
 
   _showJourneySheetOnReopen() {
-    debugPrint(">>>>> Showing journey sheet on reopen");
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1348,100 +1089,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       },
     ).whenComplete(() {
-      debugPrint("***** Modal bottom sheet is complete!!");
       hideJourney();
     });
   }
- 
-  // TODO: Put this into composite_map_widget.dart
-  // Marker _createBusMarker(Bus bus) {
-  //   final routeColor =
-  //       bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-  //   final icon =
-  //       _routeBusIcons[bus.routeId] ??
-  //       _busIcon ??
-  //       BitmapDescriptor.defaultMarkerWithHue(_colorToHue(routeColor));
-  //   return Marker(
-  //     flat: true,
-  //     markerId: MarkerId('bus_${bus.id}'),
-  //     consumeTapEvents: true,
-  //     position: bus.position,
-  //     icon: icon,
-  //     rotation: bus.heading,
-  //     anchor: const Offset(0.5, 0.5),
-  //     onTap: () => _showBusSheet(bus.id),
-  //   );
-  // }
-
-  // Display a Journey on the map
-  // void _displayJourneyOnMap(Journey journey, Color walkLineColor) async {
-    
-  // }
 
   void showJourney() {
-    debugPrint("**** showJourney call");
     journeyLayer.isVisible = true;
     baseRoutesLayer.isVisible = false;
     liveBusesLayer.isVisible = false;
   }
 
   void hideJourney() {
-    debugPrint("**** hideJourney call");
     journeyLayer.isVisible = false;
     baseRoutesLayer.isVisible = true;
     liveBusesLayer.isVisible = true;
   }
-
-  // Clear/hide the currently displayed journey overlays and return to normal route view
-  // void _clearJourneyOverlays() {
-  //   journeyLayer.clearJourney();
-  //   // if (!_journeyOverlayActive) return;
-  //   // _displayedJourneyPolylines.clear();
-  //   // _displayedJourneyMarkers.clear();
-  //   // _displayedJourneyBusMarkers.clear();
-  //   // _activeJourneyBusIds.clear();
-  //   // _activeJourneyRoutes.clear();
-  //   // _journeyOverlayActive = false;
-  //   // // making sure to remove search location marker when clearing journey
-  //   // _removeSearchLocationMarker();
-  //   // setState(() {});
-  // }
-
-  // // Haversine distance between two LatLngs in meters
-  // double _haversineDistanceMeters(LatLng a, LatLng b) {
-  //   const R = 6371000; // Earth radius in meters
-  //   final lat1 = a.latitude * math.pi / 180.0;
-  //   final lat2 = b.latitude * math.pi / 180.0;
-  //   final dLat = (b.latitude - a.latitude) * math.pi / 180.0;
-  //   final dLon = (b.longitude - a.longitude) * math.pi / 180.0;
-
-  //   final sa =
-  //       math.sin(dLat / 2) * math.sin(dLat / 2) +
-  //       math.cos(lat1) *
-  //           math.cos(lat2) *
-  //           math.sin(dLon / 2) *
-  //           math.sin(dLon / 2);
-  //   final c = 2 * math.atan2(math.sqrt(sa), math.sqrt(1 - sa));
-  //   return R * c;
-  // }
-
-  // // Find nearest index and its distance on polyline to target. Returns a pair [index, distanceMeters]
-  // List<dynamic> _nearestIndexAndDistanceOnPolyline(
-  //   List<LatLng> poly,
-  //   LatLng target,
-  // ) {
-  //   int bestIdx = 0;
-  //   double bestDist = double.infinity;
-  //   for (int i = 0; i < poly.length; i++) {
-  //     final p = poly[i];
-  //     final d = _haversineDistanceMeters(p, target);
-  //     if (d < bestDist) {
-  //       bestDist = d;
-  //       bestIdx = i;
-  //     }
-  //   }
-  //   return [bestIdx, bestDist];
-  // }
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
@@ -1463,8 +1125,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
   }
-
-
 
   void _showBusSheet(String busID) {
     showModalBottomSheet(
@@ -1550,7 +1210,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           onUnFavorite: _removeFavoriteStop,
           showBusSheet: (busId) {
             // When someone clicks "See all stops for this bus" this callback runs
-            debugPrint("Got 'See all stops' click for Bus ${busId}");
             Navigator.pop(context); // Close the current modal
             _showBusSheet(busId);
           },
@@ -1569,7 +1228,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           },
         );
       },
-    ).then((_) { hideJourney(); }); // Hide any displayed journey when the sheet is closed
+    ).then((_) {
+      hideJourney();
+    }); // Hide any displayed journey when the sheet is closed
   }
 
   // lighter function for when we need to get location
@@ -1601,8 +1262,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             ),
           );
           return null;
-        }
-        else {
+        } else {
           //Center map once right after user grants location permissions
           _centerOnLocation(true);
         }
@@ -1687,7 +1347,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   @override
   Widget build(BuildContext context) {
-    
     if (!globallPaddingHasBeenSet) {
       // set all padding
       // first, getting all the padding values
@@ -1697,29 +1356,28 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
       // screen buttons are 45 by 45 (diameter)
       // so they have a radius of 45/2 = 22.5
-      // so for perfectly spaced buttons, we 
-      // need to do screen radius - 22.5           
+      // so for perfectly spaced buttons, we
+      // need to do screen radius - 22.5
       double perfectPadding = (screenRadius?.bottomLeft ?? 0) - 22.5;
 
-      if (Platform.isIOS) perfectPadding -= 9; // the -9 just makes it look more pretty on ios 
+      if (Platform.isIOS)
+        perfectPadding -= 9; // the -9 just makes it look more pretty on ios
 
       globalTopPadding = flutterSafeAreaTop;
 
       // if we're padding less than 3 then its too rectangle.
       // default to just keeping it out of the safe area
-      if (perfectPadding < 3){
+      if (perfectPadding < 3) {
         globalBottomPadding = flutterSafeAreaBottom + 10;
         globalLeftRightPadding = 10;
-
       } else if ((perfectPadding < flutterSafeAreaBottom) && !Platform.isIOS) {
         // if the buttons are in the safe area, act rectangular
         // but not for iOS, because safe area isn't real on iOS
         globalBottomPadding = flutterSafeAreaBottom + 10;
         globalLeftRightPadding = 10;
-
       } else {
         // perfect padding is perfect! it keeps the buttons
-        // out of the safe area so we'll just use them 
+        // out of the safe area so we'll just use them
         globalBottomPadding = perfectPadding;
         globalLeftRightPadding = perfectPadding;
       }
@@ -1744,10 +1402,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   // lets us prevent back button on map page
                   canPop: false,
                   onPopInvokedWithResult: (didPop, result) {
-                    // when journey is showing and pop was attempted, clear journey
-                    // if (_journeyOverlayActive) {
-                    //   _clearJourneyOverlays();
-                    // }
                     hideJourney(); // Hide the journey if it's showing right now
 
                     // If showing a persistent bottom sheet, close it.
@@ -1765,74 +1419,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         mapLayers: [
                           baseRoutesLayer,
                           liveBusesLayer,
-                          journeyLayer
+                          journeyLayer,
                         ],
                         onMapCreated: _onMapCreated,
                       ),
-
-                      // underlying map layer (different ios and android)
-                      // Platform.isIOS
-                          // ? MapWidget(
-                          //     initialCenter: startLatLng,
-                          //     polylines: _journeyOverlayActive
-                          //         ? _displayedJourneyPolylines
-                          //         : _displayedPolylines.union(
-                          //             _displayedJourneyPolylines,
-                          //           ),
-                          //     markers: _journeyOverlayActive
-                          //         ? _displayedJourneyMarkers
-                          //               .union(_displayedJourneyBusMarkers)
-                          //               .union(
-                          //                 _searchLocationMarker != null
-                          //                     ? {_searchLocationMarker!}
-                          //                     : {},
-                          //               )
-                          //         : _allDisplayedStopMarkers,
-                          //     darkMapStyle: _darkMapStyle,
-                          //     lightMapStyle: _lightMapStyle,
-                          //     onMapCreated: _onMapCreated,
-                          //     onCameraMove: _onCameraMove,
-                          //     onCameraIdle: _onCameraIdle,
-                          //     myLocationEnabled: true,
-                          //     myLocationButtonEnabled: false,
-                          //     zoomControlsEnabled: true,
-                          //     mapToolbarEnabled: true,
-                          //   )
-                          // : AndroidMap(
-                          //     initialCenter: startLatLng,
-                          //     polylines: _journeyOverlayActive
-                          //         ? _displayedJourneyPolylines
-                          //         : _displayedPolylines.union(
-                          //             _displayedJourneyPolylines,
-                          //           ),
-                          //     staticMarkers: _journeyOverlayActive
-                          //         ? _displayedJourneyMarkers.union(
-                          //             _searchLocationMarker != null
-                          //                 ? {_searchLocationMarker!}
-                          //                 : {},
-                          //           )
-                          //         : _displayedStopMarkers.values.toSet()
-                          //               .union(_displayedFavoriteStopMarkers.values.toSet())
-                          //               .union(_displayedJourneyMarkers)
-                          //               .union(
-                          //                 _searchLocationMarker != null
-                          //                     ? {_searchLocationMarker!}
-                          //                     : {},
-                          //               ),
-                          //     darkMapStyle: _darkMapStyle,
-                          //     lightMapStyle: _lightMapStyle,
-                          //     dynamicMarkers: _journeyOverlayActive
-                          //         ? _displayedJourneyBusMarkers
-                          //         : _displayedBusMarkers,
-                          //     onMapCreated: _onMapCreated,
-                          //     onCameraMove: _onCameraMove,
-                          //     onCameraIdle: _onCameraIdle,
-                          //     //myLocationEnabled: true,
-                          //     myLocationButtonEnabled: false,
-                          //     //zoomControlsEnabled: true,
-                          //     //mapToolbarEnabled: true,
-                          //   ),
-
                       Padding(
                         padding: EdgeInsets.only(
                           top: globalTopPadding,

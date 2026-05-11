@@ -38,27 +38,22 @@ class MapImageService {
 
   // Check if cached assets need to be refreshed based on backend version
   static Future<bool> _shouldRefreshCachedAssets() async {
-    debugPrint("      HELLO THIS IS _shouldRefreshCachedAssets()");
     int frontEndVer;
     frontEndVer = await getFrontEndImageVer();
 
     try {
       final backendImageVersion = await _getBackendImageVersion();
       if (backendImageVersion == null) {
-        debugPrint("        Couldn't reach server! Forcing a refresh");
         return true; // if you can't reach the server give up
       }
       if (int.parse(backendImageVersion) == frontEndVer) {
-        debugPrint("        Images are up-to-date, no refresh needed");
         return false;
       } else {
-        debugPrint("        New images available, forcing a refresh");
         await setFrontEndImageVer(int.parse(backendImageVersion));
         return true;
       }
     } catch (e) {
       // On error, assume refresh needed
-      debugPrint("_shouldRefreshCachedAssets error: ${e.toString()}");
       return true;
     }
   }
@@ -74,7 +69,6 @@ class MapImageService {
         return data['bus_image_version'] as String?;
       }
     } catch (e) {
-      debugPrint("    getBackendImageVersion error: $e");
       // Return null on error - will trigger refresh
     }
     return null;
@@ -108,7 +102,6 @@ class MapImageService {
 
   // Set a fallback bus icon for a route
   static void _setFallbackBusIcon(String routeId) {
-    debugPrint("      Setting fallback bus icon for route ${routeId}");
     try {
       final routeColor = RouteColorService.getRouteColor(routeId);
       _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(
@@ -170,36 +163,20 @@ class MapImageService {
         await RouteColorService.initialize();
       }
 
-      debugPrint("    About to set shouldRefreshAssets variable");
       // Check if we need to update cached assets based on version
       final shouldRefreshAssets = await _shouldRefreshCachedAssets();
-      debugPrint("    Finished setting shouldRefreshAssets variable");
 
       final routeIds = RouteColorService.definedRouteIds;
 
       for (final routeId in routeIds) {
-        debugPrint(
-          "Loading icon for route ${routeId}. Should refresh assets? $shouldRefreshAssets",
-        );
-
-        // VERY SOON TODO: Uncomment this to make sure it doesn't try to load icons that are alerady in the cache?
-        // if (_routeBusIcons.containsKey(routeId)) {
-        //   debugPrint("* Icon already exists, no need to fetch it again!");
-        //   continue;
-        // }
-
         // Try to load from cache first if not forcing refresh
         if (!shouldRefreshAssets) {
-          debugPrint("    * Attempting to load from cache");
           final cachedIcon = await _loadCachedBusIcon(routeId);
           if (cachedIcon != null) {
-            debugPrint("    * Cache hit!");
             _routeBusIcons[routeId] = cachedIcon;
             continue;
           }
         }
-
-        debugPrint("    * Loading from backend...");
 
         // Load from backend if cache miss or forcing refresh
         final imageUrl = RouteColorService.getRouteImageUrl(routeId);
