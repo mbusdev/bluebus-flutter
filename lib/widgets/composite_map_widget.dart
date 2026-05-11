@@ -39,8 +39,6 @@ import 'package:widget_to_marker/widget_to_marker.dart';
 //   );
 // }
 
-
-
 // TODO: Add a Z-index to each thing in each CompositeMapLayer
 //    to explicitly define how things should be ordered
 
@@ -54,6 +52,7 @@ abstract class CompositeMapLayer {
   void setOnUpdate(Function() fn);
   void dispose() {}
 }
+
 // TODO: Extend the MapController back to map_screen.dart so it can move the camera and stuff
 class BaseRoutesLayer extends CompositeMapLayer {
   @override
@@ -78,7 +77,8 @@ class BaseRoutesLayer extends CompositeMapLayer {
   BitmapDescriptor? _favStopIcon;
   BitmapDescriptor? _favRideStopIcon;
 
-  Map<String, Map<String, Marker>> markersCache = {}; // TODO: Merge this with polylines variable?
+  Map<String, Map<String, Marker>> markersCache =
+      {}; // TODO: Merge this with polylines variable?
   Map<String, Polyline> polylinesCache = {};
 
   void setOnUpdate(Function() callback) {
@@ -86,9 +86,11 @@ class BaseRoutesLayer extends CompositeMapLayer {
     onUpdate = callback;
   }
 
-  void init(Set<String> favoriteStops_in,
+  void init(
+    Set<String> favoriteStops_in,
     Set<String> selectedRoutes_in,
-    Function(BusStop) onStopClicked_in) {
+    Function(BusStop) onStopClicked_in,
+  ) {
     favoriteStops = favoriteStops_in;
     selectedRoutes = selectedRoutes_in;
     onStopClicked = onStopClicked_in;
@@ -148,27 +150,30 @@ class BaseRoutesLayer extends CompositeMapLayer {
     markersCache.clear();
 
     for (final r in routesCache) {
-      if (!selectedRoutes.contains(r.routeId)) continue; // Skip deselected routes
+      if (!selectedRoutes.contains(r.routeId))
+        continue; // Skip deselected routes
       // Create unique key for each route variant (content-based hash)
       final routeKey = '${r.routeId}_${Object.hashAll(r.points)}';
       // Use backend color if available, otherwise fallback to service
       final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
 
-      if (!markersCache.containsKey(routeKey)) { // Prevent duplicate copies of the same stop on top of each other
+      if (!markersCache.containsKey(routeKey)) {
+        // Prevent duplicate copies of the same stop on top of each other
         markersCache[routeKey] = {};
-        for (final stop in r.stops) { // iterate through all stops in this route
+        for (final stop in r.stops) {
+          // iterate through all stops in this route
           // TODO: Implement favorite stops
           // final isFavorite = _favoriteStops.contains(stop.id);
-          
+
           final marker = Marker(
-            zIndexInt: 10, // Put bus stops on top of buses
-            markerId: MarkerId(
-              'stop_${stop.id}_${Object.hashAll(r.points)}',
-            ),
+            zIndexInt:
+                2000, // Put bus stops on top of buses, since all bus Z-indexes are between 0 and 999
+            markerId: MarkerId('stop_${stop.id}_${Object.hashAll(r.points)}'),
             position: stop.location,
             flat: true,
             // icon: BitmapDescriptor.defaultMarker,
-            icon: favoriteStops.contains(stop.id) // Used to be isFavorite
+            icon:
+                favoriteStops.contains(stop.id) // Used to be isFavorite
                 ? (stop.isRide
                       ? _favRideStopIcon ??
                             BitmapDescriptor.defaultMarkerWithHue(
@@ -198,7 +203,7 @@ class BaseRoutesLayer extends CompositeMapLayer {
 
           markersCache[routeKey]?[stop.id] = marker;
 
-          // gets first marker of this stop and adds it to the favorited stop markers 
+          // gets first marker of this stop and adds it to the favorited stop markers
           // if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
           //   _displayedFavoriteStopMarkers[stop.id] = marker;
           // }
@@ -214,11 +219,11 @@ class BaseRoutesLayer extends CompositeMapLayer {
   }
 
   void reloadPolylines() {
-
     polylinesCache.clear();
 
     for (final r in routesCache) {
-      if (!selectedRoutes.contains(r.routeId)) continue; // Skip deselected routes
+      if (!selectedRoutes.contains(r.routeId))
+        continue; // Skip deselected routes
 
       // Create unique key for each route variant (content-based hash)
       final routeKey = '${r.routeId}_${Object.hashAll(r.points)}';
@@ -239,7 +244,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
     }
 
     polylines = polylinesCache.values.toSet();
-
   }
 
   void cacheRoutes(List<BusRouteLine> routes) {
@@ -257,14 +261,13 @@ class BaseRoutesLayer extends CompositeMapLayer {
 
     if (isVisible) onUpdate();
   }
-
-  
 }
 
 class BusAnimationState {
-  Bus? prevBus; // Used to animate from the previous position to current position
+  Bus?
+  prevBus; // Used to animate from the previous position to current position
   Bus bus;
-  BitmapDescriptor busIcon;
+  // BitmapDescriptor busIcon;
   MarkerId markerId;
   int lastUpdated = 0;
 
@@ -277,14 +280,15 @@ class BusAnimationState {
 
   BusAnimationState({
     required this.bus,
-    required this.busIcon,
+    // required this.busIcon,
     required this.markerId,
-    this.lastUpdated = 0
+    this.lastUpdated = 0,
   }) {
     toHeading = bus.heading;
     toPosition = bus.position;
   }
 }
+
 class LiveBusesLayer extends CompositeMapLayer {
   @override
   bool isVisible = true;
@@ -297,7 +301,6 @@ class LiveBusesLayer extends CompositeMapLayer {
     debugPrint("Error: onUpdate called but callback was not registered!");
   };
 
-
   @override
   Set<Polyline> polylines = {};
 
@@ -306,16 +309,16 @@ class LiveBusesLayer extends CompositeMapLayer {
   int nextAnimationFrameTime = 0;
   int animationStartedTime = 0;
   static const int FRAME_DURATION = 100; // Frame duration in ms for animations
-  static const int ANIMATION_DURATION = 11000; //4000; // Animation duration in ms
+  static const int ANIMATION_DURATION =
+      11000; //4000; // Animation duration in ms
 
   AnimationController? controller;
   List<Bus> buses = [];
   Set<String> selectedRoutes = {};
   TickerProvider? tickerProvider;
 
-
-
-  Map<String, BusAnimationState> busAnimationCache = {}; // Maps Bus ID -> BusAnimationState
+  Map<String, BusAnimationState> busAnimationCache =
+      {}; // Maps Bus ID -> BusAnimationState
 
   Function(Bus b) onBusClicked = (Bus b) {
     debugPrint("Error: onBusClicked callback was called but never intiialized");
@@ -329,20 +332,22 @@ class LiveBusesLayer extends CompositeMapLayer {
   void initWithTickerProvider(TickerProvider tickerProviderIn) {
     debugPrint("******* Initting with animation controller!!");
     tickerProvider = tickerProviderIn;
-    controller = AnimationController(duration: const Duration(milliseconds: ANIMATION_DURATION), vsync: tickerProvider!);
-
+    controller = AnimationController(
+      duration: const Duration(milliseconds: ANIMATION_DURATION),
+      vsync: tickerProvider!,
+    );
   }
 
-  void init(List<Bus> buses_in,
+  void init(
+    List<Bus> buses_in,
     Set<String> selectedRoutes_in,
-    Function(Bus b) onBusClicked_in) {
+    Function(Bus b) onBusClicked_in,
+  ) {
     buses = buses_in;
     selectedRoutes = selectedRoutes_in;
     onBusClicked = onBusClicked_in;
 
-    
-
-    MapImageService.loadData();
+    // MapImageService.loadData(); // Testing NOT including this since it's already happening inside map_screen.dart on app load. Looks like commenting this out fixed the weird marker problems
   }
 
   Marker createBusMarker(Bus bus) {
@@ -360,133 +365,157 @@ class LiveBusesLayer extends CompositeMapLayer {
   }
 
   void updateAnimation() {
-
     // debugPrint("* updateAnimation call! busAnimationCache has ${busAnimationCache.keys.length} keys");
     // debugPrint("        Animation value is ${animation.value}");
     // debugPrint("* selectedRoutes is ${selectedRoutes}");
 
     DateTime now = DateTime.now();
 
-    markers = busAnimationCache.keys.where((String busId) {
-      // debugPrint("Checking to see if we should add marker ${busAnimationCache[busId]?.bus.routeId}: ${selectedRoutes.contains(busAnimationCache[busId]?.bus.routeId)}");
-      return selectedRoutes.contains(busAnimationCache[busId]?.bus.routeId);
-  })
-      .map((String busId) {
-        LatLng interpolatedPosition;
-        // debugPrint("Adding marker for ${busId}");
-        double interpolatedHeading = busAnimationCache[busId]!.bus.heading;
-        double animatedPercentage = min((now.millisecondsSinceEpoch - busAnimationCache[busId]!.lastUpdated) / ANIMATION_DURATION, 1.0);
-
-        // debugPrint("animatedPercentage is ${animatedPercentage.toStringAsFixed(2)}");
-
-        if (busAnimationCache[busId]?.prevBus == null) {
-          // If this is the first time we've seen this bus, there won't be a previous position to animate from
-          interpolatedPosition = busAnimationCache[busId]!.bus.position;
-        } else {
-          LatLng? oldPosition = busAnimationCache[busId]?.fromPosition;
-          LatLng? newPosition = busAnimationCache[busId]?.toPosition;
-
-          interpolatedPosition = LatLng(
-            animatedPercentage * (newPosition!.latitude - oldPosition!.latitude) + oldPosition!.latitude,
-            animatedPercentage * (newPosition!.longitude - oldPosition!.longitude) + oldPosition!.longitude
+    markers = busAnimationCache.keys
+        .where((String busId) {
+          // debugPrint("Checking to see if we should add marker ${busAnimationCache[busId]?.bus.routeId}: ${selectedRoutes.contains(busAnimationCache[busId]?.bus.routeId)}");
+          return selectedRoutes.contains(busAnimationCache[busId]?.bus.routeId);
+        })
+        .map((String busId) {
+          LatLng interpolatedPosition;
+          // debugPrint("Adding marker for ${busId}");
+          double interpolatedHeading = busAnimationCache[busId]!.bus.heading;
+          double animatedPercentage = min(
+            (now.millisecondsSinceEpoch -
+                    busAnimationCache[busId]!.lastUpdated) /
+                ANIMATION_DURATION,
+            1.0,
           );
 
-          busAnimationCache[busId]?.lastInterpolatedPosition = interpolatedPosition;
-          // TODO: Figure out why the buses are still jumpy? They might not be anymore actually
+          // debugPrint("animatedPercentage is ${animatedPercentage.toStringAsFixed(2)}");
 
-          // NOTE: Combined with the "has the bus moved at all" check, this might cause problems if the bus is staying still at a stop light? Double check this
+          if (busAnimationCache[busId]?.prevBus == null) {
+            // If this is the first time we've seen this bus, there won't be a previous position to animate from
+            interpolatedPosition = busAnimationCache[busId]!.bus.position;
+          } else {
+            LatLng? oldPosition = busAnimationCache[busId]?.fromPosition;
+            LatLng? newPosition = busAnimationCache[busId]?.toPosition;
 
-          double headingDelta = (busAnimationCache[busId]!.fromHeading! - busAnimationCache[busId]!.toHeading!);
+            interpolatedPosition = LatLng(
+              animatedPercentage *
+                      (newPosition!.latitude - oldPosition!.latitude) +
+                  oldPosition!.latitude,
+              animatedPercentage *
+                      (newPosition!.longitude - oldPosition!.longitude) +
+                  oldPosition!.longitude,
+            );
 
-          if (headingDelta.abs() > (360 + headingDelta).abs()) {
-            // Might need to fix this
-            headingDelta = 360 + headingDelta; // Turn the tightest direction possible
+            busAnimationCache[busId]?.lastInterpolatedPosition =
+                interpolatedPosition;
+            // TODO: Figure out why the buses are still jumpy? They might not be anymore actually
+
+            // NOTE: Combined with the "has the bus moved at all" check, this might cause problems if the bus is staying still at a stop light? Double check this
+
+            double headingDelta =
+                (busAnimationCache[busId]!.fromHeading! -
+                busAnimationCache[busId]!.toHeading!);
+
+            if (headingDelta.abs() > (360 + headingDelta).abs()) {
+              // Might need to fix this
+              headingDelta =
+                  360 + headingDelta; // Turn the tightest direction possible
+            }
+
+            if ((headingDelta).abs() < 120) {
+              // Don't animate heading changes of more than 120 degrees to avoid weird spinning if the bus turns 180
+
+              interpolatedHeading =
+                  animatedPercentage *
+                      (busAnimationCache[busId]!.toHeading! -
+                          busAnimationCache[busId]!.fromHeading!) +
+                  busAnimationCache[busId]!.fromHeading!;
+            }
           }
 
-          if ((headingDelta).abs() < 120) {
-            // Don't animate heading changes of more than 120 degrees to avoid weird spinning if the bus turns 180
+          busAnimationCache[busId]?.lastInterpolatedHeading =
+              interpolatedHeading;
+          busAnimationCache[busId]?.lastInterpolatedPosition =
+              interpolatedPosition;
 
-            interpolatedHeading = animatedPercentage * (busAnimationCache[busId]!.toHeading! - busAnimationCache[busId]!.fromHeading!) + busAnimationCache[busId]!.fromHeading!;
-          }
-        }
+          return Marker(
+            flat: true,
+            zIndexInt:
+                busId.hashCode.abs() %
+                1000, // To prevent buses from fighting over who's on top and causing flickering
+            markerId: busAnimationCache[busId]!.markerId,
+            consumeTapEvents: true,
+            position: interpolatedPosition,
+            // icon: busAnimationCache[busId]!.busIcon,
+            icon: MapImageService.getBusIcon(busAnimationCache[busId]!.bus),
+            rotation: interpolatedHeading,
+            anchor: const Offset(0.5, 0.5), // Center the icon on the position
+            onTap: () {
+              try {
+                Haptics.vibrate(HapticsType.light);
+              } catch (e) {}
+              onBusClicked(busAnimationCache[busId]!.bus);
+              // _showBusSheet(bus.id);
+            },
+          );
 
-        busAnimationCache[busId]?.lastInterpolatedHeading = interpolatedHeading;
-        busAnimationCache[busId]?.lastInterpolatedPosition = interpolatedPosition;
-
-        return Marker(
-          flat: true,
-          zIndexInt: 1,
-          markerId: busAnimationCache[busId]!.markerId,
-          consumeTapEvents: true,
-          position: interpolatedPosition,
-          icon: busAnimationCache[busId]!.busIcon,
-          rotation: interpolatedHeading,
-          anchor: const Offset(0.5, 0.5), // Center the icon on the position
-          onTap: () {
-            try {
-              Haptics.vibrate(HapticsType.light);
-            } catch (e) {}
-            onBusClicked(busAnimationCache[busId]!.bus);
-            // _showBusSheet(bus.id);
-          },
-        );
-
-        // return Marker();
-      }).toSet();
+          // return Marker();
+        })
+        .toSet();
 
     // debugPrint("***** Finished updateAnimation() call, we now have ${markers.length} markers");
 
     // markers = buses
-      // busAnimationCache.where((bus) => selectedRoutes.contains(bus.routeId))
-      // // .map((bus) {
-      // .forEach((bus) {
+    // busAnimationCache.where((bus) => selectedRoutes.contains(bus.routeId))
+    // // .map((bus) {
+    // .forEach((bus) {
 
-      //   // Update all cached markers with new location data (location is contained inside bus object)
-      //   if (busAnimationCache.containsKey(bus.id)) {
-      //     busAnimationCache[bus.id]?.prevBus = busAnimationCache[bus.id]?.bus;
-      //     busAnimationCache[bus.id]?.bus = bus;
-      //   } else {
-      //     busAnimationCache[bus.id] = BusAnimationState(
-      //       bus: bus,
-      //       busIcon: MapImageService.getBusIcon(bus),
-      //       markerId: MarkerId('bus_${bus.id}')
-      //     );
-      //   }
-      // });
+    //   // Update all cached markers with new location data (location is contained inside bus object)
+    //   if (busAnimationCache.containsKey(bus.id)) {
+    //     busAnimationCache[bus.id]?.prevBus = busAnimationCache[bus.id]?.bus;
+    //     busAnimationCache[bus.id]?.bus = bus;
+    //   } else {
+    //     busAnimationCache[bus.id] = BusAnimationState(
+    //       bus: bus,
+    //       busIcon: MapImageService.getBusIcon(bus),
+    //       markerId: MarkerId('bus_${bus.id}')
+    //     );
+    //   }
+    // });
 
-      // //TODO: Start the animation here!
-      // startAnimation();
+    // //TODO: Start the animation here!
+    // startAnimation();
 
-      //   // Use route specific bus icon if available, otherwise fallback to default
-      //   BitmapDescriptor? busIcon = MapImageService.getBusIcon(bus);
+    //   // Use route specific bus icon if available, otherwise fallback to default
+    //   BitmapDescriptor? busIcon = MapImageService.getBusIcon(bus);
 
-      //   // NEXT STEPS TODO: Get bus animations working on android, and get the live updating to work!
+    //   // NEXT STEPS TODO: Get bus animations working on android, and get the live updating to work!
 
-      //   // Maybe try Project SmoothBus(TM) again?
+    //   // Maybe try Project SmoothBus(TM) again?
 
-      //   return Marker(
-      //     flat: true,
-      //     markerId: MarkerId('bus_${bus.id}'),
-      //     consumeTapEvents: true,
-      //     position: bus.position,
-      //     icon: busIcon,
-      //     rotation: bus.heading,
-      //     anchor: const Offset(0.5, 0.5), // Center the icon on the position
-      //     onTap: () {
-      //       try {
-      //         Haptics.vibrate(HapticsType.light);
-      //       } catch (e) {}
-      //       onBusClicked(bus);
-      //       // _showBusSheet(bus.id);
-      //     },
-      //   );
-      // })
-      // .toSet();
+    //   return Marker(
+    //     flat: true,
+    //     markerId: MarkerId('bus_${bus.id}'),
+    //     consumeTapEvents: true,
+    //     position: bus.position,
+    //     icon: busIcon,
+    //     rotation: bus.heading,
+    //     anchor: const Offset(0.5, 0.5), // Center the icon on the position
+    //     onTap: () {
+    //       try {
+    //         Haptics.vibrate(HapticsType.light);
+    //       } catch (e) {}
+    //       onBusClicked(bus);
+    //       // _showBusSheet(bus.id);
+    //     },
+    //   );
+    // })
+    // .toSet();
   }
 
   void startAnimation() {
     DateTime now = DateTime.now();
-    if (animationStartedTime + ANIMATION_DURATION > now.millisecondsSinceEpoch) {
+    if (animationStartedTime + ANIMATION_DURATION >
+        now.millisecondsSinceEpoch) {
       return; // Prevent starting the same animation twice if startAnimation() gets multiple calls
     }
 
@@ -497,7 +526,6 @@ class LiveBusesLayer extends CompositeMapLayer {
     animationStartedTime = now.millisecondsSinceEpoch;
 
     // TODO: Don't start the animation if it's already going
-
 
     // controller?.reset(); // Stop all previous animations
     // WHY DOES IT BREAK WHEN THIS ISN'T HERE????
@@ -512,11 +540,13 @@ class LiveBusesLayer extends CompositeMapLayer {
         // debugPrint("tick");
         DateTime now = DateTime.now();
         if (now.millisecondsSinceEpoch < nextAnimationFrameTime) return;
-        nextAnimationFrameTime = now.millisecondsSinceEpoch + FRAME_DURATION; // 100ms frametimes
+        nextAnimationFrameTime =
+            now.millisecondsSinceEpoch + FRAME_DURATION; // 100ms frametimes
 
         // debugPrint("****** Got animation tick!");
         updateAnimation();
-        if (isVisible) onUpdate(); // Tell the CompositeMapWidget to update (CompositeMapWidget calls setState inside onUpdate)
+        if (isVisible)
+          onUpdate(); // Tell the CompositeMapWidget to update (CompositeMapWidget calls setState inside onUpdate)
       });
 
     animation.addStatusListener((AnimationStatus status) {
@@ -528,12 +558,12 @@ class LiveBusesLayer extends CompositeMapLayer {
 
     controller?.forward();
     controller?.repeat();
-    
-    
+
     debugPrint("***** Finished starting animation");
   }
 
-  void reload() { // Called when parent has new live bus GPS data to tell us about!
+  void reload() {
+    // Called when parent has new live bus GPS data to tell us about!
 
     // null case or error contacting server case
     if (buses == []) return;
@@ -541,89 +571,103 @@ class LiveBusesLayer extends CompositeMapLayer {
     DateTime now = DateTime.now();
 
     // markers = buses
-      buses.where((bus) => selectedRoutes.contains(bus.routeId))
-      // .map((bus) {
-      .forEach((bus) {
+    buses.where((bus) => selectedRoutes.contains(bus.routeId))
+    // .map((bus) {
+    .forEach((bus) {
+      // Update all cached markers with new location data (location is contained inside bus object)
+      if (busAnimationCache.containsKey(bus.id) &&
+          busAnimationCache[bus.id]!.lastUpdated + 30000 >
+              now.millisecondsSinceEpoch) {
+        // If the last bus position is super old and we try to animate it, it appears to "skate" across the map from its old position to its new position, ignoring streets entirely. It looks really funky, so if the last updated time is more than 30 seconds old, skip the animation
 
-        // Update all cached markers with new location data (location is contained inside bus object)
-        if (busAnimationCache.containsKey(bus.id)
-          && busAnimationCache[bus.id]!.lastUpdated + 30000 > now.millisecondsSinceEpoch) {
-            // If the last bus position is super old and we try to animate it, it appears to "skate" across the map from its old position to its new position, ignoring streets entirely. It looks really funky, so if the last updated time is more than 30 seconds old, skip the animation
-          
-          if (busAnimationCache[bus.id]?.bus.position == bus.position
-            && busAnimationCache[bus.id]?.bus.heading == bus.heading
-            && busAnimationCache[bus.id]!.lastUpdated + ANIMATION_DURATION + 200> now.millisecondsSinceEpoch) {
-              // debugPrint(">>>> Bus position has not changed! Skipping animation for ${bus.id}");
-            // If the bus position hasn't changed and the bus was updated recently, skip it!
-            return;
-          }
-
-          busAnimationCache[bus.id]!.lastUpdated = now.millisecondsSinceEpoch;
-
-
-          busAnimationCache[bus.id]?.prevBus = busAnimationCache[bus.id]?.bus;
-          busAnimationCache[bus.id]?.bus = bus;
-          busAnimationCache[bus.id]?.busIcon = MapImageService.getBusIcon(bus);
-
-          busAnimationCache[bus.id]?.fromPosition = busAnimationCache[bus.id]?.lastInterpolatedPosition;
-          busAnimationCache[bus.id]?.fromHeading = busAnimationCache[bus.id]?.lastInterpolatedHeading;
-          busAnimationCache[bus.id]?.toPosition = bus.position;
-          busAnimationCache[bus.id]?.toHeading = bus.heading;
-
-        } else {
-          // If we get here, the previous position either doesn't exist or is too old. Create a new BusAnimationState from scratch
-
-          busAnimationCache[bus.id] = BusAnimationState(
-            bus: bus,
-            busIcon: MapImageService.getBusIcon(bus),
-            markerId: MarkerId('bus_${bus.id}'),
-            lastUpdated: now.millisecondsSinceEpoch
-          );
+        if (busAnimationCache[bus.id]?.bus.position == bus.position &&
+            busAnimationCache[bus.id]?.bus.heading == bus.heading &&
+            busAnimationCache[bus.id]!.lastUpdated + ANIMATION_DURATION + 200 >
+                now.millisecondsSinceEpoch) {
+          // debugPrint(">>>> Bus position has not changed! Skipping animation for ${bus.id}");
+          // If the bus position hasn't changed and the bus was updated recently, skip it!
+          return;
         }
-      });
 
-      //TODO: Start the animation here!
-      startAnimation();
+        busAnimationCache[bus.id]!.lastUpdated = now.millisecondsSinceEpoch;
 
-        // // Use route specific bus icon if available, otherwise fallback to default
-        // BitmapDescriptor? busIcon = MapImageService.getBusIcon(bus);
+        busAnimationCache[bus.id]?.prevBus = busAnimationCache[bus.id]?.bus;
+        busAnimationCache[bus.id]?.bus = bus;
+        // busAnimationCache[bus.id]?.busIcon = MapImageService.getBusIcon(bus);
 
-        // // NEXT STEPS TODO: Get bus animations working on android, and get the live updating to work!
+        busAnimationCache[bus.id]?.fromPosition =
+            busAnimationCache[bus.id]?.lastInterpolatedPosition;
+        busAnimationCache[bus.id]?.fromHeading =
+            busAnimationCache[bus.id]?.lastInterpolatedHeading;
+        busAnimationCache[bus.id]?.toPosition = bus.position;
+        busAnimationCache[bus.id]?.toHeading = bus.heading;
+      } else {
+        // If we get here, the previous position either doesn't exist or is too old. Create a new BusAnimationState from scratch
 
-        // // Maybe try Project SmoothBus(TM) again?
+        busAnimationCache[bus.id] = BusAnimationState(
+          bus: bus,
+          // busIcon: MapImageService.getBusIcon(bus),
+          markerId: MarkerId('bus_${bus.id}'),
+          lastUpdated: now.millisecondsSinceEpoch,
+        );
+        // // TODO: This runs for EVERY bus route, so even if we're already downloading the icon for a Bursley-Baits bus, it'll try to download the icon for EVERY Bursley-Baits bus on the map
+        // // NEXT STEPS TODO: Figure out if the cache is working, and do some live testing on my phone to make sure.
+        // if (!MapImageService.isBusIconAvailable(bus)) {
+        //   MapImageService.ensureRouteIconIsLoaded(bus.routeId).then((
+        //     BitmapDescriptor? icon,
+        //   ) {
+        //     // Add the icon to the cache when it's ready
+        //     if (icon == null) return;
 
-        // return Marker(
-        //   flat: true,
-        //   markerId: MarkerId('bus_${bus.id}'),
-        //   consumeTapEvents: true,
-        //   position: bus.position,
-        //   icon: busIcon,
-        //   rotation: bus.heading,
-        //   anchor: const Offset(0.5, 0.5), // Center the icon on the position
-        //   onTap: () {
-        //     try {
-        //       Haptics.vibrate(HapticsType.light);
-        //     } catch (e) {}
-        //     onBusClicked(bus);
-        //     // _showBusSheet(bus.id);
-        //   },
-        // );
-      // })
-      // .toSet();
+        //     for (final state in busAnimationCache.values) {
+        //       if (state.bus.routeId == bus.routeId) {
+        //         state.busIcon = icon;
+        //       }
+        //     }
+        //   });
+        // }
+      }
+    });
+
+    //TODO: Start the animation here!
+    startAnimation();
+
+    // // Use route specific bus icon if available, otherwise fallback to default
+    // BitmapDescriptor? busIcon = MapImageService.getBusIcon(bus);
+
+    // // NEXT STEPS TODO: Get bus animations working on android, and get the live updating to work!
+
+    // // Maybe try Project SmoothBus(TM) again?
+
+    // return Marker(
+    //   flat: true,
+    //   markerId: MarkerId('bus_${bus.id}'),
+    //   consumeTapEvents: true,
+    //   position: bus.position,
+    //   icon: busIcon,
+    //   rotation: bus.heading,
+    //   anchor: const Offset(0.5, 0.5), // Center the icon on the position
+    //   onTap: () {
+    //     try {
+    //       Haptics.vibrate(HapticsType.light);
+    //     } catch (e) {}
+    //     onBusClicked(bus);
+    //     // _showBusSheet(bus.id);
+    //   },
+    // );
+    // })
+    // .toSet();
   }
-
 
   // TODO: Dispose of the AnimationController when done!
   void dispose() {
     controller?.dispose();
   }
-
 }
 
 class JourneyLayer extends CompositeMapLayer {
   // maximum allowed distance (meters) from a stop to a candidate polyline point
   static const double _maxMatchDistanceMeters = 150.0;
-
 
   @override
   bool isVisible = true;
@@ -634,7 +678,9 @@ class JourneyLayer extends CompositeMapLayer {
   @override
   Function() onUpdate = () {};
 
-  Function(String s) _showBusSheet = (String s) {debugPrint("Error: _showBusSheet was called but callback was never set");};
+  Function(String s) _showBusSheet = (String s) {
+    debugPrint("Error: _showBusSheet was called but callback was never set");
+  };
 
   BitmapDescriptor? _getOn;
   BitmapDescriptor? _getOff;
@@ -654,7 +700,12 @@ class JourneyLayer extends CompositeMapLayer {
     _mapController = mapController_in;
   }
 
-  void init(Function(String s) showBusSheet_in, Set<String> activeJourneyBusIds_in, Set<String> activeJourneyRoutes_in, BuildContext context_in) {
+  void init(
+    Function(String s) showBusSheet_in,
+    Set<String> activeJourneyBusIds_in,
+    Set<String> activeJourneyRoutes_in,
+    BuildContext context_in,
+  ) {
     // activeJourneyBusIds = activeJourneyBusIds_in;
     // activeJourneyRoutes = activeJourneyRoutes_in;
     // TODO: Get rid of activeJourneyBusIds and activeJourneyRoutes as they're passed in here
@@ -664,12 +715,20 @@ class JourneyLayer extends CompositeMapLayer {
   }
 
   Future<void> loadMarkers() async {
-    _getOn = await MapImageService.resizeImage(await rootBundle.load('assets/getOn.png'));
-    _getOff = await MapImageService.resizeImage(await rootBundle.load('assets/getOff.png'));
-    _destination = await MapImageService.resizeImage(await rootBundle.load('assets/destination.png'));
-    _start = await MapImageService.resizeImage(await rootBundle.load('assets/start.png'));
+    _getOn = await MapImageService.resizeImage(
+      await rootBundle.load('assets/getOn.png'),
+    );
+    _getOff = await MapImageService.resizeImage(
+      await rootBundle.load('assets/getOff.png'),
+    );
+    _destination = await MapImageService.resizeImage(
+      await rootBundle.load('assets/destination.png'),
+    );
+    _start = await MapImageService.resizeImage(
+      await rootBundle.load('assets/start.png'),
+    );
   }
-  
+
   void setOnUpdate(Function() callback) {
     debugPrint("****** got setOnUpdate call!");
     onUpdate = callback;
@@ -681,7 +740,7 @@ class JourneyLayer extends CompositeMapLayer {
       // Show buses that are on routes used in the journey
       if (activeJourneyBusIds.contains(bus.id)) {
         BitmapDescriptor busIcon = MapImageService.getBusIcon(bus);
-        
+
         liveBusMarkers.add(
           Marker(
             flat: true,
@@ -703,8 +762,6 @@ class JourneyLayer extends CompositeMapLayer {
       routesCache[l.routeId] = l;
     }
   }
-
-
 
   // Haversine distance between two LatLngs in meters
   double _haversineDistanceMeters(LatLng a, LatLng b) {
@@ -775,8 +832,11 @@ class JourneyLayer extends CompositeMapLayer {
     }
   }
 
-
-  Future<void> addBusLegMarkersAndPolylines(Leg leg, Journey journey, int legIndex) async {
+  Future<void> addBusLegMarkersAndPolylines(
+    Leg leg,
+    Journey journey,
+    int legIndex,
+  ) async {
     // This accepts a bus leg that goes from, e.g. CCTC (C251) through several stops to a destination, e.g. Stop C251
     // and adds the necessary markers and polylines to the markers and polylines Sets
 
@@ -791,7 +851,11 @@ class JourneyLayer extends CompositeMapLayer {
     final LatLng? endLatLng = getLatLongFromStopID(leg.destinationID);
 
     if (startLatLng != null && endLatLng != null && line?.points != null) {
-      List<LatLng>? segment = _extractRouteSegment(line!.points, startLatLng, endLatLng);
+      List<LatLng>? segment = _extractRouteSegment(
+        line!.points,
+        startLatLng,
+        endLatLng,
+      );
       if (segment == null) {
         debugPrint("ERROR: Line segment is null!");
 
@@ -826,7 +890,9 @@ class JourneyLayer extends CompositeMapLayer {
         // Making sure the marker has a valid location
         debugPrint("Can add start/end markers!");
 
-        BitmapDescriptor iconBitmap = await RouteIcon.small(leg.rt!).toBitmapDescriptor();
+        BitmapDescriptor iconBitmap = await RouteIcon.small(
+          leg.rt!,
+        ).toBitmapDescriptor();
 
         // TODO: See what the UI team says about this--if it looks good, add an extra method to the RouteIcon class that generates a bitmap instead of having to render this whole thing to the widget tree (it'll be MUCH faster)
 
@@ -838,7 +904,6 @@ class JourneyLayer extends CompositeMapLayer {
             icon:
                 // _getOn ??
                 iconBitmap ??
-
                 BitmapDescriptor.defaultMarkerWithHue(
                   colorToHue(RouteColorService.getRouteColor(leg.rt!)),
                 ),
@@ -876,18 +941,21 @@ class JourneyLayer extends CompositeMapLayer {
         // );
       }
     }
-
-
-
   }
 
-  void addWalkingLegMarkersAndPolylines(Leg leg, Journey journey, int legIndex) {
+  void addWalkingLegMarkersAndPolylines(
+    Leg leg,
+    Journey journey,
+    int legIndex,
+  ) {
     // Walking legs add a dotted line between origin and destination
     // First try to get the locations from origin and destination IDs
     LatLng? startLatLng = getLatLongFromStopID(leg.originID);
     LatLng? endLatLng = getLatLongFromStopID(leg.destinationID);
 
-    debugPrint("**** Adding walking leg markers! from ${startLatLng} to ${endLatLng}");
+    debugPrint(
+      "**** Adding walking leg markers! from ${startLatLng} to ${endLatLng}",
+    );
 
     // Walking leg information
 
@@ -925,7 +993,6 @@ class JourneyLayer extends CompositeMapLayer {
     //     // ignore GPS resolution failure
     //   }
     // }
-
 
     // NEXT STEPS TODO: Get these walking lines working and see if I can fix the straight-line bus segment problem (where it says ERROR: Line segment is null!)
 
@@ -995,7 +1062,9 @@ class JourneyLayer extends CompositeMapLayer {
       jointType: JointType.round,
       polylineId: PolylineId('walking_${journey.hashCode}_$legIndex'),
       points: pathCoords,
-      color: (context != null) ? getColor(context!, ColorType.mapWalkingLine) : Colors.black, // Walk line color
+      color: (context != null)
+          ? getColor(context!, ColorType.mapWalkingLine)
+          : Colors.black, // Walk line color
       width: 8, // line width
       patterns: [
         PatternItem.dot,
@@ -1005,7 +1074,6 @@ class JourneyLayer extends CompositeMapLayer {
     );
 
     polylines.add(walkingPolyline);
-
   }
 
   void addRouteStartMarker(LatLng position, Journey journey) {
@@ -1016,9 +1084,7 @@ class JourneyLayer extends CompositeMapLayer {
         position: position,
         icon:
             _start ??
-          BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen,
-          ),
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
       ),
     );
   }
@@ -1027,20 +1093,17 @@ class JourneyLayer extends CompositeMapLayer {
     markers.add(
       Marker(
         flat: true,
-        markerId: MarkerId(
-          'journey_final_destination_${journey.hashCode}',
-        ),
+        markerId: MarkerId('journey_final_destination_${journey.hashCode}'),
         position: position,
         icon:
-          _destination ??
-          BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueRed,
-          ),
+            _destination ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       ),
     );
   }
 
-  void setJourney(Journey journey, Color walkLineColor) { // Don't stop believin'
+  void setJourney(Journey journey, Color walkLineColor) {
+    // Don't stop believin'
 
     debugPrint("************ got setJourney call");
 
@@ -1060,7 +1123,9 @@ class JourneyLayer extends CompositeMapLayer {
       // if (leg.originID == "VIRTUAL_ORIGIN" && leg.pathCoords != null && leg.pathCoords!.isNotEmpty) {
       //   addRouteStartMarker(leg.pathCoords!.first, journey);
       // }
-      if (leg.destinationID == "VIRTUAL_DESTINATION" && leg.pathCoords != null && leg.pathCoords!.isNotEmpty) {
+      if (leg.destinationID == "VIRTUAL_DESTINATION" &&
+          leg.pathCoords != null &&
+          leg.pathCoords!.isNotEmpty) {
         addRouteEndMarker(leg.pathCoords!.last, journey);
       }
 
@@ -1069,7 +1134,6 @@ class JourneyLayer extends CompositeMapLayer {
       // Determine leg type for processing
 
       if (isBusLeg) {
-
         addBusLegMarkersAndPolylines(leg, journey, legIndex);
 
         // Add route ID and vehicle ID to active sets for bus filtering
@@ -1157,44 +1221,43 @@ class JourneyLayer extends CompositeMapLayer {
 
         if (!usedRouteGeometry) {
           // Fallback to simple path
-        //   final pts = <LatLng>[];
-        //   bool started = false;
-        //   for (final st in leg.trip!.stopTimes) {
-        //     if (st.stop == leg.originID) started = true;
-        //     if (started) {
-        //       final latlng = getLatLongFromStopID(st.stop);
-        //       if (latlng != null) {
-        //         pts.add(latlng);
-        //         allPoints.add(latlng);
-        //         _displayedJourneyMarkers.add(
-        //           Marker(
-        //             flat: true,
-        //             markerId: MarkerId('journey_stop_${st.stop}_$legIndex'),
-        //             position: latlng,
-        //             icon:
-        //                 _stopIcon ??
-        //                 BitmapDescriptor.defaultMarkerWithHue(
-        //                   colorToHue(RouteColorService.getRouteColor(leg.rt!)),
-        //                 ),
-        //           ),
-        //         );
-        //       }
-        //     }
-        //     if (st.stop == leg.destinationID && started) break;
-        //   }
+          //   final pts = <LatLng>[];
+          //   bool started = false;
+          //   for (final st in leg.trip!.stopTimes) {
+          //     if (st.stop == leg.originID) started = true;
+          //     if (started) {
+          //       final latlng = getLatLongFromStopID(st.stop);
+          //       if (latlng != null) {
+          //         pts.add(latlng);
+          //         allPoints.add(latlng);
+          //         _displayedJourneyMarkers.add(
+          //           Marker(
+          //             flat: true,
+          //             markerId: MarkerId('journey_stop_${st.stop}_$legIndex'),
+          //             position: latlng,
+          //             icon:
+          //                 _stopIcon ??
+          //                 BitmapDescriptor.defaultMarkerWithHue(
+          //                   colorToHue(RouteColorService.getRouteColor(leg.rt!)),
+          //                 ),
+          //           ),
+          //         );
+          //       }
+          //     }
+          //     if (st.stop == leg.destinationID && started) break;
+          //   }
 
-        //   if (pts.isNotEmpty) {
-        //     final poly = Polyline(
-        //       polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
-        //       points: pts,
-        //       color: RouteColorService.getRouteColor(leg.rt!),
-        //       width: 6,
-        //     );
-        //     _displayedJourneyPolylines.add(poly);
-        //   }
+          //   if (pts.isNotEmpty) {
+          //     final poly = Polyline(
+          //       polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
+          //       points: pts,
+          //       color: RouteColorService.getRouteColor(leg.rt!),
+          //       width: 6,
+          //     );
+          //     _displayedJourneyPolylines.add(poly);
+          //   }
         }
       } else {
-
         addWalkingLegMarkersAndPolylines(leg, journey, legIndex);
         // TODO: Add support for these edge cases
 
@@ -1417,7 +1480,6 @@ class JourneyLayer extends CompositeMapLayer {
     polylines.clear();
     if (isVisible) onUpdate();
   }
-
 }
 
 class CompositeMapWidget extends StatefulWidget {
@@ -1437,32 +1499,28 @@ class CompositeMapWidget extends StatefulWidget {
   final List<CompositeMapLayer> mapLayers;
   final Function(GoogleMapController) onMapCreated;
 
-// TODO: Implement these methods
-  
-  
+  // TODO: Implement these methods
+
   // final UniversalMapController universalController;
-  
+
   CompositeMapWidget({
     required this.initialCenter,
     required this.mapLayers,
-    required this.onMapCreated
+    required this.onMapCreated,
   });
-  
+
   @override
   State<StatefulWidget> createState() {
     // TODO: implement createState
     return CompositeMapWidgetState();
   }
-
-  
 }
 
-
-class CompositeMapWidgetState extends State<CompositeMapWidget> with SingleTickerProviderStateMixin {
+class CompositeMapWidgetState extends State<CompositeMapWidget>
+    with SingleTickerProviderStateMixin {
   GoogleMapController? _mapController;
   Set<Marker> allMarkers = {};
   Set<Polyline> allPolylines = {};
-
 
   void reloadMap() {
     // debugPrint("******* Got reloadMap() call!");
@@ -1492,7 +1550,6 @@ class CompositeMapWidgetState extends State<CompositeMapWidget> with SingleTicke
         layer.initWithTickerProvider(this);
       }
     });
-
   }
 
   @override
@@ -1501,20 +1558,18 @@ class CompositeMapWidgetState extends State<CompositeMapWidget> with SingleTicke
     //   if (!layer.isVisible) return;
     //   allallMarkers.union(other)
     // });
-  allMarkers = widget.mapLayers.expand<Marker>((CompositeMapLayer layer) {
-    if (!layer.isVisible) return {};
-    return layer.markers;
-  }).toSet(); //Flatten all the markers from each layer into one big layer
-  allPolylines = widget.mapLayers.expand<Polyline>((CompositeMapLayer layer) {
-    if (!layer.isVisible) return {};
-    return layer.polylines;
-  }).toSet();
+    allMarkers = widget.mapLayers.expand<Marker>((CompositeMapLayer layer) {
+      if (!layer.isVisible) return {};
+      return layer.markers;
+    }).toSet(); //Flatten all the markers from each layer into one big layer
+    allPolylines = widget.mapLayers.expand<Polyline>((CompositeMapLayer layer) {
+      if (!layer.isVisible) return {};
+      return layer.polylines;
+    }).toSet();
 
-  // allmarkers = 
+    // allmarkers =
 
-  // debugPrint("******* Got CompositeMapWidget build command! #markers is ${allMarkers.length}");
-  
-
+    // debugPrint("******* Got CompositeMapWidget build command! #markers is ${allMarkers.length}");
 
     return RepaintBoundary(
       child: GoogleMap(
@@ -1525,12 +1580,18 @@ class CompositeMapWidgetState extends State<CompositeMapWidget> with SingleTicke
         myLocationButtonEnabled: false,
         markers: allMarkers,
         polylines: allPolylines,
-        // controller: 
+        // controller:
         cameraTargetBounds: CameraTargetBounds(
           LatLngBounds(
-            southwest: LatLng(42.217530, -83.84367266), // Southern and Westernmost point
-            northeast: LatLng(42.328602, -83.53892646), // Northern and Easternmost point 
-          )
+            southwest: LatLng(
+              42.217530,
+              -83.84367266,
+            ), // Southern and Westernmost point
+            northeast: LatLng(
+              42.328602,
+              -83.53892646,
+            ), // Northern and Easternmost point
+          ),
         ),
         minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
         // markers: curMarkers.union(widget.staticMarkers),
@@ -1539,7 +1600,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget> with SingleTicke
           zoom: 15.0,
         ),
         style: isDarkMode(context) ? _darkMapStyle : _lightMapStyle,
-        onMapCreated:(GoogleMapController controller) {
+        onMapCreated: (GoogleMapController controller) {
           _mapController = controller;
           widget.mapLayers.forEach((CompositeMapLayer layer) {
             if (layer is JourneyLayer) {
@@ -1548,7 +1609,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget> with SingleTicke
           });
           widget.onMapCreated(controller);
         },
-      )
+      ),
     );
   }
 
@@ -1561,7 +1622,6 @@ class CompositeMapWidgetState extends State<CompositeMapWidget> with SingleTicke
     for (CompositeMapLayer l in widget.mapLayers) {
       l.dispose();
     }
-
   }
 }
 

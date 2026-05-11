@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 // UPDATE WHEN RELAUNCH
-final String currentVersion = '2.0.0';
+final String currentVersion = '2.0.1';
 
 bool isCurrentVersionEqualOrHigher(String otherVersion) {
-  final List<int> currentParts =
-      currentVersion.split('.').map(int.parse).toList();
-  final List<int> otherParts =
-      otherVersion.split('.').map(int.parse).toList();
+  final List<int> currentParts = currentVersion
+      .split('.')
+      .map(int.parse)
+      .toList();
+  final List<int> otherParts = otherVersion.split('.').map(int.parse).toList();
 
-  final int length =
-      (currentParts.length < otherParts.length) ? currentParts.length : otherParts.length;
+  final int length = (currentParts.length < otherParts.length)
+      ? currentParts.length
+      : otherParts.length;
 
   for (int i = 0; i < length; i++) {
     if (currentParts[i] > otherParts[i]) {
@@ -26,10 +28,10 @@ bool isCurrentVersionEqualOrHigher(String otherVersion) {
 }
 
 // Backend url for the api
-// const String BACKEND_URL = 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3'; 
+// const String BACKEND_URL = 'https://mbus-310c2b44573c.herokuapp.com/mbus/api/v3';
 const String BACKEND_URL = String.fromEnvironment(
   'BACKEND_URL',
-  defaultValue: 'https://busapi.maizebus.com/mbus/api/v3'
+  defaultValue: 'https://busapi.maizebus.com/mbus/api/v3',
 );
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'https://www.efeakinci.host/mbus/api/v3');
 //const String BACKEND_URL = String.fromEnvironment("BACKEND_URL", defaultValue: "http://10.0.2.2:3000/mbus/api/v3/");
@@ -54,7 +56,10 @@ final _whitespacePattern = RegExp(r'\s+');
 
 String normalizeStopName(String rawStopName) {
   // Remove random characters (add them to list if needed), collapse whitespace to a single space, and trim edges.
-  return rawStopName.replaceAll('%', '').replaceAll(_whitespacePattern, ' ').trim();
+  return rawStopName
+      .replaceAll('%', '')
+      .replaceAll(_whitespacePattern, ' ')
+      .trim();
 }
 
 String getPrettyRouteName(String code) {
@@ -78,26 +83,39 @@ const Color maizeBusBlueDarkMode = Color.fromARGB(255, 80, 150, 210);
 const Color maizeBusBlue = Color.fromARGB(255, 11, 83, 148);
 
 enum ColorType {
-  primary, secondary, opposite, background, backgroundGradientStart,
+  primary,
+  secondary,
+  opposite,
+  background,
+  backgroundGradientStart,
 
-  mapButtonPrimary, mapButtonSecondary,
-  mapButtonIcon, mapButtonShadow,
+  mapButtonPrimary,
+  mapButtonSecondary,
+  mapButtonIcon,
+  mapButtonShadow,
 
-  inputBackground, inputText,
+  inputBackground,
+  inputText,
 
-  highlighted, dim, error,
+  highlighted,
+  dim,
+  error,
   shadow,
-  
-  sliderBackground, sliderButton,
+
+  sliderBackground,
+  sliderButton,
 
   // info card colors (in route selector, favorites sheet, etc.)
-  infoCardColor, infoCardHighlighted,
+  infoCardColor,
+  infoCardHighlighted,
 
   // all the buttons except for the main map buttons
-  importantButtonBackground, importantButtonText,
-  secondaryButtonBackground, secondaryButtonText,
+  importantButtonBackground,
+  importantButtonText,
+  secondaryButtonBackground,
+  secondaryButtonText,
 
-  mapWalkingLine // Color for the walking line on the map
+  mapWalkingLine, // Color for the walking line on the map
 }
 
 const Map<ColorType, Color> lightColors = {
@@ -105,24 +123,29 @@ const Map<ColorType, Color> lightColors = {
   ColorType.secondary: Color.fromARGB(255, 226, 231, 236),
   ColorType.opposite: Colors.black,
   ColorType.background: Colors.white,
-  ColorType.backgroundGradientStart: Color.fromARGB(0, 255, 255, 255), // same as background but transparent
-  
-  ColorType.mapButtonPrimary: Color.fromARGB(255, 11, 83, 148), 
+  ColorType.backgroundGradientStart: Color.fromARGB(
+    0,
+    255,
+    255,
+    255,
+  ), // same as background but transparent
+
+  ColorType.mapButtonPrimary: Color.fromARGB(255, 11, 83, 148),
   ColorType.mapButtonSecondary: Color.fromARGB(190, 255, 255, 255),
   ColorType.mapButtonIcon: Colors.white,
-  ColorType.mapButtonShadow: Color.fromARGB(77, 133, 133, 133), 
+  ColorType.mapButtonShadow: Color.fromARGB(77, 133, 133, 133),
 
   ColorType.highlighted: Color.fromARGB(255, 120, 192, 255),
   ColorType.dim: Color.fromARGB(255, 215, 228, 241),
   ColorType.error: Color.fromARGB(255, 242, 41, 41),
 
   ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
-  
-  ColorType.sliderButton: Colors.white,
-  ColorType.sliderBackground: Color.fromARGB(255, 200, 228, 255), 
 
-  ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255), 
-  ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),  
+  ColorType.sliderButton: Colors.white,
+  ColorType.sliderBackground: Color.fromARGB(255, 200, 228, 255),
+
+  ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255),
+  ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),
 
   ColorType.inputBackground: Color.fromARGB(255, 227, 227, 227),
   ColorType.inputText: Colors.black,
@@ -132,7 +155,7 @@ const Map<ColorType, Color> lightColors = {
   ColorType.secondaryButtonBackground: Color.fromARGB(255, 215, 228, 241),
   ColorType.secondaryButtonText: maizeBusBlue,
 
-  ColorType.mapWalkingLine: Color.fromARGB(255, 7, 55, 97)
+  ColorType.mapWalkingLine: Color.fromARGB(255, 7, 55, 97),
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -140,26 +163,31 @@ const Map<ColorType, Color> darkColors = {
   ColorType.secondary: Color.fromARGB(255, 40, 54, 72),
   ColorType.opposite: Colors.white,
   ColorType.background: Color.fromARGB(255, 32, 33, 34),
-  ColorType.backgroundGradientStart: Color.fromARGB(0, 32, 33, 34), // same as background but transparent
+  ColorType.backgroundGradientStart: Color.fromARGB(
+    0,
+    32,
+    33,
+    34,
+  ), // same as background but transparent
 
   ColorType.mapButtonPrimary: Color.fromARGB(255, 255, 255, 255),
   ColorType.mapButtonSecondary: Color.fromARGB(187, 104, 104, 134),
   ColorType.mapButtonIcon: maizeBusBlue,
-  ColorType.mapButtonShadow: Color.fromARGB(95, 68, 68, 68), 
+  ColorType.mapButtonShadow: Color.fromARGB(95, 68, 68, 68),
 
   ColorType.highlighted: Color.fromARGB(255, 49, 129, 199),
   ColorType.dim: Color.fromARGB(255, 47, 54, 60),
   ColorType.error: Color.fromARGB(255, 255, 114, 114),
 
   ColorType.shadow: Color.fromARGB(95, 68, 68, 68),
-  
+
   ColorType.sliderButton: Color.fromARGB(255, 32, 33, 34),
   ColorType.sliderBackground: Color.fromARGB(255, 33, 71, 105),
 
   ColorType.infoCardColor: Color.fromARGB(255, 47, 54, 60),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),
 
-  ColorType.inputBackground:Color.fromARGB(255, 47, 54, 60),
+  ColorType.inputBackground: Color.fromARGB(255, 47, 54, 60),
   ColorType.inputText: Colors.white,
 
   ColorType.importantButtonBackground: Color.fromARGB(255, 49, 129, 199),
@@ -167,7 +195,7 @@ const Map<ColorType, Color> darkColors = {
   ColorType.secondaryButtonBackground: Color.fromARGB(255, 47, 54, 60),
   ColorType.secondaryButtonText: Color.fromARGB(255, 49, 129, 199),
 
-  ColorType.mapWalkingLine: Color.fromARGB(255, 178, 219, 255)
+  ColorType.mapWalkingLine: Color.fromARGB(255, 178, 219, 255),
 };
 
 // returns true if the current theme is dark mode
@@ -203,7 +231,7 @@ BoxShadow infoCardShadowDark = BoxShadow(
   offset: Offset(0, 3),
 );
 
-// Gets the correct shadow depending on 
+// Gets the correct shadow depending on
 BoxShadow getInfoCardShadow(BuildContext context) {
   return isDarkMode(context) ? infoCardShadowDark : infoCardShadowLight;
 }
@@ -218,12 +246,12 @@ Color getGradientLerpColor(BuildContext context, double percentage) {
   return Color.lerp(
     getColor(context, ColorType.backgroundGradientStart),
     getColor(context, ColorType.background),
-    percentage
+    percentage,
   )!;
 }
 
 LinearGradient getStopHeroImageGradient(BuildContext context) {
-  // A slightly smoother gradient than sRGB 
+  // A slightly smoother gradient than sRGB
   return LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -232,13 +260,13 @@ LinearGradient getStopHeroImageGradient(BuildContext context) {
       getGradientLerpColor(context, 0.15),
       getGradientLerpColor(context, 0.5),
       getGradientLerpColor(context, 0.75),
-      getGradientLerpColor(context, 1)
+      getGradientLerpColor(context, 1),
     ],
     // original stops by Isaac
     // stops: [0.6, 0.65, 0.74, 0.85, 1]
 
     // adjusted stops by Ishan - using the same ratios but less tall
-    stops: [0.67, 0.71, 0.79, 0.88, 1]
+    stops: [0.67, 0.71, 0.79, 0.88, 1],
   );
 }
 
@@ -248,38 +276,39 @@ class TrapezoidClip extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     Path path = Path();
-    path.lineTo(size.width, 0); 
-    path.lineTo(size.width - size.height, size.height); 
+    path.lineTo(size.width, 0);
+    path.lineTo(size.width - size.height, size.height);
     path.lineTo(0, size.height);
-    path.close(); 
-    return path; 
+    path.close();
+    return path;
   }
+
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) {
-    return false; 
+    return false;
   }
 }
+
 class TrapezoidClipReversed extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     Path path = Path();
-    path.moveTo(size.width, 0); 
-    path.lineTo(size.width, size.height); 
+    path.moveTo(size.width, 0);
+    path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.lineTo(size.height, 0);
-    path.close(); 
-    return path; 
+    path.close();
+    return path;
   }
+
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) {
-    return false; 
+    return false;
   }
 }
 
 // TEXT
-enum TextType {
-  modalHeader, logo, bold, normal, small, sectionHeader    
-}
+enum TextType { modalHeader, logo, bold, normal, small, sectionHeader }
 
 TextStyle getTextStyle(TextType type, Color? color) {
   double size, height;
@@ -310,7 +339,13 @@ TextStyle getTextStyle(TextType type, Color? color) {
       weight = FontWeight.w700;
       height = 26.4;
   }
-  return TextStyle(color: color, fontFamily: 'Urbanist', fontSize: size, fontWeight: weight, height: height / size);
+  return TextStyle(
+    color: color,
+    fontFamily: 'Urbanist',
+    fontSize: size,
+    fontWeight: weight,
+    height: height / size,
+  );
 }
 
 // THEMES
@@ -323,15 +358,13 @@ ThemeData lightMode = ThemeData(
   // Default button themes
   floatingActionButtonTheme: FloatingActionButtonThemeData(
     backgroundColor: lightColors[ColorType.mapButtonPrimary],
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(56),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(56)),
   ),
 
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: lightColors[ColorType.mapButtonPrimary],
-    )
+    ),
   ),
 
   dividerTheme: DividerThemeData(
@@ -341,43 +374,35 @@ ThemeData lightMode = ThemeData(
 
   // set default text color
   textTheme: TextTheme(
-    bodyMedium: TextStyle(
-      color: Colors.black,
-      fontFamily: 'Urbanist'
-    )
-  )
+    bodyMedium: TextStyle(color: Colors.black, fontFamily: 'Urbanist'),
+  ),
 );
 
 ThemeData darkMode = ThemeData(
   brightness: Brightness.dark,
   fontFamily: 'Urbanist',
-  
+
   // Default button themes
   floatingActionButtonTheme: FloatingActionButtonThemeData(
     backgroundColor: darkColors[ColorType.mapButtonPrimary],
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(56),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(56)),
   ),
 
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: darkColors[ColorType.mapButtonPrimary],
-    )
+    ),
   ),
-  
+
   dividerTheme: DividerThemeData(
     thickness: 2,
     color: darkColors[ColorType.dim],
   ),
-  
+
   // set default text color
   textTheme: TextTheme(
-    bodyMedium: TextStyle(
-      color: Colors.white,
-      fontFamily: 'Urbanist'
-    )
-  )
+    bodyMedium: TextStyle(color: Colors.white, fontFamily: 'Urbanist'),
+  ),
 );
 
 //data types
@@ -406,17 +431,15 @@ class Location {
 class ArrivalTimeLocation extends Location {
   final String arrivalTime;
 
-  ArrivalTimeLocation(
-    this.arrivalTime, 
-    Location loc,
-  ) : super(
-    loc.name,
-    loc.abbrev,
-    loc.aliases,
-    loc.isBusStop,
-    stopId: loc.stopId,
-    latlng: loc.latlng,
-  );
+  ArrivalTimeLocation(this.arrivalTime, Location loc)
+    : super(
+        loc.name,
+        loc.abbrev,
+        loc.aliases,
+        loc.isBusStop,
+        stopId: loc.stopId,
+        latlng: loc.latlng,
+      );
 }
 
 class StartupDataHolder {
@@ -425,7 +448,13 @@ class StartupDataHolder {
   String updateMessage;
   String persistantMessageTitle;
   String persistantMessage;
-  StartupDataHolder(this.version, this.updateTitle, this.updateMessage, this.persistantMessageTitle, this.persistantMessage);
+  StartupDataHolder(
+    this.version,
+    this.updateTitle,
+    this.updateMessage,
+    this.persistantMessageTitle,
+    this.persistantMessage,
+  );
 }
 
 class Loadpoint {
@@ -436,11 +465,7 @@ class Loadpoint {
 
 const SheetBoxShadow = BoxShadow(
   color: Color.fromRGBO(0, 0, 0, 0.2),
-  offset: const Offset(
-    0.0,
-    0.0,
-  ),
+  offset: const Offset(0.0, 0.0),
   blurRadius: 100.0,
   spreadRadius: 40.0,
 );
-
