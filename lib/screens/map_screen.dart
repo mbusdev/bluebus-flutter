@@ -1414,14 +1414,16 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   },
                   child: Stack(
                     children: [
-                      CompositeMapWidget(
-                        initialCenter: startLatLng,
-                        mapLayers: [
-                          baseRoutesLayer,
-                          liveBusesLayer,
-                          journeyLayer,
-                        ],
-                        onMapCreated: _onMapCreated,
+                      RepaintBoundary(
+                        child: CompositeMapWidget(
+                          initialCenter: startLatLng,
+                          mapLayers: [
+                            baseRoutesLayer,
+                            liveBusesLayer,
+                            journeyLayer,
+                          ],
+                          onMapCreated: _onMapCreated,
+                        ),
                       ),
                       Padding(
                         padding: EdgeInsets.only(
