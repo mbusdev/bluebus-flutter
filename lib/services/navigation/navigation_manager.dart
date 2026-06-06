@@ -14,6 +14,27 @@ class NavOnBus extends NavigationStage {
   // ...
 }
 
+class ChooseBus extends NavigationStage{
+  title = "Choose a Bus";
+  //Not sure if we actually need this. Depends on if we want to filter out some buses from certain stops. 
+  List<Bus> potentialBuses;
+  List<BusStop> potentialStops;
+  // If you have a list of buses to board and stops, 
+  // this can help you display a bus and the stop you will board
+  // This could be simplified more, probably by picking up data from another function 
+}
+
+//I believe this is just NavWalking but I'm doing it here to be sure. 
+class Walking extends NavigationStage{
+  //Points in order, you can check if you are near a point to remove it from the route or start another leg
+  List<LatLng> points;
+  //This could be refreshed in intervals
+  LatLng currWalkingPos;
+
+
+}
+
+
 class NavigationManager {
   // TODO: Implement ChangeNotifier and learn how that works
 
