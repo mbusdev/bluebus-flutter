@@ -333,10 +333,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
     }
 
+    void onBusError(String route, String error) =>
+      showMaizebusOKDialog(
+        contextIn: context,
+        title: Text("Error loading route $route. We are aware of the issue, and it will be fixed shortly."),
+        content: Text(error)
+      );
+
+    void onBusError(String route, String error) =>
+      showMaizebusOKDialog(
+        contextIn: context,
+        title: Text("Error loading route $route. We are aware of the issue, and it will be fixed shortly."),
+        content: Text(error)
+      );
+
     // loading all this data in parallel
     await Future.wait([
-      // _loadCustomMarkers(),
-      busProvider.loadRoutes(),
+      _loadCustomMarkers(),
+      busProvider.loadRoutes(onBusError),
       _loadSelectedRoutes(),
       _loadFavoriteStops(),
     ]);
