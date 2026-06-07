@@ -25,6 +25,6 @@ class NavigationWidgetState extends State<NavigationWidget>
 
   @override
   Widget build(BuildContext context) {
-    return null; // TODO: Return some widget stuff
+    return Text("Hello"); // TODO: Return some widget stuff
   }
 }

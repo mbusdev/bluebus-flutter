@@ -3,7 +3,18 @@ import 'package:bluebus/services/map_layers/navigation_layer.dart';
 
 
 sealed class NavigationStage {
-  String title = "...";
+  // String title = "..."; //Don't use this anymore--implement getTitle() instead
+  String getTitle() {
+    return "Swim forward"; // Title displayed on the big bar at the top
+  }
+
+  String getSubtitle() {
+    return "Swim for 200 meters"; // Subtitle displayed on the big bar at the top
+  }
+
+  double length = 0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
+  double percent_complete = 0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
+  
 }
 
 class NavWalking extends NavigationStage {
