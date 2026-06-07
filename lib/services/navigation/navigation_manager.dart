@@ -1,4 +1,7 @@
+import 'package:bluebus/models/bus_route_line.dart';
+import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 
 
@@ -22,7 +25,42 @@ class NavWalking extends NavigationStage {
 }
 
 class NavOnBus extends NavigationStage {
-  // ...
+  @override
+  String get title => "On Bus";
+
+  String rt;
+  String departureStop;
+  String arrivalStop;
+
+  Trip trip;
+  BusRouteLine? busPath;  
+
+  NavOnBus({
+    required this.rt,
+    required this.departureStop,
+    required this.arrivalStop,
+    required this.trip,
+    required this.busPath,
+  });
+
+  factory NavOnBus.init(Leg leg, Map<String, BusRouteLine> routesCache) {
+    final maybeRt = leg.rt;
+    final maybeTrip = leg.trip;
+    if (maybeRt == null ||
+        maybeTrip == null ||
+        leg.stopTimes == null ||
+        leg.originID == '' ||
+        leg.destinationID == '') {
+      throw Exception("leg was malformed or not a bus leg");
+    }
+    return NavOnBus(
+      rt: maybeRt,
+      departureStop: leg.originID,
+      arrivalStop: leg.destinationID,
+      trip: maybeTrip,
+      busPath: routesCache[maybeRt],
+    );
+  }
 }
 
 class ChooseBus extends NavigationStage{
