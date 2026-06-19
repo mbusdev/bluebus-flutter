@@ -1106,8 +1106,8 @@ class _ReminderFormState extends State<ReminderForm> {
                           if (context.mounted) {
                             showMaizebusOKDialog(
                               contextIn: context,
-                              title: Text("Failed to set reminders"),
-                              content: Text("If this error is persistent, please send us feedback through the feedback form in the settings page"),
+                              title: "Failed to set reminders",
+                              content: "If this error is persistent, please send us feedback through the feedback form in the settings page",
                             );
                           }
                         }
