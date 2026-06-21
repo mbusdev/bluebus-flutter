@@ -13,6 +13,7 @@ import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
+import 'package:bluebus/widgets/navigation_overlay_widget.dart';
 import 'package:bluebus/widgets/reminder_widgets.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
@@ -38,6 +39,7 @@ import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
+import 'package:bluebus/services/navigation/navigation_manager.dart';
 //import 'dart:convert';
 
 final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
@@ -51,6 +53,7 @@ double pointRotation(double lat1, double lon1, double lat2, double lon2) {
 
   double dLat = lat2 - lat1;
   double dLon = lon2 - lon1;
+  
 
   // Scale longitude by cos(lat) to correct for east-west distance
   double x = dLon * (Math.cos(lat1 * degToRad));
@@ -114,6 +117,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   //     and _searchLocationMarker. Stored here so build() has better performance
 
   Marker? _searchLocationMarker;
+  // Location subscription and follow-mode state
+  StreamSubscription<Position>? _posSub;
+  bool _followUser = true; // TODO: toggle via UI
+  Position? _lastCenteredPos;
+  static const double _followDistanceThresholdMeters = 8.0;
+  // Navigation manager for the overlay
+  NavigationManager navigationManager = NavigationManager();
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
 
@@ -234,6 +244,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
+
+
   Future<void> _loadAllData() async {
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
@@ -278,6 +290,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         contextIn: context,
         title: Text("Error loading route $route. We are aware of the issue, and it will be fixed shortly."),
         content: Text(error)
+
       );
 
     // loading all this data in parallel
@@ -661,9 +674,71 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
+  Future<void> startLocationUpdates() async {
+    if (!await Geolocator.isLocationServiceEnabled()) return;
+
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.deniedForever) return;
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm != LocationPermission.whileInUse &&
+        perm != LocationPermission.always) {
+      return;
+    }
+
+    await _posSub?.cancel();
+
+    final settings = LocationSettings(
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 5,
+    );
+
+    _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
+      (Position p) async {
+        // Keep this lightweight; do a minimal amount of work here and defer heavy updates.
+        if (!mounted || _mapController == null) return;
+
+        // If follow mode is disabled, don't recenter automatically.
+        if (!_followUser) return;
+
+        // Only move camera if user has moved more than threshold to avoid jitter.
+        final shouldMove = _lastCenteredPos == null ||
+            Geolocator.distanceBetween(
+                  _lastCenteredPos!.latitude,
+                  _lastCenteredPos!.longitude,
+                  p.latitude,
+                  p.longitude,
+                ) >
+                _followDistanceThresholdMeters;
+
+        if (!shouldMove) return;
+
+        _lastCenteredPos = p;
+
+        // Center the camera on the new location.
+        _centerOnLocation(true);
+
+        // TODO: Update any navigation manager / UI that depends on live position here.
+      },
+    );
+
+    // TODO: Consider throttling updates or using a timer if animateCamera is too frequent.
+  }
+
+  // Call to programmatically enable/disable follow mode. Wire this to your location FAB.
+  void _setFollowMode(bool enabled) {
+    setState(() {
+      _followUser = enabled;
+      if (!enabled) return;
+      // When enabling follow mode, reset last-centered so next position recenters immediately.
+      _lastCenteredPos = null;
+    });
+  }
   @override
   void dispose() {
     _loadingMessageNotifier.dispose();
+    _posSub?.cancel();
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
@@ -2418,6 +2493,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
                             ),
 
+
+                            NavigationOverlay(navigationManager: navigationManager),
+
+
+
                             // reminder widget
                             SizedBox(height: 30.0),
                             _journeyOverlayActive || _isOffline
@@ -2537,6 +2617,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                       ),
                                                       child: FloatingActionButton.small(
                                                         onPressed: () {
+                                                          _setFollowMode(true);
                                                           _centerOnLocation(
                                                             true,
                                                           );
