@@ -84,12 +84,27 @@ class Walking extends NavigationStage{
 }
 
 
+class DemoStage extends NavigationStage {
+
+  String getTitle() {
+    return "This is a demo!";
+  }
+
+  String getSubtitle() {
+    return "Look, here's a subtitle too";
+  }
+
+  double length = 15.0;
+  double percent_complete = 11.0;
+
+}
+
 class NavigationManager {
   // TODO: Implement ChangeNotifier and learn how that works
 
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList =
-      []; // Stores all the states for users to page back and forth
+      [DemoStage()]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
 
   // Some way for the navigation widget to
@@ -98,9 +113,20 @@ class NavigationManager {
     // Init as necessary
   }
 
+  // Some sort of code to read the current stage and next stage to determine whether the user can "jump" (stage switch)
+  //    Look at the bus times of the next stage and the walking position of the current stage to determine if the user is A) near the end of their walking path and B) the bus hasn't left yet
+  // Write a function to detect if the stage switch went wrong
+  //    Allen: Add UI to ask the user about which new bus to take [Check with Ishan and Harvey]
+  //      Isaac: I'll talk to Ishan (gc with Allen+Ishan+Harvey) about what the final logic is for the "Oops" stage
+
   NavigationStage getCurrentStage() {
     return stageList[currentStage];
   }
 
   // TODO: Add start()/stop() methods
+
+
+  // - Allen: Get “Oops” code started. Find a way to talk to the NavigationOverlayWidget
+  // - Find a way to get the two to talk to each other: I.e. whenever `NavigationOverlayWidget` is created, it calls a specific method inside NavigationManager that says "Hey, I'm here, please save me in a member variable", so when the "Oops" stage happens later you can call localReferenceToOverlayWidget.displayOopsDialog(...)
+  //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }

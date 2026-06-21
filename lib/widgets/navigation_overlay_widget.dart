@@ -75,11 +75,12 @@ class _NavigationOverlayState extends State<NavigationOverlay> {
                   children: [
                     Text(
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: getColor(context, ColorType.mapButtonIcon)),
-                      "Go for a swim"
+                      widget.navigationManager.getCurrentStage().getTitle()
                     ),
                     Text(
                       style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                      "I don't know, dude, figure it out"
+                      // "I don't know, dude, figure it out"
+                      widget.navigationManager.getCurrentStage().getSubtitle()
                     ),
                   ]
                 )
@@ -119,6 +120,67 @@ class _NavigationOverlayState extends State<NavigationOverlay> {
                   "I'm told your bus is coming"
                 ),
               )
+              
+            ],
+          )
+        ),
+
+        // Expanded(child: SizedBox.expand()),
+        // SizedBox.expand(),
+
+        Container( // I have absolutely no idea how to shrink this to fit the content. Thanks Flutter
+          
+          margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+          padding: EdgeInsets.all(8),
+          
+          decoration: BoxDecoration(
+            color: getColor(context, ColorType.infoCardColor),
+            boxShadow: [
+              BoxShadow(
+                color: getColor(
+                  context,
+                  ColorType.mapButtonShadow,
+                ),
+                blurRadius: 10,
+                offset: Offset(0, 6),
+              ),
+            ],
+            borderRadius:
+                BorderRadius.circular(25),
+          ),
+          child: Column(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+
+                child: Row(
+                  children: [ // Navigation sections
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.3,
+                      height: 10,
+                      decoration: BoxDecoration(color: Colors.green),
+                    ),
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.3,
+                      height: 10,
+                      decoration: BoxDecoration(color: Colors.red),
+                    ),
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.3,
+                      height: 10,
+                      decoration: BoxDecoration(color: Colors.green),
+                    ),
+                  ],
+                )
+              )
+
+              // Padding(
+              //   padding: EdgeInsetsGeometry.only(left: 8),
+              //   child: Text(
+              //     // style: TextStyle(fontSize: 16, color: getColor(context, ColorType.primary)),
+              //     "I'm told your bus is coming"
+              //   ),
+              // )
               
             ],
           )
