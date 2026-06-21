@@ -2,7 +2,6 @@ name: bluebus
 description: "A new Flutter project."
 publish_to: 'none'
 version: 2.0.2+8
->>>>>>> Stashed changes
 
 environment:
   sdk: ^3.8.0
