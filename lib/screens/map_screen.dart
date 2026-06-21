@@ -7,14 +7,6 @@ import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/screens/new_features_screen.dart';
-<<<<<<< Updated upstream
-=======
-import 'package:bluebus/services/map_image_service.dart';
-import 'package:bluebus/services/map_layers/base_routes_layer.dart';
-import 'package:bluebus/services/map_layers/journey_layer.dart';
-import 'package:bluebus/services/map_layers/live_buses_layer.dart';
-import 'package:bluebus/services/navigation/navigation_manager.dart';
->>>>>>> Stashed changes
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/dialog.dart';
@@ -99,23 +91,6 @@ class MaizeBusCore extends StatefulWidget {
 class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
   late Journey currDisplayed;
-<<<<<<< Updated upstream
-=======
-  ScreenRadius? screenRadius;
-  bool screenRadiusLoaded = false;
-  bool followUser = true;
-
-  StreamSubscription<Position>? _posSub;
-  // TODO: Follow-mode state. When true, the map recenters on location updates.
-
-  bool _followUser = true;
-  // Remember last centered position to avoid jitter on small movements.
-  Position? _lastCenteredPos;
-  // TODO: Tune this threshold (meters) to your liking.
-  static const double _followDistanceThresholdMeters = 8.0;
-
-  NavigationManager navigationManager = NavigationManager();
->>>>>>> Stashed changes
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -305,22 +280,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     void onBusError(String route, String error) =>
       showMaizebusOKDialog(
         contextIn: context,
-<<<<<<< Updated upstream
         title: Text("Error loading route $route. We are aware of the issue, and it will be fixed shortly."),
         content: Text(error)
-=======
-        title: "Error loading route $route. We are aware of the issue, and it will be fixed shortly.",
-        content: error
->>>>>>> Stashed changes
+
       );
 
     // loading all this data in parallel
     await Future.wait([
-<<<<<<< Updated upstream
       _loadCustomMarkers(),
-=======
-      // _loadCustomMarkers(),
->>>>>>> Stashed changes
       busProvider.loadRoutes(onBusError),
       _loadSelectedRoutes(),
       _loadFavoriteStops(),

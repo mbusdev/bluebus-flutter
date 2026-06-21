@@ -1,9 +1,6 @@
 name: bluebus
 description: "A new Flutter project."
 publish_to: 'none'
-<<<<<<< Updated upstream
-version: 2.0.1+7
-=======
 version: 2.0.2+8
 >>>>>>> Stashed changes
 
