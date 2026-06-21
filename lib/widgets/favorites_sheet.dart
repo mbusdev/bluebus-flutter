@@ -47,7 +47,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
     _favoritesFuture = _loadFavoriteStopIds();
 
     // Build stop id -> name map to show readable names in the list.
-    BlueBusApi.fetchRoutes()
+    BlueBusApi.fetchRoutes((String r, String e) { }) // ignore errors here (they'll be caught in map_screen anyways)
         .then((routes) {
           if (!mounted) return; // makes sure widget hasn't been closed while waiting for this
           final map = <String, String>{};
@@ -63,7 +63,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
         });
 
     // same for ride
-    RideAPI.fetchRoutes()
+    RideAPI.fetchRoutes((String r, String e) { })
         .then((routes) {
           if (!mounted) return; // makes sure widget hasn't been closed while waiting for this
           final map = <String, String>{};

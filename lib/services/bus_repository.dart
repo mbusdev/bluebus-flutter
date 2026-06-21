@@ -12,11 +12,11 @@ class BusRepository {
 
   BusRepository({this.busUpdateInterval = const Duration(seconds: 5)});
 
-  Future<List<BusRouteLine>> fetchRoutes() async {
+  Future<List<BusRouteLine>> fetchRoutes(Function(String route, String error) onError) async {
     // fetching the ride and bluebus routes simultaneously
     final results = await Future.wait([
-      BlueBusApi.fetchRoutes(),
-      RideAPI.fetchRoutes(), 
+      BlueBusApi.fetchRoutes(onError),
+      RideAPI.fetchRoutes(onError), 
     ]);
 
     // merging both route lists

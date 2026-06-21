@@ -12,6 +12,7 @@ import 'package:bluebus/services/map_image_service.dart';
 import 'package:bluebus/services/map_layers/base_routes_layer.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
+import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/composite_map_widget.dart';
@@ -19,6 +20,7 @@ import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
+import 'package:bluebus/widgets/navigation_overlay_widget.dart';
 import 'package:bluebus/widgets/reminder_widgets.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
@@ -83,6 +85,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   late Journey currDisplayed;
   ScreenRadius? screenRadius;
   bool screenRadiusLoaded = false;
+
+  NavigationManager navigationManager = NavigationManager();
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -329,10 +333,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
     }
 
+    void onBusError(String route, String error) =>
+      showMaizebusOKDialog(
+        contextIn: context,
+        title: "Error loading route $route. We are aware of the issue, and it will be fixed shortly.",
+        content: error
+      );
+
     // loading all this data in parallel
     await Future.wait([
       // _loadCustomMarkers(),
-      busProvider.loadRoutes(),
+      busProvider.loadRoutes(onBusError),
       _loadSelectedRoutes(),
       _loadFavoriteStops(),
     ]);
@@ -1685,6 +1696,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       key: ValueKey('offline-banner-hidden'),
                                     ),
                             ),
+
+
+                            NavigationOverlay(navigationManager: navigationManager),
+
+
 
                             // reminder widget
                             SizedBox(height: 30.0),
