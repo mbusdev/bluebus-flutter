@@ -1,9 +1,34 @@
+import 'dart:ui';
+
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+enum LineType { Dotted, Dashed}
 
+class NavigationStageStep {
+  String getTitle() {
+    return "";
+  }
+
+  String? getSubtitle() {
+    return null; // Return null if no subtitle
+  }
+
+  String getTime() {
+    return "0:00"; // Get the time
+  }
+
+  Color? getColor() {
+    return null; // Return null for neutral gray
+  }
+
+  LineType getLineType() {
+    return LineType.Dashed;
+  }
+
+}
 
 sealed class NavigationStage {
   // String title = "..."; //Don't use this anymore--implement getTitle() instead
@@ -18,6 +43,15 @@ sealed class NavigationStage {
   double length = 0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
   double percent_complete = 0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
   
+  List<NavigationStageStep> getSteps() {
+    return []; // Get navigation stage steps
+  }
+  List<Marker> getMarkers() {
+    return [];
+  }
+  List<Polyline> getPolylines() {
+    return [];
+  }
 }
 
 class NavWalking extends NavigationStage {
