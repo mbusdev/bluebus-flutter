@@ -29,7 +29,7 @@ require(flutter.compileSdkVersion >= 35);
 android {
     namespace = "com.ishankumar.maizebus"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "28.1.13356709"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
