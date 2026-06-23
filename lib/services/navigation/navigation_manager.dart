@@ -5,6 +5,7 @@ import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
+import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -263,3 +264,14 @@ class NavigationManager {
   // - Find a way to get the two to talk to each other: I.e. whenever `NavigationOverlayWidget` is created, it calls a specific method inside NavigationManager that says "Hey, I'm here, please save me in a member variable", so when the "Oops" stage happens later you can call localReferenceToOverlayWidget.displayOopsDialog(...)
   //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }
+
+Future<Journey> getMockJourney() async {
+  // using the same start / end as the backend test
+  // make sure BACKEND_URL is set to the mock backend
+  final journeys = await JourneyRepository.planJourney(
+    originLat: 42.264356, originLon: -83.744353999999,
+    destLat: 42.268067999999, destLon: -83.747307000001
+  );
+  return journeys[0];
+}
+
