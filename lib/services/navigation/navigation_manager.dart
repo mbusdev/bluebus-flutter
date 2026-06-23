@@ -250,14 +250,10 @@ class NavigationManager {
   }
 
   void nextStage() {
-    debugPrint("Stage index: $currentStage + 1 % ${stageList.length}");
     currentStage = (currentStage + 1) % stageList.length;
-    debugPrint("Stage index is now $currentStage");
   }
   void previousStage() {
-    debugPrint("Stage index: $currentStage - 1 % ${stageList.length}");
     currentStage = (currentStage - 1) % stageList.length;
-    debugPrint("Stage index is now $currentStage");
   }
 
   // TODO: Add start()/stop() methods
