@@ -22,7 +22,20 @@ class NavigationOverlay extends StatefulWidget {
 
 class _NavigationOverlayState extends State<NavigationOverlay> {
 
+  TimelineInfo timelineInfo = TimelineInfo();
 
+  void updateTimeline() { // Call this after all the stages are loaded (or stages change)
+    // debugPrint("***** Updating timeline!");
+    timelineInfo = widget.navigationManager.getTimeline();
+    // debugPrint("***** Timeline now has ${timelineSteps.length} things!");
+  }
+
+  @override
+  void initState() {
+    // debugPrint("HELLO YELLO WE ARE IN IN/ITSTATE");
+    super.initState();
+    updateTimeline();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +92,6 @@ class _NavigationOverlayState extends State<NavigationOverlay> {
                     ),
                     Text(
                       style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                      // "I don't know, dude, figure it out"
                       widget.navigationManager.getCurrentStage().getSubtitle()
                     ),
                   ]
@@ -119,7 +131,29 @@ class _NavigationOverlayState extends State<NavigationOverlay> {
                   style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
                   "I'm told your bus is coming"
                 ),
+              ),
+              MaterialButton(
+                minWidth: 50,
+                onPressed: () {
+                  setState(() {
+                    widget.navigationManager.previousStage();
+                    updateTimeline();
+                  });
+                },
+                child: Icon(Icons.arrow_back, color: Colors.white),
+              ),
+              MaterialButton(
+                minWidth: 50,
+                onPressed: () {
+                  setState(() {
+                    widget.navigationManager.nextStage();
+                    updateTimeline();
+                  });
+                },
+                child: Icon(Icons.arrow_forward, color: Colors.white)
               )
+              
+              
               
             ],
           )
@@ -150,29 +184,99 @@ class _NavigationOverlayState extends State<NavigationOverlay> {
           ),
           child: Column(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+              // TODO: Add the user's position in all of this
+              // ClipRRect(
+              //   borderRadius: BorderRadius.circular(12),
 
-                child: Row(
-                  children: [ // Navigation sections
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.3,
-                      height: 10,
-                      decoration: BoxDecoration(color: Colors.green),
-                    ),
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.3,
-                      height: 10,
-                      decoration: BoxDecoration(color: Colors.red),
-                    ),
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.3,
-                      height: 10,
-                      decoration: BoxDecoration(color: Colors.green),
-                    ),
-                  ],
-                )
+                // child: 
+                LayoutBuilder(
+                  builder: (context, constraints) {
+
+                    const double dotSize = 24.0;
+                    final double dotLeft = (constraints.maxWidth * this.timelineInfo.activePositionPercentage) - (dotSize / 2);
+
+
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(top: dotSize, bottom: dotSize),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Row(
+                          
+                            children: this.timelineInfo.timelineSteps.map((item) {
+                                return Flexible(
+                                  flex: item.estimated_time.floor(), // Proportionally sizes to each item's time
+                                  child: Container(
+                                    height: 10,
+                                    decoration: BoxDecoration(color: item.color),
+                                  )
+                                );
+                                // return Container(
+                                //   width: MediaQuery.of(context).size.width * item.percentage,
+                                //   height: 10,
+                                //   decoration: BoxDecoration(color: item.color),
+                                // );
+                              }).toList(),
+                              // Container(
+                              //   width: MediaQuery.of(context).size.width * 0.3,
+                              //   height: 10,
+                              //   decoration: BoxDecoration(color: Colors.green),
+                              // ),
+                              // Container(
+                              //   width: MediaQuery.of(context).size.width * 0.3,
+                              //   height: 10,
+                              //   decoration: BoxDecoration(color: Colors.red),
+                              // ),
+                              // Container(
+                              //   width: MediaQuery.of(context).size.width * 0.3,
+                              //   height: 10,
+                              //   decoration: BoxDecoration(color: Colors.green),
+                              // ),
+                          ),
+                        ),
+                      ),
+                      
+
+                      // Text("HIIIIIII THIS IS A TEST ${dotLeft}, pos %: ${this.timelineInfo.activePositionPercentage}"),
+
+                      // Container(
+                      //     width: dotSize, 
+                      //     height: dotSize, 
+                      //     decoration: const BoxDecoration(
+                      //       color: Colors.red, 
+                      //       shape: BoxShape.circle
+                      //     ),
+                      //   ),
+                    
+                      Positioned( // TODO: Make this thing animate smoooooothly!
+                        left: dotLeft,
+                        // top: -dotSize / 4,
+                        // top: -dotSize,
+                        child: Container(
+                          width: dotSize, 
+                          height: dotSize, 
+                          decoration: BoxDecoration(
+                            color: Color(0xFF4286F5), 
+                            border: Border.all(
+                              color: Colors.white,
+                              // color: Color(0x666896DD),
+                              width: 2.0
+                            ),
+                            boxShadow: [
+                              BoxShadow(color: Color(0x666896DD), spreadRadius: 16)
+                            ],
+                            shape: BoxShape.circle
+                          ),
+                        ),
+                      )
+                    ],
+                  );
+                }
               )
+            // )
 
               // Padding(
               //   padding: EdgeInsetsGeometry.only(left: 8),

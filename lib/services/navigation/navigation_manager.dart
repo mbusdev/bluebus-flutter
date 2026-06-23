@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:bluebus/models/bus.dart';
@@ -5,6 +6,7 @@ import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 enum LineType { Dotted, Dashed}
@@ -53,6 +55,10 @@ sealed class NavigationStage {
   }
   List<Polyline> getPolylines() {
     return [];
+  }
+
+  Color getColor() { // Return a random color
+    return Color(Random().nextInt(0xFFFFFFFF)).withAlpha(255);
   }
 }
 
@@ -121,16 +127,50 @@ class Walking extends NavigationStage{
 
 class DemoStage extends NavigationStage {
 
+  int favoriteNumber;
+
   String getTitle() {
-    return "This is a demo!";
+    return "This is a demo! #${favoriteNumber}";
   }
 
   String getSubtitle() {
-    return "Look, here's a subtitle too";
+    return "Look, here's a subtitle too #${favoriteNumber}";
   }
 
   double length = 15.0;
-  double percent_complete = 11.0;
+  double percent_complete = 0.110;
+
+  DemoStage({
+    required this.favoriteNumber,
+    required this.length,
+    required this.percent_complete
+  });
+
+  Color getColor() { // Return a random color
+    return Color(Random().nextInt(0xFFFFFFFF)).withAlpha(255);
+  }
+
+}
+
+class TimelineStep { 
+  double estimated_time;
+  double percentage;
+  Color color;
+
+  TimelineStep({
+    required this.estimated_time,
+    required this.percentage, // Percentage of the entire progress bar occupied by this timeline step
+    required this.color
+  });
+}
+
+class TimelineInfo {
+  List<TimelineStep> timelineSteps = [];
+  double activePositionPercentage = 0.0; // e.g. if the user is 31% of the way through the whole trip, this equals 0.31
+  TimelineInfo({
+    List<TimelineStep>? timelineSteps,
+    this.activePositionPercentage = 0.0
+  }) : timelineSteps = timelineSteps ?? [];
 
 }
 
@@ -139,8 +179,59 @@ class NavigationManager {
 
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList =
-      [DemoStage()]; // Stores all the states for users to page back and forth
+      [
+        DemoStage(
+          favoriteNumber: 1, length: 15, percent_complete: 0.80,
+        ),
+        DemoStage(
+          favoriteNumber: 2, length: 33, percent_complete: 0.23,
+        ),
+        DemoStage(
+          favoriteNumber: 3, length: 4, percent_complete: 0.0,
+        ),
+      
+      ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
+
+  TimelineInfo getTimeline() {
+
+    // TODO: Also return the user's position in the whole journey
+    
+    double total_estimated_time = 0.0;
+    double activePositionTime = 0.0; // This is the active position percentage before dividing by total estimated trip length
+    double activePositionPercentage = 0.0;
+
+    for (int i = 0; i < stageList.length; i++) {
+
+      double currentStageLength = stageList[i].length;
+
+      total_estimated_time += currentStageLength;
+
+      if (i < currentStage) {
+        activePositionTime = activePositionTime + currentStageLength;
+      } else if (i == currentStage) {
+        activePositionTime += currentStageLength * stageList[i].percent_complete;
+      }
+      
+    }
+    activePositionPercentage = activePositionTime / total_estimated_time;
+
+    List<TimelineStep> timelineSteps = [];
+
+    for (int i = 0; i < stageList.length; i++) {
+      timelineSteps.add(TimelineStep(
+        estimated_time: stageList[i].length,
+        percentage: stageList[i].length / total_estimated_time,
+        color: stageList[i].getColor()
+        // TODO: Define a color for the stage in the stage itself
+        // color: Colors.red
+        )
+      );
+    }
+
+    return TimelineInfo(timelineSteps: timelineSteps, activePositionPercentage: activePositionPercentage);
+
+  }
 
   // Some way for the navigation widget to
 
@@ -156,6 +247,17 @@ class NavigationManager {
 
   NavigationStage getCurrentStage() {
     return stageList[currentStage];
+  }
+
+  void nextStage() {
+    debugPrint("Stage index: $currentStage + 1 % ${stageList.length}");
+    currentStage = (currentStage + 1) % stageList.length;
+    debugPrint("Stage index is now $currentStage");
+  }
+  void previousStage() {
+    debugPrint("Stage index: $currentStage - 1 % ${stageList.length}");
+    currentStage = (currentStage - 1) % stageList.length;
+    debugPrint("Stage index is now $currentStage");
   }
 
   // TODO: Add start()/stop() methods
