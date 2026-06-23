@@ -58,7 +58,7 @@ sealed class NavigationStage {
   }
 
   Color getColor() { // Return a random color
-    return Color(Random().nextInt(0xFFFFFFFF)).withAlpha(255);
+    return Color(0xFFDBE4ED);
   }
 }
 
