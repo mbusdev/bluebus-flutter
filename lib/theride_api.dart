@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as Math;
+import 'package:bluebus/utils/geometry.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'constants.dart';
@@ -7,27 +8,6 @@ import 'models/bus_stop.dart';
 import 'models/bus.dart';
 import 'models/bus_route_line.dart';
 import 'services/route_color_service.dart';
-
-// Function to calculate rotation angle between two geographical points
-// (used for bus stop icon orientation)
-double pointRotation(double lat1, double lon1, double lat2, double lon2) {
-  const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232;    // 180 / π
-
-  double dLat = lat2 - lat1;
-  double dLon = lon2 - lon1;
-
-  // Scale longitude by cos(lat) to correct for east-west distance
-  double x = dLon * (Math.cos(lat1 * degToRad));
-  double y = dLat;
-
-  double angle = Math.atan2(x, y) * radToDeg;
-
-  // Normalize to [0, 360)
-  if (angle < 0) angle += 360;
-
-  return angle;
-}
 
 class RideAPI {
   static const String baseUrl = BACKEND_URL;
