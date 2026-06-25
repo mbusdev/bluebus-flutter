@@ -193,6 +193,10 @@ class NavigationManager {
       ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
 
+  void setMapLayer(NavigationLayer mapLayer_in) {
+    this.mapLayer = mapLayer_in;
+  }
+
   TimelineInfo getTimeline() {
 
     // TODO: Also return the user's position in the whole journey
@@ -244,6 +248,22 @@ class NavigationManager {
   // Write a function to detect if the stage switch went wrong
   //    Allen: Add UI to ask the user about which new bus to take [Check with Ishan and Harvey]
   //      Isaac: I'll talk to Ishan (gc with Allen+Ishan+Harvey) about what the final logic is for the "Oops" stage
+
+  void rebuildMarkersAndPolylines() {
+    if (this.mapLayer == null) {
+      debugPrint("Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!");
+      return;
+    }
+    Set<Marker> markersToDisplay = stageList.expand((NavigationStage stage) => stage.getMarkers()).toSet();
+    Set<Polyline> polylinesToDisplay = stageList.expand((NavigationStage stage) => stage.getPolylines()).toSet();
+
+    this.mapLayer!.setMarkers(markersToDisplay);
+    this.mapLayer!.setPolylines(polylinesToDisplay);
+    this.mapLayer!.reload();
+
+    // FUTURE TODO: Get some sample data for polylines/markers and conditionally show them on the map--define a "navigation mode" that can be active (or not) in map_screen.dart
+    
+  }
 
   NavigationStage getCurrentStage() {
     return stageList[currentStage];

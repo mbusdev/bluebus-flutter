@@ -12,6 +12,7 @@ import 'package:bluebus/services/map_image_service.dart';
 import 'package:bluebus/services/map_layers/base_routes_layer.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
+import 'package:bluebus/services/map_layers/navigation_layer.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
@@ -162,6 +163,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final BaseRoutesLayer baseRoutesLayer = BaseRoutesLayer();
   final LiveBusesLayer liveBusesLayer = LiveBusesLayer();
   final JourneyLayer journeyLayer = JourneyLayer();
+  final NavigationLayer navigationLayer = NavigationLayer();
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -186,6 +188,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       _activeJourneyRoutes,
       context,
     );
+
+    navigationManager.setMapLayer(navigationLayer);
+    navigationLayer.init();
 
     hideJourney(); // Hide the journey layer until we're ready to use it
 
