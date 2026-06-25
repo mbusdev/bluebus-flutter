@@ -5,7 +5,9 @@ import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
+import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -124,6 +126,47 @@ class Walking extends NavigationStage{
 
 }
 
+// oops stage
+// TODOs: 
+class MissedBus extends NavigationStage { 
+  // using the new title information method
+  @override
+  String getTitle() {
+    // could be a more descriptive title who knows..
+    return "Oops!";
+  }
+
+  // information for the popup 
+  @override
+  String getSubtitle() { 
+    // Looks like these are for pop-ups, so maybe this can be part of a user prompt? 
+    return "Looks like you might've missed your bus! Would you like to re-route?";
+  }
+
+  String route; // current route
+  String nearest_stop; // nearest stop: ideally to get off
+  String c_bus; // current bus i am/was on 
+  String c_pos; // current position (maybe not str lat lng?)
+
+  MissedBus({
+    // Constructor for more stuff
+    required this.route, 
+    required this.nearest_stop,
+    required this.c_bus,
+    required this.c_pos,
+  });
+
+  // Core functionality + TODOs for Allen 
+  // Main objectives for the "oops" stage:
+  // - Acknowledge to user that they have missed expected bus
+  // - Based on logic: immediately ask user to get off on next stop 
+  // - Goal: Recalculate or call to recalcualte new route and redirect user to a nother stage ideally
+
+  // Data Structure Implementation 
+  // What we need: 
+  // - hangon...
+
+}
 
 class DemoStage extends NavigationStage {
 
@@ -283,3 +326,14 @@ class NavigationManager {
   // - Find a way to get the two to talk to each other: I.e. whenever `NavigationOverlayWidget` is created, it calls a specific method inside NavigationManager that says "Hey, I'm here, please save me in a member variable", so when the "Oops" stage happens later you can call localReferenceToOverlayWidget.displayOopsDialog(...)
   //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }
+
+Future<Journey> getMockJourney() async {
+  // using the same start / end as the backend test
+  // make sure BACKEND_URL is set to the mock backend
+  final journeys = await JourneyRepository.planJourney(
+    originLat: 42.264356, originLon: -83.744353999999,
+    destLat: 42.268067999999, destLon: -83.747307000001
+  );
+  return journeys[0];
+}
+

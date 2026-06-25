@@ -1,9 +1,7 @@
 import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as Math;
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -35,12 +33,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../widgets/map_widget.dart';
+import 'package:vector_math/vector_math_64.dart' as vec_math;
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
-//import '../models/bus_stop.dart';
 import '../models/journey.dart';
 import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
@@ -48,31 +45,9 @@ import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
 import 'package:screen_corner_radius/screen_corner_radius.dart';
-//import 'dart:convert';
 
 final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
 final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
-
-// Function to calculate rotation angle between two geographical points
-// (used for bus stop icon orientation)
-double pointRotation(double lat1, double lon1, double lat2, double lon2) {
-  const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232; // 180 / π
-
-  double dLat = lat2 - lat1;
-  double dLon = lon2 - lon1;
-
-  // Scale longitude by cos(lat) to correct for east-west distance
-  double x = dLon * (Math.cos(lat1 * degToRad));
-  double y = dLat;
-
-  double angle = Math.atan2(x, y) * radToDeg;
-
-  // Normalize to [0, 360)
-  if (angle < 0) angle += 360;
-
-  return angle;
-}
 
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
@@ -1774,7 +1749,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                         ? (-_currentCameraPos!
                                                                       .bearing -
                                                                   45) *
-                                                              (math.pi / 180)
+                                                              vec_math.degrees2Radians
                                                         : 0,
                                                     child: Icon(
                                                       FontAwesomeIcons.compass,
