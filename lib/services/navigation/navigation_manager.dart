@@ -346,7 +346,7 @@ class NavigationManager {
 }
 
 abstract class NavigationOverlayHost { 
-  void displayOopsDialogue(MissedBus state); // just for the Oops state for now...
+  void displayOopsDialog(MissedBus state); // just for the Oops state for now...
   void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
 
