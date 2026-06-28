@@ -103,11 +103,11 @@ class Walking extends NavigationStage{
 class DemoStage extends NavigationStage {
 
   String getTitle() {
-    return "This is a demo!";
+    return "This is a demo! #$favoriteNumber";
   }
 
   String getSubtitle() {
-    return "Look, here's a subtitle too";
+    return "Look, here's a subtitle too #$favoriteNumber";
   }
 
   double length = 15.0;
@@ -292,6 +292,14 @@ class NavigationManager {
 
   NavigationStage getCurrentStage() {
     return stageList[currentStage];
+  }
+
+  void nextStage() {
+    currentStage = (currentStage + 1) % stageList.length;
+  }
+
+  void previousStage() {
+    currentStage = (currentStage - 1) % stageList.length;
   }
 
   // TODO: Add start()/stop() methods

@@ -32,6 +32,14 @@ class NavigationLayer extends CompositeMapLayer {
     if (isVisible) onUpdate();
   }
 
+  void setMarkers(Set<Marker> markers_in) {
+    this.markers = markers_in;
+  }
+
+  void setPolylines(Set<Polyline> polylines_in) {
+    this.polylines = polylines_in;
+  }
+
   void reloadMarkers() {
     //...
   }
