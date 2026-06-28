@@ -280,6 +280,7 @@ class NavigationManager {
 
   }
 
+
   // Some way for the navigation widget to
 
   void init() {
@@ -325,6 +326,11 @@ class NavigationManager {
   // - Allen: Get “Oops” code started. Find a way to talk to the NavigationOverlayWidget
   // - Find a way to get the two to talk to each other: I.e. whenever `NavigationOverlayWidget` is created, it calls a specific method inside NavigationManager that says "Hey, I'm here, please save me in a member variable", so when the "Oops" stage happens later you can call localReferenceToOverlayWidget.displayOopsDialog(...)
   //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
+}
+
+abstract class NavigationOverlayHost { 
+  void displayOopsDialogue(MissedBus state); // just for the Oops state for now...
+  void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
 
 Future<Journey> getMockJourney() async {
