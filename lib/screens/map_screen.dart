@@ -1,12 +1,16 @@
 import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as Math;
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/screens/new_features_screen.dart';
+import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/services/map_layers/base_routes_layer.dart';
+import 'package:bluebus/services/map_layers/journey_layer.dart';
+import 'package:bluebus/services/map_layers/live_buses_layer.dart';
+import 'package:bluebus/services/map_layers/navigation_layer.dart';
+import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/dialog.dart';
@@ -26,58 +30,21 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../widgets/map_widget.dart';
+import 'package:vector_math/vector_math_64.dart' as vec_math;
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
-//import '../models/bus_stop.dart';
 import '../models/journey.dart';
 import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
-//import 'dart:convert';
+import 'package:screen_corner_radius/screen_corner_radius.dart';
 
 final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
 final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
-
-// Function to calculate rotation angle between two geographical points
-// (used for bus stop icon orientation)
-double pointRotation(double lat1, double lon1, double lat2, double lon2) {
-  const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232; // 180 / π
-
-  double dLat = lat2 - lat1;
-  double dLon = lon2 - lon1;
-
-  // Scale longitude by cos(lat) to correct for east-west distance
-  double x = dLon * (Math.cos(lat1 * degToRad));
-  double y = dLat;
-
-  double angle = Math.atan2(x, y) * radToDeg;
-
-  // Normalize to [0, 360)
-  if (angle < 0) angle += 360;
-
-  return angle;
-}
-
-Future<BitmapDescriptor> resizeImage(ByteData image) async {
-  // Load and resize stop icon
-  final stopBytes = image;
-  final stopCodec = await ui.instantiateImageCodec(
-    stopBytes.buffer.asUint8List(),
-    targetWidth: 65,
-    targetHeight: 65,
-  );
-  final stopFrame = await stopCodec.getNextFrame();
-  final stopData = await stopFrame.image.toByteData(
-    format: ui.ImageByteFormat.png,
-  );
-  return BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
-}
 
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
@@ -154,6 +121,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // store persistent bottom sheet controller
   PersistentBottomSheetController? _bottomSheetController;
 
+  final BaseRoutesLayer baseRoutesLayer = BaseRoutesLayer();
+  final LiveBusesLayer liveBusesLayer = LiveBusesLayer();
+  final JourneyLayer journeyLayer = JourneyLayer();
+  final NavigationLayer navigationLayer = NavigationLayer();
+
   // GoogleMaps styles
   String _darkMapStyle = "{}";
   String _lightMapStyle = "{}";
@@ -169,6 +141,22 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void initState() {
     super.initState();
     _setupConnectivityMonitoring();
+
+    // debugPrint("MAP SCREEN INITSTATE===================");
+    navigationManager.init();
+
+    baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
+    journeyLayer.init(
+      _showBusSheet,
+      _activeJourneyBusIds,
+      _activeJourneyRoutes,
+      context,
+    );
+
+    navigationManager.setMapLayer(navigationLayer);
+    navigationLayer.init();
+
+    hideJourney(); // Hide the journey layer until we're ready to use it
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
@@ -2092,68 +2080,18 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   },
                   child: Stack(
                     children: [
-                      // underlying map layer (different ios and android)
-                      Platform.isIOS
-                          ? MapWidget(
-                              initialCenter: _defaultCenter,
-                              polylines: _journeyOverlayActive
-                                  ? _displayedJourneyPolylines
-                                  : _displayedPolylines.union(
-                                      _displayedJourneyPolylines,
-                                    ),
-                              markers: _journeyOverlayActive
-                                  ? _displayedJourneyMarkers
-                                        .union(_displayedJourneyBusMarkers)
-                                        .union(
-                                          _searchLocationMarker != null
-                                              ? {_searchLocationMarker!}
-                                              : {},
-                                        )
-                                  : _allDisplayedStopMarkers,
-                              darkMapStyle: _darkMapStyle,
-                              lightMapStyle: _lightMapStyle,
-                              onMapCreated: _onMapCreated,
-                              onCameraMove: _onCameraMove,
-                              onCameraIdle: _onCameraIdle,
-                              myLocationEnabled: true,
-                              myLocationButtonEnabled: false,
-                              zoomControlsEnabled: true,
-                              mapToolbarEnabled: true,
-                            )
-                          : AndroidMap(
-                              initialCenter: _defaultCenter,
-                              polylines: _journeyOverlayActive
-                                  ? _displayedJourneyPolylines
-                                  : _displayedPolylines.union(
-                                      _displayedJourneyPolylines,
-                                    ),
-                              staticMarkers: _journeyOverlayActive
-                                  ? _displayedJourneyMarkers.union(
-                                      _searchLocationMarker != null
-                                          ? {_searchLocationMarker!}
-                                          : {},
-                                    )
-                                  : _displayedStopMarkers
-                                        .union(_displayedJourneyMarkers)
-                                        .union(
-                                          _searchLocationMarker != null
-                                              ? {_searchLocationMarker!}
-                                              : {},
-                                        ),
-                              darkMapStyle: _darkMapStyle,
-                              lightMapStyle: _lightMapStyle,
-                              dynamicMarkers: _journeyOverlayActive
-                                  ? _displayedJourneyBusMarkers
-                                  : _displayedBusMarkers,
-                              onMapCreated: _onMapCreated,
-                              onCameraMove: _onCameraMove,
-                              onCameraIdle: _onCameraIdle,
-                              //myLocationEnabled: true,
-                              myLocationButtonEnabled: false,
-                              //zoomControlsEnabled: true,
-                              //mapToolbarEnabled: true,
-                            ),
-
+                      RepaintBoundary(
+                        child: CompositeMapWidget(
+                          initialCenter: startLatLng,
+                          mapLayers: [
+                            // baseRoutesLayer,
+                            // liveBusesLayer,
+                            // journeyLayer,
+                            navigationLayer
+                          ],
+                          onMapCreated: _onMapCreated,
+                        ),
+                      ),
                       Padding(
                         padding: EdgeInsets.only(
                           top: globalTopPadding,
@@ -2486,7 +2424,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                         ? (-_currentCameraPos!
                                                                       .bearing -
                                                                   45) *
-                                                              (math.pi / 180)
+                                                              vec_math.degrees2Radians
                                                         : 0,
                                                     child: Icon(
                                                       FontAwesomeIcons.compass,

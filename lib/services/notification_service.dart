@@ -10,6 +10,7 @@ class NotificationService {
   static final _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
   static bool _listeningForFcmUpdates = false;
   static bool _listeningForForegroundMessages = false;
+  static bool _listeningForMessageOpened = false; 
   static String? _registrationToken;
   static Function(String)? _tokenChangeCallback;
 
