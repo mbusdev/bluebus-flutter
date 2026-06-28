@@ -236,6 +236,23 @@ class NavigationManager {
       ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
 
+  NavigationOverlayHost? _overlay;
+
+  void registerOverlay(NavigationOverlayHost overlay) {
+    _overlay = overlay;
+  }
+
+  void unregisterOverlay(NavigationOverlayHost overlay) {
+    if (_overlay == overlay) {
+      _overlay = null;
+    }
+  }
+
+  // Call to update if state changes require an update 
+  void notifyOverlay() {
+    _overlay?.onNavigationUpdated();
+  }
+
   void setMapLayer(NavigationLayer mapLayer_in) {
     this.mapLayer = mapLayer_in;
   }
