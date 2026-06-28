@@ -14,7 +14,7 @@ import 'package:bluebus/widgets/dialog.dart';
 // (used for bus stop icon orientation)
 double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232; // 180 / π
+  const double radToDeg = 57.29577951308232;    // 180 / π
 
   double dLat = lat2 - lat1;
   double dLon = lon2 - lon1;
@@ -166,9 +166,7 @@ class BlueBusApi {
   // Fetch all buses and their positions
   static Future<List<Bus>> fetchBuses() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/getVehiclePositions'),
-      );
+      final response = await http.get(Uri.parse('$baseUrl/getVehiclePositions'));
       if (response.statusCode != 200) throw Exception('Failed to load buses');
       final data = jsonDecode(response.body);
       final buses = <Bus>[];
@@ -193,11 +191,10 @@ class BlueBusApi {
       }
 
       return buses;
-    } catch (e) {
+    } catch (e){
+
       // on error return a blank list
       return [];
     }
   }
 }
-
-// TODO: Make bus routes have better fallback, so if one route fails to be processed it doesn't tank the rest of them
