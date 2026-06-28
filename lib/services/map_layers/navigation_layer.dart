@@ -21,16 +21,14 @@ class NavigationLayer extends CompositeMapLayer {
   };
 
   void init(
-    Set<String> favoriteStops_in,
-    Set<String> selectedRoutes_in,
-    Function(BusStop) onStopClicked_in,
   ) {
     //...
   }
 
   void reload() {
-    reloadMarkers();
-    reloadPolylines();
+    // reloadMarkers();
+    // reloadPolylines();
+    debugPrint("**** RELOADING NAVIGATIONLAYER, we have ${markers.length} markers and ${polylines} polylines");
     if (isVisible) onUpdate();
   }
 

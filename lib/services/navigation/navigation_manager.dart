@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 
@@ -19,7 +22,19 @@ sealed class NavigationStage {
 
   double length = 0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
   double percent_complete = 0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
-  
+
+  List<Marker> getMarkers() {
+    return [];
+  }
+
+  List<Polyline> getPolylines() {
+    return [];
+  }
+
+  Color getColor() {
+    return Color(0xFFDBE4ED);
+  }
+
 }
 
 class NavWalking extends NavigationStage {
@@ -96,7 +111,77 @@ class DemoStage extends NavigationStage {
   }
 
   double length = 15.0;
-  double percent_complete = 11.0;
+  double percent_complete = 0.110;
+
+  LatLng startPoint;
+  LatLng endPoint;
+
+  double favoriteNumber;
+
+  DemoStage({
+    required this.favoriteNumber,
+    required this.length,
+    required this.percent_complete,
+    required this.startPoint,
+    required this.endPoint
+  });
+
+  @override
+  Color getColor() { // Return a random color
+    // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
+    const double golden = 0.618033988749895;
+    final double hue = ((this.favoriteNumber.hashCode * golden) % 1.0).abs() * 360;
+    return HSLColor.fromAHSL(1.0, hue, 0.65, 0.55).toColor();
+  }
+
+  @override
+  List<Marker> getMarkers() {
+    return [
+      Marker(
+        markerId: MarkerId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
+        position: this.startPoint
+      ),
+      Marker(
+        markerId: MarkerId("${this.favoriteNumber}-${this.endPoint.latitude}-${this.endPoint.longitude}"),
+        position: this.endPoint
+      )
+    ];
+  }
+  @override
+  List<Polyline> getPolylines() {
+    return [
+      Polyline(
+        polylineId: PolylineId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
+        points: [
+          this.startPoint,
+          this.endPoint
+        ],
+        color: this.getColor()
+      )
+    ];
+  }
+
+}
+
+class TimelineStep { 
+  double estimated_time;
+  double percentage;
+  Color color;
+
+  TimelineStep({
+    required this.estimated_time,
+    required this.percentage, // Percentage of the entire progress bar occupied by this timeline step
+    required this.color
+  });
+}
+
+class TimelineInfo {
+  List<TimelineStep> timelineSteps = [];
+  double activePositionPercentage = 0.0; // e.g. if the user is 31% of the way through the whole trip, this equals 0.31
+  TimelineInfo({
+    List<TimelineStep>? timelineSteps,
+    this.activePositionPercentage = 0.0
+  }) : timelineSteps = timelineSteps ?? [];
 
 }
 
@@ -105,13 +190,82 @@ class NavigationManager {
 
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList =
-      [DemoStage()]; // Stores all the states for users to page back and forth
+      [
+        DemoStage(
+          favoriteNumber: 1,
+          length: 15,
+          percent_complete: 0.80,
+          startPoint: LatLng(42.281973, -83.765719),
+          endPoint: LatLng(42.281291, -83.743918)
+        ),
+        DemoStage(
+          favoriteNumber: 2,
+          length: 33,
+          percent_complete: 0.23,
+          startPoint: LatLng(42.281291, -83.743918),
+          endPoint: LatLng(42.287031, -83.743532),
+        ),
+        DemoStage(
+          favoriteNumber: 3,
+          length: 4,
+          percent_complete: 0.0,
+          startPoint: LatLng(42.287031, -83.743532),
+          endPoint: LatLng(42.289689, -83.738435)
+        ),
+      
+      ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
+
+  void setMapLayer(NavigationLayer mapLayer_in) {
+    this.mapLayer = mapLayer_in;
+    rebuildMarkersAndPolylines();
+  }
+
+  TimelineInfo getTimeline() {
+
+    // TODO: Also return the user's position in the whole journey
+    
+    double total_estimated_time = 0.0;
+    double activePositionTime = 0.0; // This is the active position percentage before dividing by total estimated trip length
+    double activePositionPercentage = 0.0;
+
+    for (int i = 0; i < stageList.length; i++) {
+
+      double currentStageLength = stageList[i].length;
+
+      total_estimated_time += currentStageLength;
+
+      if (i < currentStage) {
+        activePositionTime = activePositionTime + currentStageLength;
+      } else if (i == currentStage) {
+        activePositionTime += currentStageLength * stageList[i].percent_complete;
+      }
+      
+    }
+    activePositionPercentage = activePositionTime / total_estimated_time;
+
+    List<TimelineStep> timelineSteps = [];
+
+    for (int i = 0; i < stageList.length; i++) {
+      timelineSteps.add(TimelineStep(
+        estimated_time: stageList[i].length,
+        percentage: stageList[i].length / total_estimated_time,
+        color: stageList[i].getColor()
+        // TODO: Define a color for the stage in the stage itself
+        // color: Colors.red
+        )
+      );
+    }
+
+    return TimelineInfo(timelineSteps: timelineSteps, activePositionPercentage: activePositionPercentage);
+
+  }
 
   // Some way for the navigation widget to
 
   void init() {
     // Init as necessary
+    rebuildMarkersAndPolylines();
   }
 
   // Some sort of code to read the current stage and next stage to determine whether the user can "jump" (stage switch)
@@ -119,6 +273,22 @@ class NavigationManager {
   // Write a function to detect if the stage switch went wrong
   //    Allen: Add UI to ask the user about which new bus to take [Check with Ishan and Harvey]
   //      Isaac: I'll talk to Ishan (gc with Allen+Ishan+Harvey) about what the final logic is for the "Oops" stage
+
+  void rebuildMarkersAndPolylines() { // Call this whenever markers or polylines change
+    if (this.mapLayer == null) {
+      debugPrint("Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!");
+      return;
+    }
+    Set<Marker> markersToDisplay = stageList.expand((NavigationStage stage) => stage.getMarkers()).toSet();
+    Set<Polyline> polylinesToDisplay = stageList.expand((NavigationStage stage) => stage.getPolylines()).toSet();
+
+    this.mapLayer!.setMarkers(markersToDisplay);
+    this.mapLayer!.setPolylines(polylinesToDisplay);
+    this.mapLayer!.reload();
+
+    // FUTURE TODO: Get some sample data for polylines/markers and conditionally show them on the map--define a "navigation mode" that can be active (or not) in map_screen.dart
+    
+  }
 
   NavigationStage getCurrentStage() {
     return stageList[currentStage];
