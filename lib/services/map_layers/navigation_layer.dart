@@ -28,6 +28,7 @@ class NavigationLayer extends CompositeMapLayer {
   void reload() {
     // reloadMarkers();
     // reloadPolylines();
+    debugPrint("**** RELOADING NAVIGATIONLAYER, we have ${markers.length} markers and ${polylines} polylines");
     if (isVisible) onUpdate();
   }
 

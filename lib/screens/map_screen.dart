@@ -156,6 +156,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     super.initState();
     _setupConnectivityMonitoring();
 
+    // debugPrint("MAP SCREEN INITSTATE===================");
+    navigationManager.init();
+
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
     journeyLayer.init(
       _showBusSheet,
@@ -1409,9 +1412,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         child: CompositeMapWidget(
                           initialCenter: startLatLng,
                           mapLayers: [
-                            baseRoutesLayer,
-                            liveBusesLayer,
-                            journeyLayer,
+                            // baseRoutesLayer,
+                            // liveBusesLayer,
+                            // journeyLayer,
+                            navigationLayer
                           ],
                           onMapCreated: _onMapCreated,
                         ),

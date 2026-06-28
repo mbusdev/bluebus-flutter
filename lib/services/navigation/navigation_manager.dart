@@ -183,14 +183,47 @@ class DemoStage extends NavigationStage {
   double length = 15.0;
   double percent_complete = 0.110;
 
+  LatLng startPoint;
+  LatLng endPoint;
+
   DemoStage({
     required this.favoriteNumber,
     required this.length,
-    required this.percent_complete
+    required this.percent_complete,
+    required this.startPoint,
+    required this.endPoint
   });
 
   Color getColor() { // Return a random color
-    return Color(Random().nextInt(0xFFFFFFFF)).withAlpha(255);
+    // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
+    const double golden = 0.618033988749895;
+    final double hue = ((this.favoriteNumber.hashCode * golden) % 1.0).abs() * 360;
+    return HSLColor.fromAHSL(1.0, hue, 0.65, 0.55).toColor();
+  }
+
+  List<Marker> getMarkers() {
+    return [
+      Marker(
+        markerId: MarkerId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
+        position: this.startPoint
+      ),
+      Marker(
+        markerId: MarkerId("${this.favoriteNumber}-${this.endPoint.latitude}-${this.endPoint.longitude}"),
+        position: this.endPoint
+      )
+    ];
+  }
+  List<Polyline> getPolylines() {
+    return [
+      Polyline(
+        polylineId: PolylineId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
+        points: [
+          this.startPoint,
+          this.endPoint
+        ],
+        color: this.getColor()
+      )
+    ];
   }
 
 }
@@ -224,13 +257,25 @@ class NavigationManager {
   List<NavigationStage> stageList =
       [
         DemoStage(
-          favoriteNumber: 1, length: 15, percent_complete: 0.80,
+          favoriteNumber: 1,
+          length: 15,
+          percent_complete: 0.80,
+          startPoint: LatLng(42.281973, -83.765719),
+          endPoint: LatLng(42.281291, -83.743918)
         ),
         DemoStage(
-          favoriteNumber: 2, length: 33, percent_complete: 0.23,
+          favoriteNumber: 2,
+          length: 33,
+          percent_complete: 0.23,
+          startPoint: LatLng(42.281291, -83.743918),
+          endPoint: LatLng(42.287031, -83.743532),
         ),
         DemoStage(
-          favoriteNumber: 3, length: 4, percent_complete: 0.0,
+          favoriteNumber: 3,
+          length: 4,
+          percent_complete: 0.0,
+          startPoint: LatLng(42.287031, -83.743532),
+          endPoint: LatLng(42.289689, -83.738435)
         ),
       
       ]; // Stores all the states for users to page back and forth
@@ -238,6 +283,7 @@ class NavigationManager {
 
   void setMapLayer(NavigationLayer mapLayer_in) {
     this.mapLayer = mapLayer_in;
+    rebuildMarkersAndPolylines();
   }
 
   TimelineInfo getTimeline() {
@@ -284,6 +330,7 @@ class NavigationManager {
 
   void init() {
     // Init as necessary
+    rebuildMarkersAndPolylines();
   }
 
   // Some sort of code to read the current stage and next stage to determine whether the user can "jump" (stage switch)
@@ -292,7 +339,7 @@ class NavigationManager {
   //    Allen: Add UI to ask the user about which new bus to take [Check with Ishan and Harvey]
   //      Isaac: I'll talk to Ishan (gc with Allen+Ishan+Harvey) about what the final logic is for the "Oops" stage
 
-  void rebuildMarkersAndPolylines() {
+  void rebuildMarkersAndPolylines() { // Call this whenever markers or polylines change
     if (this.mapLayer == null) {
       debugPrint("Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!");
       return;
