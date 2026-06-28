@@ -25,7 +25,7 @@ class BlueBusApi {
       for (final subroute in subroutes) {
         try {
           final points = <LatLng>[];
-          final stops = <BusStop>[];
+          final stops = <(int, BusStop)>[];
           
           // Cast to list to be able to be able to get different elements
           final pointList = subroute['pt'] as List; 
@@ -41,27 +41,25 @@ class BlueBusApi {
             );
             if (point['typ'] == 'S') {
               // get rotation of stop
-              if (isLast){
+              double stopRotation;
+              if (isLast) {
                 // use the previous 2 points to calculate rotation
-                double stopRotation = pointRotation(
+                stopRotation = pointRotation(
                   pointList[i - 2]['lat']?.toDouble() ?? 0,
                   pointList[i - 2]['lon']?.toDouble() ?? 0,
                   pointList[i - 1]['lat']?.toDouble() ?? 0,
                   pointList[i - 1]['lon']?.toDouble() ?? 0,
                 );
-                stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
-                
               } else {
                 // use the next 2 points to calculate rotation
-                double stopRotation = pointRotation(
+                stopRotation = pointRotation(
                   pointList[i + 1]['lat']?.toDouble() ?? 0,
                   pointList[i + 1]['lon']?.toDouble() ?? 0,
                   pointList[i + 2]['lat']?.toDouble() ?? 0,
                   pointList[i + 2]['lon']?.toDouble() ?? 0,
                 );
-                stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
               }
-
+              stops.add((i, BusStop.fromJson(point, routeId, stopRotation, false)));
             }
           }
 
@@ -82,7 +80,7 @@ class BlueBusApi {
           // Handle detour points if present
           if (subroute.containsKey('dtrpt')) {
             final detourPoints = <LatLng>[];
-            final detourStops = <BusStop>[];
+            final detourStops = <(int, BusStop)>[];
 
             // Cast to list to be able to be able to get different elements
             final detourPointList = subroute['dtrpt'] as List; 
@@ -99,26 +97,26 @@ class BlueBusApi {
               );
               if (point['typ'] == 'S') {
                 // get rotation of stop
-                if (isLast){
+                double stopRotation;
+                if (isLast) {
                   // use the previous 2 points to calculate rotation
-                  double stopRotation = pointRotation(
+                  stopRotation = pointRotation(
                     detourPointList[i - 2]['lat']?.toDouble() ?? 0,
                     detourPointList[i - 2]['lon']?.toDouble() ?? 0,
                     detourPointList[i - 1]['lat']?.toDouble() ?? 0,
                     detourPointList[i - 1]['lon']?.toDouble() ?? 0,
                   );
-                  detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
                   
                 } else {
                   // use the next 2 points to calculate rotation
-                  double stopRotation = pointRotation(
+                  stopRotation = pointRotation(
                     detourPointList[i + 1]['lat']?.toDouble() ?? 0,
                     detourPointList[i + 1]['lon']?.toDouble() ?? 0,
                     detourPointList[i + 2]['lat']?.toDouble() ?? 0,
                     detourPointList[i + 2]['lon']?.toDouble() ?? 0,
                   );
-                  detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
                 }
+                detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, false)));
               }
             }
 

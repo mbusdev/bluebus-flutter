@@ -5,7 +5,8 @@ import 'bus_stop.dart';
 class BusRouteLine {
   final String routeId;
   final List<LatLng> points;
-  final List<BusStop> stops;
+  /// bus stops along with the index of the associated point
+  final List<(int, BusStop)> stops;
   final Color? color;
   final String? imageUrl;
 

@@ -4,6 +4,7 @@ import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:bluebus/widgets/composite_map_widget.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +39,7 @@ class JourneyLayer extends CompositeMapLayer {
   Set<String> activeJourneyRoutes = {};
   Set<Marker> liveBusMarkers = {};
 
-  Map<String, BusRouteLine> routesCache = {};
+  Map<String, List<BusRouteLine>> routesCache = {};
   BuildContext? context;
 
   GoogleMapController? _mapController;
@@ -104,8 +105,9 @@ class JourneyLayer extends CompositeMapLayer {
   }
 
   void setRoutesCache(List<BusRouteLine> routes) {
+    routesCache.clear();
     for (BusRouteLine l in routes) {
-      routesCache[l.routeId] = l;
+      routesCache.putIfAbsent(l.routeId, () => []).add(l);
     }
   }
 
@@ -146,7 +148,10 @@ class JourneyLayer extends CompositeMapLayer {
     if (leg.rt != null) activeJourneyRoutes.add(leg.rt!);
     if (leg.trip != null) activeJourneyBusIds.add(leg.trip!.vid);
 
-    BusRouteLine? line = routesCache[leg.rt];
+    final rt = leg.rt;
+    final line = rt != null
+      ? NavOnBus.determineRouteOfBusLeg(routesCache, rt, leg.originID, leg.destinationID)
+      : null;
 
     // debugPrint("Tracing path from ${leg.originID} to ${leg.destinationID}");
 

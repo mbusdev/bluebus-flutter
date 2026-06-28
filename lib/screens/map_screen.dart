@@ -594,7 +594,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
         _routeStopMarkers[routeKey] = {};
-        for (final stop in r.stops) {
+        for (final (_, stop) in r.stops) {
           // iterate through all stops in this route
           final isFavorite = _favoriteStops.contains(stop.id);
 

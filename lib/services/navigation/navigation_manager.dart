@@ -7,6 +7,7 @@ import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
+import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -69,14 +70,13 @@ class NavWalking extends NavigationStage {
 }
 
 class NavOnBus extends NavigationStage {
-  String title = "On Bus";
-
   String rt;
   String departureStop;
   String arrivalStop;
 
   Trip trip;
-  BusRouteLine? busPath;  
+  List<(LatLng, (int, BusStop)?)> busPath;
+  // BusRouteLine busPath;  
 
   NavOnBus({
     required this.rt,
@@ -86,7 +86,7 @@ class NavOnBus extends NavigationStage {
     required this.busPath,
   });
 
-  factory NavOnBus.init(Leg leg, Map<String, BusRouteLine> routesCache) {
+  factory NavOnBus.init(Leg leg, Map<String, List<BusRouteLine>> routesCache) {
     final maybeRt = leg.rt;
     final maybeTrip = leg.trip;
     if (maybeRt == null ||
@@ -96,14 +96,83 @@ class NavOnBus extends NavigationStage {
         leg.destinationID == '') {
       throw Exception("leg was malformed or not a bus leg");
     }
+    final busLine = determineRouteOfBusLeg(routesCache, maybeRt, leg.originID, leg.destinationID);
+    if (busLine == null) throw Exception("bus line not found");
+
+    final stopsIter = busLine.stops.skipWhile((s) => s.$2.id != leg.originID);
+    final startIdx = stopsIter.firstOrNull?.$1;
+    final endIdx = stopsIter.where((s) => s.$2.id == leg.destinationID).firstOrNull?.$1;
+    if (startIdx == null || endIdx == null) throw Exception("valid bus line not found");
+
+    final busPath = <(LatLng, (int, BusStop)?)>[];
+    for (int i = startIdx; i <= endIdx; i++) {
+      busPath.add((busLine.points[i], busLine.stops.where((s) => s.$1 == i).firstOrNull));
+    }
+
     return NavOnBus(
       rt: maybeRt,
       departureStop: leg.originID,
       arrivalStop: leg.destinationID,
       trip: maybeTrip,
-      busPath: routesCache[maybeRt],
+      busPath: busPath,
     );
   }
+
+  @override
+  String getTitle() {
+    // TODO: implement getTitle
+    return "($rt) Ride ${-1} more stops";
+  }
+
+  @override
+  String getSubtitle() {
+    // TODO: implement getSubtitle
+    return "${-1} min";
+  }
+
+  @override
+  // TODO: implement length
+  double get length => super.length;
+
+  @override
+  // TODO: implement percent_complete
+  double get percent_complete => super.percent_complete;
+
+  @override
+  List<NavigationStageStep> getSteps() {
+    // TODO: implement getSteps
+    return super.getSteps();
+  }
+
+  @override
+  List<Marker> getMarkers() {
+    // TODO: implement getMarkers
+    return super.getMarkers();
+  }
+
+  @override
+  List<Polyline> getPolylines() {
+    // TODO: implement getPolylines
+    return super.getPolylines();
+  }
+
+  @override
+  Color getColor() {
+    return RouteColorService.getRouteColor(rt);
+  }
+
+  // FIXME: it is assumed that all resonable trips are represented by only one subroute, confirm this or make it able to handle the multi-subroute case
+  static BusRouteLine? determineRouteOfBusLeg(
+    Map<String, List<BusRouteLine>> routesCache, String rt, String originID, String destinationID
+  ) {
+      List<BusRouteLine> candidates = routesCache[rt] ?? [];
+      return candidates
+        .where((line) {
+          final stpids = line.stops.map((s) => s.$2.id);
+          return stpids.skipWhile((stpid) => stpid != originID).contains(destinationID);
+        })
+        .firstOrNull;
+    }
 }
 
 class ChooseBus extends NavigationStage{
