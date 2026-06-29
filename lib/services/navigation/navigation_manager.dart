@@ -7,6 +7,7 @@ import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:math' as math;
 
 
 
@@ -90,13 +91,90 @@ class ChooseBus extends NavigationStage{
 }
 
 //I believe this is just NavWalking but I'm doing it here to be sure. 
-class Walking extends NavigationStage{
-  //Points in order, you can check if you are near a point to remove it from the route or start another leg
-  List<LatLng> points = [];
-  //This could be refreshed in intervals
-  LatLng? currWalkingPos;
+class Walking extends NavigationStage {
+  List<LatLng> points = [ //dummy pts taken from google maps by the cctc (replace later)
+    const LatLng(42.27792397921826, -83.73596985653457),
+    const LatLng(42.27756042901099, -83.7359661838265),
+    const LatLng(42.27754197988967, -83.73706331473826),
+    const LatLng(42.2775215703816,  -83.73809993417933),
+    const LatLng(42.278481544159916, -83.73811396072821),
+  ];
 
+  LatLng? currWalkingPos = const LatLng(42.27831772684626, -83.73599054149456); //near cctc (replace w user's location)
 
+  int _nextIndex = 0;
+  static const double _reachThresholdMeters = 15.0;
+
+  double _distMeters(LatLng a, LatLng b) {
+    const R = 6371000.0;
+    final dLat = (b.latitude  - a.latitude)  * math.pi / 180;
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final s = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(a.latitude * math.pi / 180) *
+        math.cos(b.latitude * math.pi / 180) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    return 2 * R * math.asin(math.sqrt(s));
+  }
+
+  double _bearing(LatLng a, LatLng b) {
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final lat1 = a.latitude * math.pi / 180;
+    final lat2 = b.latitude * math.pi / 180;
+    final y = math.sin(dLon) * math.cos(lat2);
+    final x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+  }
+
+  //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
+  bool updatePosition(LatLng newPos) {
+    currWalkingPos = newPos;
+    if (_nextIndex < points.length &&
+        _distMeters(newPos, points[_nextIndex]) <= _reachThresholdMeters) {
+      _nextIndex++;
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  String getTitle() {
+    if (_nextIndex >= points.length) {
+      return "You've arrived!";
+    }
+    final pos = currWalkingPos;
+    if (pos == null) {
+      return "Acquiring GPS…";
+    }
+    final feet = (_distMeters(pos, points[_nextIndex]) * 3.28084).round();
+    return "${_directionWord(pos)} in $feet ft";
+  }
+
+  @override
+  String getSubtitle() {
+    if (_nextIndex >= points.length) {
+      return "Walk complete";
+    }
+    return "Waypoint ${_nextIndex + 1} of ${points.length}";
+  }
+
+  String _directionWord(LatLng pos) {
+    if (_nextIndex == 0) {
+      return "Head";
+    }
+    final incoming = _bearing(points[_nextIndex - 1], pos);
+    final outgoing = _bearing(pos, points[_nextIndex]);
+    final diff = (outgoing - incoming + 360) % 360;
+    if (diff < 20 || diff > 340) {
+      return "Continue straight";
+    }
+    if (diff <= 170) {
+      return "Turn right";
+    }
+    if (diff >= 190) {
+      return "Turn left";
+    }
+    return "U-turn";
+  }
 }
 
 
