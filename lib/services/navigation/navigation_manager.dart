@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:bluebus/models/bus.dart';
@@ -36,6 +37,27 @@ sealed class NavigationStage {
     return Color(0xFFDBE4ED);
   }
 
+  final _eventController = StreamController<StageEvent>();
+
+  Stream<StageEvent> get events => _eventController.stream;
+
+  void dispose() {
+    _eventController.close();
+  }
+
+}
+
+enum RerouteReason {
+  wrongBus,
+  walkPathChanged
+  // Feel free to add additional reasons as necessary
+}
+
+sealed class StageEvent {}
+class StageComplete extends StageEvent {}
+class StageReroute extends StageEvent {
+  final RerouteReason reason; // e.g. wrong bus, missed stop
+  StageReroute(this.reason);
 }
 
 class NavWalking extends NavigationStage {
@@ -239,6 +261,19 @@ class DemoStage extends NavigationStage {
     ];
   }
 
+  final _eventController = StreamController<StageEvent>();
+
+  Stream<StageEvent> get events => _eventController.stream;
+
+  // To add stage events (i.e. if you miss the bus):
+  // _controller.add(StageReroute(RerouteReason.wrongBus))
+  // _controller.add(StageReroute(RerouteReason.walkPathChanged))
+  // _controller.add(StageComplete()) // If your stage is complete!
+  // Note to all frontend devs: Feel free to add additional RerouteReasons if you need them!
+
+  void dispose() {
+    _eventController.close();
+  }
 }
 
 class TimelineStep { 
@@ -265,6 +300,8 @@ class TimelineInfo {
 
 class NavigationManager {
   // TODO: Implement ChangeNotifier and learn how that works
+
+  StreamSubscription<StageEvent>? _stageEventSub;
 
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList =
@@ -293,6 +330,19 @@ class NavigationManager {
       
       ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
+
+  void _activateStageSub(NavigationStage stage) {
+    // TODO: Call this whenever the stage is activated
+    _stageEventSub?.cancel(); // Drop the old subscription
+    _stageEventSub = stage.events.listen((event) {
+      switch (event) {
+        case StageComplete():
+          // Move on to the next stage
+        case StageReroute(:final reason):
+          // Handle the reroute
+      }
+    });
+  }
 
   void setMapLayer(NavigationLayer mapLayer_in) {
     this.mapLayer = mapLayer_in;
@@ -374,10 +424,12 @@ class NavigationManager {
 
   void nextStage() {
     currentStage = (currentStage + 1) % stageList.length;
+    _activateStageSub(stageList[currentStage]);
   }
 
   void previousStage() {
     currentStage = (currentStage - 1) % stageList.length;
+    _activateStageSub(stageList[currentStage]);
   }
 
   // TODO: Add start()/stop() methods
@@ -387,3 +439,5 @@ class NavigationManager {
   // - Find a way to get the two to talk to each other: I.e. whenever `NavigationOverlayWidget` is created, it calls a specific method inside NavigationManager that says "Hey, I'm here, please save me in a member variable", so when the "Oops" stage happens later you can call localReferenceToOverlayWidget.displayOopsDialog(...)
   //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }
+
+// TODO: Call dispose() on stages as they are removed
