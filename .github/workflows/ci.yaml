@@ -12,5 +12,6 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.8'
+      - run: echo "GOOGLE_MAPS_API_KEY=fake-key-for-ci-build-only" >> android/local.properties
       - run: flutter pub get
       - run: flutter build apk --debug
