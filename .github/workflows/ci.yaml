@@ -14,4 +14,6 @@ jobs:
           flutter-version: '3.41.8'
       - run: echo "GOOGLE_MAPS_API_KEY=fake-key-for-ci-build-only" >> android/local.properties
       - run: flutter pub get
-      - run: flutter build apk --debug
+      - run: flutter build apk --debug -v --no-pub
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
