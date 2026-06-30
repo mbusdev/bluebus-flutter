@@ -13,7 +13,20 @@ jobs:
         with:
           flutter-version: '3.41.8'
       - run: echo "GOOGLE_MAPS_API_KEY=fake-key-for-ci-build-only" >> android/local.properties
+      - name: Write dummy firebase_options.dart for CI build
+      - run: |
+          cat > lib/firebase_options.dart << 'EOF'
+          import 'package:firebase_core/firebase_core.dart';
+          class DefaultFirebaseOptions {
+            static FirebaseOptions get currentPlatform => const FirebaseOptions(
+              apiKey: 'fake-key-for-ci',
+              appId: 'fake-app-id',
+              messagingSenderId: 'fake-sender-id',
+              projectId: 'fake-project-id',
+            );
+          }
+          EOF
       - run: flutter pub get
-      - run: flutter build apk --debug -v --no-pub
+      - run: flutter build apk --debug --no-pub
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
