@@ -112,6 +112,47 @@ class ChooseBus extends NavigationStage{
   // This could be simplified more, probably by picking up data from another function 
 }
 
+class MissedBus extends NavigationStage { 
+  // using the new title information method
+  @override
+  String getTitle() {
+    // could be a more descriptive title who knows..
+    return "Oops!";
+  }
+
+  // information for the popup 
+  @override
+  String getSubtitle() { 
+    // Looks like these are for pop-ups, so maybe this can be part of a user prompt? 
+    return "Looks like you might've missed your bus! Would you like to re-route?";
+  }
+
+  String route; // current route
+  String nearest_stop; // nearest stop: ideally to get off
+  String c_bus; // current bus i am/was on 
+  String c_pos; // current position (maybe not str lat lng?)
+
+  MissedBus({
+    // Constructor for more stuff
+    required this.route, 
+    required this.nearest_stop,
+    required this.c_bus,
+    required this.c_pos,
+  });
+
+  // Core functionality + TODOs for Allen 
+  // Main objectives for the "oops" stage:
+  // - Acknowledge to user that they have missed expected bus
+  // - Based on logic: immediately ask user to get off on next stop 
+  // - Goal: Recalculate or call to recalcualte new route and redirect user to a nother stage ideally
+
+  // Data Structure Implementation 
+  // What we need: 
+  // - hangon...
+
+}
+
+
 //I believe this is just NavWalking but I'm doing it here to be sure. 
 class Walking extends NavigationStage {
   List<LatLng> points = [ //dummy pts taken from google maps by the cctc (replace later)
