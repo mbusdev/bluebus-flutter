@@ -20,7 +20,8 @@ class NavigationOverlay extends StatefulWidget {
 
 }
 
-class _NavigationOverlayState extends State<NavigationOverlay> {
+class _NavigationOverlayState extends State<NavigationOverlay> 
+  implements NavigationOverlayHost {
 
   TimelineInfo timelineInfo = TimelineInfo();
 
@@ -35,6 +36,37 @@ class _NavigationOverlayState extends State<NavigationOverlay> {
     // debugPrint("HELLO YELLO WE ARE IN IN/ITSTATE");
     super.initState();
     updateTimeline();
+    widget.navigationManager.registerOverlay(this); // does not set to null, see the navigation manager
+  }
+
+  @override
+  void dispose() { 
+    // sets to null 
+    widget.navigationManager.unregisterOverlay(this);
+    super.dispose();
+  }
+
+  @override
+  void onNavigationUpdated() { 
+    setState(() {
+      // called from the nav manager, updates stuff
+      updateTimeline();
+    });
+  }
+
+  // this is the actual Oops code portion
+  // not sure if this is how we should have it set up but it is here for now, going to leave a marker 
+  // !! TEMP !! 
+  @override
+  void displayOopsDialog(MissedBus stage) {
+    // TODO FOR ALLEN: Make this one a MaizeBusDialogue (Next Updates)
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(stage.getTitle()),
+        content: Text(stage.getSubtitle()),
+      ),
+    );
   }
 
   @override
@@ -129,7 +161,7 @@ class _NavigationOverlayState extends State<NavigationOverlay> {
                 padding: EdgeInsetsGeometry.only(left: 8),
                 child: Text(
                   style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                  "I'm told your bus is coming"
+                  "Bus arriving in 218 mins"
                 ),
               ),
               MaterialButton(

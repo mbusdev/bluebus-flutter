@@ -40,13 +40,13 @@ class NavigationLayer extends CompositeMapLayer {
     this.polylines = polylines_in;
   }
 
-  // void reloadMarkers() {
-  //   //...
-  // }
+  void reloadMarkers() {
+    //...
+  }
 
-  // void reloadPolylines() {
-  //   //...
-  // }
+  void reloadPolylines() {
+    //...
+  }
 
   void setOnUpdate(Function() callback) {
     onUpdate = callback;

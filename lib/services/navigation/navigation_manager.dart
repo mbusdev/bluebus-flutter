@@ -57,13 +57,36 @@ sealed class NavigationStage {
   List<Marker> getMarkers() {
     return [];
   }
+
   List<Polyline> getPolylines() {
     return [];
   }
 
-  Color getColor() { // Return a random color
+  Color getColor() {
     return Color(0xFFDBE4ED);
   }
+
+  final _eventController = StreamController<StageEvent>();
+
+  Stream<StageEvent> get events => _eventController.stream;
+
+  void dispose() {
+    _eventController.close();
+  }
+
+}
+
+enum RerouteReason {
+  wrongBus,
+  walkPathChanged
+  // Feel free to add additional reasons as necessary
+}
+
+sealed class StageEvent {}
+class StageComplete extends StageEvent {}
+class StageReroute extends StageEvent {
+  final RerouteReason reason; // e.g. wrong bus, missed stop
+  StageReroute(this.reason);
 }
 
 class NavWalking extends NavigationStage {
@@ -301,16 +324,103 @@ class MissedBus extends NavigationStage {
 
 }
 
+
+//I believe this is just NavWalking but I'm doing it here to be sure. 
+class Walking extends NavigationStage {
+  List<LatLng> points = [ //dummy pts taken from google maps by the cctc (replace later)
+    const LatLng(42.27792397921826, -83.73596985653457),
+    const LatLng(42.27756042901099, -83.7359661838265),
+    const LatLng(42.27754197988967, -83.73706331473826),
+    const LatLng(42.2775215703816,  -83.73809993417933),
+    const LatLng(42.278481544159916, -83.73811396072821),
+  ];
+
+  LatLng? currWalkingPos = const LatLng(42.27831772684626, -83.73599054149456); //near cctc (replace w user's location)
+
+  int _nextIndex = 0;
+  static const double _reachThresholdMeters = 15.0;
+
+  double _distMeters(LatLng a, LatLng b) {
+    const R = 6371000.0;
+    final dLat = (b.latitude  - a.latitude)  * math.pi / 180;
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final s = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(a.latitude * math.pi / 180) *
+        math.cos(b.latitude * math.pi / 180) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    return 2 * R * math.asin(math.sqrt(s));
+  }
+
+  double _bearing(LatLng a, LatLng b) {
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final lat1 = a.latitude * math.pi / 180;
+    final lat2 = b.latitude * math.pi / 180;
+    final y = math.sin(dLon) * math.cos(lat2);
+    final x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+  }
+
+  //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
+  bool updatePosition(LatLng newPos) {
+    currWalkingPos = newPos;
+    if (_nextIndex < points.length &&
+        _distMeters(newPos, points[_nextIndex]) <= _reachThresholdMeters) {
+      _nextIndex++;
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  String getTitle() {
+    if (_nextIndex >= points.length) {
+      return "You've arrived!";
+    }
+    final pos = currWalkingPos;
+    if (pos == null) {
+      return "Acquiring GPS…";
+    }
+    final feet = (_distMeters(pos, points[_nextIndex]) * 3.28084).round();
+    return "${_directionWord(pos)} in $feet ft";
+  }
+
+  @override
+  String getSubtitle() {
+    if (_nextIndex >= points.length) {
+      return "Walk complete";
+    }
+    return "Waypoint ${_nextIndex + 1} of ${points.length}";
+  }
+
+  String _directionWord(LatLng pos) {
+    if (_nextIndex == 0) {
+      return "Head";
+    }
+    final incoming = _bearing(points[_nextIndex - 1], pos);
+    final outgoing = _bearing(pos, points[_nextIndex]);
+    final diff = (outgoing - incoming + 360) % 360;
+    if (diff < 20 || diff > 340) {
+      return "Continue straight";
+    }
+    if (diff <= 170) {
+      return "Turn right";
+    }
+    if (diff >= 190) {
+      return "Turn left";
+    }
+    return "U-turn";
+  }
+}
+
+
 class DemoStage extends NavigationStage {
 
-  int favoriteNumber;
-
   String getTitle() {
-    return "This is a demo! #${favoriteNumber}";
+    return "This is a demo! #$favoriteNumber";
   }
 
   String getSubtitle() {
-    return "Look, here's a subtitle too #${favoriteNumber}";
+    return "Look, here's a subtitle too #$favoriteNumber";
   }
 
   double length = 15.0;
@@ -318,6 +428,8 @@ class DemoStage extends NavigationStage {
 
   LatLng startPoint;
   LatLng endPoint;
+
+  double favoriteNumber;
 
   DemoStage({
     required this.favoriteNumber,
@@ -327,6 +439,7 @@ class DemoStage extends NavigationStage {
     required this.endPoint
   });
 
+  @override
   Color getColor() { // Return a random color
     // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
     const double golden = 0.618033988749895;
@@ -334,6 +447,7 @@ class DemoStage extends NavigationStage {
     return HSLColor.fromAHSL(1.0, hue, 0.65, 0.55).toColor();
   }
 
+  @override
   List<Marker> getMarkers() {
     return [
       Marker(
@@ -346,6 +460,7 @@ class DemoStage extends NavigationStage {
       )
     ];
   }
+  @override
   List<Polyline> getPolylines() {
     return [
       Polyline(
@@ -359,6 +474,19 @@ class DemoStage extends NavigationStage {
     ];
   }
 
+  final _eventController = StreamController<StageEvent>();
+
+  Stream<StageEvent> get events => _eventController.stream;
+
+  // To add stage events (i.e. if you miss the bus):
+  // _controller.add(StageReroute(RerouteReason.wrongBus))
+  // _controller.add(StageReroute(RerouteReason.walkPathChanged))
+  // _controller.add(StageComplete()) // If your stage is complete!
+  // Note to all frontend devs: Feel free to add additional RerouteReasons if you need them!
+
+  void dispose() {
+    _eventController.close();
+  }
 }
 
 class TimelineStep { 
@@ -385,6 +513,8 @@ class TimelineInfo {
 
 class NavigationManager {
   // TODO: Implement ChangeNotifier and learn how that works
+
+  StreamSubscription<StageEvent>? _stageEventSub;
 
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList =
@@ -413,6 +543,36 @@ class NavigationManager {
       
       ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
+
+  NavigationOverlayHost? _overlay;
+
+  void registerOverlay(NavigationOverlayHost overlay) {
+    _overlay = overlay;
+  }
+
+  void unregisterOverlay(NavigationOverlayHost overlay) {
+    if (_overlay == overlay) {
+      _overlay = null;
+    }
+  }
+
+  // Call to update if state changes require an update 
+  void notifyOverlay() {
+    _overlay?.onNavigationUpdated();
+  }
+
+  void _activateStageSub(NavigationStage stage) {
+    // TODO: Call this whenever the stage is activated
+    _stageEventSub?.cancel(); // Drop the old subscription
+    _stageEventSub = stage.events.listen((event) {
+      switch (event) {
+        case StageComplete():
+          // Move on to the next stage
+        case StageReroute(:final reason):
+          // Handle the reroute
+      }
+    });
+  }
 
   void setMapLayer(NavigationLayer mapLayer_in) {
     this.mapLayer = mapLayer_in;
@@ -494,9 +654,12 @@ class NavigationManager {
 
   void nextStage() {
     currentStage = (currentStage + 1) % stageList.length;
+    _activateStageSub(stageList[currentStage]);
   }
+
   void previousStage() {
     currentStage = (currentStage - 1) % stageList.length;
+    _activateStageSub(stageList[currentStage]);
   }
 
   // TODO: Add start()/stop() methods
@@ -507,13 +670,8 @@ class NavigationManager {
   //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }
 
-Future<Journey> getMockJourney() async {
-  // using the same start / end as the backend test
-  // make sure BACKEND_URL is set to the mock backend
-  final journeys = await JourneyRepository.planJourney(
-    originLat: 42.264356, originLon: -83.744353999999,
-    destLat: 42.268067999999, destLon: -83.747307000001
-  );
-  return journeys[0];
+abstract class NavigationOverlayHost { 
+  void displayOopsDialog(MissedBus state); // just for the Oops state for now...
+  void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
-
+// TODO: Call dispose() on stages as they are removed

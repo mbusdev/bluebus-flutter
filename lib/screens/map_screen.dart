@@ -1,7 +1,9 @@
 import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as Math;
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -33,11 +35,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:vector_math/vector_math_64.dart' as vec_math;
+import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
+//import '../models/bus_stop.dart';
 import '../models/journey.dart';
 import '../providers/bus_provider.dart';
 import '../services/route_color_service.dart';
@@ -61,7 +64,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   late Journey currDisplayed;
   ScreenRadius? screenRadius;
   bool screenRadiusLoaded = false;
+  StreamSubscription<Position>? _posSub;
+  // TODO: Follow-mode state. When true, the map recenters on location updates.
+  Position? _lastCenteredPos;
 
+  bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
 
   Future<void>? _dataLoadingFuture;
@@ -268,6 +275,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme();
 
+    final prefs = await SharedPreferences.getInstance();
+    globalFollowDistanceThresholdMeters =
+      prefs.getDouble('follow_distance_threshold_meters') ??
+      globalFollowDistanceThresholdMeters;
+    globalGpsUpdateDistanceFilterMeters =
+      prefs.getInt('gps_update_distance_filter_meters') ??
+      globalGpsUpdateDistanceFilterMeters;
+
     screenRadius = await ScreenCornerRadius.get(); // load screen radius
     screenRadiusLoaded = true;
 
@@ -359,7 +374,78 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _loadingMessageNotifier.value = Loadpoint('Starting app...', 5);
     busProvider.startBusUpdates();
     busProvider.startRouteUpdates();
+    // Start location updates in the background so startup doesn't block on
+    // permission dialogs or stream initialization.
+    startLocationUpdates();
     await Future.delayed(const Duration(milliseconds: 180));
+  }
+
+    Future<void> startLocationUpdates() async {
+    if (!await Geolocator.isLocationServiceEnabled()) return;
+
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.deniedForever) return;
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm != LocationPermission.whileInUse &&
+        perm != LocationPermission.always) {
+      return;
+    }
+
+    await _posSub?.cancel();
+
+    final settings = LocationSettings(
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: globalGpsUpdateDistanceFilterMeters,
+    );
+
+    _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
+      (Position p) async {
+        // Keep this lightweight; do a minimal amount of work here and defer heavy updates.
+        if (!mounted || _mapController == null) return;
+
+        // If follow mode is disabled, don't recenter automatically.
+        if (!_followUser) return;
+
+        // Only move camera if user has moved more than threshold to avoid jitter.
+        final shouldMove = _lastCenteredPos == null ||
+            Geolocator.distanceBetween(
+                  _lastCenteredPos!.latitude,
+                  _lastCenteredPos!.longitude,
+                  p.latitude,
+                  p.longitude,
+                ) >
+                globalFollowDistanceThresholdMeters;
+
+        if (!shouldMove) return;
+
+        _lastCenteredPos = p;
+
+        // Center on the new streamed position while preserving the current camera view.
+        await _centerOnLocation(
+          false,
+          lat: p.latitude,
+          long: p.longitude,
+          zoom: _currentCameraPos?.zoom,
+          bearing: _currentCameraPos?.bearing,
+        );
+
+        // TODO: Update any navigation manager / UI that depends on live position here.
+      },
+    );
+
+    // TODO: Consider throttling updates or using a timer if animateCamera is too frequent.
+  }
+
+  // Call to programmatically enable/disable follow mode. Wire this to your location FAB.
+  void _setFollowMode(bool enabled) {
+    setState(() {
+      _followUser = enabled;
+      if (!enabled) return;
+      // When enabling follow mode, reset last-centered so next position recenters immediately.
+      _lastCenteredPos = null;
+    });
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -884,8 +970,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               if (isBusStop) {
                 _centerOnLocation(
                   false,
-                  searchCoordinates.latitude,
-                  searchCoordinates.longitude,
+                  lat: searchCoordinates.latitude,
+                  long: searchCoordinates.longitude,
                 );
                 _showStopSheet(
                   stopID,
@@ -896,8 +982,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               } else {
                 _centerOnLocation(
                   false,
-                  searchCoordinates.latitude,
-                  searchCoordinates.longitude,
+                  lat: searchCoordinates.latitude,
+                  long: searchCoordinates.longitude,
                 );
                 _showBuildingSheet(location);
               }
@@ -1103,8 +1189,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _mapController = controller;
   }
 
-  void _onCameraMove(CameraPosition position) async {
-    _currentCameraPos = position;
+  void _onCameraMove(CameraPosition position) {
+    if (!mounted) return;
+    setState(() {
+      _currentCameraPos = position;
+    });
   }
 
   void _onCameraIdle() async {
@@ -1113,9 +1202,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (viewportBounds != null) {
       Position? pos = await _getLastKnownLocation();
       if (pos != null) {
-        _userLocVisible = !viewportBounds.contains(
-          LatLng(pos.latitude, pos.longitude),
-        );
+        if (!mounted) return;
+        setState(() {
+          _userLocVisible = !viewportBounds.contains(
+            LatLng(pos.latitude, pos.longitude),
+          );
+        });
       }
     }
   }
@@ -1289,10 +1381,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _centerOnLocation(
-    bool userLocation, [
+    bool userLocation, {
     double lat = 0,
     double long = 0,
-  ]) async {
+    double? zoom,
+    double? bearing,
+  }) async {
     // at first create a default position. User location can overwrite later if needed
     Position position = Position(
       longitude: long,
@@ -1318,7 +1412,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         CameraUpdate.newCameraPosition(
           CameraPosition(
             target: LatLng(position.latitude, position.longitude),
-            zoom: userLocation ? 15.0 : 17.0,
+            zoom: zoom ?? (userLocation ? 15.0 : 17.0),
+            bearing: bearing ?? 0.0,
           ),
         ),
       );
@@ -1418,6 +1513,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             navigationLayer
                           ],
                           onMapCreated: _onMapCreated,
+                          onCameraMove: _onCameraMove,
+                          onCameraIdle: _onCameraIdle,
                         ),
                       ),
                       Padding(
