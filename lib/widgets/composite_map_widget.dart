@@ -38,11 +38,15 @@ class CompositeMapWidget extends StatefulWidget {
   final LatLng initialCenter;
   final List<CompositeMapLayer> mapLayers;
   final Function(GoogleMapController) onMapCreated;
+  final ValueChanged<CameraPosition>? onCameraMove;
+  final VoidCallback? onCameraIdle;
 
   CompositeMapWidget({
     required this.initialCenter,
     required this.mapLayers,
     required this.onMapCreated,
+    this.onCameraMove,
+    this.onCameraIdle,
   });
 
   @override
@@ -133,6 +137,8 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
           });
           widget.onMapCreated(controller);
         },
+        onCameraMove: widget.onCameraMove,
+        onCameraIdle: widget.onCameraIdle,
       ),
     );
   }

@@ -1,40 +1,16 @@
-import 'dart:math';
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
-import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:math' as math;
 
-enum LineType { Dotted, Dashed}
 
-class NavigationStageStep {
-  String getTitle() {
-    return "";
-  }
-
-  String? getSubtitle() {
-    return null; // Return null if no subtitle
-  }
-
-  String getTime() {
-    return "0:00"; // Get the time
-  }
-
-  Color? getColor() {
-    return null; // Return null for neutral gray
-  }
-
-  LineType getLineType() {
-    return LineType.Dashed;
-  }
-
-}
 
 sealed class NavigationStage {
   // String title = "..."; //Don't use this anymore--implement getTitle() instead
@@ -48,20 +24,40 @@ sealed class NavigationStage {
 
   double length = 0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
   double percent_complete = 0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
-  
-  List<NavigationStageStep> getSteps() {
-    return []; // Get navigation stage steps
-  }
+
   List<Marker> getMarkers() {
     return [];
   }
+
   List<Polyline> getPolylines() {
     return [];
   }
 
-  Color getColor() { // Return a random color
+  Color getColor() {
     return Color(0xFFDBE4ED);
   }
+
+  final _eventController = StreamController<StageEvent>();
+
+  Stream<StageEvent> get events => _eventController.stream;
+
+  void dispose() {
+    _eventController.close();
+  }
+
+}
+
+enum RerouteReason {
+  wrongBus,
+  walkPathChanged
+  // Feel free to add additional reasons as necessary
+}
+
+sealed class StageEvent {}
+class StageComplete extends StageEvent {}
+class StageReroute extends StageEvent {
+  final RerouteReason reason; // e.g. wrong bus, missed stop
+  StageReroute(this.reason);
 }
 
 class NavWalking extends NavigationStage {
@@ -117,82 +113,167 @@ class ChooseBus extends NavigationStage{
 }
 
 //I believe this is just NavWalking but I'm doing it here to be sure. 
-class Walking extends NavigationStage{
-  //Points in order, you can check if you are near a point to remove it from the route or start another leg
-  List<LatLng> points = [];
-  //This could be refreshed in intervals
-  LatLng? currWalkingPos;
+class Walking extends NavigationStage {
+  List<LatLng> points = [ //dummy pts taken from google maps by the cctc (replace later)
+    const LatLng(42.27792397921826, -83.73596985653457),
+    const LatLng(42.27756042901099, -83.7359661838265),
+    const LatLng(42.27754197988967, -83.73706331473826),
+    const LatLng(42.2775215703816,  -83.73809993417933),
+    const LatLng(42.278481544159916, -83.73811396072821),
+  ];
 
+  LatLng? currWalkingPos = const LatLng(42.27831772684626, -83.73599054149456); //near cctc (replace w user's location)
 
-}
+  int _nextIndex = 0;
+  static const double _reachThresholdMeters = 15.0;
 
-// oops stage
-// TODOs: 
-class MissedBus extends NavigationStage { 
-  // using the new title information method
+  double _distMeters(LatLng a, LatLng b) {
+    const R = 6371000.0;
+    final dLat = (b.latitude  - a.latitude)  * math.pi / 180;
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final s = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(a.latitude * math.pi / 180) *
+        math.cos(b.latitude * math.pi / 180) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    return 2 * R * math.asin(math.sqrt(s));
+  }
+
+  double _bearing(LatLng a, LatLng b) {
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final lat1 = a.latitude * math.pi / 180;
+    final lat2 = b.latitude * math.pi / 180;
+    final y = math.sin(dLon) * math.cos(lat2);
+    final x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+  }
+
+  //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
+  bool updatePosition(LatLng newPos) {
+    currWalkingPos = newPos;
+    if (_nextIndex < points.length &&
+        _distMeters(newPos, points[_nextIndex]) <= _reachThresholdMeters) {
+      _nextIndex++;
+      return true;
+    }
+    return false;
+  }
+
   @override
   String getTitle() {
-    // could be a more descriptive title who knows..
-    return "Oops!";
+    if (_nextIndex >= points.length) {
+      return "You've arrived!";
+    }
+    final pos = currWalkingPos;
+    if (pos == null) {
+      return "Acquiring GPS…";
+    }
+    final feet = (_distMeters(pos, points[_nextIndex]) * 3.28084).round();
+    return "${_directionWord(pos)} in $feet ft";
   }
 
-  // information for the popup 
   @override
-  String getSubtitle() { 
-    // Looks like these are for pop-ups, so maybe this can be part of a user prompt? 
-    return "Looks like you might've missed your bus! Would you like to re-route?";
+  String getSubtitle() {
+    if (_nextIndex >= points.length) {
+      return "Walk complete";
+    }
+    return "Waypoint ${_nextIndex + 1} of ${points.length}";
   }
 
-  String route; // current route
-  String nearest_stop; // nearest stop: ideally to get off
-  String c_bus; // current bus i am/was on 
-  String c_pos; // current position (maybe not str lat lng?)
-
-  MissedBus({
-    // Constructor for more stuff
-    required this.route, 
-    required this.nearest_stop,
-    required this.c_bus,
-    required this.c_pos,
-  });
-
-  // Core functionality + TODOs for Allen 
-  // Main objectives for the "oops" stage:
-  // - Acknowledge to user that they have missed expected bus
-  // - Based on logic: immediately ask user to get off on next stop 
-  // - Goal: Recalculate or call to recalcualte new route and redirect user to a nother stage ideally
-
-  // Data Structure Implementation 
-  // What we need: 
-  // - hangon...
-
+  String _directionWord(LatLng pos) {
+    if (_nextIndex == 0) {
+      return "Head";
+    }
+    final incoming = _bearing(points[_nextIndex - 1], pos);
+    final outgoing = _bearing(pos, points[_nextIndex]);
+    final diff = (outgoing - incoming + 360) % 360;
+    if (diff < 20 || diff > 340) {
+      return "Continue straight";
+    }
+    if (diff <= 170) {
+      return "Turn right";
+    }
+    if (diff >= 190) {
+      return "Turn left";
+    }
+    return "U-turn";
+  }
 }
+
 
 class DemoStage extends NavigationStage {
 
-  int favoriteNumber;
-
   String getTitle() {
-    return "This is a demo! #${favoriteNumber}";
+    return "This is a demo! #$favoriteNumber";
   }
 
   String getSubtitle() {
-    return "Look, here's a subtitle too #${favoriteNumber}";
+    return "Look, here's a subtitle too #$favoriteNumber";
   }
 
   double length = 15.0;
   double percent_complete = 0.110;
 
+  LatLng startPoint;
+  LatLng endPoint;
+
+  double favoriteNumber;
+
   DemoStage({
     required this.favoriteNumber,
     required this.length,
-    required this.percent_complete
+    required this.percent_complete,
+    required this.startPoint,
+    required this.endPoint
   });
 
+  @override
   Color getColor() { // Return a random color
-    return Color(Random().nextInt(0xFFFFFFFF)).withAlpha(255);
+    // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
+    const double golden = 0.618033988749895;
+    final double hue = ((this.favoriteNumber.hashCode * golden) % 1.0).abs() * 360;
+    return HSLColor.fromAHSL(1.0, hue, 0.65, 0.55).toColor();
   }
 
+  @override
+  List<Marker> getMarkers() {
+    return [
+      Marker(
+        markerId: MarkerId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
+        position: this.startPoint
+      ),
+      Marker(
+        markerId: MarkerId("${this.favoriteNumber}-${this.endPoint.latitude}-${this.endPoint.longitude}"),
+        position: this.endPoint
+      )
+    ];
+  }
+  @override
+  List<Polyline> getPolylines() {
+    return [
+      Polyline(
+        polylineId: PolylineId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
+        points: [
+          this.startPoint,
+          this.endPoint
+        ],
+        color: this.getColor()
+      )
+    ];
+  }
+
+  final _eventController = StreamController<StageEvent>();
+
+  Stream<StageEvent> get events => _eventController.stream;
+
+  // To add stage events (i.e. if you miss the bus):
+  // _controller.add(StageReroute(RerouteReason.wrongBus))
+  // _controller.add(StageReroute(RerouteReason.walkPathChanged))
+  // _controller.add(StageComplete()) // If your stage is complete!
+  // Note to all frontend devs: Feel free to add additional RerouteReasons if you need them!
+
+  void dispose() {
+    _eventController.close();
+  }
 }
 
 class TimelineStep { 
@@ -220,17 +301,31 @@ class TimelineInfo {
 class NavigationManager {
   // TODO: Implement ChangeNotifier and learn how that works
 
+  StreamSubscription<StageEvent>? _stageEventSub;
+
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList =
       [
         DemoStage(
-          favoriteNumber: 1, length: 15, percent_complete: 0.80,
+          favoriteNumber: 1,
+          length: 15,
+          percent_complete: 0.80,
+          startPoint: LatLng(42.281973, -83.765719),
+          endPoint: LatLng(42.281291, -83.743918)
         ),
         DemoStage(
-          favoriteNumber: 2, length: 33, percent_complete: 0.23,
+          favoriteNumber: 2,
+          length: 33,
+          percent_complete: 0.23,
+          startPoint: LatLng(42.281291, -83.743918),
+          endPoint: LatLng(42.287031, -83.743532),
         ),
         DemoStage(
-          favoriteNumber: 3, length: 4, percent_complete: 0.0,
+          favoriteNumber: 3,
+          length: 4,
+          percent_complete: 0.0,
+          startPoint: LatLng(42.287031, -83.743532),
+          endPoint: LatLng(42.289689, -83.738435)
         ),
       
       ]; // Stores all the states for users to page back and forth
@@ -253,8 +348,22 @@ class NavigationManager {
     _overlay?.onNavigationUpdated();
   }
 
+  void _activateStageSub(NavigationStage stage) {
+    // TODO: Call this whenever the stage is activated
+    _stageEventSub?.cancel(); // Drop the old subscription
+    _stageEventSub = stage.events.listen((event) {
+      switch (event) {
+        case StageComplete():
+          // Move on to the next stage
+        case StageReroute(:final reason):
+          // Handle the reroute
+      }
+    });
+  }
+
   void setMapLayer(NavigationLayer mapLayer_in) {
     this.mapLayer = mapLayer_in;
+    rebuildMarkersAndPolylines();
   }
 
   TimelineInfo getTimeline() {
@@ -302,6 +411,7 @@ class NavigationManager {
 
   void init() {
     // Init as necessary
+    rebuildMarkersAndPolylines();
   }
 
   // Some sort of code to read the current stage and next stage to determine whether the user can "jump" (stage switch)
@@ -310,7 +420,7 @@ class NavigationManager {
   //    Allen: Add UI to ask the user about which new bus to take [Check with Ishan and Harvey]
   //      Isaac: I'll talk to Ishan (gc with Allen+Ishan+Harvey) about what the final logic is for the "Oops" stage
 
-  void rebuildMarkersAndPolylines() {
+  void rebuildMarkersAndPolylines() { // Call this whenever markers or polylines change
     if (this.mapLayer == null) {
       debugPrint("Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!");
       return;
@@ -332,9 +442,12 @@ class NavigationManager {
 
   void nextStage() {
     currentStage = (currentStage + 1) % stageList.length;
+    _activateStageSub(stageList[currentStage]);
   }
+
   void previousStage() {
     currentStage = (currentStage - 1) % stageList.length;
+    _activateStageSub(stageList[currentStage]);
   }
 
   // TODO: Add start()/stop() methods
@@ -349,14 +462,4 @@ abstract class NavigationOverlayHost {
   void displayOopsDialog(MissedBus state); // just for the Oops state for now...
   void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
-
-Future<Journey> getMockJourney() async {
-  // using the same start / end as the backend test
-  // make sure BACKEND_URL is set to the mock backend
-  final journeys = await JourneyRepository.planJourney(
-    originLat: 42.264356, originLon: -83.744353999999,
-    destLat: 42.268067999999, destLon: -83.747307000001
-  );
-  return journeys[0];
-}
-
+// TODO: Call dispose() on stages as they are removed

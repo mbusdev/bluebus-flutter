@@ -1,3 +1,4 @@
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
@@ -6,6 +7,7 @@ import 'package:bluebus/constants.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -15,6 +17,59 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
+  late final TextEditingController _followThresholdController;
+  final GlobalKey<FormState> _followThresholdFormKey = GlobalKey<FormState>();
+  late final TextEditingController _gpsUpdateDistanceController;
+  final GlobalKey<FormState> _gpsUpdateDistanceFormKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _followThresholdController = TextEditingController(
+      text: globalFollowDistanceThresholdMeters.toStringAsFixed(1),
+    );
+    _gpsUpdateDistanceController = TextEditingController(
+      text: globalGpsUpdateDistanceFilterMeters.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _followThresholdController.dispose();
+    _gpsUpdateDistanceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveFollowThreshold() async {
+    final parsed = double.tryParse(_followThresholdController.text.trim());
+    if (parsed == null || parsed < 0) {
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('follow_distance_threshold_meters', parsed);
+
+    if (!mounted) return;
+    setState(() {
+      globalFollowDistanceThresholdMeters = parsed;
+    });
+  }
+
+  Future<void> _saveGpsUpdateDistanceFilter() async {
+    final parsed = int.tryParse(_gpsUpdateDistanceController.text.trim());
+    if (parsed == null || parsed < 0) {
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('gps_update_distance_filter_meters', parsed);
+
+    if (!mounted) return;
+    setState(() {
+      globalGpsUpdateDistanceFilterMeters = parsed;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
@@ -96,6 +151,200 @@ class _SettingsState extends State<Settings> {
                   }
                 ),
         
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                const Text(
+                  'Map Follow Distance',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'How far you need to move before the map recenters while follow mode is enabled.',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w400,
+                    fontSize: 16,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Form(
+                  key: _followThresholdFormKey,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _followThresholdController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Threshold in meters',
+                            hintText: '8.0',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          validator: (value) {
+                            final parsed = double.tryParse((value ?? '').trim());
+                            if (parsed == null) {
+                              return 'Enter a valid number';
+                            }
+                            if (parsed < 0) {
+                              return 'Enter a value of 0 or higher';
+                            }
+                            return null;
+                          },
+                          onFieldSubmitted: (_) async {
+                            final isValid = _followThresholdFormKey.currentState
+                                ?.validate() ??
+                                false;
+                            if (isValid) {
+                              await _saveFollowThreshold();
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final isValid = _followThresholdFormKey.currentState
+                                  ?.validate() ??
+                              false;
+                          if (isValid) {
+                            await _saveFollowThreshold();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              getColor(context, ColorType.importantButtonBackground),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Apply',
+                          style: TextStyle(
+                            color: getColor(context, ColorType.importantButtonText),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                const Text(
+                  'GPS Update Distance',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'How far you need to move (dead reckoning) before the GPS requests updated location',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w400,
+                    fontSize: 16,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Form(
+                  key: _gpsUpdateDistanceFormKey,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _gpsUpdateDistanceController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Distance in meters',
+                            hintText: '5',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          validator: (value) {
+                            final parsed = int.tryParse((value ?? '').trim());
+                            if (parsed == null) {
+                              return 'Enter a valid number';
+                            }
+                            if (parsed < 0) {
+                              return 'Enter a value of 0 or higher';
+                            }
+                            return null;
+                          },
+                          onFieldSubmitted: (_) async {
+                            final isValid = _gpsUpdateDistanceFormKey.currentState
+                                ?.validate() ??
+                                false;
+                            if (isValid) {
+                              await _saveGpsUpdateDistanceFilter();
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final isValid = _gpsUpdateDistanceFormKey.currentState
+                                  ?.validate() ??
+                              false;
+                          if (isValid) {
+                            await _saveGpsUpdateDistanceFilter();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              getColor(context, ColorType.importantButtonBackground),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Apply',
+                          style: TextStyle(
+                            color: getColor(context, ColorType.importantButtonText),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 20),

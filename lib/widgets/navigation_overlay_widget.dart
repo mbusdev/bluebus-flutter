@@ -161,7 +161,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 padding: EdgeInsetsGeometry.only(left: 8),
                 child: Text(
                   style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                  "I'm told your bus is coming"
+                  "Bus arriving in 218 mins"
                 ),
               ),
               MaterialButton(

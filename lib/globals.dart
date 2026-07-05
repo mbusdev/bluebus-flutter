@@ -3,6 +3,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 List<Location> globalStopLocs = [];
 
+double globalFollowDistanceThresholdMeters = 8.0;
+int globalGpsUpdateDistanceFilterMeters = 5;
+
 // the global app padding
 // don't modify these here, instead use the helper function in map_screen.dart that sets these based on phone type and safe area insets
 bool globallPaddingHasBeenSet = false;
