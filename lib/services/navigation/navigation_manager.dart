@@ -1,15 +1,14 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
-import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
-import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
 import 'package:bluebus/services/route_color_service.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -270,16 +269,6 @@ class ChooseBus extends NavigationStage{
   // If you have a list of buses to board and stops, 
   // this can help you display a bus and the stop you will board
   // This could be simplified more, probably by picking up data from another function 
-}
-
-//I believe this is just NavWalking but I'm doing it here to be sure. 
-class Walking extends NavigationStage{
-  //Points in order, you can check if you are near a point to remove it from the route or start another leg
-  List<LatLng> points = [];
-  //This could be refreshed in intervals
-  LatLng? currWalkingPos;
-
-
 }
 
 // oops stage

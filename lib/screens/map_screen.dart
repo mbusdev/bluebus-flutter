@@ -1,9 +1,7 @@
 import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as Math;
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -35,6 +33,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:vector_math/vector_math_64.dart' as vec_math;
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
