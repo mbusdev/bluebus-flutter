@@ -89,8 +89,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   StreamSubscription<Position>? _posSub;
   // TODO: Follow-mode state. When true, the map recenters on location updates.
   Position? _lastCenteredPos;
-  // TODO: Tune this threshold (meters) to your liking.
-  static const double _followDistanceThresholdMeters = 8.0;
 
   bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
@@ -299,6 +297,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme();
 
+    final prefs = await SharedPreferences.getInstance();
+    globalFollowDistanceThresholdMeters =
+      prefs.getDouble('follow_distance_threshold_meters') ??
+      globalFollowDistanceThresholdMeters;
+    globalGpsUpdateDistanceFilterMeters =
+      prefs.getInt('gps_update_distance_filter_meters') ??
+      globalGpsUpdateDistanceFilterMeters;
+
     screenRadius = await ScreenCornerRadius.get(); // load screen radius
     screenRadiusLoaded = true;
 
@@ -413,7 +419,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     final settings = LocationSettings(
       accuracy: LocationAccuracy.bestForNavigation,
-      distanceFilter: 5,
+      distanceFilter: globalGpsUpdateDistanceFilterMeters,
     );
 
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
@@ -432,7 +438,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   p.latitude,
                   p.longitude,
                 ) >
-                _followDistanceThresholdMeters;
+                globalFollowDistanceThresholdMeters;
 
         if (!shouldMove) return;
 
