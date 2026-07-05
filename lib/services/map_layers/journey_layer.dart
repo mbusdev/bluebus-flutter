@@ -150,7 +150,7 @@ class JourneyLayer extends CompositeMapLayer {
 
     final rt = leg.rt;
     final line = rt != null
-      ? NavOnBus.determineRouteOfBusLeg(routesCache, rt, leg.originID, leg.destinationID)
+      ? determineRouteOfBusLeg(routesCache, rt, leg.originID, leg.destinationID)
       : null;
 
     // debugPrint("Tracing path from ${leg.originID} to ${leg.destinationID}");
