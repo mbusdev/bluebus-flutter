@@ -1,16 +1,41 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:collection';
+import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
+import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'dart:math' as math;
 
+enum LineType { Dotted, Dashed}
 
+class NavigationStageStep {
+  String getTitle() {
+    return "";
+  }
+
+  String? getSubtitle() {
+    return null; // Return null if no subtitle
+  }
+
+  String getTime() {
+    return "0:00"; // Get the time
+  }
+
+  Color? getColor() {
+    return null; // Return null for neutral gray
+  }
+
+  LineType getLineType() {
+    return LineType.Dashed;
+  }
+
+}
 
 sealed class NavigationStage {
   // String title = "..."; //Don't use this anymore--implement getTitle() instead
@@ -24,7 +49,10 @@ sealed class NavigationStage {
 
   double length = 0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
   double percent_complete = 0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
-
+  
+  List<NavigationStageStep> getSteps() {
+    return []; // Get navigation stage steps
+  }
   List<Marker> getMarkers() {
     return [];
   }
@@ -65,14 +93,13 @@ class NavWalking extends NavigationStage {
 }
 
 class NavOnBus extends NavigationStage {
-  String title = "On Bus";
-
   String rt;
   String departureStop;
   String arrivalStop;
 
   Trip trip;
-  BusRouteLine? busPath;  
+  List<(LatLng, (int, BusStop)?)> busPath;
+  // BusRouteLine busPath;  
 
   NavOnBus({
     required this.rt,
@@ -82,7 +109,7 @@ class NavOnBus extends NavigationStage {
     required this.busPath,
   });
 
-  factory NavOnBus.init(Leg leg, Map<String, BusRouteLine> routesCache) {
+  factory NavOnBus.init(Leg leg, Map<String, List<BusRouteLine>> routesCache) {
     final maybeRt = leg.rt;
     final maybeTrip = leg.trip;
     if (maybeRt == null ||
@@ -92,14 +119,146 @@ class NavOnBus extends NavigationStage {
         leg.destinationID == '') {
       throw Exception("leg was malformed or not a bus leg");
     }
+    final busLine = determineRouteOfBusLeg(routesCache, maybeRt, leg.originID, leg.destinationID);
+    if (busLine == null) throw Exception("bus line not found");
+
+    final stopsIter = busLine.stops.skipWhile((s) => s.$2.id != leg.originID);
+    final startIdx = stopsIter.firstOrNull?.$1;
+    final endIdx = stopsIter.where((s) => s.$2.id == leg.destinationID).firstOrNull?.$1;
+    if (startIdx == null || endIdx == null) throw Exception("valid bus line not found");
+
+    final busPath = <(LatLng, (int, BusStop)?)>[];
+    for (int i = startIdx; i <= endIdx; i++) {
+      busPath.add((busLine.points[i], busLine.stops.where((s) => s.$1 == i).firstOrNull));
+    }
+
     return NavOnBus(
       rt: maybeRt,
       departureStop: leg.originID,
       arrivalStop: leg.destinationID,
       trip: maybeTrip,
-      busPath: routesCache[maybeRt],
+      busPath: busPath,
     );
   }
+
+  @override
+  String getTitle() {
+    // TODO: implement getTitle
+    return "($rt) Ride ${-1} more stops";
+  }
+
+  @override
+  String getSubtitle() {
+    // TODO: implement getSubtitle
+    return "${-1} min";
+  }
+
+  @override
+  // TODO: implement length
+  double get length => super.length;
+
+  @override
+  // TODO: implement percent_complete
+  double get percent_complete => super.percent_complete;
+
+  @override
+  List<NavigationStageStep> getSteps() {
+    // TODO: implement getSteps
+    return super.getSteps();
+  }
+
+  @override
+  List<Marker> getMarkers() {
+    // TODO: implement getMarkers
+    return super.getMarkers();
+  }
+
+  @override
+  List<Polyline> getPolylines() {
+    // TODO: implement getPolylines
+    return super.getPolylines();
+  }
+
+  @override
+  Color getColor() {
+    return RouteColorService.getRouteColor(rt);
+  }
+
+}
+
+typedef Edge = ({ BusStop from, BusStop to, List<LatLng> points });
+typedef AdjacencyEntry = ({ BusStop from, Set<({ BusStop stop, List<LatLng> points })> tos });
+BusRouteLine? determineRouteOfBusLeg(
+  Map<String, List<BusRouteLine>> routesCache, String rt, String originID, String destinationID
+) {
+  List<BusRouteLine> candidates = routesCache[rt] ?? [];
+
+  // happy path
+  final directLine = candidates
+    .where((line) {
+      final stpids = line.stops.map((s) => s.$2.id);
+      return stpids.skipWhile((stpid) => stpid != originID).contains(destinationID);
+    })
+    .firstOrNull;
+  if (directLine != null) return directLine;
+
+  // big sad path: graph traverse the entire route...
+  final Map<String, AdjacencyEntry> adjacency = {};  // for stpids
+  // make the adjacency structure ...
+  for (final line in candidates) {
+    (int, BusStop)? prev;
+    for (final (i, stop) in line.stops) {
+      if (prev != null) {
+        final (prevIdx, prevStop) = prev;
+        // ignore: prefer_collection_literals (for better type inference)
+        adjacency.putIfAbsent(prevStop.id, () => (from: prevStop, tos: Set()))
+          .tos.add((stop: stop, points: line.points.sublist(prevIdx, i + 1)));
+      }
+      prev = (i, stop);
+    }
+  }
+  // do breadth first search ...
+  final Set<String> explored = {};
+  final queue = ListQueue<(String, List<Edge>)>();
+  queue.addLast((originID, []));
+
+  while (queue.isNotEmpty) {
+    final (stpid, edges) = queue.first;
+    if (stpid == destinationID) break;
+    queue.removeFirst();
+
+    if (explored.contains(stpid)) continue;
+    explored.add(stpid);
+
+    final neighbors = adjacency[stpid];
+    if (neighbors != null) {
+      for (final entry in neighbors.tos) {
+        queue.addLast((
+          entry.stop.id,
+          edges.followedBy([(from: neighbors.from, to: entry.stop, points: entry.points)]).toList()
+         ));
+      }
+    }
+  }
+
+  if (queue.isEmpty || queue.first.$2.isEmpty) return null;
+  final edges = queue.first.$2;
+
+  List<LatLng> points = [LatLng(0.0, 0.0)];
+  List<(int, BusStop)> stops = [(0, edges.first.from)];
+  for (final e in edges) {
+    points.removeLast();
+    points.addAll(e.points);
+    stops.add((points.length - 1, e.to));    
+  }
+  
+  return BusRouteLine(
+    points: points,
+    stops: stops,
+    routeId: candidates.first.routeId,
+    color: candidates.fold(null, (acc, next) => acc ?? next.color),
+    imageUrl: candidates.fold(null, (acc, next) => acc ?? next.imageUrl),
+  );
 }
 
 class ChooseBus extends NavigationStage{
@@ -111,6 +270,49 @@ class ChooseBus extends NavigationStage{
   // this can help you display a bus and the stop you will board
   // This could be simplified more, probably by picking up data from another function 
 }
+
+// oops stage
+// TODOs: 
+class MissedBus extends NavigationStage { 
+  // using the new title information method
+  @override
+  String getTitle() {
+    // could be a more descriptive title who knows..
+    return "Oops!";
+  }
+
+  // information for the popup 
+  @override
+  String getSubtitle() { 
+    // Looks like these are for pop-ups, so maybe this can be part of a user prompt? 
+    return "Looks like you might've missed your bus! Would you like to re-route?";
+  }
+
+  String route; // current route
+  String nearest_stop; // nearest stop: ideally to get off
+  String c_bus; // current bus i am/was on 
+  String c_pos; // current position (maybe not str lat lng?)
+
+  MissedBus({
+    // Constructor for more stuff
+    required this.route, 
+    required this.nearest_stop,
+    required this.c_bus,
+    required this.c_pos,
+  });
+
+  // Core functionality + TODOs for Allen 
+  // Main objectives for the "oops" stage:
+  // - Acknowledge to user that they have missed expected bus
+  // - Based on logic: immediately ask user to get off on next stop 
+  // - Goal: Recalculate or call to recalcualte new route and redirect user to a nother stage ideally
+
+  // Data Structure Implementation 
+  // What we need: 
+  // - hangon...
+
+}
+
 
 //I believe this is just NavWalking but I'm doing it here to be sure. 
 class Walking extends NavigationStage {
@@ -331,6 +533,23 @@ class NavigationManager {
       ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
 
+  NavigationOverlayHost? _overlay;
+
+  void registerOverlay(NavigationOverlayHost overlay) {
+    _overlay = overlay;
+  }
+
+  void unregisterOverlay(NavigationOverlayHost overlay) {
+    if (_overlay == overlay) {
+      _overlay = null;
+    }
+  }
+
+  // Call to update if state changes require an update 
+  void notifyOverlay() {
+    _overlay?.onNavigationUpdated();
+  }
+
   void _activateStageSub(NavigationStage stage) {
     // TODO: Call this whenever the stage is activated
     _stageEventSub?.cancel(); // Drop the old subscription
@@ -440,4 +659,8 @@ class NavigationManager {
   //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }
 
+abstract class NavigationOverlayHost { 
+  void displayOopsDialog(MissedBus state); // just for the Oops state for now...
+  void onNavigationUpdated(); // call navigation overlay widget to refresh
+}
 // TODO: Call dispose() on stages as they are removed
