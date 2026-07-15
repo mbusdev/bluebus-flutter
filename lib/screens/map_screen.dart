@@ -1,9 +1,7 @@
 import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as Math;
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -35,6 +33,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:vector_math/vector_math_64.dart' as vec_math;
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
@@ -48,31 +47,9 @@ import 'package:geolocator/geolocator.dart';
 import '../constants.dart';
 import './settings.dart';
 import 'package:screen_corner_radius/screen_corner_radius.dart';
-//import 'dart:convert';
 
 final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
 final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
-
-// Function to calculate rotation angle between two geographical points
-// (used for bus stop icon orientation)
-double pointRotation(double lat1, double lon1, double lat2, double lon2) {
-  const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232; // 180 / π
-
-  double dLat = lat2 - lat1;
-  double dLon = lon2 - lon1;
-
-  // Scale longitude by cos(lat) to correct for east-west distance
-  double x = dLon * (Math.cos(lat1 * degToRad));
-  double y = dLat;
-
-  double angle = Math.atan2(x, y) * radToDeg;
-
-  // Normalize to [0, 360)
-  if (angle < 0) angle += 360;
-
-  return angle;
-}
 
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
@@ -89,6 +66,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   StreamSubscription<Position>? _posSub;
   // TODO: Follow-mode state. When true, the map recenters on location updates.
   Position? _lastCenteredPos;
+  bool _userHasInteractedWithMap = false;
+  bool _isProgrammaticCameraMove = false;
 
   bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
@@ -429,6 +408,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
         // If follow mode is disabled, don't recenter automatically.
         if (!_followUser) return;
+        if (_userHasInteractedWithMap) return;
 
         // Only move camera if user has moved more than threshold to avoid jitter.
         final shouldMove = _lastCenteredPos == null ||
@@ -467,6 +447,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (!enabled) return;
       // When enabling follow mode, reset last-centered so next position recenters immediately.
       _lastCenteredPos = null;
+      _userHasInteractedWithMap = false;
     });
   }
 
@@ -702,7 +683,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
       if (!_routeStopMarkers.containsKey(routeKey)) {
         _routeStopMarkers[routeKey] = {};
-        for (final stop in r.stops) {
+        for (final (_, stop) in r.stops) {
           // iterate through all stops in this route
           final isFavorite = _favoriteStops.contains(stop.id);
 
@@ -1213,6 +1194,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onCameraMove(CameraPosition position) {
     if (!mounted) return;
+    if (!_isProgrammaticCameraMove) {
+      _userHasInteractedWithMap = true;
+    }
     setState(() {
       _currentCameraPos = position;
     });
@@ -1430,15 +1414,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     // Animate the map camera to the user's location
     if (_mapController != null) {
-      await _mapController!.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: LatLng(position.latitude, position.longitude),
-            zoom: zoom ?? (userLocation ? 15.0 : 17.0),
-            bearing: bearing ?? 0.0,
+      _isProgrammaticCameraMove = true;
+      try {
+        await _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(position.latitude, position.longitude),
+              zoom: zoom ?? (userLocation ? 15.0 : 17.0),
+              bearing: bearing ?? 0.0,
+            ),
           ),
-        ),
-      );
+        );
+      } finally {
+        _isProgrammaticCameraMove = false;
+      }
     }
   }
 
@@ -1872,7 +1861,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                         ? (-_currentCameraPos!
                                                                       .bearing -
                                                                   45) *
-                                                              (math.pi / 180)
+                                                              vec_math.degrees2Radians
                                                         : 0,
                                                     child: Icon(
                                                       FontAwesomeIcons.compass,
@@ -1923,6 +1912,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                       ),
                                                       child: FloatingActionButton.small(
                                                         onPressed: () {
+                                                          _setFollowMode(true);
                                                           _centerOnLocation(
                                                             true,
                                                           );

@@ -83,7 +83,7 @@ class BaseRoutesLayer extends CompositeMapLayer {
       if (!markersCache.containsKey(routeKey)) {
         // Prevent duplicate copies of the same stop on top of each other
         markersCache[routeKey] = {};
-        for (final stop in r.stops) {
+        for (final (_, stop) in r.stops) {
           // iterate through all stops in this route
           // TODO: Implement favorite stops
           // final isFavorite = _favoriteStops.contains(stop.id);

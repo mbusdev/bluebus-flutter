@@ -8,28 +8,7 @@ import 'models/bus_stop.dart';
 import 'models/bus.dart';
 import 'models/bus_route_line.dart';
 import 'services/route_color_service.dart';
-import 'package:bluebus/widgets/dialog.dart';
-
-// Function to calculate rotation angle between two geographical points
-// (used for bus stop icon orientation)
-double pointRotation(double lat1, double lon1, double lat2, double lon2) {
-  const double degToRad = 0.017453292519943295; // π / 180
-  const double radToDeg = 57.29577951308232; // 180 / π
-
-  double dLat = lat2 - lat1;
-  double dLon = lon2 - lon1;
-
-  // Scale longitude by cos(lat) to correct for east-west distance
-  double x = dLon * (Math.cos(lat1 * degToRad));
-  double y = dLat;
-
-  double angle = Math.atan2(x, y) * radToDeg;
-
-  // Normalize to [0, 360)
-  if (angle < 0) angle += 360;
-
-  return angle;
-}
+import 'utils/geometry.dart';
 
 class BlueBusApi {
   static const String baseUrl = BACKEND_URL;
@@ -48,7 +27,7 @@ class BlueBusApi {
       for (final subroute in subroutes) {
         try {
           final points = <LatLng>[];
-          final stops = <BusStop>[];
+          final stops = <(int, BusStop)>[];
           
           // Cast to list to be able to be able to get different elements
           final pointList = subroute['pt'] as List; 
@@ -64,27 +43,25 @@ class BlueBusApi {
             );
             if (point['typ'] == 'S') {
               // get rotation of stop
-              if (isLast){
+              double stopRotation;
+              if (isLast) {
                 // use the previous 2 points to calculate rotation
-                double stopRotation = pointRotation(
+                stopRotation = pointRotation(
                   pointList[i - 2]['lat']?.toDouble() ?? 0,
                   pointList[i - 2]['lon']?.toDouble() ?? 0,
                   pointList[i - 1]['lat']?.toDouble() ?? 0,
                   pointList[i - 1]['lon']?.toDouble() ?? 0,
                 );
-                stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
-                
               } else {
                 // use the next 2 points to calculate rotation
-                double stopRotation = pointRotation(
+                stopRotation = pointRotation(
                   pointList[i + 1]['lat']?.toDouble() ?? 0,
                   pointList[i + 1]['lon']?.toDouble() ?? 0,
                   pointList[i + 2]['lat']?.toDouble() ?? 0,
                   pointList[i + 2]['lon']?.toDouble() ?? 0,
                 );
-                stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
               }
-
+              stops.add((i, BusStop.fromJson(point, routeId, stopRotation, false)));
             }
           }
 
@@ -105,7 +82,7 @@ class BlueBusApi {
           // Handle detour points if present
           if (subroute.containsKey('dtrpt')) {
             final detourPoints = <LatLng>[];
-            final detourStops = <BusStop>[];
+            final detourStops = <(int, BusStop)>[];
 
             // Cast to list to be able to be able to get different elements
             final detourPointList = subroute['dtrpt'] as List; 
@@ -122,26 +99,26 @@ class BlueBusApi {
               );
               if (point['typ'] == 'S') {
                 // get rotation of stop
-                if (isLast){
+                double stopRotation;
+                if (isLast) {
                   // use the previous 2 points to calculate rotation
-                  double stopRotation = pointRotation(
+                  stopRotation = pointRotation(
                     detourPointList[i - 2]['lat']?.toDouble() ?? 0,
                     detourPointList[i - 2]['lon']?.toDouble() ?? 0,
                     detourPointList[i - 1]['lat']?.toDouble() ?? 0,
                     detourPointList[i - 1]['lon']?.toDouble() ?? 0,
                   );
-                  detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
                   
                 } else {
                   // use the next 2 points to calculate rotation
-                  double stopRotation = pointRotation(
+                  stopRotation = pointRotation(
                     detourPointList[i + 1]['lat']?.toDouble() ?? 0,
                     detourPointList[i + 1]['lon']?.toDouble() ?? 0,
                     detourPointList[i + 2]['lat']?.toDouble() ?? 0,
                     detourPointList[i + 2]['lon']?.toDouble() ?? 0,
                   );
-                  detourStops.add(BusStop.fromJson(point, routeId, stopRotation, false));
                 }
+                detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, false)));
               }
             }
 

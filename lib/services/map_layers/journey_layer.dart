@@ -1,17 +1,17 @@
-import 'dart:math' as math;
-
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:bluebus/widgets/composite_map_widget.dart';
-import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import 'package:bluebus/utils/geometry.dart';
 
 class JourneyLayer extends CompositeMapLayer {
   // maximum allowed distance (meters) from a stop to a candidate polyline point
@@ -39,7 +39,7 @@ class JourneyLayer extends CompositeMapLayer {
   Set<String> activeJourneyRoutes = {};
   Set<Marker> liveBusMarkers = {};
 
-  Map<String, BusRouteLine> routesCache = {};
+  Map<String, List<BusRouteLine>> routesCache = {};
   BuildContext? context;
 
   GoogleMapController? _mapController;
@@ -105,45 +105,10 @@ class JourneyLayer extends CompositeMapLayer {
   }
 
   void setRoutesCache(List<BusRouteLine> routes) {
+    routesCache.clear();
     for (BusRouteLine l in routes) {
-      routesCache[l.routeId] = l;
+      routesCache.putIfAbsent(l.routeId, () => []).add(l);
     }
-  }
-
-  // Haversine distance between two LatLngs in meters
-  double _haversineDistanceMeters(LatLng a, LatLng b) {
-    const R = 6371000; // Earth radius in meters
-    final lat1 = a.latitude * math.pi / 180.0;
-    final lat2 = b.latitude * math.pi / 180.0;
-    final dLat = (b.latitude - a.latitude) * math.pi / 180.0;
-    final dLon = (b.longitude - a.longitude) * math.pi / 180.0;
-
-    final sa =
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) *
-            math.cos(lat2) *
-            math.sin(dLon / 2) *
-            math.sin(dLon / 2);
-    final c = 2 * math.atan2(math.sqrt(sa), math.sqrt(1 - sa));
-    return R * c;
-  }
-
-  // Find nearest index and its distance on polyline to target. Returns a pair [index, distanceMeters]
-  List<dynamic> _nearestIndexAndDistanceOnPolyline(
-    List<LatLng> poly,
-    LatLng target,
-  ) {
-    int bestIdx = 0;
-    double bestDist = double.infinity;
-    for (int i = 0; i < poly.length; i++) {
-      final p = poly[i];
-      final d = _haversineDistanceMeters(p, target);
-      if (d < bestDist) {
-        bestDist = d;
-        bestIdx = i;
-      }
-    }
-    return [bestIdx, bestDist];
   }
 
   // Helper to extract a contiguous segment from polyline points between two latlngs
@@ -153,20 +118,13 @@ class JourneyLayer extends CompositeMapLayer {
     LatLng start,
     LatLng end,
   ) {
-    // debugPrint("extractRouteSegment call!!!");
-    final sRes = _nearestIndexAndDistanceOnPolyline(poly, start);
-    final eRes = _nearestIndexAndDistanceOnPolyline(poly, end);
-    // debugPrint("*** sRes = ${sRes}, eRes = ${eRes}");
-    final si = sRes[0] as int;
-    final ei = eRes[0] as int;
-    final sDist = sRes[1] as double;
-    final eDist = eRes[1] as double;
+    final (si, sDist) = start.nearestPolylineIndexAndDistanceDiscrete(poly);
+    final (ei, eDist) = end.nearestPolylineIndexAndDistanceDiscrete(poly);
 
     // If either nearest point is too far from the stop, we consider this polyline not a match
-    if (sDist > _maxMatchDistanceMeters || eDist > _maxMatchDistanceMeters)
+    if (sDist > _maxMatchDistanceMeters || eDist > _maxMatchDistanceMeters) {
       return null;
-
-    // debugPrint("We have valid coords!");
+    }
 
     if (si == ei) return null;
 
@@ -190,7 +148,10 @@ class JourneyLayer extends CompositeMapLayer {
     if (leg.rt != null) activeJourneyRoutes.add(leg.rt!);
     if (leg.trip != null) activeJourneyBusIds.add(leg.trip!.vid);
 
-    BusRouteLine? line = routesCache[leg.rt];
+    final rt = leg.rt;
+    final line = rt != null
+      ? determineRouteOfBusLeg(routesCache, rt, leg.originID, leg.destinationID)
+      : null;
 
     // debugPrint("Tracing path from ${leg.originID} to ${leg.destinationID}");
 
