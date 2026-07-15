@@ -45,6 +45,16 @@ sealed class NavigationStage {
     _eventController.close();
   }
 
+  void initWithLeg(Leg leg) {
+    // Do cool stuff to set up your Stage with an e.g. walking or bus leg
+  }
+
+  void receiveLocationUpdate(LatLng newLocation) {
+    // Do whatever you need to with the current location.
+    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
+    //    _controller.add(StageComplete()) // If the user has reached the end!
+  }
+
 }
 
 enum RerouteReason {
@@ -304,16 +314,27 @@ class DemoStage extends NavigationStage {
 
   final _eventController = StreamController<StageEvent>();
 
-  Stream<StageEvent> get events => _eventController.stream;
+  Stream<StageEvent> get events => _eventController.stream; // This is so the NavigationController can do yourStage.events and access your event controller
 
   // To add stage events (i.e. if you miss the bus):
-  // _controller.add(StageReroute(RerouteReason.wrongBus))
-  // _controller.add(StageReroute(RerouteReason.walkPathChanged))
-  // _controller.add(StageComplete()) // If your stage is complete!
+  // _eventController.add(StageReroute(RerouteReason.wrongBus))
+  // _eventController.add(StageReroute(RerouteReason.walkPathChanged))
+  // _eventController.add(StageComplete()) // If your stage is complete!
   // Note to all frontend devs: Feel free to add additional RerouteReasons if you need them!
 
   void dispose() {
     _eventController.close();
+  }
+
+  // New!
+  void initWithLeg(Leg leg) {
+    // Do cool stuff to set up your Stage with an e.g. walking or bus leg
+  }
+
+  void receiveLocationUpdate(LatLng newLocation) {
+    // Do whatever you need to with the current location.
+    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
+    //    _eventController.add(StageComplete()) // If the user has reached the end!
   }
 }
 
