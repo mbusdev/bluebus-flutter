@@ -1789,8 +1789,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
                             ),
 
-
-                            NavigationOverlay(navigationManager: navigationManager),
+                            // Expanded(
+                            //   child: NavigationOverlay(navigationManager: navigationManager),
+                            // ),
 
 
 
@@ -2217,6 +2218,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   ),
                           ],
                         ),
+                      ),
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: NavigationOverlay(navigationManager: navigationManager)
+                        )
                       ),
                     ],
                   ),

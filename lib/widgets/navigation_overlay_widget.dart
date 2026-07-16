@@ -79,247 +79,349 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     //     // TODO: Handle this case.
     //     throw UnimplementedError();
     // }
-    return Column(
-
+    return Stack(
       children: [
-      
-        Container(
-          width: double.infinity,
-          
-          margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-          padding: EdgeInsets.all(20),
-          
-          decoration: BoxDecoration(
-            color: getColor(context, ColorType.mapButtonPrimary),
-            boxShadow: [
-              BoxShadow(
-                color: getColor(
-                  context,
-                  ColorType.mapButtonShadow,
-                ),
-                blurRadius: 10,
-                offset: Offset(0, 6),
-              ),
-            ],
-            borderRadius:
-                BorderRadius.circular(25),
-          ),
-          child: Row(children: [
-            Icon(
-              Icons.pool,
-              color: getColor(context, ColorType.mapButtonIcon),
-              size: 48,
-            ),
-            Expanded(
-              
-              child: 
-              Padding(
-                padding: EdgeInsets.only(left: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: getColor(context, ColorType.mapButtonIcon)),
-                      widget.navigationManager.getCurrentStage().getTitle()
-                    ),
-                    Text(
-                      style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                      widget.navigationManager.getCurrentStage().getSubtitle()
-                    ),
-                  ]
-                )
-              )
-            )
-          ])
-        ),
-
-  
-        Container( // I have absolutely no idea how to shrink this to fit the content. Thanks Flutter
-          
-          margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-          padding: EdgeInsets.all(8),
-          
-          decoration: BoxDecoration(
-            color: getColor(context, ColorType.mapButtonPrimary),
-            boxShadow: [
-              BoxShadow(
-                color: getColor(
-                  context,
-                  ColorType.mapButtonShadow,
-                ),
-                blurRadius: 10,
-                offset: Offset(0, 6),
-              ),
-            ],
-            borderRadius:
-                BorderRadius.circular(25),
-          ),
-          child: Row(
-            children: [
-              RouteIcon.small("BB"),
-              Padding(
-                padding: EdgeInsetsGeometry.only(left: 8),
-                child: Text(
-                  style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                  "Bus arriving in 218 mins"
-                ),
-              ),
-              MaterialButton(
-                minWidth: 50,
-                onPressed: () {
-                  setState(() {
-                    widget.navigationManager.previousStage();
-                    updateTimeline();
-                  });
-                },
-                child: Icon(Icons.arrow_back, color: Colors.white),
-              ),
-              MaterialButton(
-                minWidth: 50,
-                onPressed: () {
-                  setState(() {
-                    widget.navigationManager.nextStage();
-                    updateTimeline();
-                  });
-                },
-                child: Icon(Icons.arrow_forward, color: Colors.white)
-              )
-              
-              
-              
-            ],
-          )
-        ),
-
-        // Expanded(child: SizedBox.expand()),
-        // SizedBox.expand(),
-
-        Container( // I have absolutely no idea how to shrink this to fit the content. Thanks Flutter
-          
-          margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-          padding: EdgeInsets.all(8),
-          
-          decoration: BoxDecoration(
-            color: getColor(context, ColorType.infoCardColor),
-            boxShadow: [
-              BoxShadow(
-                color: getColor(
-                  context,
-                  ColorType.mapButtonShadow,
-                ),
-                blurRadius: 10,
-                offset: Offset(0, 6),
-              ),
-            ],
-            borderRadius:
-                BorderRadius.circular(25),
-          ),
+        Padding(
+          padding: EdgeInsetsGeometry.only(left: 10, right: 10, top: 70),
           child: Column(
             children: [
-              // TODO: Add the user's position in all of this
-              // ClipRRect(
-              //   borderRadius: BorderRadius.circular(12),
-
-                // child: 
-                LayoutBuilder(
-                  builder: (context, constraints) {
-
-                    const double dotSize = 24.0;
-                    final double dotLeft = (constraints.maxWidth * this.timelineInfo.activePositionPercentage) - (dotSize / 2);
-
-
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(top: dotSize, bottom: dotSize),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Row(
-                          
-                            children: this.timelineInfo.timelineSteps.map((item) {
-                                return Flexible(
-                                  flex: item.estimated_time.floor(), // Proportionally sizes to each item's time
-                                  child: Container(
-                                    height: 10,
-                                    decoration: BoxDecoration(color: item.color),
-                                  )
-                                );
-                                // return Container(
-                                //   width: MediaQuery.of(context).size.width * item.percentage,
-                                //   height: 10,
-                                //   decoration: BoxDecoration(color: item.color),
-                                // );
-                              }).toList(),
-                              // Container(
-                              //   width: MediaQuery.of(context).size.width * 0.3,
-                              //   height: 10,
-                              //   decoration: BoxDecoration(color: Colors.green),
-                              // ),
-                              // Container(
-                              //   width: MediaQuery.of(context).size.width * 0.3,
-                              //   height: 10,
-                              //   decoration: BoxDecoration(color: Colors.red),
-                              // ),
-                              // Container(
-                              //   width: MediaQuery.of(context).size.width * 0.3,
-                              //   height: 10,
-                              //   decoration: BoxDecoration(color: Colors.green),
-                              // ),
-                          ),
-                        ),
+            
+              Container(
+                width: double.infinity,
+                
+                margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                padding: EdgeInsets.all(20),
+                
+                decoration: BoxDecoration(
+                  color: getColor(context, ColorType.mapButtonPrimary),
+                  boxShadow: [
+                    BoxShadow(
+                      color: getColor(
+                        context,
+                        ColorType.mapButtonShadow,
                       ),
-                      
-
-                      // Text("HIIIIIII THIS IS A TEST ${dotLeft}, pos %: ${this.timelineInfo.activePositionPercentage}"),
-
-                      // Container(
-                      //     width: dotSize, 
-                      //     height: dotSize, 
-                      //     decoration: const BoxDecoration(
-                      //       color: Colors.red, 
-                      //       shape: BoxShape.circle
-                      //     ),
-                      //   ),
+                      blurRadius: 10,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                  borderRadius:
+                      BorderRadius.circular(25),
+                ),
+                child: Row(children: [
+                  Icon(
+                    Icons.pool,
+                    color: getColor(context, ColorType.mapButtonIcon),
+                    size: 48,
+                  ),
+                  Expanded(
                     
-                      Positioned( // TODO: Make this thing animate smoooooothly!
-                        left: dotLeft,
-                        // top: -dotSize / 4,
-                        // top: -dotSize,
-                        child: Container(
-                          width: dotSize, 
-                          height: dotSize, 
-                          decoration: BoxDecoration(
-                            color: Color(0xFF4286F5), 
-                            border: Border.all(
-                              color: Colors.white,
-                              // color: Color(0x666896DD),
-                              width: 2.0
-                            ),
-                            boxShadow: [
-                              BoxShadow(color: Color(0x666896DD), spreadRadius: 16)
-                            ],
-                            shape: BoxShape.circle
+                    child: 
+                    Padding(
+                      padding: EdgeInsets.only(left: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: getColor(context, ColorType.mapButtonIcon)),
+                            widget.navigationManager.getCurrentStage().getTitle()
                           ),
-                        ),
+                          Text(
+                            style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
+                            widget.navigationManager.getCurrentStage().getSubtitle()
+                          ),
+                        ]
+                      )
+                    )
+                  )
+                ])
+              ),
+
+        
+              Container( // I have absolutely no idea how to shrink this to fit the content. Thanks Flutter
+                
+                margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                padding: EdgeInsets.all(8),
+                
+                decoration: BoxDecoration(
+                  color: getColor(context, ColorType.mapButtonPrimary),
+                  boxShadow: [
+                    BoxShadow(
+                      color: getColor(
+                        context,
+                        ColorType.mapButtonShadow,
+                      ),
+                      blurRadius: 10,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                  borderRadius:
+                      BorderRadius.circular(25),
+                ),
+                child: Row(
+                  children: [
+                    RouteIcon.small("BB"),
+                    Padding(
+                      padding: EdgeInsetsGeometry.only(left: 8),
+                      child: Text(
+                        style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
+                        "Bus arriving in 218 mins"
+                      ),
+                    ),
+                    MaterialButton(
+                      minWidth: 50,
+                      onPressed: () {
+                        setState(() {
+                          widget.navigationManager.previousStage();
+                          updateTimeline();
+                        });
+                      },
+                      child: Icon(Icons.arrow_back, color: Colors.white),
+                    ),
+                    MaterialButton(
+                      minWidth: 50,
+                      onPressed: () {
+                        setState(() {
+                          widget.navigationManager.nextStage();
+                          updateTimeline();
+                        });
+                      },
+                      child: Icon(Icons.arrow_forward, color: Colors.white)
+                    )
+                    
+                    
+                    
+                  ],
+                )
+              ),
+
+              // Expanded(child: SizedBox.expand()),
+              // SizedBox.expand(),
+              // const Spacer(),
+
+              // VVVVVV This is the bottom bar--temporarily commenting it out to repurpose it as a DraggableScrollableSheet
+
+              
+                    
+                    
+                  // )
+
+                    // Padding(
+                    //   padding: EdgeInsetsGeometry.only(left: 8),
+                    //   child: Text(
+                    //     // style: TextStyle(fontSize: 16, color: getColor(context, ColorType.primary)),
+                    //     "I'm told your bus is coming"
+                    //   ),
+                    // )
+                    
+                //   ],
+                // )
+              // ),
+            ]
+          ),
+        ),
+
+        // TODO: Add a scrim that fades in when you drag up on the progress bar so that the background is darkened behind the DraggableScrollableSheet
+        
+        
+        DraggableScrollableSheet(
+          initialChildSize: 0.12, // TODO: Compute the height of the progress bar dynamically instead of using 12% of screen height as a hardcoded number
+          minChildSize: 0.12,
+          maxChildSize: 0.85,
+          snap: true,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: getColor(context, ColorType.infoCardColor),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+                boxShadow: [ /* TODO: Add a nice box shadow */ ]
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: EdgeInsets.all(15),
+                children: [
+                  // Container(
+                
+                  // margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                  // padding: EdgeInsets.all(8),
+                  
+                  // decoration: BoxDecoration(
+                  //   color: getColor(context, ColorType.infoCardColor),
+                  //   boxShadow: [
+                  //     BoxShadow(
+                  //       color: getColor(
+                  //         context,
+                  //         ColorType.mapButtonShadow,
+                  //       ),
+                  //       blurRadius: 10,
+                  //       offset: Offset(0, 6),
+                  //     ),
+                  //   ],
+                  //   borderRadius:
+                  //       BorderRadius.circular(25),
+                  // ),
+                  // child: 
+
+                  // TODO: Figure out why the map panning is so laggy if there's a DraggableScrollableSheet on top
+
+                  // NEXT STEPS TODO: get the steps showing inside the DraggableScrollableSheet and fix the lagging!
+
+                  Row( // Drag handle
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 50,
+                        height: 4,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade400, // TODO: Make this a real color in constants.dart
+                            borderRadius: BorderRadius.circular(1000)
+                          ),
+                        )
                       )
                     ],
-                  );
-                }
-              )
-            // )
+                  ),
 
-              // Padding(
-              //   padding: EdgeInsetsGeometry.only(left: 8),
-              //   child: Text(
-              //     // style: TextStyle(fontSize: 16, color: getColor(context, ColorType.primary)),
-              //     "I'm told your bus is coming"
-              //   ),
-              // )
-              
-            ],
-          )
+                  Column(
+                    children: [
+                      // ClipRRect(
+                      //   borderRadius: BorderRadius.circular(12),
+
+                        // child: 
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+
+                            const double dotSize = 24.0;
+                            final double dotLeft = (constraints.maxWidth * this.timelineInfo.activePositionPercentage) - (dotSize / 2);
+
+
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(top: dotSize, bottom: dotSize),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Row(
+                                  
+                                    children: this.timelineInfo.timelineSteps.map((item) {
+                                        return Flexible(
+                                          flex: item.estimated_time.floor(), // Proportionally sizes to each item's time
+                                          child: Container(
+                                            height: 10,
+                                            decoration: BoxDecoration(color: item.color),
+                                          )
+                                        );
+                                        // return Container(
+                                        //   width: MediaQuery.of(context).size.width * item.percentage,
+                                        //   height: 10,
+                                        //   decoration: BoxDecoration(color: item.color),
+                                        // );
+                                      }).toList(),
+                                      // Container(
+                                      //   width: MediaQuery.of(context).size.width * 0.3,
+                                      //   height: 10,
+                                      //   decoration: BoxDecoration(color: Colors.green),
+                                      // ),
+                                      // Container(
+                                      //   width: MediaQuery.of(context).size.width * 0.3,
+                                      //   height: 10,
+                                      //   decoration: BoxDecoration(color: Colors.red),
+                                      // ),
+                                      // Container(
+                                      //   width: MediaQuery.of(context).size.width * 0.3,
+                                      //   height: 10,
+                                      //   decoration: BoxDecoration(color: Colors.green),
+                                      // ),
+                                    ),
+                                  ),
+                                ),
+                              
+
+                              // Text("HIIIIIII THIS IS A TEST ${dotLeft}, pos %: ${this.timelineInfo.activePositionPercentage}"),
+
+                              // Container(
+                              //     width: dotSize, 
+                              //     height: dotSize, 
+                              //     decoration: const BoxDecoration(
+                              //       color: Colors.red, 
+                              //       shape: BoxShape.circle
+                              //     ),
+                              //   ),
+                            
+                              Positioned( // TODO: Make this thing animate smoooooothly!
+                                left: dotLeft,
+                                // top: -dotSize / 4,
+                                // top: -dotSize,
+                                child: Container(
+                                  width: dotSize, 
+                                  height: dotSize, 
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFF4286F5), 
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      // color: Color(0x666896DD),
+                                      width: 2.0
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(color: Color(0x666896DD), spreadRadius: 16)
+                                    ],
+                                    shape: BoxShape.circle
+                                  ),
+                                ),
+                              )
+                              ],
+                            );
+                        }
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(left: 10, right: 10, bottom: 5),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Arrive in 10 mins"),
+                            Text("ETA 9:35PM")
+                          ],
+                        )
+                      )
+                    ]
+                  // )
+                  ),
+
+                  Column(
+                    children: widget.navigationManager.stageList.map((NavigationStage stage) {
+                      return Column(
+                        children: stage.getSteps().map((NavigationStageStep step) {
+                          return Row(
+                            children: [
+                              Padding(padding: EdgeInsets.only(left: 20)),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: step.getColor()
+                                ),
+                                width: 30,
+                                height: 40,
+                                child: Container(
+
+                                )
+                              ),
+                              Padding(padding: EdgeInsets.only(left: 20)),
+                              Text(step.getTitle()),
+                              // Spacer(),
+                              Container(width: 40),
+                              Text(step.getTime())
+                            ]
+                          );
+                        }).toList(),
+                      );
+                      // return Text(stage.getTitle());
+                  }).toList(),
+                  )
+                    
+                ]
+              )
+            );
+          }
         ),
       ]
     );
