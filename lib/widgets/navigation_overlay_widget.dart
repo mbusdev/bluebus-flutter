@@ -388,36 +388,121 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                   // )
                   ),
 
-                  Column(
-                    children: widget.navigationManager.stageList.map((NavigationStage stage) {
-                      return Column(
-                        children: stage.getSteps().map((NavigationStageStep step) {
-                          return Row(
-                            children: [
-                              Padding(padding: EdgeInsets.only(left: 20)),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: step.getColor()
-                                ),
-                                width: 30,
-                                height: 40,
-                                child: Container(
+                  // TODO: Filter by user location!! Only show the future steps(?)
+                  // TODO: Also show stage titles in this list
 
-                                )
-                              ),
-                              Padding(padding: EdgeInsets.only(left: 20)),
-                              Text(step.getTitle()),
-                              // Spacer(),
-                              Container(width: 40),
-                              Text(step.getTime())
-                            ]
-                          );
-                        }).toList(),
+          
+                  Column(
+                    
+                    children: widget.navigationManager.stageList.asMap().entries.map((entry) {
+
+                      int index = entry.key;
+                      NavigationStage stage = entry.value;
+
+                      bool shouldRoundTopCorners = (index == 0) || stage.hasRoundedCorners();
+
+                      return Column(
+                        children: [
+                          
+                          Row(
+                              children: [
+                                Padding(padding: EdgeInsets.only(left: 20)),
+                                Container( // Gray background behind colorful line segment
+                                  width: 30,
+                                  height: 40,
+                                  decoration: (index != 0) ? BoxDecoration(
+                                    color: getColor(context, ColorType.navigationStepsGray)
+                                  ) : null,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: stage.getColor(),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: shouldRoundTopCorners ? Radius.circular(20) : Radius.circular(0),
+                                        topRight: shouldRoundTopCorners ? Radius.circular(20) : Radius.circular(0),
+                                      )
+                                    ),
+                                  ),
+                                ),
+                                
+                                Padding(padding: EdgeInsets.only(left: 20)),
+                                Text(
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.bold
+                                  ),
+                                  stage.getTitle()
+                                ),
+                                // Spacer(),
+                                Container(width: 40),
+                                // Text(stage.g())
+                              ]
+                            ),
+
+                          ...stage.getSteps().asMap().entries.map((entry) {
+                            int sub_index = entry.key;
+                            NavigationStageStep step = entry.value;
+                            // NEXT STEPS TODO: Get the border radius working on only the first and last items
+
+
+  // NEXT STEPS TODO: get live location showing on the step list, as well as properly rounded corners (see the Figma) and bigger dots on the first/last segments, etc. Also get subtitles working
+
+                            bool shouldRoundBottomCorners = false;
+
+                            if (index == widget.navigationManager.stageList.length - 1 && sub_index == stage.getSteps().length - 1) {
+                              shouldRoundBottomCorners = true;
+                            }
+                            
+                            if (stage.hasRoundedCorners() && sub_index == stage.getSteps().length - 1) {
+                              shouldRoundBottomCorners = true;
+                            }
+
+                            return Row(
+                              children: [
+                                Padding(padding: EdgeInsets.only(left: 20)),
+                                Container( // Gray background behind colorful line segment
+                                  width: 30,
+                                  height: 40,
+                                  decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
+                                    // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
+                                    color: getColor(context, ColorType.navigationStepsGray)
+                                  ) : null,
+                                  child: Container( // Colorful line segment
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: step.getColor(),
+                                      borderRadius: BorderRadius.only(
+                                        bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
+                                        bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
+                                      )
+                                    ),
+                                    
+                                    child: Container( // Inside dot or dash
+                                      width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
+                                      height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
+                                      // color: Colors.white,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.all(Radius.circular(100))
+                                      ),
+                                      // color: Colors.white
+                                    )
+                                  ),
+                                ),
+                                Padding(padding: EdgeInsets.only(left: 20)),
+                                Text(step.getTitle()),
+                                // Spacer(),
+                                Container(width: 40),
+                                Text(step.getTime())
+                              ]
+                            );
+                          }).toList()
+                        ],
                       );
                       // return Text(stage.getTitle());
                   }).toList(),
                   )
                     
+              // )
                 ]
               )
             );

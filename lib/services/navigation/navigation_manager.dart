@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:math' as math;
 
+import 'package:bluebus/constants.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
@@ -77,6 +78,10 @@ sealed class NavigationStage {
 
   Color getColor() {
     return Color(0xFFDBE4ED);
+  }
+
+  bool hasRoundedCorners() {
+    return false;
   }
 
   final _eventController = StreamController<StageEvent>();
@@ -443,21 +448,23 @@ class DemoStage extends NavigationStage {
   LatLng endPoint;
 
   double favoriteNumber;
+  Color color = Colors.black;
+  LineType lineType;
 
   DemoStage({
     required this.favoriteNumber,
     required this.length,
     required this.percent_complete,
     required this.startPoint,
-    required this.endPoint
+    required this.endPoint,
+    required this.color,
+    required this.lineType
   });
 
   @override
   Color getColor() { // Return a random color
     // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
-    const double golden = 0.618033988749895;
-    final double hue = ((this.favoriteNumber.hashCode * golden) % 1.0).abs() * 360;
-    return HSLColor.fromAHSL(1.0, hue, 0.65, 0.55).toColor();
+    return color;
   }
 
   @override
@@ -494,23 +501,30 @@ class DemoStage extends NavigationStage {
         subtitle: "Step 1 subtitle",
         time: '1:23 AM',
         color: getColor(), // Use the stage's color in our demo
-        lineType: LineType.Dashed,
+        // lineType: LineType.Dashed,
+        lineType: this.lineType
       ),
       NavigationStageStep(
         title: "Step 2",
         subtitle: "Step 2 subtitle",
         time: '4:56 AM',
         color: getColor(), // Use the stage's color in our demo
-        lineType: LineType.Dashed,
+        // lineType: LineType.Dashed,
+        lineType: this.lineType
       ),
       NavigationStageStep(
         title: "Step 3",
         subtitle: "Step 3 subtitle",
         time: '7:89 AM',
         color: getColor(), // Use the stage's color in our demo
-        lineType: LineType.Dashed,
+        // lineType: LineType.Dashed,
+        lineType: this.lineType
       )
     ]; // Get navigation stage steps
+  }
+
+  bool hasRoundedCorners() {
+    return favoriteNumber == 2;
   }
 
   final _eventController = StreamController<StageEvent>();
@@ -574,7 +588,9 @@ class NavigationManager {
           length: 15,
           percent_complete: 0.80,
           startPoint: LatLng(42.281973, -83.765719),
-          endPoint: LatLng(42.281291, -83.743918)
+          endPoint: LatLng(42.281291, -83.743918),
+          color: darkColors[ColorType.navigationStepsGray]!, // TODO: Make this dynamic. This will be messy since we need to do something about context in getColor(context, color Type)
+          lineType: LineType.Dashed
         ),
         DemoStage(
           favoriteNumber: 2,
@@ -582,13 +598,17 @@ class NavigationManager {
           percent_complete: 0.23,
           startPoint: LatLng(42.281291, -83.743918),
           endPoint: LatLng(42.287031, -83.743532),
+          color: Colors.purple,
+          lineType: LineType.Dotted
         ),
         DemoStage(
           favoriteNumber: 3,
           length: 4,
           percent_complete: 0.0,
           startPoint: LatLng(42.287031, -83.743532),
-          endPoint: LatLng(42.289689, -83.738435)
+          endPoint: LatLng(42.289689, -83.738435),
+          color: darkColors[ColorType.navigationStepsGray]!,
+          lineType: LineType.Dashed
         ),
       
       ]; // Stores all the states for users to page back and forth
