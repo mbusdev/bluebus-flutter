@@ -732,6 +732,35 @@ class NavigationManager {
     _activateStageSub(stageList[currentStage]);
   }
 
+  void initFromJourney(Journey journey) {
+
+    this.stageList.clear();
+
+    for (Leg leg in journey.legs) {
+      // if (leg.")
+      debugPrint("Adding ${leg.origin}->${leg.destination} leg");
+      // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
+
+      // TODO: Add a "mode" variable to the Leg (this is returned as JSON from the API--we just need to add a variable to capture it)
+    }
+
+    this.stageList.add(
+      DemoStage(
+      favoriteNumber: 7,
+      length: 20.0,
+      percent_complete: 0.72,
+      startPoint: LatLng(42.297493, -83.710782),
+      endPoint: LatLng(42.398493, -83.811782),
+      color: Colors.orange,
+      lineType: LineType.Dashed
+     )
+    );
+
+    _overlay?.onNavigationUpdated();
+    rebuildMarkersAndPolylines();
+
+  }
+
   // TODO: Add start()/stop() methods
 
 

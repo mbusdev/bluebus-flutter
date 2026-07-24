@@ -1,5 +1,6 @@
 
 import 'package:bluebus/constants.dart';
+import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
@@ -83,116 +84,197 @@ class _NavigationOverlayState extends State<NavigationOverlay>
       children: [
         Padding(
           padding: EdgeInsetsGeometry.only(left: 10, right: 10, top: 70),
-          child: Column(
+          child: Column( // Core column for vertical layout
             children: [
-            
-              Container(
-                width: double.infinity,
-                
-                margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                padding: EdgeInsets.all(20),
-                
-                decoration: BoxDecoration(
-                  color: getColor(context, ColorType.mapButtonPrimary),
-                  boxShadow: [
-                    BoxShadow(
-                      color: getColor(
-                        context,
-                        ColorType.mapButtonShadow,
-                      ),
-                      blurRadius: 10,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                  borderRadius:
-                      BorderRadius.circular(25),
-                ),
-                child: Row(children: [
-                  Icon(
-                    Icons.pool,
-                    color: getColor(context, ColorType.mapButtonIcon),
-                    size: 48,
-                  ),
-                  Expanded(
-                    
-                    child: 
-                    Padding(
-                      padding: EdgeInsets.only(left: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: getColor(context, ColorType.mapButtonIcon)),
-                            widget.navigationManager.getCurrentStage().getTitle()
-                          ),
-                          Text(
-                            style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                            widget.navigationManager.getCurrentStage().getSubtitle()
-                          ),
-                        ]
-                      )
-                    )
-                  )
-                ])
+              MaterialButton(
+                color: Colors.blue.shade900,
+                child: Text("Init stages from /plan-journey"),
+                onPressed: () async {
+                  final journeys = await JourneyRepository.planJourney(
+                    originLat: 42.274014,
+                    originLon: -83.753664,
+                    destLat: 42.297493,
+                    destLon: -83.710782,
+                  );
+
+                  // Use journeys[0] to get the first one
+
+                  widget.navigationManager.initFromJourney(journeys[0]);
+
+
+                }
               ),
 
-        
-              Container( // I have absolutely no idea how to shrink this to fit the content. Thanks Flutter
-                
-                margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                padding: EdgeInsets.all(8),
-                
-                decoration: BoxDecoration(
-                  color: getColor(context, ColorType.mapButtonPrimary),
-                  boxShadow: [
-                    BoxShadow(
-                      color: getColor(
-                        context,
-                        ColorType.mapButtonShadow,
+
+              Row( // Top header row
+                children: [
+                  Expanded(
+                  child:
+                    Container(
+                      margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                      decoration: BoxDecoration(
+                        // color: getColor(context, ColorType.mapButtonPrimary),
+                        color: Colors.green,
+                        boxShadow: [
+                          BoxShadow(
+                            color: getColor(
+                              context,
+                              ColorType.mapButtonShadow,
+                            ),
+                            blurRadius: 10,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                        borderRadius:
+                            BorderRadius.circular(25),
                       ),
-                      blurRadius: 10,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                  borderRadius:
-                      BorderRadius.circular(25),
-                ),
-                child: Row(
-                  children: [
-                    RouteIcon.small("BB"),
-                    Padding(
-                      padding: EdgeInsetsGeometry.only(left: 8),
-                      child: Text(
-                        style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                        "Bus arriving in 218 mins"
-                      ),
-                    ),
-                    MaterialButton(
-                      minWidth: 50,
-                      onPressed: () {
-                        setState(() {
-                          widget.navigationManager.previousStage();
-                          updateTimeline();
-                        });
-                      },
-                      child: Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                    MaterialButton(
-                      minWidth: 50,
-                      onPressed: () {
-                        setState(() {
-                          widget.navigationManager.nextStage();
-                          updateTimeline();
-                        });
-                      },
-                      child: Icon(Icons.arrow_forward, color: Colors.white)
+                      child: Column(
+                        children: [
+                          Container( // The big white card at the top
+                          
+                            // margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                            padding: EdgeInsets.all(20),
+                            
+                            decoration: BoxDecoration(
+                              color: getColor(context, ColorType.mapButtonPrimary),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: getColor(
+                                    context,
+                                    ColorType.mapButtonShadow,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 6),
+                                ),
+                              ],
+                              borderRadius:
+                                  BorderRadius.circular(25),
+                            ),
+                            child: Row(children: [
+                              Icon(
+                                Icons.pool,
+                                color: getColor(context, ColorType.mapButtonIcon),
+                                size: 30,
+                              ),
+                              // Expanded(
+                                
+                                // child: 
+                              Padding(
+                                padding: EdgeInsets.only(left: 10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: getColor(context, ColorType.mapButtonIcon)),
+                                      widget.navigationManager.getCurrentStage().getTitle()
+                                    ),
+                                    // Text(
+                                    //   style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
+                                    //   widget.navigationManager.getCurrentStage().getSubtitle()
+                                    // ),
+                                  ]
+                                )
+                              ),
+
+                              // )
+                            ]
+                          )
+                        ),
+                          Container( // The smaller bottom protrusion from the big white card
+                            
+                            padding: EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20),
+                            
+                            
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.pool,
+                                  size: 20,
+                                ),
+                                SizedBox.square(dimension: 10,),
+                                Text(
+                                  "Then turn left",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18
+                                  )
+                                )
+                              ],
+                            )
+                          )
+                      ]
+                      )
                     )
                     
+                  ),
+                  SizedBox.square(dimension: 10.0,),
+                  Container( 
+                
+                    margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                    padding: EdgeInsets.all(16),
                     
-                    
-                  ],
-                )
+                    decoration: BoxDecoration(
+                      color: getColor(context, ColorType.mapButtonPrimary),
+                      boxShadow: [
+                        BoxShadow(
+                          color: getColor(
+                            context,
+                            ColorType.mapButtonShadow,
+                          ),
+                          blurRadius: 10,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                      borderRadius:
+                          BorderRadius.circular(25),
+                    ),
+                    child: Column(
+                      children: [
+                        RouteIcon.small("BB"),
+                        Text(
+                          "3 min",
+                          style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
+                          ),
+                        Text(
+                          "arrival",
+                          style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
+                        )
+                        // Padding(
+                        //   padding: EdgeInsetsGeometry.only(left: 8),
+                        //   child: Text(
+                        //     style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
+                        //     "Bus arriving in 218 mins"
+                        //   ),
+                        // ),
+                        // MaterialButton(
+                        //   minWidth: 50,
+                        //   onPressed: () {
+                        //     setState(() {
+                        //       widget.navigationManager.previousStage();
+                        //       updateTimeline();
+                        //     });
+                        //   },
+                        //   child: Icon(Icons.arrow_back, color: Colors.white),
+                        // ),
+                        // MaterialButton(
+                        //   minWidth: 50,
+                        //   onPressed: () {
+                        //     setState(() {
+                        //       widget.navigationManager.nextStage();
+                        //       updateTimeline();
+                        //     });
+                        //   },
+                        //   child: Icon(Icons.arrow_forward, color: Colors.white)
+                        // )
+                        
+                        
+                        
+                      ],
+                    )
+                  ),
+                ],
               ),
+            
 
               // Expanded(child: SizedBox.expand()),
               // SizedBox.expand(),
@@ -388,6 +470,8 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                   // )
                   ),
 
+                  SizedBox.square(dimension: 20.0,),
+
                   // TODO: Filter by user location!! Only show the future steps(?)
                   // TODO: Also show stage titles in this list
 
@@ -409,7 +493,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                                 Padding(padding: EdgeInsets.only(left: 20)),
                                 Container( // Gray background behind colorful line segment
                                   width: 30,
-                                  height: 40,
+                                  height: 50,
                                   decoration: (index != 0) ? BoxDecoration(
                                     color: getColor(context, ColorType.navigationStepsGray)
                                   ) : null,
