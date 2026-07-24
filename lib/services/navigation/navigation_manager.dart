@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:math' as math;
 
+import 'package:bluebus/constants.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
@@ -15,24 +16,38 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 enum LineType { Dotted, Dashed}
 
 class NavigationStageStep {
+  String title;
+  String? subtitle;
+  String time;
+  Color color;
+  LineType lineType; // e.g. LineType.Dashed
+
+  NavigationStageStep({
+    required this.title,
+    this.subtitle,
+    required this.time,
+    required this.color,
+    required this.lineType
+  });
+
   String getTitle() {
-    return "";
+    return title;
   }
 
   String? getSubtitle() {
-    return null; // Return null if no subtitle
+    return subtitle; // Return null if no subtitle
   }
 
   String getTime() {
-    return "0:00"; // Get the time
+    return time; // Get the time
   }
 
   Color? getColor() {
-    return null; // Return null for neutral gray
+    return color; // Return null for neutral gray
   }
 
   LineType getLineType() {
-    return LineType.Dashed;
+    return lineType;
   }
 
 }
@@ -65,12 +80,26 @@ sealed class NavigationStage {
     return Color(0xFFDBE4ED);
   }
 
+  bool hasRoundedCorners() {
+    return false;
+  }
+
   final _eventController = StreamController<StageEvent>();
 
   Stream<StageEvent> get events => _eventController.stream;
 
   void dispose() {
     _eventController.close();
+  }
+
+  void initWithLeg(Leg leg) {
+    // Do cool stuff to set up your Stage with an e.g. walking or bus leg
+  }
+
+  void receiveLocationUpdate(LatLng newLocation) {
+    // Do whatever you need to with the current location.
+    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
+    //    _controller.add(StageComplete()) // If the user has reached the end!
   }
 
 }
@@ -415,21 +444,23 @@ class DemoStage extends NavigationStage {
   LatLng endPoint;
 
   double favoriteNumber;
+  Color color = Colors.black;
+  LineType lineType;
 
   DemoStage({
     required this.favoriteNumber,
     required this.length,
     required this.percent_complete,
     required this.startPoint,
-    required this.endPoint
+    required this.endPoint,
+    required this.color,
+    required this.lineType
   });
 
   @override
   Color getColor() { // Return a random color
     // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
-    const double golden = 0.618033988749895;
-    final double hue = ((this.favoriteNumber.hashCode * golden) % 1.0).abs() * 360;
-    return HSLColor.fromAHSL(1.0, hue, 0.65, 0.55).toColor();
+    return color;
   }
 
   @override
@@ -459,18 +490,62 @@ class DemoStage extends NavigationStage {
     ];
   }
 
+  List<NavigationStageStep> getSteps() {
+    return [
+      NavigationStageStep(
+        title: "Step 1",
+        subtitle: "Step 1 subtitle",
+        time: '1:23 AM',
+        color: getColor(), // Use the stage's color in our demo
+        // lineType: LineType.Dashed,
+        lineType: this.lineType
+      ),
+      NavigationStageStep(
+        title: "Step 2",
+        subtitle: "Step 2 subtitle",
+        time: '4:56 AM',
+        color: getColor(), // Use the stage's color in our demo
+        // lineType: LineType.Dashed,
+        lineType: this.lineType
+      ),
+      NavigationStageStep(
+        title: "Step 3",
+        subtitle: "Step 3 subtitle",
+        time: '7:89 AM',
+        color: getColor(), // Use the stage's color in our demo
+        // lineType: LineType.Dashed,
+        lineType: this.lineType
+      )
+    ]; // Get navigation stage steps
+  }
+
+  bool hasRoundedCorners() {
+    return favoriteNumber == 2;
+  }
+
   final _eventController = StreamController<StageEvent>();
 
-  Stream<StageEvent> get events => _eventController.stream;
+  Stream<StageEvent> get events => _eventController.stream; // This is so the NavigationController can do yourStage.events and access your event controller
 
   // To add stage events (i.e. if you miss the bus):
-  // _controller.add(StageReroute(RerouteReason.wrongBus))
-  // _controller.add(StageReroute(RerouteReason.walkPathChanged))
-  // _controller.add(StageComplete()) // If your stage is complete!
+  // _eventController.add(StageReroute(RerouteReason.wrongBus))
+  // _eventController.add(StageReroute(RerouteReason.walkPathChanged))
+  // _eventController.add(StageComplete()) // If your stage is complete!
   // Note to all frontend devs: Feel free to add additional RerouteReasons if you need them!
 
   void dispose() {
     _eventController.close();
+  }
+
+  // New!
+  void initWithLeg(Leg leg) {
+    // Do cool stuff to set up your Stage with an e.g. walking or bus leg
+  }
+
+  void receiveLocationUpdate(LatLng newLocation) {
+    // Do whatever you need to with the current location.
+    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
+    //    _eventController.add(StageComplete()) // If the user has reached the end!
   }
 }
 
@@ -509,7 +584,9 @@ class NavigationManager {
           length: 15,
           percent_complete: 0.80,
           startPoint: LatLng(42.281973, -83.765719),
-          endPoint: LatLng(42.281291, -83.743918)
+          endPoint: LatLng(42.281291, -83.743918),
+          color: darkColors[ColorType.navigationStepsGray]!, // TODO: Make this dynamic. This will be messy since we need to do something about context in getColor(context, color Type)
+          lineType: LineType.Dashed
         ),
         DemoStage(
           favoriteNumber: 2,
@@ -517,13 +594,17 @@ class NavigationManager {
           percent_complete: 0.23,
           startPoint: LatLng(42.281291, -83.743918),
           endPoint: LatLng(42.287031, -83.743532),
+          color: Colors.purple,
+          lineType: LineType.Dotted
         ),
         DemoStage(
           favoriteNumber: 3,
           length: 4,
           percent_complete: 0.0,
           startPoint: LatLng(42.287031, -83.743532),
-          endPoint: LatLng(42.289689, -83.738435)
+          endPoint: LatLng(42.289689, -83.738435),
+          color: darkColors[ColorType.navigationStepsGray]!,
+          lineType: LineType.Dashed
         ),
       
       ]; // Stores all the states for users to page back and forth

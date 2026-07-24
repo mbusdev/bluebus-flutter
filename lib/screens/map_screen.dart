@@ -66,6 +66,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   StreamSubscription<Position>? _posSub;
   // TODO: Follow-mode state. When true, the map recenters on location updates.
   Position? _lastCenteredPos;
+  bool _userHasInteractedWithMap = false;
+  bool _isProgrammaticCameraMove = false;
 
   bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
@@ -406,6 +408,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
         // If follow mode is disabled, don't recenter automatically.
         if (!_followUser) return;
+        if (_userHasInteractedWithMap) return;
 
         // Only move camera if user has moved more than threshold to avoid jitter.
         final shouldMove = _lastCenteredPos == null ||
@@ -444,6 +447,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (!enabled) return;
       // When enabling follow mode, reset last-centered so next position recenters immediately.
       _lastCenteredPos = null;
+      _userHasInteractedWithMap = false;
     });
   }
 
@@ -1190,6 +1194,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onCameraMove(CameraPosition position) {
     if (!mounted) return;
+    if (!_isProgrammaticCameraMove) {
+      _userHasInteractedWithMap = true;
+    }
     setState(() {
       _currentCameraPos = position;
     });
@@ -1407,15 +1414,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     // Animate the map camera to the user's location
     if (_mapController != null) {
-      await _mapController!.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: LatLng(position.latitude, position.longitude),
-            zoom: zoom ?? (userLocation ? 15.0 : 17.0),
-            bearing: bearing ?? 0.0,
+      _isProgrammaticCameraMove = true;
+      try {
+        await _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(position.latitude, position.longitude),
+              zoom: zoom ?? (userLocation ? 15.0 : 17.0),
+              bearing: bearing ?? 0.0,
+            ),
           ),
-        ),
-      );
+        );
+      } finally {
+        _isProgrammaticCameraMove = false;
+      }
     }
   }
 
@@ -1777,8 +1789,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
                             ),
 
-
-                            NavigationOverlay(navigationManager: navigationManager),
+                            // Expanded(
+                            //   child: NavigationOverlay(navigationManager: navigationManager),
+                            // ),
 
 
 
@@ -1900,6 +1913,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                       ),
                                                       child: FloatingActionButton.small(
                                                         onPressed: () {
+                                                          _setFollowMode(true);
                                                           _centerOnLocation(
                                                             true,
                                                           );
@@ -2204,6 +2218,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                   ),
                           ],
                         ),
+                      ),
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: NavigationOverlay(navigationManager: navigationManager)
+                        )
                       ),
                     ],
                   ),

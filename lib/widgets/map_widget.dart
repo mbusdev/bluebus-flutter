@@ -47,8 +47,8 @@ class MapWidget extends StatelessWidget {
       ),
       cameraTargetBounds: CameraTargetBounds(
         LatLngBounds(
-          southwest: LatLng(42.217530, -83.84367266), // Southern and Westernmost point
-          northeast: LatLng(42.328602, -83.53892646), // Northern and Easternmost point 
+          southwest: LatLng(42.217530, -85.84367266), // Southern and Westernmost point
+          northeast: LatLng(43.328602, -83.53892646), // Northern and Easternmost point 
         )
       ),
       minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
@@ -239,8 +239,8 @@ class _AndroidMapState extends State<AndroidMap>
       myLocationButtonEnabled: false,
       cameraTargetBounds: CameraTargetBounds(
         LatLngBounds(
-          southwest: LatLng(42.217530, -83.84367266), // Southern and Westernmost point
-          northeast: LatLng(42.328602, -83.53892646), // Northern and Easternmost point 
+          southwest: LatLng(42.217530, -85.84367266), // Southern and Westernmost point
+          northeast: LatLng(43.328602, -83.53892646), // Northern and Easternmost point 
         )
       ),
       minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
