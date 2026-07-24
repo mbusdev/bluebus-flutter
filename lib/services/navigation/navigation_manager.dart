@@ -307,10 +307,6 @@ class MissedBus extends NavigationStage {
   // - Based on logic: immediately ask user to get off on next stop 
   // - Goal: Recalculate or call to recalcualte new route and redirect user to a nother stage ideally
 
-  // Data Structure Implementation 
-  // What we need: 
-  // - hangon...
-
 }
 
 
