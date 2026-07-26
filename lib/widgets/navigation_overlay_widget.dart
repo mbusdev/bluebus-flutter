@@ -1,7 +1,9 @@
 
 import 'package:bluebus/constants.dart';
+import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
+import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 
@@ -55,18 +57,81 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     });
   }
 
-  // this is the actual Oops code portion
-  // not sure if this is how we should have it set up but it is here for now, going to leave a marker 
-  // !! TEMP !! 
-  @override
-  void displayOopsDialog(MissedBus stage) {
-    // TODO FOR ALLEN: Make this one a MaizeBusDialogue (Next Updates)
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(stage.getTitle()),
-        content: Text(stage.getSubtitle()),
+  Widget busOptionButton(
+    Bus bus, 
+    VoidCallback onTap
+  ) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: bus.routeColor,
+                child: Text(bus.routeId, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  bus.id,
+                  style: const TextStyle(decoration: TextDecoration.underline, fontSize: 14),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: const Color(0xFFFFC94A), borderRadius: BorderRadius.circular(10)),
+                child: Text("1", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)), // NOTE: Mock using number 1, need to double check with Bus class
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  // making this reusable, bit unecessary but uh..
+  Widget missedBusButton(VoidCallback onTap, Text text) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
+        child: text, // using passed in text parameter 
+      ),
+    ); // the beautiful pill of doom and despair
+  }
+
+  // The code below should diplay the "which bus are you on" popup from UI Team 
+  // Should currently show (#4) (Version of the design..)
+  @override
+  void displayOopsDialog(BuildContext context) {
+    showUndismissableMaizebusDialog(
+      contextIn: context,
+      title: Text("Which bus are you on?"), 
+      content: Container(
+        child: Column(
+          spacing: 1.0,
+          children: [
+            
+          ],
+        )
+      )
     );
   }
 
