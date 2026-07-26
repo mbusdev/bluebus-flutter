@@ -110,6 +110,22 @@ enum RerouteReason {
   // Feel free to add additional reasons as necessary
 }
 
+
+class BusPromptOption { 
+  // DISCLAIMER: STRUCTURES SUBJECT TO CHANGE BECAUSE IM NOT SURE IF WE HAVE CUSTOM STRUCTURES 
+  // going to remove this soon probably, since i can use the bus structure...
+  final String code; // "CN" "BB"...
+  final String label; // expanded name 
+  final Color color; 
+  final String? busNumber; // 3067 :)
+  BusPromptOption({
+    required this.code, 
+    required this.label, 
+    required this.color, 
+    this.busNumber
+  });
+}
+
 sealed class StageEvent {}
 class StageComplete extends StageEvent {}
 class StageReroute extends StageEvent {
@@ -301,42 +317,35 @@ class ChooseBus extends NavigationStage{
 }
 
 // oops stage
-// TODOs: 
-class MissedBus extends NavigationStage { 
-  // using the new title information method
-  @override
-  String getTitle() {
-    // could be a more descriptive title who knows..
-    return "Oops!";
-  }
+// TODOs: MOVING TO NAVIGATION MANAGER
+// class MissedBus extends NavigationStage { 
+//   // using the new title information method
+//   @override
+//   String getTitle() {
+//     // could be a more descriptive title who knows..
+//     return "Oops!";
+//   }
 
-  // information for the popup 
-  @override
-  String getSubtitle() { 
-    // Looks like these are for pop-ups, so maybe this can be part of a user prompt? 
-    return "Looks like you might've missed your bus! Would you like to re-route?";
-  }
+//   // information for the popup 
+//   @override
+//   String getSubtitle() { 
+//     // Looks like these are for pop-ups, so maybe this can be part of a user prompt? 
+//     return "Looks like you might've missed your bus! Would you like to re-route?";
+//   }
 
-  String route; // current route
-  String nearest_stop; // nearest stop: ideally to get off
-  String c_bus; // current bus i am/was on 
-  String c_pos; // current position (maybe not str lat lng?)
+//   String route; // current route
+//   String nearest_stop; // nearest stop: ideally to get off
+//   String c_bus; // current bus i am/was on 
+//   String c_pos; // current position (maybe not str lat lng?)
 
-  MissedBus({
-    // Constructor for more stuff
-    required this.route, 
-    required this.nearest_stop,
-    required this.c_bus,
-    required this.c_pos,
-  });
-
-  // Core functionality + TODOs for Allen 
-  // Main objectives for the "oops" stage:
-  // - Acknowledge to user that they have missed expected bus
-  // - Based on logic: immediately ask user to get off on next stop 
-  // - Goal: Recalculate or call to recalcualte new route and redirect user to a nother stage ideally
-
-}
+//   MissedBus({
+//     // Constructor for more stuff
+//     required this.route, 
+//     required this.nearest_stop,
+//     required this.c_bus,
+//     required this.c_pos,
+//   });
+// }
 
 
 //I believe this is just NavWalking but I'm doing it here to be sure. 
@@ -766,7 +775,7 @@ class NavigationManager {
 }
 
 abstract class NavigationOverlayHost { 
-  void displayOopsDialog(MissedBus state); // just for the Oops state for now...
+  void displayOopsDialog(BuildContext context); // just for the Oops state for now...
   void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
 // TODO: Call dispose() on stages as they are removed
