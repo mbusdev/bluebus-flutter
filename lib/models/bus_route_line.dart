@@ -1,6 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/material.dart';
 import 'bus_stop.dart';
+import 'package:bluebus/backend/export.dart' as backend;
 
 class BusRouteLine {
   final String routeId;
@@ -19,4 +20,14 @@ class BusRouteLine {
     this.color,
     this.imageUrl,
   });
+
+  static BusRouteLine fromBackend(backend.BusRouteLine line, Color? color, String? imageUrl) {
+    return BusRouteLine(
+      routeId: line.routeId,
+      points: line.points.map((p) => LatLng(p.lat.toDouble(), p.lon.toDouble())).toList(),
+      stops: line.stops.map((x) => (x.index, BusStop.fromBackend(x.stop))).toList(),
+      color: color,
+      imageUrl: imageUrl
+    );
+  }
 }

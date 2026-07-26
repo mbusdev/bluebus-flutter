@@ -33,11 +33,19 @@ dependencies:
   screen_corner_radius: ^3.0.0
   widget_to_marker: ^1.0.6
   vector_math: ^2.2.0
+  dio: ^5.9.2
+  json_annotation: ^4.12.0
+  retrofit: ^4.9.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  build_runner: ^2.15.0
+  carapacik_lints: ^3.12.0
+  json_serializable: ^6.14.0
+  retrofit_generator: ^10.2.7
+  swagger_parser: ^1.44.0
 
 flutter:
   fonts:
@@ -79,3 +87,10 @@ flutter_launcher_icons:
   adaptive_icon_foreground_inset: 24
   image_path: "assets/appicon.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
+
+swagger_parser:
+  schema_url: https://docs.mb.thething.fyi/refs/heads/nav/plan-journey-bus-polylines/openapi/spec.json
+  output_directory: lib/backend/
+  name: backend
+  language: dart
+  fallback_client: "backend"

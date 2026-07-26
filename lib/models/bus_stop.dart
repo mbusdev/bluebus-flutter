@@ -1,5 +1,6 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../constants.dart';
+import 'package:bluebus/backend/export.dart' as backend;
 
 class BusStop {
   final String id;
@@ -11,14 +12,15 @@ class BusStop {
 
   BusStop({required this.id, required this.name, required this.location, required this.routeId, required this.rotation, required this.isRide});
 
-  factory BusStop.fromJson(Map<String, dynamic> json, String routeId, double rotation, bool isRide) {
+  factory BusStop.fromBackend(backend.BusStop x) {
     return BusStop(
-      id: json['stpid'] ?? '',
-      name: normalizeStopName(json['stpnm'] ?? ''),
-      location: LatLng(json['lat']?.toDouble() ?? 0, json['lon']?.toDouble() ?? 0),
-      routeId: routeId,
-      rotation: rotation, 
-      isRide: isRide
+      id: x.id,
+      name: x.name,
+      location: LatLng(x.location.lat.toDouble(),
+      x.location.lon.toDouble()),
+      routeId: x.routeId,
+      rotation: x.rotation.toDouble(),
+      isRide: x.isRide
     );
   }
 } 
