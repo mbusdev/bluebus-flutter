@@ -57,6 +57,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     });
   }
 
+  // the regular busOptions button 
   Widget busOptionButton(
     Bus bus, 
     VoidCallback onTap
@@ -100,7 +101,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     );
   }
 
-  // making this reusable, bit unecessary but uh..
+  // making this reusable, bit unecessary but if you need a red button with text!
   Widget missedBusButton(VoidCallback onTap, Text text) {
     return SizedBox(
       width: double.infinity,
