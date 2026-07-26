@@ -19,7 +19,7 @@ dependencies:
   flutter_email_sender: ^7.0.0
   haptic_feedback: ^0.6.4+3
   flutter_launcher_icons: ^0.14.4
-  font_awesome_flutter: ^10.12.0
+  font_awesome_flutter: ^11.0.0
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   url_launcher: ^6.3.2
