@@ -114,7 +114,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                       margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
                       decoration: BoxDecoration(
                         // color: getColor(context, ColorType.mapButtonPrimary),
-                        color: Colors.green,
+                        color: Color.fromARGB(255, 187, 187, 187),
                         boxShadow: [
                           BoxShadow(
                             color: getColor(
@@ -190,13 +190,15 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                                 Icon(
                                   Icons.pool,
                                   size: 20,
+                                  color: getColor(context, ColorType.mapButtonIcon)
                                 ),
                                 SizedBox.square(dimension: 10,),
                                 Text(
                                   "Then turn left",
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 18
+                                    fontSize: 18,
+                                    color: getColor(context, ColorType.mapButtonIcon)
                                   )
                                 )
                               ],
