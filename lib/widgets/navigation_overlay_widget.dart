@@ -6,6 +6,7 @@ import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class NavigationOverlay extends StatefulWidget {
 
@@ -128,8 +129,22 @@ class _NavigationOverlayState extends State<NavigationOverlay>
       content: Container(
         child: Column(
           spacing: 1.0,
-          children: [
-            
+          children: [ // All of this data is currently placeholder
+            busOptionButton(Bus(id: "1234", 
+                                position: LatLng(12.1, 12.1), 
+                                routeId: "NES", 
+                                heading: 12.0, 
+                                fullness: "67%", 
+                                routeColor: Color.fromARGB(0, 9, 9, 239)), 
+                                () {}), 
+            busOptionButton(Bus(id: "5678", 
+                                position: LatLng(12.1, 12.1), 
+                                routeId: "BB", 
+                                heading: 12.0, 
+                                fullness: "67%", 
+                                routeColor: Color.fromARGB(0, 9, 9, 239)), 
+                                () {}), 
+            missedBusButton(() {}, Text("I missed the bus"))
           ],
         )
       )
