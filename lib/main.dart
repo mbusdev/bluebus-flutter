@@ -8,12 +8,23 @@ import 'screens/onboarding_screen.dart';
 import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
 import 'providers/theme_provider.dart';
+import 'package:flutter/services.dart';
+
 
 // This function initializes the Flutter app and runs the MainApp widget
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initPlugin();
   await IncomingBusReminderService.start();
+
+  // make navigation bar transparent. Looks really nice on Android
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Colors.transparent,
+    ),
+  );
+  // make flutter draw behind navigation bar
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   runApp(
     MultiProvider(
@@ -40,6 +51,7 @@ class MainApp extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
       ),
       child: Consumer<ThemeProvider>( // rebuilds when ThemeProvider changes
         builder: (context, themeObj, child) => MaterialApp(

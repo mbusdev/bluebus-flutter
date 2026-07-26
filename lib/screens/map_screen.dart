@@ -17,6 +17,7 @@ import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/composite_map_widget.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/directions_sheet.dart';
+import 'package:bluebus/widgets/floorplan_overlay_widget.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/navigation_overlay_widget.dart';
@@ -2219,6 +2220,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           ],
                         ),
                       ),
+                      // Positioned.fill(
+                      //   child: RepaintBoundary(
+                      //     child: FloorplanOverlay()
+                      //   )
+                      // ),
                       Positioned.fill(
                         child: RepaintBoundary(
                           child: NavigationOverlay(navigationManager: navigationManager)
