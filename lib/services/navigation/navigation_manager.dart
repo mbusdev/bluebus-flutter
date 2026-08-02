@@ -133,10 +133,6 @@ class StageReroute extends StageEvent {
   StageReroute(this.reason);
 }
 
-class NavWalking extends NavigationStage {
-  // ...
-}
-
 class NavOnBus extends NavigationStage {
   String rt;
   String departureStop;
@@ -384,14 +380,23 @@ class Walking extends NavigationStage {
   }
 
   //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
-  bool updatePosition(LatLng newPos) {
-    currWalkingPos = newPos;
-    if (_nextIndex < points.length &&
-        _distMeters(newPos, points[_nextIndex]) <= _reachThresholdMeters) {
-      _nextIndex++;
-      return true;
+  @override
+  bool receiveLocationUpdate(LatLng newLocation) {
+    currWalkingPos = newLocation;
+    
+    // check if it has not reached new waypoint
+    if (_nextIndex >= points.length ||
+        _distMeters(newLocation, points[_nextIndex]) > _reachThresholdMeters) {
+      return false;
     }
-    return false;
+
+    // if it has reached new waypoint, update index, length left, and percent complete
+    _nextIndex++;
+
+    // TODO:
+    // update length and percent_complete here
+
+    return true;
   }
 
   @override
@@ -405,6 +410,27 @@ class Walking extends NavigationStage {
     }
     final feet = (_distMeters(pos, points[_nextIndex]) * 3.28084).round();
     return "${_directionWord(pos)} in $feet ft";
+  }
+
+  // Calculates the distance left in the walking stage
+  // in feet based on the current user position
+  double getDistanceLeftFeet() {
+    double distLeft = 0;
+    if (currWalkingPos != null) { // if GPS is broken/off, use distance from _nextIndex to the destination
+      distLeft = _distMeters(currWalkingPos!, points[_nextIndex]);
+    }
+    // calculate remaining walking distance
+    for (int i = _nextIndex; i < points.length - 1; ++i) {
+      distLeft += _distMeters(points[i], points[i + 1]);
+    }
+    return (distLeft * 3.28084);
+  }
+
+  // Get summary text that shows up in steps view
+  // such as "Walk 67 ft"
+  // @override
+  String getFixedTitle() {
+    return "Walk ${getDistanceLeftFeet().round()} ft";
   }
 
   @override
@@ -432,6 +458,24 @@ class Walking extends NavigationStage {
       return "Turn left";
     }
     return "U-turn";
+  }
+
+  // Initializes the Walking stage given a Leg.
+  @override
+  void initWithLeg(Leg leg) {
+    final path = leg.pathCoords;
+
+    if (path == null || path.isEmpty) {
+      throw ArgumentError(
+        'Walking leg from ${leg.origin} to ${leg.destination} has no path.',
+      );
+    }
+
+    points = List<LatLng>.unmodifiable(path);
+    _nextIndex = 0;
+
+    length = leg.duration;
+    percent_complete = 0.0;
   }
 }
 
