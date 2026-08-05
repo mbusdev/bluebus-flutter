@@ -2,8 +2,6 @@ name: CI
 on:
   pull_request:
     branches: [flutter-map-refactor, github-actions-testing]
-  push:
-    branches: [flutter-map-refactor, github-actions-testing]
 jobs:
   build:
     runs-on: ubuntu-latest
