@@ -1,0 +1,59 @@
+name: CI
+on:
+  pull_request:
+    branches: [flutter-map-refactor, github-actions-testing]
+  push:
+    branches: [flutter-map-refactor, github-actions-testing]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.8'
+      - run: echo "GOOGLE_MAPS_API_KEY=fake-key-for-ci-build-only" >> android/local.properties
+      - name: Write dummy firebase_options.dart for CI build
+        run: |
+          cat > lib/firebase_options.dart << 'EOF'
+          import 'package:firebase_core/firebase_core.dart';
+          class DefaultFirebaseOptions {
+            static FirebaseOptions get currentPlatform => const FirebaseOptions(
+              apiKey: 'fake-key-for-ci',
+              appId: 'fake-app-id',
+              messagingSenderId: 'fake-sender-id',
+              projectId: 'fake-project-id',
+            );
+          }
+          EOF
+      - name: Write dummy google-services.json for CI build
+        run: |
+          cat > android/app/google-services.json << 'EOF'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "fake-project-id",
+              "storage_bucket": "fake-project-id.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.ishankumar.maizebus"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [{ "current_key": "fake-api-key" }],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Build app
+        run: flutter build apk --debug --no-pub
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
