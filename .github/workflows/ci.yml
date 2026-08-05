@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:
+    branches-ignore:
+      - "tools/*"
+  pull_request:
+jobs:
+  Compiles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+      - name: Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # latest stable version
+          channel: stable
+      - name: Write dummy firebase_options.dart for CI build
+        run: |
+          cat > lib/firebase_options.dart << 'EOF'
+          import 'package:firebase_core/firebase_core.dart';
+          class DefaultFirebaseOptions {
+            static FirebaseOptions get currentPlatform => const FirebaseOptions(
+              apiKey: 'fake-key-for-ci',
+              appId: 'fake-app-id',
+              messagingSenderId: 'fake-sender-id',
+              projectId: 'fake-project-id',
+            );
+          }
+          EOF
+      - name: Generate Client
+        run: |
+          rm -rf lib/backend
+          dart run build_runner clean
+          dart run swagger_parser
+          dart run build_runner build
+      - name: Analyze
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+          
