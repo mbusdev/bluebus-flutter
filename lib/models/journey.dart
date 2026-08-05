@@ -16,6 +16,8 @@ class Journey {
   }
 }
 
+enum LegMode { walk, bus }
+
 // I really want to turn this into a sum type... (sealed class + two subclasses)
 class Leg {
   final String origin;
@@ -30,6 +32,7 @@ class Leg {
   final String destinationID;
   final List<LatLng>? pathCoords;
   final Map<int, Turn>? directions;
+  final LegMode mode;
 
   Leg({
     required this.origin,
@@ -44,6 +47,7 @@ class Leg {
     required this.destinationID,
     this.pathCoords,
     this.directions,
+    required this.mode
   });
 
   factory Leg.fromJson(Map<String, dynamic> json) {
@@ -76,7 +80,8 @@ class Leg {
               (degree: (x['turn']['degrees'] as num).toDouble(),
               landmark: x['turn']['landmark'] as String)
         }
-        : null
+        : null,
+      mode: (json['mode'] == "bus" ? LegMode.bus : LegMode.walk)
     );
   }
 }

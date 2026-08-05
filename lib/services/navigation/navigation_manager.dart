@@ -490,7 +490,7 @@ class DemoStage extends NavigationStage {
     return "Look, here's a subtitle too #$favoriteNumber";
   }
 
-  double length = 15.0;
+  double length = 15.0; // In minutes
   double percent_complete = 0.110;
 
   LatLng startPoint;
@@ -659,6 +659,8 @@ class NavigationManager {
           color: darkColors[ColorType.navigationStepsGray]!,
           lineType: LineType.Dashed
         ),
+
+        
       
       ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
@@ -790,20 +792,36 @@ class NavigationManager {
       debugPrint("Adding ${leg.origin}->${leg.destination} leg");
       // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
 
+      if (leg.mode == LegMode.walk) {
+        Walking walkingStage = Walking();
+        walkingStage.initWithLeg(leg);
+        this.stageList.add(walkingStage);
+      } else if (leg.mode == LegMode.bus) {
+        NavOnBus onBusStage = NavOnBus(
+          rt: leg.rt ?? "",
+          departureStop: leg.destinationID,
+          arrivalStop: leg.originID,
+          trip: leg.trip!,
+          busPath: []
+        );
+        onBusStage.initWithLeg(leg);
+        this.stageList.add(onBusStage);
+      }
+
       // TODO: Add a "mode" variable to the Leg (this is returned as JSON from the API--we just need to add a variable to capture it)
     }
 
-    this.stageList.add(
-      DemoStage(
-      favoriteNumber: 7,
-      length: 20.0,
-      percent_complete: 0.72,
-      startPoint: LatLng(42.297493, -83.710782),
-      endPoint: LatLng(42.398493, -83.811782),
-      color: Colors.orange,
-      lineType: LineType.Dashed
-     )
-    );
+    // this.stageList.add(
+    //   DemoStage(
+    //   favoriteNumber: 7,
+    //   length: 20.0,
+    //   percent_complete: 0.72,
+    //   startPoint: LatLng(42.297493, -83.710782),
+    //   endPoint: LatLng(42.398493, -83.811782),
+    //   color: Colors.orange,
+    //   lineType: LineType.Dashed
+    //  )
+    // );
 
     _overlay?.onNavigationUpdated();
     rebuildMarkersAndPolylines();
