@@ -807,8 +807,6 @@ class NavigationManager {
         onBusStage.initWithLeg(leg);
         this.stageList.add(onBusStage);
       }
-
-      // TODO: Add a "mode" variable to the Leg (this is returned as JSON from the API--we just need to add a variable to capture it)
     }
 
     // this.stageList.add(
