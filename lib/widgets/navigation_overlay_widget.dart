@@ -1,4 +1,6 @@
 
+import 'dart:math';
+
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/services/journey_repository.dart';
@@ -27,6 +29,7 @@ class NavigationOverlay extends StatefulWidget {
 class _NavigationOverlayState extends State<NavigationOverlay> 
   implements NavigationOverlayHost {
 
+  bool planJourneyInProgress = false;
   TimelineInfo timelineInfo = TimelineInfo();
 
   void updateTimeline() { // Call this after all the stages are loaded (or stages change)
@@ -169,20 +172,36 @@ class _NavigationOverlayState extends State<NavigationOverlay>
             children: [
               MaterialButton(
                 color: Colors.blue.shade900,
-                child: Text("Init stages from /plan-journey"),
+                child: Text(planJourneyInProgress ? "Loading..." : "Init stages from /plan-journey"),
                 onPressed: () async {
-                  final journeys = await JourneyRepository.planJourney(
-                    originLat: 42.274014,
-                    originLon: -83.753664,
-                    destLat: 42.297493,
-                    destLon: -83.710782,
-                  );
+                  setState(() {
+                    planJourneyInProgress = true;
+                  });
+                  try {
+                    // Try both forwards and reverse directions
+                    final fut1 = JourneyRepository.planJourney(
+                      originLat: 42.274014,
+                      originLon: -83.753664,
+                      destLat: 42.297493,
+                      destLon: -83.710782,
+                    );
+                    final fut2 = JourneyRepository.planJourney(
+                      originLat: 42.297493,
+                      originLon: -83.710782,
+                      destLat: 42.274014,
+                      destLon: -83.753664,
+                    );
+                    final journeys = (await Future.wait([fut1, fut2]))
+                      .expand((x) => x)
+                      .toList();
 
-                  // Use journeys[0] to get the first one
-
-                  widget.navigationManager.initFromJourney(journeys[0]);
-
-
+                    // Pick a random journey
+                    widget.navigationManager.initFromJourney(journeys[Random().nextInt(journeys.length)]);
+                  } finally {
+                    setState(() {
+                      planJourneyInProgress = false;
+                    });
+                  }
                 }
               ),
 

@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  google_maps_flutter: ^2.12.3
+  google_maps_flutter: ^2.17.1
   geolocator: ^13.0.1
   http: ^1.4.0
   provider: ^6.1.5+1
