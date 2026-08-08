@@ -736,7 +736,7 @@ class DemoStage extends NavigationStage {
         lineType: this.lineType
       ),
       NavigationStageStep(
-        title: "Step 2",
+        title: favoriteNumber == 3 ? "Step 2 I'm making this title really long to test text wrapping. It's getting even longer now--practically absurd for the name of a bus stop but great for UI testing. " : "Step 2",
         subtitle: "Step 2 subtitle",
         time: '4:56 AM',
         color: getColor(), // Use the stage's color in our demo
