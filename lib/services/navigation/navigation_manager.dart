@@ -4,13 +4,18 @@ import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:bluebus/constants.dart';
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
 import 'package:bluebus/services/route_color_service.dart';
+import 'package:bluebus/utils/geometry.dart';
+import 'package:bluebus/utils/time.dart';
+import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 enum LineType { Dotted, Dashed}
@@ -133,102 +138,275 @@ class StageReroute extends StageEvent {
   StageReroute(this.reason);
 }
 
-class NavWalking extends NavigationStage {
-  // ...
+// used to ensure that the stage is fully initialized
+class NavOnBusState {
+  Trip _trip;
+  String _departureStop;
+  String _arrivalStop;
+  BusRouteLine _line;
+
+  NavOnBusState({
+    required Trip trip,
+    required String departureStop,
+    required String arrivalStop,
+    required BusRouteLine line,
+  }) : _trip = trip,
+       _departureStop = departureStop,
+       _arrivalStop = arrivalStop,
+       _line = line;
+
+  String get rt => _line.routeId;
+  String get departureStop => _departureStop;
+  String get arrivalStop => _arrivalStop;
+
+  List<(int, BusStop)> get stops {
+    final (depIdx, (depPointIdx, _)) = _line.stops.indexed.firstWhere(
+      (x) => x.$2.$2.id == _departureStop
+    );
+    final (arrIdx, (arrPointIdx, _)) = _line.stops.indexed
+      .skip(depIdx)
+      .firstWhere((x) => x.$2.$2.id == _arrivalStop);
+    return _line.stops
+        .sublist(depIdx, arrIdx + 1)
+        .map(
+          (x) => switch (x) {
+            (final pointIdx, final stop) => (pointIdx - depPointIdx, stop),
+          },
+        )
+        .toList();
+  }
+
+  List<LatLng> get points {
+    final (depIdx, (depPointIdx, _)) = _line.stops.indexed.firstWhere(
+      (x) => x.$2.$2.id == _departureStop
+    );
+    final (arrIdx, (arrPointIdx, _)) = _line.stops.indexed
+      .skip(depIdx)
+      .firstWhere((x) => x.$2.$2.id == _arrivalStop);
+    return _line.points.sublist(depPointIdx, arrPointIdx + 1);
+  }
+
+  List<StopTime> get stopTimes {
+    final List<StopTime> result = [];
+    for (final st in _trip.stopTimes.skipWhile(
+      (st) => st.stop != _departureStop,
+    )) {
+      result.add(st);
+      if (st.stop == _arrivalStop) {
+        break;
+      }
+    }
+    return result;
+  }
 }
 
 class NavOnBus extends NavigationStage {
-  String rt;
-  String departureStop;
-  String arrivalStop;
+  late NavOnBusState state;
+  late BitmapDescriptor stopBitmap;
+  LatLng? lastPosition;
 
-  Trip trip;
-  List<(LatLng, (int, BusStop)?)> busPath;
-  // BusRouteLine busPath;  
+  NavOnBus();
 
-  NavOnBus({
-    required this.rt,
-    required this.departureStop,
-    required this.arrivalStop,
-    required this.trip,
-    required this.busPath,
-  });
-
-  factory NavOnBus.init(Leg leg, Map<String, List<BusRouteLine>> routesCache) {
-    final maybeRt = leg.rt;
-    final maybeTrip = leg.trip;
-    if (maybeRt == null ||
-        maybeTrip == null ||
-        leg.stopTimes == null ||
+  @override
+  void initWithLeg(Leg leg) {
+    if (leg.mode != LegMode.bus) {
+      throw ArgumentError("leg is of the wrong type");
+    }
+    final rt = leg.rt;
+    final trip = leg.trip;
+    if (rt == null ||
+        trip == null ||
+        // leg.stopTimes == null ||
         leg.originID == '' ||
         leg.destinationID == '') {
-      throw Exception("leg was malformed or not a bus leg");
+      throw FormatException("leg was malformed");
     }
-    final busLine = determineRouteOfBusLeg(routesCache, maybeRt, leg.originID, leg.destinationID);
-    if (busLine == null) throw Exception("bus line not found");
+    if (trip.stopTimes.length < 2) throw FormatException("trip is too short");
+    // TODO: use info from backend instead of this placeholder, check that line
+    // has the same number of stops
+    final points = <LatLng>[];
+    final stops = <(int, BusStop)>[];
 
-    final stopsIter = busLine.stops.skipWhile((s) => s.$2.id != leg.originID);
-    final startIdx = stopsIter.firstOrNull?.$1;
-    final endIdx = stopsIter.where((s) => s.$2.id == leg.destinationID).firstOrNull?.$1;
-    if (startIdx == null || endIdx == null) throw Exception("valid bus line not found");
-
-    final busPath = <(LatLng, (int, BusStop)?)>[];
-    for (int i = startIdx; i <= endIdx; i++) {
-      busPath.add((busLine.points[i], busLine.stops.where((s) => s.$1 == i).firstOrNull));
+    for (final st in trip.stopTimes.skipWhile(
+      (st) => st.stop != leg.originID,
+    )) {
+      final loc = getLatLongFromStopID(st.stop);
+      if (loc == null) continue;
+      points.add(loc);
+      stops.add((
+        stops.length,
+        BusStop(
+          id: st.stop,
+          name: getStopNameFromID(st.stop),
+          location: loc,
+          routeId: rt,
+          rotation: 0.0,
+          isRide: isRide(rt),
+        ),
+      ));
     }
-
-    return NavOnBus(
-      rt: maybeRt,
+    final line = BusRouteLine(
+      routeId: rt,
+      points: points,
+      stops: stops,
+      color: RouteColorService.getRouteColor(rt),
+      imageUrl: null,
+    );
+    state = NavOnBusState(
+      trip: trip,
       departureStop: leg.originID,
       arrivalStop: leg.destinationID,
-      trip: maybeTrip,
-      busPath: busPath,
+      line: line,
     );
+    // const svgString = '<svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    //   + '<circle cx="9.5" cy="9.5" r="8" fill="white" stroke="black" stroke-width="3"/>'
+    //   + '</svg>';
+
+    // // final svg = SvgPicture.string(svgString, width: 19, height: 19,);
+    // final pictureInfo = vg.loadPicture(const SvgStringLoader(svgString), null);
+    // pictureInfo.
+    // svg.clipBehavior
+    // stopBitmap = BitmapDescriptor.bytes();
+    stopBitmap = BitmapDescriptor.defaultMarker;
+  }
+
+  @override
+  void receiveLocationUpdate(LatLng newLocation) {
+    lastPosition = newLocation;
+    // TODO: determine if stage is over
   }
 
   @override
   String getTitle() {
-    // TODO: implement getTitle
-    return "($rt) Ride ${-1} more stops";
+    // TODO: move route thing to a route icon widget
+    final stopsRemaining = state.stops.length - getStepIndex() - 1;
+    return "(${state.rt}) Ride $stopsRemaining more stops";
+  }
+
+  String getFixedTitle() {
+    return "Board ${state.rt}";
   }
 
   @override
   String getSubtitle() {
-    // TODO: implement getSubtitle
-    return "${-1} min";
+    return "Get off at ${getStopNameFromID(state.arrivalStop)}";
   }
 
   @override
-  // TODO: implement length
-  double get length => super.length;
+  // using seconds to match the walking stage right now, if you change this make
+  // sure to adjust the use of length in percent_complete
+  double get length {
+    final sts = state.stopTimes;
+    return (sts.last.arrivalTime.toDouble() - sts.first.departureTime);
+  }
 
   @override
-  // TODO: implement percent_complete
-  double get percent_complete => super.percent_complete;
+  // uses the departure time of the last stop passed with respect to `trip` as
+  // a baseline before adding progress past that stop
+  double get percent_complete {
+    final pos = lastPosition;
+    if (pos == null) return 0;
+
+    final sts = state.stopTimes;
+    final stops = state.stops;
+    final points = state.points;
+
+    final stepIdx = getStepIndex();
+    final (prevStopIdx, _) = stops[stepIdx];
+    final (nextStopIdx, _) = stops[min(stepIdx + 1, stops.length - 1)];
+    final (pointsIdx, _) = pos.nearestPolylineIndexAndDistanceContinuous(
+      points,
+    );
+    final currStepTotalDist = points
+        .sublist(prevStopIdx, nextStopIdx + 1)
+        .totalDistance();
+
+    // compute distance past the stop
+    var currStepMovedDist = points
+        .sublist(prevStopIdx, pointsIdx.truncate() + 1)
+        .totalDistance();
+    final currSegmentDist = points
+        .sublist(
+          pointsIdx.truncate(),
+          min(pointsIdx.truncate() + 2, points.length),
+        )
+        .totalDistance();
+    currStepMovedDist += currSegmentDist * (pointsIdx - pointsIdx.truncate());
+
+    var progress =
+        sts[stepIdx].arrivalTime.toDouble() - sts.first.departureTime;
+    if (currStepTotalDist != 0.0) {
+      // add progress past the stop
+      progress +=
+          (currStepMovedDist / currStepTotalDist) *
+          (sts[min(stepIdx + 1, sts.length - 1)].arrivalTime -
+              sts[stepIdx].arrivalTime);
+    }
+    return progress / length;
+  }
+
+  /// the index of the last step reached/passed
+  int getStepIndex() {
+    final pos = lastPosition;
+    if (pos == null) return 0;
+    // project lastPosition onto polyline
+    final (idx, _) = pos.nearestPolylineIndexAndDistanceContinuous(state.points);
+    // return how many stops were passed
+    return state.stops.takeWhile((x) => x.$1 <= idx).length - 1;
+  }
 
   @override
   List<NavigationStageStep> getSteps() {
-    // TODO: implement getSteps
-    return super.getSteps();
+    final color = RouteColorService.getRouteColor(state.rt);
+    final steps = state.stopTimes
+        .map(
+          (st) => NavigationStageStep(
+            title: getStopNameFromID(st.stop),
+            time: convertSecondsToFormattedTime(st.departureTime),
+            color: color,
+            lineType: LineType.Dotted,
+          ),
+        )
+        .toList();
+    steps[0].title = getFixedTitle();
+    steps[steps.length - 1].title =
+        "Get off at ${steps[steps.length - 1].title}";
+    return steps;
   }
 
   @override
   List<Marker> getMarkers() {
-    // TODO: implement getMarkers
-    return super.getMarkers();
+    return state.stops
+        .map(
+          (x) => switch (x) {
+            (int _, BusStop stop) => AdvancedMarker(
+              markerId: MarkerId("navonbus_marker_${state.rt}_${stop.id}"),
+              flat: true,
+              position: stop.location,
+              zIndex: 2000,
+              icon: stopBitmap,
+            ),
+          },
+        )
+        .toList();
   }
 
   @override
   List<Polyline> getPolylines() {
-    // TODO: implement getPolylines
-    return super.getPolylines();
+    return [
+      Polyline(
+        polylineId: PolylineId("navonbus_polyline_${state.rt}"),
+        color: RouteColorService.getRouteColor(state.rt),
+        points: state.points,
+        zIndex: 1999,
+      ),
+    ];
   }
 
   @override
   Color getColor() {
-    return RouteColorService.getRouteColor(rt);
+    return RouteColorService.getRouteColor(state.rt);
   }
-
 }
 
 typedef Edge = ({ BusStop from, BusStop to, List<LatLng> points });
@@ -384,14 +562,23 @@ class Walking extends NavigationStage {
   }
 
   //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
-  bool updatePosition(LatLng newPos) {
-    currWalkingPos = newPos;
-    if (_nextIndex < points.length &&
-        _distMeters(newPos, points[_nextIndex]) <= _reachThresholdMeters) {
-      _nextIndex++;
-      return true;
+  @override
+  bool receiveLocationUpdate(LatLng newLocation) {
+    currWalkingPos = newLocation;
+    
+    // check if it has not reached new waypoint
+    if (_nextIndex >= points.length ||
+        _distMeters(newLocation, points[_nextIndex]) > _reachThresholdMeters) {
+      return false;
     }
-    return false;
+
+    // if it has reached new waypoint, update index, length left, and percent complete
+    _nextIndex++;
+
+    // TODO:
+    // update length and percent_complete here
+
+    return true;
   }
 
   @override
@@ -405,6 +592,27 @@ class Walking extends NavigationStage {
     }
     final feet = (_distMeters(pos, points[_nextIndex]) * 3.28084).round();
     return "${_directionWord(pos)} in $feet ft";
+  }
+
+  // Calculates the distance left in the walking stage
+  // in feet based on the current user position
+  double getDistanceLeftFeet() {
+    double distLeft = 0;
+    if (currWalkingPos != null) { // if GPS is broken/off, use distance from _nextIndex to the destination
+      distLeft = _distMeters(currWalkingPos!, points[_nextIndex]);
+    }
+    // calculate remaining walking distance
+    for (int i = _nextIndex; i < points.length - 1; ++i) {
+      distLeft += _distMeters(points[i], points[i + 1]);
+    }
+    return (distLeft * 3.28084);
+  }
+
+  // Get summary text that shows up in steps view
+  // such as "Walk 67 ft"
+  // @override
+  String getFixedTitle() {
+    return "Walk ${getDistanceLeftFeet().round()} ft";
   }
 
   @override
@@ -433,6 +641,24 @@ class Walking extends NavigationStage {
     }
     return "U-turn";
   }
+
+  // Initializes the Walking stage given a Leg.
+  @override
+  void initWithLeg(Leg leg) {
+    final path = leg.pathCoords;
+
+    if (path == null || path.isEmpty) {
+      throw ArgumentError(
+        'Walking leg from ${leg.origin} to ${leg.destination} has no path.',
+      );
+    }
+
+    points = List<LatLng>.unmodifiable(path);
+    _nextIndex = 0;
+
+    length = leg.duration;
+    percent_complete = 0.0;
+  }
 }
 
 
@@ -446,7 +672,7 @@ class DemoStage extends NavigationStage {
     return "Look, here's a subtitle too #$favoriteNumber";
   }
 
-  double length = 15.0;
+  double length = 15.0; // In minutes
   double percent_complete = 0.110;
 
   LatLng startPoint;
@@ -510,7 +736,7 @@ class DemoStage extends NavigationStage {
         lineType: this.lineType
       ),
       NavigationStageStep(
-        title: "Step 2",
+        title: favoriteNumber == 3 ? "Step 2 I'm making this title really long to test text wrapping. It's getting even longer now--practically absurd for the name of a bus stop but great for UI testing. " : "Step 2",
         subtitle: "Step 2 subtitle",
         time: '4:56 AM',
         color: getColor(), // Use the stage's color in our demo
@@ -615,6 +841,8 @@ class NavigationManager {
           color: darkColors[ColorType.navigationStepsGray]!,
           lineType: LineType.Dashed
         ),
+
+        
       
       ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
@@ -752,20 +980,28 @@ class NavigationManager {
       debugPrint("Adding ${leg.origin}->${leg.destination} leg");
       // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
 
-      // TODO: Add a "mode" variable to the Leg (this is returned as JSON from the API--we just need to add a variable to capture it)
+      if (leg.mode == LegMode.walk) {
+        Walking walkingStage = Walking();
+        walkingStage.initWithLeg(leg);
+        this.stageList.add(walkingStage);
+      } else if (leg.mode == LegMode.bus) {
+        NavOnBus onBusStage = NavOnBus();
+        onBusStage.initWithLeg(leg);
+        this.stageList.add(onBusStage);
+      }
     }
 
-    this.stageList.add(
-      DemoStage(
-      favoriteNumber: 7,
-      length: 20.0,
-      percent_complete: 0.72,
-      startPoint: LatLng(42.297493, -83.710782),
-      endPoint: LatLng(42.398493, -83.811782),
-      color: Colors.orange,
-      lineType: LineType.Dashed
-     )
-    );
+    // this.stageList.add(
+    //   DemoStage(
+    //   favoriteNumber: 7,
+    //   length: 20.0,
+    //   percent_complete: 0.72,
+    //   startPoint: LatLng(42.297493, -83.710782),
+    //   endPoint: LatLng(42.398493, -83.811782),
+    //   color: Colors.orange,
+    //   lineType: LineType.Dashed
+    //  )
+    // );
 
     _overlay?.onNavigationUpdated();
     rebuildMarkersAndPolylines();

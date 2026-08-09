@@ -1865,7 +1865,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                   45) *
                                                               vec_math.degrees2Radians
                                                         : 0,
-                                                    child: Icon(
+                                                    child: FaIcon(
                                                       FontAwesomeIcons.compass,
                                                       color: getColor(
                                                         context,

@@ -1,4 +1,6 @@
 
+import 'dart:math';
+
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/services/journey_repository.dart';
@@ -27,6 +29,7 @@ class NavigationOverlay extends StatefulWidget {
 class _NavigationOverlayState extends State<NavigationOverlay> 
   implements NavigationOverlayHost {
 
+  bool planJourneyInProgress = false;
   TimelineInfo timelineInfo = TimelineInfo();
 
   void updateTimeline() { // Call this after all the stages are loaded (or stages change)
@@ -180,20 +183,36 @@ class _NavigationOverlayState extends State<NavigationOverlay>
             children: [
               MaterialButton(
                 color: Colors.blue.shade900,
-                child: Text("Init stages from /plan-journey"),
+                child: Text(planJourneyInProgress ? "Loading..." : "Init stages from /plan-journey"),
                 onPressed: () async {
-                  final journeys = await JourneyRepository.planJourney(
-                    originLat: 42.274014,
-                    originLon: -83.753664,
-                    destLat: 42.297493,
-                    destLon: -83.710782,
-                  );
+                  setState(() {
+                    planJourneyInProgress = true;
+                  });
+                  try {
+                    // Try both forwards and reverse directions
+                    final fut1 = JourneyRepository.planJourney(
+                      originLat: 42.274014,
+                      originLon: -83.753664,
+                      destLat: 42.297493,
+                      destLon: -83.710782,
+                    );
+                    final fut2 = JourneyRepository.planJourney(
+                      originLat: 42.297493,
+                      originLon: -83.710782,
+                      destLat: 42.274014,
+                      destLon: -83.753664,
+                    );
+                    final journeys = (await Future.wait([fut1, fut2]))
+                      .expand((x) => x)
+                      .toList();
 
-                  // Use journeys[0] to get the first one
-
-                  widget.navigationManager.initFromJourney(journeys[0]);
-
-
+                    // Pick a random journey
+                    widget.navigationManager.initFromJourney(journeys[Random().nextInt(journeys.length)]);
+                  } finally {
+                    setState(() {
+                      planJourneyInProgress = false;
+                    });
+                  }
                 }
               ),
 
@@ -608,7 +627,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                                   ),
                                 ),
                                 
-                                Padding(padding: EdgeInsets.only(left: 20)),
+                                Padding(padding: EdgeInsets.only(left: 15)),
                                 Text(
                                   style: TextStyle(
                                     fontSize: 16.0,
@@ -640,45 +659,111 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                               shouldRoundBottomCorners = true;
                             }
 
-                            return Row(
+                            return Stack(
+                              
                               children: [
-                                Padding(padding: EdgeInsets.only(left: 20)),
-                                Container( // Gray background behind colorful line segment
+                                Positioned(
+                                  left: 10,
+                                  top: 0,
+                                  bottom: 0,
                                   width: 30,
-                                  height: 40,
-                                  decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
-                                    // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
-                                    color: getColor(context, ColorType.navigationStepsGray)
-                                  ) : null,
-                                  child: Container( // Colorful line segment
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: step.getColor(),
-                                      borderRadius: BorderRadius.only(
-                                        bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
-                                        bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
+                                  child: Container( // Gray background behind colorful line segment
+                                    width: 30,
+                                    // height: 40,
+                                    decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
+                                      // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
+                                      color: getColor(context, ColorType.navigationStepsGray)
+                                    ) : null,
+                                    child: Container( // Colorful line segment
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: step.getColor(),
+                                        borderRadius: BorderRadius.only(
+                                          bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
+                                          bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
+                                        )
+                                      ),
+                                      
+                                      child: Container( // Inside dot or dash
+                                        width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
+                                        height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
+                                        // color: Colors.white,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.all(Radius.circular(100))
+                                        ),
+                                        // color: Colors.white
                                       )
                                     ),
-                                    
-                                    child: Container( // Inside dot or dash
-                                      width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
-                                      height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
-                                      // color: Colors.white,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.all(Radius.circular(100))
-                                      ),
-                                      // color: Colors.white
-                                    )
                                   ),
                                 ),
-                                Padding(padding: EdgeInsets.only(left: 20)),
-                                Text(step.getTitle()),
-                                // Spacer(),
-                                Container(width: 40),
-                                Text(step.getTime())
-                              ]
+                                
+                                Padding(
+                                  padding: EdgeInsetsGeometry.only(top: 10, bottom: 10, left: 55),
+                                  child: Row(
+                                    children: [
+                                      // Padding(padding: EdgeInsets.only(left: 20)),
+                                      
+                                      // Padding(padding: EdgeInsets.only(left: 20)),
+                                      Expanded(
+                                        child: Text(step.getTitle() + step.getTitle()),
+                                      ),
+                                      
+                                      // // Spacer(),
+                                      // Container(width: 40),
+                                      Text(step.getTime())
+                                    ]
+                                  )
+                                )
+                                
+                              ],
                             );
+
+                            // return Row(
+                            //   children: [
+                            //     Padding(padding: EdgeInsets.only(left: 20)),
+                            //     Container( // Gray background behind colorful line segment
+                            //       width: 30,
+                            //       height: 40,
+                            //       decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
+                            //         // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
+                            //         color: getColor(context, ColorType.navigationStepsGray)
+                            //       ) : null,
+                            //       child: Container( // Colorful line segment
+                            //         alignment: Alignment.center,
+                            //         decoration: BoxDecoration(
+                            //           color: step.getColor(),
+                            //           borderRadius: BorderRadius.only(
+                            //             bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
+                            //             bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
+                            //           )
+                            //         ),
+                                    
+                            //         child: Container( // Inside dot or dash
+                            //           width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
+                            //           height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
+                            //           // color: Colors.white,
+                            //           decoration: BoxDecoration(
+                            //             color: Colors.white,
+                            //             borderRadius: BorderRadius.all(Radius.circular(100))
+                            //           ),
+                            //           // color: Colors.white
+                            //         )
+                            //       ),
+                            //     ),
+                            //     Padding(padding: EdgeInsets.only(left: 20)),
+                            //     Expanded(
+                            //       child: Text(step.getTitle() + step.getTitle()),
+                            //     ),
+                                
+                            //     // // Spacer(),
+                            //     // Container(width: 40),
+                            //     Text(step.getTime())
+                            //   ]
+                            // );
+
+
+
                           }).toList()
                         ],
                       );

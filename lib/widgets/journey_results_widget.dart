@@ -1,5 +1,6 @@
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/innerShadow.dart';
+import 'package:bluebus/utils/time.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:bluebus/widgets/upcoming_stops_widget.dart';
 import 'package:flutter/material.dart';
@@ -488,19 +489,6 @@ class _JourneyBodyState extends State<JourneyBody> {
     }
 
     return outputLocations;
-  }
-
-  // utc secs after midnight -> michigan time
-  String convertSecondsToFormattedTime(int secondsFromMidnightUtc) {
-    final now = DateTime.now().toUtc();
-    final midnightUtc = DateTime.utc(now.year, now.month, now.day);
-    final timeUtc = midnightUtc.add(Duration(seconds: secondsFromMidnightUtc));
-
-    // Convert the UTC time to the local timezone.
-    final localTime = timeUtc.toLocal();
-
-    // Use the DateFormat class to format the local time string.
-    return DateFormat('h:mm a').format(localTime);
   }
 
   // returns when the bus is arriving at this stop (used for navigation)

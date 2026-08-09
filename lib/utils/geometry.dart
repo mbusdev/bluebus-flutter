@@ -21,6 +21,18 @@ double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   return angle;
 }
 
+extension LatLngListHelpers on List<LatLng> {
+  double totalDistance() {
+    double acc = 0.0;
+    LatLng? prev;
+    for (final next in this) {
+      if (prev != null) acc += prev.haversineDistanceMetersTo(next);
+      prev = next;
+    }
+    return acc;
+  }
+}
+
 extension Vector3GeometryHelpers on Vector3 {
   /// expects [this] to be in the same coordinate system used by [LatLng.toEuclideanUnitSphere()]
   LatLng toLatLng() {
