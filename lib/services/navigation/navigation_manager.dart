@@ -631,9 +631,15 @@ class NavigationManager {
     }
   }
 
-  // Call to update if state changes require an update 
+  // Call to update if state changes require an update
   void notifyOverlay() {
     _overlay?.onNavigationUpdated();
+  }
+
+  // Overlay can display the "which bus are you on?" prompt
+  // We can call this
+  void showOopsDialog() {
+    _overlay?.displayOopsDialog();
   }
 
   void _activateStageSub(NavigationStage stage) {
@@ -774,8 +780,8 @@ class NavigationManager {
   //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }
 
-abstract class NavigationOverlayHost { 
-  void displayOopsDialog(BuildContext context); // just for the Oops state for now...
+abstract class NavigationOverlayHost {
+  void displayOopsDialog(); // just for the Oops state for now...
   void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
 // TODO: Call dispose() on stages as they are removed
