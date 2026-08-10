@@ -125,29 +125,40 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   // The code below should diplay the "which bus are you on" popup from UI Team 
   // Should currently show (#4) (Version of the design..)
   @override
-  void displayOopsDialog(BuildContext context) {
+  void displayOopsDialog() {
     showUndismissableMaizebusDialog(
       contextIn: context,
-      title: Text("Which bus are you on?"), 
-      content: Container(
-        child: Column(
-          spacing: 1.0,
+      title: Text("Which bus are you on?"),
+      // Builder so the buttons below get a context underneath the dialog route and can pop it
+      content: Builder(
+        builder: (dialogContext) => Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 10.0,
           children: [ // All of this data is currently placeholder
-            busOptionButton(Bus(id: "1234", 
-                                position: LatLng(12.1, 12.1), 
-                                routeId: "NES", 
-                                heading: 12.0, 
-                                fullness: "67%", 
-                                routeColor: Color.fromARGB(0, 9, 9, 239)), 
-                                () {}), 
-            busOptionButton(Bus(id: "5678", 
-                                position: LatLng(12.1, 12.1), 
-                                routeId: "BB", 
-                                heading: 12.0, 
-                                fullness: "67%", 
-                                routeColor: Color.fromARGB(0, 9, 9, 239)), 
-                                () {}), 
-            missedBusButton(() {}, Text("I missed the bus"))
+            busOptionButton(Bus(id: "1234",
+                                position: LatLng(12.1, 12.1),
+                                routeId: "NES",
+                                heading: 12.0,
+                                fullness: "67%",
+                                routeColor: Color.fromARGB(255, 9, 9, 239)),
+                                () {
+                                  debugPrint("Oops dialog: picked bus 1234 (NES)");
+                                  Navigator.pop(dialogContext);
+                                }),
+            busOptionButton(Bus(id: "5678",
+                                position: LatLng(12.1, 12.1),
+                                routeId: "BB",
+                                heading: 12.0,
+                                fullness: "67%",
+                                routeColor: Color.fromARGB(255, 9, 9, 239)),
+                                () {
+                                  debugPrint("Oops dialog: picked bus 5678 (BB)");
+                                  Navigator.pop(dialogContext);
+                                }),
+            missedBusButton(() {
+              debugPrint("Oops dialog: user missed the bus");
+              Navigator.pop(dialogContext);
+            }, Text("I missed the bus"))
           ],
         )
       )
@@ -203,6 +214,12 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                     });
                   }
                 }
+              ),
+
+              MaterialButton(
+                color: Colors.red.shade900,
+                child: Text("Show Oops dialog"),
+                onPressed: () => widget.navigationManager.showOopsDialog(),
               ),
 
 
