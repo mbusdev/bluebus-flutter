@@ -15,6 +15,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 const STOP_ICON_WIDTH = 65;
 const STOP_ICON_HEIGHT = 65;
 
+const FANCY_STOP_ICON_XHEADROOM = 20;
+const FANCY_STOP_ICON_YHEADROOM = 20;
+
+const FANCY_STOP_ICON_MARGIN = 10;
+const FANCY_STOP_ICON_SMALLMARGIN = 5;
+
+const ROW_ICON_SIZE = (STOP_ICON_HEIGHT - FANCY_STOP_ICON_SMALLMARGIN + FANCY_STOP_ICON_YHEADROOM * 2) / 2;
+
+const FANCY_STOP_ICON_WIDTH = FANCY_STOP_ICON_XHEADROOM + STOP_ICON_WIDTH + FANCY_STOP_ICON_MARGIN + (ROW_ICON_SIZE + FANCY_STOP_ICON_SMALLMARGIN) * 3; // Add enough space for the stop icon, margins, and 3 route icons
+
+const FANCY_STOP_ICON_HEIGHT = 65 + FANCY_STOP_ICON_XHEADROOM * 2;
+
 class MapImageService {
   // Route specific bus icons
   static Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -45,6 +57,8 @@ class MapImageService {
   static ByteData? _rideStopIconBytes;
   static ByteData? _favStopIconBytes;
   static ByteData? _favRideStopIconBytes;
+
+  static bool _stopIconsInitialized = false;
 
   static Future<int> getFrontEndImageVer() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -222,6 +236,33 @@ class MapImageService {
     }
   }
 
+  static Future<void> _loadStopIcons() async {
+    try {
+      _stopIconBytes = await rootBundle.load('assets/busStop.png');
+      _rideStopIconBytes = await rootBundle.load('assets/busStopRide.png');
+      _favStopIconBytes = await rootBundle.load('assets/favbusStop.png');
+      _favRideStopIconBytes = await rootBundle.load('assets/favbusStopRide.png');
+
+      _stopIconImage = await _decode(_stopIconBytes!);
+      _rideStopIconImage = await _decode(_rideStopIconBytes!);
+      _favStopIconImage = await _decode(_favStopIconBytes!);
+      _favRideStopIconImage = await _decode(_favRideStopIconBytes!);
+
+      // Load stop icons
+      stopIcon = await MapImageService.resizeImage(_stopIconBytes!);
+      rideStopIcon = await MapImageService.resizeImage(_rideStopIconBytes!);
+      favStopIcon = await MapImageService.resizeImage(_favStopIconBytes!,);
+      favRideStopIcon = await MapImageService.resizeImage(_favRideStopIconBytes!);
+
+      _stopIconsInitialized = true;
+
+    } catch (e) {
+      debugPrint("Error! $e");
+      // Fallback to default markers if custom loading fails
+      // These are now set as initial values
+    }
+  }
+
   static Future<BitmapDescriptor?> ensureRouteIconIsLoaded(
     String routeId,
   ) async {
@@ -297,65 +338,103 @@ class MapImageService {
     }
   }
 
-  static Future<ui.Image> _decode(ByteData data, int width, int height) {
-    final completer = Completer<ui.Image>();
-    ui.decodeImageFromPixels(
-      data.buffer.asUint8List(),
-      width,
-      height,
-      ui.PixelFormat.rgba8888,
-      completer.complete,
-    );
-    return completer.future;
+  static Future<ui.Image> _decode(ByteData data) async {
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    final frame = await codec.getNextFrame();
+    return frame.image;
   }
 
+  static void drawRouteIconOntoCanvas(Canvas canvas, int x, int y, int width, int height, String routeId) {
+    final paint = Paint()
+      ..color = RouteColorService.getRouteColor(routeId)
+      ..style = PaintingStyle.fill;
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: routeId,
+        style: TextStyle(
+          fontSize: width / 2,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1,
+        )
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr
+    )..layout(minWidth: 0, maxWidth: width.toDouble());
+
+    canvas.drawCircle(Offset(x + width / 2, y + height / 2), width / 2, paint);
+    textPainter.paint(canvas, Offset(x + width / 2 - (textPainter.width / 2), y + height / 2 - (textPainter.height / 2)));
+    // textPainter.paint(canvas, Offset(0,0));
+  }
+
+
+// NEXT STEPS TODO: Pass in a hardcoded list of bus stops and get the circles rendering nicely (as well as the arrow for the bus stop). Also get anchoring and zoom level switching working properly
   static Future<BitmapDescriptor> getFancyStopIcon() async { // TODO: Pass in a list of bus route codes here later
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
-    int total_height = STOP_ICON_HEIGHT;
+    List<String> routesServed = ["BB", "CS", "CN", "CSX"];
+
+    // int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
+    // int total_height = STOP_ICON_HEIGHT;
 
     final paint = Paint()
       ..color = Colors.green
       ..style = PaintingStyle.fill;
 
+    
+
     try {
-      canvas.drawImage(_stopIconImage!, Offset.zero, Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
+      if (!_stopIconsInitialized) {
+        debugPrint("Stop icons not initialized, loading...");
+        await _loadStopIcons();
+      }
+
+      canvas.drawImage(_stopIconImage!, Offset(FANCY_STOP_ICON_XHEADROOM.toDouble(), FANCY_STOP_ICON_YHEADROOM.toDouble()), Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
     } catch (err) {}
 
-    canvas.drawRect(Rect.fromLTWH(STOP_ICON_WIDTH.toDouble(), 0, (total_width - STOP_ICON_WIDTH).toDouble(), STOP_ICON_HEIGHT.toDouble()), paint);
+    // canvas.drawRect(Rect.fromLTWH(STOP_ICON_WIDTH.toDouble(), 0, (FANCY_STOP_ICON_WIDTH - STOP_ICON_WIDTH).toDouble(), STOP_ICON_HEIGHT.toDouble()), paint);
+
+    int xDrawPos = STOP_ICON_WIDTH + FANCY_STOP_ICON_XHEADROOM + FANCY_STOP_ICON_MARGIN;
+    int yDrawPos = 0;
+
+    for (int i = 0; i < routesServed.length; i++) {
+      if (xDrawPos + ROW_ICON_SIZE > FANCY_STOP_ICON_WIDTH) {
+        // If the route icon is going to get clipped, wrap to the next row
+        yDrawPos += ROW_ICON_SIZE.toInt() + FANCY_STOP_ICON_SMALLMARGIN;
+        xDrawPos = FANCY_STOP_ICON_XHEADROOM + STOP_ICON_WIDTH + FANCY_STOP_ICON_MARGIN;
+      }
+      
+      String routeId = routesServed[i];
+      drawRouteIconOntoCanvas(
+        canvas,
+        xDrawPos, // x
+        yDrawPos, // y
+        ROW_ICON_SIZE.toInt(), // width
+        ROW_ICON_SIZE.toInt(), // height
+        routeId);
+
+      xDrawPos += ROW_ICON_SIZE.toInt() + FANCY_STOP_ICON_SMALLMARGIN;
+    }
 
     final picture = recorder.endRecording();
-    final img = await picture.toImage(total_width, total_height);
+    final img = await picture.toImage(FANCY_STOP_ICON_WIDTH.toInt(), FANCY_STOP_ICON_HEIGHT);
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
 
     return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
   }
 
+  static Offset getFancyStopIconOffset() {
+    double offsetX = (STOP_ICON_WIDTH.toDouble() / 2) / FANCY_STOP_ICON_WIDTH.toDouble();
+    double offsetY = 0.5;
+    debugPrint("Offset X: $offsetX, Y: $offsetY");
+    return Offset(offsetX, offsetY);
+    // return Offset(0.5, 0.5);
+  }
+
   static Future<void> loadData() async {
     await _loadRouteSpecificBusIcons();
 
-    try {
-      _stopIconBytes = await rootBundle.load('assets/busStop.png');
-      _rideStopIconBytes = await rootBundle.load('assets/busStopRide.png');
-      _favStopIconBytes = await rootBundle.load('assets/favbusStop.png');
-      _favRideStopIconBytes = await rootBundle.load('assets/favbusStopRide.png');
-
-      _stopIconImage = await _decode(_stopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
-      _rideStopIconImage = await _decode(_rideStopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
-      _favStopIconImage = await _decode(_favStopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
-      _favRideStopIconImage = await _decode(_favRideStopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
-
-      // Load stop icons
-      stopIcon = await MapImageService.resizeImage(_stopIconBytes!);
-      rideStopIcon = await MapImageService.resizeImage(_rideStopIconBytes!);
-      favStopIcon = await MapImageService.resizeImage(_favStopIconBytes!,);
-      favRideStopIcon = await MapImageService.resizeImage(_favRideStopIconBytes!);
-
-    } catch (e) {
-      // Fallback to default markers if custom loading fails
-      // These are now set as initial values
-    }
+    await _loadStopIcons();
   }
 }

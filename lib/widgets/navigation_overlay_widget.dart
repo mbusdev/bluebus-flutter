@@ -539,8 +539,6 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                                 ),
                               
 
-                              // Text("HIIIIIII THIS IS A TEST ${dotLeft}, pos %: ${this.timelineInfo.activePositionPercentage}"),
-
                               // Container(
                               //     width: dotSize, 
                               //     height: dotSize, 
@@ -590,10 +588,6 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                   ),
 
                   SizedBox.square(dimension: 20.0,),
-
-                  // TODO: Filter by user location!! Only show the future steps(?)
-                  // TODO: Also show stage titles in this list
-
           
                   Column(
                     
@@ -644,10 +638,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                           ...stage.getSteps().asMap().entries.map((entry) {
                             int sub_index = entry.key;
                             NavigationStageStep step = entry.value;
-                            // NEXT STEPS TODO: Get the border radius working on only the first and last items
-
-
-  // NEXT STEPS TODO: get live location showing on the step list, as well as properly rounded corners (see the Figma) and bigger dots on the first/last segments, etc. Also get subtitles working
+  // NEXT STEPS TODO: get live location showing on the step list
 
                             bool shouldRoundBottomCorners = false;
 

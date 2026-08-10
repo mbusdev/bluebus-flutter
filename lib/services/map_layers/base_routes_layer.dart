@@ -69,66 +69,77 @@ class BaseRoutesLayer extends CompositeMapLayer {
     if (isVisible) onUpdate();
   }
 
+  // TODO: Add caching so this doesn't have to recompute markers for each stop each time
+
   Future<void> reloadMarkers() async {
-    markersCache.clear();
+    try {
+      markersCache.clear();
 
-    for (final r in routesCache) {
-      if (!selectedRoutes.contains(r.routeId))
-        continue; // Skip deselected routes
-      // Create unique key for each route variant (content-based hash)
-      final routeKey = '${r.routeId}_${Object.hashAll(r.points)}';
-      // Use backend color if available, otherwise fallback to service
-      final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
+      for (final r in routesCache) {
+        if (!selectedRoutes.contains(r.routeId))
+          continue; // Skip deselected routes
+        // Create unique key for each route variant (content-based hash)
+        final routeKey = '${r.routeId}_${Object.hashAll(r.points)}';
+        // Use backend color if available, otherwise fallback to service
+        final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
 
-      if (!markersCache.containsKey(routeKey)) {
-        // Prevent duplicate copies of the same stop on top of each other
-        markersCache[routeKey] = {};
-        for (final (_, stop) in r.stops) {
-          // iterate through all stops in this route
-          // TODO: Implement favorite stops
-          // final isFavorite = _favoriteStops.contains(stop.id);
+        if (!markersCache.containsKey(routeKey)) {
+          // Prevent duplicate copies of the same stop on top of each other
+          markersCache[routeKey] = {};
+          for (final (idx, stop) in r.stops) {
+            // iterate through all stops in this route
+            // TODO: Implement favorite stops
+            // final isFavorite = _favoriteStops.contains(stop.id);
 
-          final marker = Marker(
-            zIndexInt:
-                2000, // Put bus stops on top of buses, since all bus Z-indexes are between 0 and 999
-            markerId: MarkerId('stop_${stop.id}_${Object.hashAll(r.points)}'),
-            position: stop.location,
-            flat: true,
-            // icon: BitmapDescriptor.defaultMarker,
-            icon:
-                // TODO: Reimplement this isRide/isNotRide/isFavorite/etc logic
-                // favoriteStops.contains(stop.id) // Used to be isFavorite
-                // ? (stop.isRide ? MapImageService.favRideStopIcon : MapImageService.favStopIcon)
-                // : (stop.isRide ? MapImageService.rideStopIcon : MapImageService. stopIcon),
-                await MapImageService.getFancyStopIcon(),
 
-                // favoriteStops.contains(stop.id) // Used to be isFavorite
-                // ? (stop.isRide ? _favRideStopIcon : _favStopIcon)
-                // : (stop.isRide ? _rideStopIcon : _stopIcon),
-            consumeTapEvents: true,
-            onTap: () {
-              onStopClicked(stop);
-            },
-            rotation: stop.rotation,
-            anchor: Offset(0.5, 0.5),
-          );
-          // _routeStopMarkers[routeKey]?[stop.id] = marker;
+            // TODO: ****** See why the duplicate cache isn't working in some cases!
 
-          markersCache[routeKey]?[stop.id] = marker;
+            bool useFancyStopIcon = true;
 
-          // gets first marker of this stop and adds it to the favorited stop markers
-          // if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
-          //   _displayedFavoriteStopMarkers[stop.id] = marker;
-          // }
-          // _stopIsRide[stop.id] = stop.isRide;
+            final marker = Marker(
+              zIndexInt:
+                  2000, // Put bus stops on top of buses, since all bus Z-indexes are between 0 and 999
+              markerId: MarkerId('stop_${stop.id}_${Object.hashAll(r.points)}'),
+              position: stop.location,
+              flat: true,
+              // icon: BitmapDescriptor.defaultMarker,
+              icon:
+                  // TODO: Reimplement this isRide/isNotRide/isFavorite/etc logic
+                  // favoriteStops.contains(stop.id) // Used to be isFavorite
+                  // ? (stop.isRide ? MapImageService.favRideStopIcon : MapImageService.favStopIcon)
+                  // : (stop.isRide ? MapImageService.rideStopIcon : MapImageService. stopIcon),
+                  (idx % 3 == 1) ? await MapImageService.getFancyStopIcon() : MapImageService.stopIcon,
+
+                  // favoriteStops.contains(stop.id) // Used to be isFavorite
+                  // ? (stop.isRide ? _favRideStopIcon : _favStopIcon)
+                  // : (stop.isRide ? _rideStopIcon : _stopIcon),
+              consumeTapEvents: true,
+              onTap: () {
+                onStopClicked(stop);
+              },
+              rotation: useFancyStopIcon ? 0.0 : stop.rotation,
+              anchor: useFancyStopIcon ? MapImageService.getFancyStopIconOffset() : Offset(0.5, 0.5),
+            );
+            // _routeStopMarkers[routeKey]?[stop.id] = marker;
+
+            markersCache[routeKey]?[stop.id] = marker;
+
+            // gets first marker of this stop and adds it to the favorited stop markers
+            // if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
+            //   _displayedFavoriteStopMarkers[stop.id] = marker;
+            // }
+            // _stopIsRide[stop.id] = stop.isRide;
+          }
         }
       }
-    }
 
-    // markers = {};
-    markers = markersCache.values.expand((Map<String, Marker> m) {
-      return m.values;
-    }).toSet();
+      // markers = {};
+      markers = markersCache.values.expand((Map<String, Marker> m) {
+        return m.values;
+      }).toSet();
+    } catch (err) {
+      debugPrint("Error: $err");
+    }
   }
 
   void reloadPolylines() {
