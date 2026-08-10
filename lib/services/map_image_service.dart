@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -6,9 +7,13 @@ import 'package:bluebus/constants.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+const STOP_ICON_WIDTH = 65;
+const STOP_ICON_HEIGHT = 65;
 
 class MapImageService {
   // Route specific bus icons
@@ -16,6 +21,30 @@ class MapImageService {
   static BitmapDescriptor? _busIcon;
 
   // TODO: Maybe make this manage stop icons too?
+
+
+  static BitmapDescriptor stopIcon = BitmapDescriptor.defaultMarkerWithHue(
+    BitmapDescriptor.hueAzure,
+  );
+  static BitmapDescriptor rideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+    BitmapDescriptor.hueAzure,
+  );
+  static BitmapDescriptor favStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+    BitmapDescriptor.hueAzure,
+  );
+  static BitmapDescriptor favRideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+    BitmapDescriptor.hueAzure,
+  );
+
+  static ui.Image? _stopIconImage;
+  static ui.Image? _rideStopIconImage;
+  static ui.Image? _favStopIconImage;
+  static ui.Image? _favRideStopIconImage;
+
+  static ByteData? _stopIconBytes;
+  static ByteData? _rideStopIconBytes;
+  static ByteData? _favStopIconBytes;
+  static ByteData? _favRideStopIconBytes;
 
   static Future<int> getFrontEndImageVer() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -230,8 +259,7 @@ class MapImageService {
     _routeBusIcons.clear();
     _loadRouteSpecificBusIcons();
   }
-
-  // FUTURE: Maybe wrap this into a map_image_service.dart file?
+// NEXT STEPS TODO: Figure out how to create a Canvas that's the right size, add the stop image to it, and then add extra stuff (e.g. rectangles) just to show we can
   static Future<BitmapDescriptor> resizeImage(ByteData image) async {
     // Load and resize stop icon
     final stopBytes = image;
@@ -269,7 +297,65 @@ class MapImageService {
     }
   }
 
+  static Future<ui.Image> _decode(ByteData data, int width, int height) {
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromPixels(
+      data.buffer.asUint8List(),
+      width,
+      height,
+      ui.PixelFormat.rgba8888,
+      completer.complete,
+    );
+    return completer.future;
+  }
+
+  static Future<BitmapDescriptor> getFancyStopIcon() async { // TODO: Pass in a list of bus route codes here later
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
+    int total_height = STOP_ICON_HEIGHT;
+
+    final paint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.fill;
+
+    try {
+      canvas.drawImage(_stopIconImage!, Offset.zero, Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
+    } catch (err) {}
+
+    canvas.drawRect(Rect.fromLTWH(STOP_ICON_WIDTH.toDouble(), 0, (total_width - STOP_ICON_WIDTH).toDouble(), STOP_ICON_HEIGHT.toDouble()), paint);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(total_width, total_height);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
   static Future<void> loadData() async {
     await _loadRouteSpecificBusIcons();
+
+    try {
+      _stopIconBytes = await rootBundle.load('assets/busStop.png');
+      _rideStopIconBytes = await rootBundle.load('assets/busStopRide.png');
+      _favStopIconBytes = await rootBundle.load('assets/favbusStop.png');
+      _favRideStopIconBytes = await rootBundle.load('assets/favbusStopRide.png');
+
+      _stopIconImage = await _decode(_stopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
+      _rideStopIconImage = await _decode(_rideStopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
+      _favStopIconImage = await _decode(_favStopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
+      _favRideStopIconImage = await _decode(_favRideStopIconBytes!, STOP_ICON_WIDTH, STOP_ICON_HEIGHT);
+
+      // Load stop icons
+      stopIcon = await MapImageService.resizeImage(_stopIconBytes!);
+      rideStopIcon = await MapImageService.resizeImage(_rideStopIconBytes!);
+      favStopIcon = await MapImageService.resizeImage(_favStopIconBytes!,);
+      favRideStopIcon = await MapImageService.resizeImage(_favRideStopIconBytes!);
+
+    } catch (e) {
+      // Fallback to default markers if custom loading fails
+      // These are now set as initial values
+    }
   }
 }

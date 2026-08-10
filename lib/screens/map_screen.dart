@@ -1790,11 +1790,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
                             ),
 
-                            // Expanded(
-                            //   child: NavigationOverlay(navigationManager: navigationManager),
-                            // ),
-
-
 
                             // reminder widget
                             SizedBox(height: 30.0),

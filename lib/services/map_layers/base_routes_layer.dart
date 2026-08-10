@@ -42,11 +42,11 @@ class BaseRoutesLayer extends CompositeMapLayer {
       {}; // TODO: Merge this with polylines variable?
   Map<String, Polyline> polylinesCache = {};
 
-  void cacheRoutes(List<BusRouteLine> routes) {
+  void cacheRoutes(List<BusRouteLine> routes) async {
     // Called from inside _loadAllData() inside map_screen.dart
     routesCache = routes;
 
-    reloadMarkers();
+    await reloadMarkers();
     reloadPolylines();
 
     if (isVisible) onUpdate();
@@ -63,13 +63,13 @@ class BaseRoutesLayer extends CompositeMapLayer {
     _loadCustomMarkers();
   }
 
-  void reload() {
-    reloadMarkers();
+  void reload() async {
+    await reloadMarkers();
     reloadPolylines();
     if (isVisible) onUpdate();
   }
 
-  void reloadMarkers() {
+  Future<void> reloadMarkers() async {
     markersCache.clear();
 
     for (final r in routesCache) {
@@ -96,9 +96,15 @@ class BaseRoutesLayer extends CompositeMapLayer {
             flat: true,
             // icon: BitmapDescriptor.defaultMarker,
             icon:
-                favoriteStops.contains(stop.id) // Used to be isFavorite
-                ? (stop.isRide ? _favRideStopIcon : _favStopIcon)
-                : (stop.isRide ? _rideStopIcon : _stopIcon),
+                // TODO: Reimplement this isRide/isNotRide/isFavorite/etc logic
+                // favoriteStops.contains(stop.id) // Used to be isFavorite
+                // ? (stop.isRide ? MapImageService.favRideStopIcon : MapImageService.favStopIcon)
+                // : (stop.isRide ? MapImageService.rideStopIcon : MapImageService. stopIcon),
+                await MapImageService.getFancyStopIcon(),
+
+                // favoriteStops.contains(stop.id) // Used to be isFavorite
+                // ? (stop.isRide ? _favRideStopIcon : _favStopIcon)
+                // : (stop.isRide ? _rideStopIcon : _stopIcon),
             consumeTapEvents: true,
             onTap: () {
               onStopClicked(stop);
