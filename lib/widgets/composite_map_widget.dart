@@ -1,35 +1,22 @@
-import 'dart:math';
-import 'dart:math' as math;
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:bluebus/constants.dart';
-import 'package:bluebus/globals.dart';
-import 'package:bluebus/models/bus.dart';
-import 'package:bluebus/models/bus_route_line.dart';
-import 'package:bluebus/models/bus_stop.dart';
-import 'package:bluebus/models/journey.dart';
-import 'package:bluebus/services/map_image_service.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
-import 'package:bluebus/services/route_color_service.dart';
-import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:haptic_feedback/haptic_feedback.dart';
-import 'package:widget_to_marker/widget_to_marker.dart';
 
 // Define the CompositeMapLayer
 abstract class CompositeMapLayer {
-  // Every CompositeMapLayer must have these four things
+  // Every CompositeMapLayer must have these five things
   bool get isVisible;
   Set<Polyline> get polylines;
   Set<Marker> get markers;
   Function() get onUpdate;
   void setOnUpdate(Function() fn);
   void dispose() {}
+
+  // Optional: If they need, CompositeMapLayers can include these things
+  void onCameraMove(CameraPosition oldPosition, CameraPosition newPosition) {}
 }
 
 // TODO: Extend the MapController back to map_screen.dart so it can move the camera and stuff
@@ -60,6 +47,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
   GoogleMapController? _mapController;
   Set<Marker> allMarkers = {};
   Set<Polyline> allPolylines = {};
+  CameraPosition? oldCameraPosition;
 
   void reloadMap() {
     setState(() {}); // Rebuild with updated markers
@@ -137,7 +125,23 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
           });
           widget.onMapCreated(controller);
         },
-        onCameraMove: widget.onCameraMove,
+        onCameraMove: (CameraPosition position) {
+
+          if (oldCameraPosition == null) {
+            // First camera update
+            oldCameraPosition = position;
+
+          } else if (oldCameraPosition?.target != position.target ||
+                     oldCameraPosition?.tilt != position.tilt ||
+                     oldCameraPosition?.zoom != position.zoom) {
+            for (CompositeMapLayer layer in widget.mapLayers) {
+              layer.onCameraMove(oldCameraPosition!, position);
+            }
+            oldCameraPosition = position;
+          }
+
+          widget.onCameraMove?.call(position);
+        },
         onCameraIdle: widget.onCameraIdle,
       ),
     );

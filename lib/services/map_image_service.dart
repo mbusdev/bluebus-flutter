@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -11,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 const STOP_ICON_WIDTH = 65;
 const STOP_ICON_HEIGHT = 65;
@@ -31,6 +33,8 @@ class MapImageService {
   // Route specific bus icons
   static Map<String, BitmapDescriptor> _routeBusIcons = {};
   static BitmapDescriptor? _busIcon;
+
+  static Map<String, BitmapDescriptor> _fancyStopIconsCache = {}; // Cache for fancy stop icons. Key format is "[rotation],[buscode],[buscode],...", such as "274,NW,CS,CX,BB"
 
   // TODO: Maybe make this manage stop icons too?
 
@@ -356,6 +360,7 @@ class MapImageService {
           fontSize: width / 2,
           fontWeight: FontWeight.w900,
           letterSpacing: -1,
+          fontFamily: 'Urbanist'
         )
       ),
       textAlign: TextAlign.center,
@@ -367,13 +372,45 @@ class MapImageService {
     // textPainter.paint(canvas, Offset(0,0));
   }
 
+  static void drawRotatedImage(
+    Canvas canvas,
+    ui.Image image,
+    Offset center,
+    double angleRadians,
+  ) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angleRadians);
+    canvas.drawImage(
+      image,
+      Offset(-image.width / 2, -image.height / 2), // shift so `center` is the pivot
+      Paint(),
+    );
+    canvas.restore();
+  }
+
+  static double degreesToRadians(double degrees) => degrees * math.pi / 180;
 
 // NEXT STEPS TODO: Pass in a hardcoded list of bus stops and get the circles rendering nicely (as well as the arrow for the bus stop). Also get anchoring and zoom level switching working properly
-  static Future<BitmapDescriptor> getFancyStopIcon() async { // TODO: Pass in a list of bus route codes here later
+//
+// *** Cache NOT based on stop ID, but based on the routes in the given list (to make our cache more resilient/flexible). Sort the list alphabetically each time
+  static Future<BitmapDescriptor> getFancyStopIcon(String stopId, double rotation, List<String> routesServed) async { // TODO: Pass in a list of bus route codes here later
+
+    // String cacheKey = rotation.round().toString() + "," + routesServed.join(",");
+    // String cacheKey = routesServed.join(","); // Temporary, for testing
+    String cacheKey = stopId;
+
+
+    if (_fancyStopIconsCache.containsKey(cacheKey)) {
+      return _fancyStopIconsCache[cacheKey]!;
+    }
+
+    // TODO: Add the bus stop icon type (favorite, nonfavorite, TheRide favorite, etc)
+
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    List<String> routesServed = ["BB", "CS", "CN", "CSX"];
+    debugPrint("Generating icon for ${routesServed.join(",")}");
 
     // int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
     // int total_height = STOP_ICON_HEIGHT;
@@ -390,13 +427,30 @@ class MapImageService {
         await _loadStopIcons();
       }
 
-      canvas.drawImage(_stopIconImage!, Offset(FANCY_STOP_ICON_XHEADROOM.toDouble(), FANCY_STOP_ICON_YHEADROOM.toDouble()), Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
+      drawRotatedImage(
+        canvas,
+        _stopIconImage!,
+        Offset(
+          FANCY_STOP_ICON_XHEADROOM.toDouble() + (STOP_ICON_WIDTH.toDouble() / 2),
+          FANCY_STOP_ICON_YHEADROOM.toDouble() + (STOP_ICON_HEIGHT.toDouble() / 2)),
+        degreesToRadians(rotation)
+      );
+
+      // canvas.drawImage(_stopIconImage!, Offset(FANCY_STOP_ICON_XHEADROOM.toDouble(), FANCY_STOP_ICON_YHEADROOM.toDouble()), Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
     } catch (err) {}
 
     // canvas.drawRect(Rect.fromLTWH(STOP_ICON_WIDTH.toDouble(), 0, (FANCY_STOP_ICON_WIDTH - STOP_ICON_WIDTH).toDouble(), STOP_ICON_HEIGHT.toDouble()), paint);
 
+    int maxRouteIconsPerRow = ((FANCY_STOP_ICON_WIDTH - FANCY_STOP_ICON_XHEADROOM - STOP_ICON_WIDTH - FANCY_STOP_ICON_MARGIN) / (ROW_ICON_SIZE + FANCY_STOP_ICON_SMALLMARGIN)).floor().toInt();
+
     int xDrawPos = STOP_ICON_WIDTH + FANCY_STOP_ICON_XHEADROOM + FANCY_STOP_ICON_MARGIN;
     int yDrawPos = 0;
+
+    if (routesServed.length <= maxRouteIconsPerRow) {
+      yDrawPos = (FANCY_STOP_ICON_HEIGHT / 2 - ROW_ICON_SIZE / 2).floor();
+    }
+
+
 
     for (int i = 0; i < routesServed.length; i++) {
       if (xDrawPos + ROW_ICON_SIZE > FANCY_STOP_ICON_WIDTH) {
@@ -421,13 +475,15 @@ class MapImageService {
     final img = await picture.toImage(FANCY_STOP_ICON_WIDTH.toInt(), FANCY_STOP_ICON_HEIGHT);
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
 
-    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+    BitmapDescriptor output = BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+    _fancyStopIconsCache[cacheKey] = output;
+    return output;
   }
 
   static Offset getFancyStopIconOffset() {
-    double offsetX = (STOP_ICON_WIDTH.toDouble() / 2) / FANCY_STOP_ICON_WIDTH.toDouble();
+    double offsetX = (STOP_ICON_WIDTH.toDouble() / 2 + FANCY_STOP_ICON_XHEADROOM) / FANCY_STOP_ICON_WIDTH.toDouble();
     double offsetY = 0.5;
-    debugPrint("Offset X: $offsetX, Y: $offsetY");
+    // debugPrint("Offset X: $offsetX, Y: $offsetY");
     return Offset(offsetX, offsetY);
     // return Offset(0.5, 0.5);
   }
