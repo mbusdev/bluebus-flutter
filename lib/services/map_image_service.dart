@@ -394,11 +394,11 @@ class MapImageService {
 // NEXT STEPS TODO: Pass in a hardcoded list of bus stops and get the circles rendering nicely (as well as the arrow for the bus stop). Also get anchoring and zoom level switching working properly
 //
 // *** Cache NOT based on stop ID, but based on the routes in the given list (to make our cache more resilient/flexible). Sort the list alphabetically each time
-  static Future<BitmapDescriptor> getFancyStopIcon(String stopId, double rotation, List<String> routesServed) async { // TODO: Pass in a list of bus route codes here later
+  static Future<BitmapDescriptor> getFancyStopIcon(String stopId, bool isFavorite, bool isRide, double rotation, List<String> routesServed) async { // TODO: Pass in a list of bus route codes here later
 
     // String cacheKey = rotation.round().toString() + "," + routesServed.join(",");
     // String cacheKey = routesServed.join(","); // Temporary, for testing
-    String cacheKey = stopId;
+    String cacheKey = "${stopId}_$isFavorite";
 
 
     if (_fancyStopIconsCache.containsKey(cacheKey)) {
@@ -410,7 +410,7 @@ class MapImageService {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    debugPrint("Generating icon for ${routesServed.join(",")}");
+    // debugPrint("Generating icon for ${routesServed.join(",")}");
 
     // int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
     // int total_height = STOP_ICON_HEIGHT;
@@ -427,9 +427,13 @@ class MapImageService {
         await _loadStopIcons();
       }
 
+      ui.Image? targetImage = isFavorite ?
+          (isRide ? _favRideStopIconImage : _favStopIconImage) :
+          (isRide ? _rideStopIconImage : _stopIconImage);
+
       drawRotatedImage(
         canvas,
-        _stopIconImage!,
+        targetImage!,
         Offset(
           FANCY_STOP_ICON_XHEADROOM.toDouble() + (STOP_ICON_WIDTH.toDouble() / 2),
           FANCY_STOP_ICON_YHEADROOM.toDouble() + (STOP_ICON_HEIGHT.toDouble() / 2)),
