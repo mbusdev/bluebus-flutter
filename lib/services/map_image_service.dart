@@ -348,7 +348,7 @@ class MapImageService {
     return frame.image;
   }
 
-  static void drawRouteIconOntoCanvas(Canvas canvas, int x, int y, int width, int height, String routeId) {
+  static void drawRouteIconOntoCanvas(Canvas canvas, int x, int y, int width, int height, String routeId, bool isRide) {
     final paint = Paint()
       ..color = RouteColorService.getRouteColor(routeId)
       ..style = PaintingStyle.fill;
@@ -366,8 +366,18 @@ class MapImageService {
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr
     )..layout(minWidth: 0, maxWidth: width.toDouble());
-
-    canvas.drawCircle(Offset(x + width / 2, y + height / 2), width / 2, paint);
+    
+    if (isRide) {
+      double rideIconHeight = height.toDouble() * 0.75;
+      double marginTop = (height - rideIconHeight) / 2;
+      final rrect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x.toDouble(), y.toDouble() + marginTop, width.toDouble(), rideIconHeight), 
+        Radius.circular(rideIconHeight / 2),
+      );
+      canvas.drawRRect(rrect, paint);
+    } else {
+      canvas.drawCircle(Offset(x + width / 2, y + height / 2), width / 2, paint);
+    }
     textPainter.paint(canvas, Offset(x + width / 2 - (textPainter.width / 2), y + height / 2 - (textPainter.height / 2)));
     // textPainter.paint(canvas, Offset(0,0));
   }
@@ -470,7 +480,8 @@ class MapImageService {
         yDrawPos, // y
         ROW_ICON_SIZE.toInt(), // width
         ROW_ICON_SIZE.toInt(), // height
-        routeId);
+        routeId,
+        isRide);
 
       xDrawPos += ROW_ICON_SIZE.toInt() + FANCY_STOP_ICON_SMALLMARGIN;
     }
