@@ -976,8 +976,6 @@ class NavigationManager {
     this.stageList.clear();
 
     for (Leg leg in journey.legs) {
-      // if (leg.")
-      debugPrint("Adding ${leg.origin}->${leg.destination} leg");
       // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
 
       if (leg.mode == LegMode.walk) {

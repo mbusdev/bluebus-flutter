@@ -114,7 +114,6 @@ class LiveBusesLayer extends CompositeMapLayer {
       rotation: bus.heading,
       anchor: const Offset(0.5, 0.5),
       onTap: () {
-        debugPrint("****** ON TAP");
         showRipple(bus.position);
         onBusClicked(bus);
       },
@@ -298,7 +297,6 @@ class LiveBusesLayer extends CompositeMapLayer {
     controller?.forward();
     controller?.repeat();
 
-    debugPrint("***** Finished starting animation");
   }
 
   void reload() {

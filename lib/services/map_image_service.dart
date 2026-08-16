@@ -433,7 +433,7 @@ class MapImageService {
 
     try {
       if (!_stopIconsInitialized) {
-        debugPrint("Stop icons not initialized, loading...");
+        // debugPrint("Stop icons not initialized, loading...");
         await _loadStopIcons();
       }
 

@@ -33,14 +33,11 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   TimelineInfo timelineInfo = TimelineInfo();
 
   void updateTimeline() { // Call this after all the stages are loaded (or stages change)
-    // debugPrint("***** Updating timeline!");
     timelineInfo = widget.navigationManager.getTimeline();
-    // debugPrint("***** Timeline now has ${timelineSteps.length} things!");
   }
 
   @override
   void initState() {
-    // debugPrint("HELLO YELLO WE ARE IN IN/ITSTATE");
     super.initState();
     updateTimeline();
     widget.navigationManager.registerOverlay(this); // does not set to null, see the navigation manager
