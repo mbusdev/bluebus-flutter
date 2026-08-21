@@ -290,6 +290,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     screenRadius = await ScreenCornerRadius.get(); // load screen radius
     screenRadiusLoaded = true;
+    globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
 
     //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
     LocationPermission permission = await Geolocator.checkPermission();

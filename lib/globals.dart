@@ -13,6 +13,10 @@ double globalBottomPadding = 0;
 double globalTopPadding = 0;
 double globalLeftRightPadding = 0;
 
+// the physical corner radius of the screen's bottom corners, loaded by map_screen.dart
+// use this to keep rounded UI at the bottom of the screen concentric with the phone
+double globalScreenBottomRadius = 0;
+
 // helper function
 String getStopNameFromID (String id){
   if (id == "VIRTUAL_DESTINATION"){
