@@ -1198,9 +1198,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (!_isProgrammaticCameraMove) {
       _userHasInteractedWithMap = true;
     }
-    setState(() {
-      _currentCameraPos = position;
-    });
+
+    // Note: Please avoid calling setState() inside _onCameraMove since Flutter has to rebuild the map each time and it causes stuttering. Thanks!
+    // setState(() {
+    //   _currentCameraPos = position;
+    // });
   }
 
   void _onCameraIdle() async {

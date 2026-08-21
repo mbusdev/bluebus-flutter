@@ -11,6 +11,15 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 const double FANCY_ICONS_ZOOM_THRESHOLD = 17.55;
+const int STAGGERED_RELOAD_CHUNK_SIZE = 50; // Load this many markers at a time when doing staggered reloads
+
+class StopReloadEntry {
+  final BusStop stop;
+  final String routeKey;
+  final Color routeColor;
+
+  StopReloadEntry({required this.stop, required this.routeKey, required this.routeColor});
+}
 
 class BaseRoutesLayer extends CompositeMapLayer {
   @override
@@ -21,6 +30,10 @@ class BaseRoutesLayer extends CompositeMapLayer {
   Set<Marker> markers = {};
   @override
   Function() onUpdate = () {};
+  @override
+  Function(LatLng) showRipple = (LatLng location) {
+    debugPrint("Warning! showRipple called but no callback was registered");
+  };
   Function(BusStop) onStopClicked = (BusStop s) {
     debugPrint("Warning! onStopClicked called but no callback was registered");
   };
@@ -47,6 +60,8 @@ class BaseRoutesLayer extends CompositeMapLayer {
     BitmapDescriptor.hueAzure,
   );
 
+  LatLng viewportLocation = LatLng(42.280427, -83.736522); // Default/dummy coordinates we expect to get overwritten as soon as the user pans the map
+
   // Map<String, Map<String, Marker>> markersCache = {};
 
   int _markerGeneration = 0; // This increments each time all the markers are regenerated
@@ -71,7 +86,7 @@ class BaseRoutesLayer extends CompositeMapLayer {
       }
     }
 
-    debugPrint("Pre-generating fancy stop icons");
+    // debugPrint("Pre-generating fancy stop icons");
     for (MapEntry entry in stopIdToRouteIds.entries) {
       try {
         await MapImageService.getFancyStopIcon(
@@ -85,10 +100,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
     }
 
     // TODO: Sort the routeIDs for each key? Do we need to do this or is it already sorted? (It might be already sorted since we're going through the same ordering of routes each time)
-
-    // stopIdToRouteId.entries.forEach((e) => {
-    //   debugPrint("Bus stop ${e.key} has service from ${e.value.join(", ")}")
-    // },);
 
     await reloadAllMarkers();
     reloadPolylines();
@@ -117,27 +128,41 @@ class BaseRoutesLayer extends CompositeMapLayer {
 
   @override
   void onCameraMove(CameraPosition oldPosition, CameraPosition newPosition) async {
-    // debugPrint("Camera zoomed from ${oldPosition.zoom} to ${newPosition.zoom}");
+    
+
+    viewportLocation = newPosition.target;
+
     if (oldPosition.zoom < FANCY_ICONS_ZOOM_THRESHOLD && newPosition.zoom >= FANCY_ICONS_ZOOM_THRESHOLD) {
-      debugPrint("******* ENABLING FANCY ICONS");
       displayFancyIcons = true;
-      // TODO: Add a _markerGeneration++ statement here
-      // await reloadAllMarkers();
-      // if (isVisible) onUpdate();
       reloadAllMarkersStaggered();
     } else if (oldPosition.zoom >= FANCY_ICONS_ZOOM_THRESHOLD && newPosition.zoom < FANCY_ICONS_ZOOM_THRESHOLD) {
-      debugPrint("******* DISABLING FANCY ICONS");
       displayFancyIcons = false;
       reloadAllMarkersStaggered();
-      // await reloadAllMarkers();
-      // if (isVisible) onUpdate();
     }
   }
 
-  Future<void> reloadMarkersForRoutes(List<BusRouteLine> routes) async {
-    // Used to only reload markers for a given list of routes. Useful because the fancy icons take some time for Google Maps to process (replacing 100+ markers with custom icons all at once causes a lot of stuttering), so we only process 1-2 routes per frame to keep things smoother
+  double getSquaredDistanceBetween(LatLng a, LatLng b) {
+    double lat_delta = a.latitude - b.latitude;
+    double lon_delta = a.longitude - b.longitude;
+    return lat_delta * lat_delta + lon_delta * lon_delta; // a^2 + b^2: Pythagorean theorem, sans square root (to make the calculation a little faster)
+  }
+
+  
+
+  List<StopReloadEntry> stopsToReload = [];
+  int stopsToReloadCursor = 0;
+
+  void preprocessStopsToReload(List<BusRouteLine> routes) {
+    // Fills the stopsToReload List and sorts them by distance to the viewport
+    stopsToReload.clear();
+    stopsToReloadCursor = 0;
+
     for (final r in routes) { // used to be routesCache
       if (!selectedRoutes.contains(r.routeId)) continue; // Skip deselected routes
+
+
+
+      // TODO: VVV Save these two variables in some data structure somewhere, or maybe alongside the Stop in the stopsToReload 
 
       // Create unique key for each route variant (content-based hash)
       final routeKey = '${r.routeId}_${Object.hashAll(r.points)}';
@@ -145,151 +170,81 @@ class BaseRoutesLayer extends CompositeMapLayer {
       // Use backend color if available, otherwise fallback to service
       final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
 
-      // if (!markersCache.containsKey(routeKey)) {
-      //   // Prevent duplicate copies of the same stop on top of each other
-      //   markersCache[routeKey] = {};
-      for (final (idx, stop) in r.stops) {
+      for (final (_, stop) in r.stops) {
         // iterate through all stops in this route
-        // TODO: Implement favorite stops
-        // final isFavorite = _favoriteStops.contains(stop.id);
 
         if (_markerBuiltAtGeneration[stop.id] == _markerGeneration) {
           continue; // This is a duplicate marker that has already been updated. Skip it
         }
         _markerBuiltAtGeneration[stop.id] = _markerGeneration;
+        stopsToReload.add(StopReloadEntry(stop: stop, routeKey: routeKey, routeColor: routeColor));
 
-
-        // List<String> routesServed = ["BB", "CS", "CN", "CSX"];
-        Set<String> routesServed = stopIdToRouteIds[stop.id] ?? {};
-
-        final marker = Marker(
-          zIndexInt:
-              2000, // Put bus stops on top of buses, since all bus Z-indexes are between 0 and 999
-          markerId: MarkerId('stop_${stop.id}_${Object.hashAll(r.points)}'),
-          position: stop.location,
-          flat: true,
-          icon:
-              // TODO: Reimplement this isRide/isNotRide/isFavorite/etc logic
-              (displayFancyIcons)
-                ? (
-                  await MapImageService.getFancyStopIcon(
-                    stop.id,
-                    favoriteStops.contains(stop.id),
-                    stop.isRide,
-                    stop.rotation,
-                    routesServed.toList()
-                  )
-                ) : (
-                  favoriteStops.contains(stop.id) // Used to be isFavorite
-                  ? (stop.isRide ? _favRideStopIcon : _favStopIcon)
-                  : (stop.isRide ? _rideStopIcon : _stopIcon)
-              ),
-          consumeTapEvents: true,
-          onTap: () {
-            onStopClicked(stop);
-          },
-          rotation: displayFancyIcons ? 0.0 : stop.rotation,
-          anchor: displayFancyIcons ? MapImageService.getFancyStopIconOffset() : Offset(0.5, 0.5),
-        );
-
-        markersCache[stop.id] = marker;
-
-        // gets first marker of this stop and adds it to the favorited stop markers
-        // if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
-        //   _displayedFavoriteStopMarkers[stop.id] = marker;
-        // }
-        // _stopIsRide[stop.id] = stop.isRide;
       }
     }
 
-    markers = markersCache.values.toSet(); // Update global markers list
+    stopsToReload.sort((a, b) => getSquaredDistanceBetween(a.stop.location, viewportLocation).compareTo(getSquaredDistanceBetween(b.stop.location, viewportLocation))); // Sort by distance to the viewport
 
   }
 
+  Future<void> reloadPreprocessedMarkersSegment(int markersToReload) async {
+
+    int stopIndex = stopsToReloadCursor + markersToReload;
+
+    for (; stopsToReloadCursor < math.min(stopsToReload.length, stopIndex); stopsToReloadCursor++) {
+
+
+      // iterate through all stops in this route
+      StopReloadEntry entry = stopsToReload[stopsToReloadCursor];
+
+      // List<String> routesServed = ["BB", "CS", "CN", "CSX"];
+      Set<String> routesServed = stopIdToRouteIds[entry.stop.id] ?? {};
+
+      final marker = Marker(
+        zIndexInt:
+            2000, // Put bus stops on top of buses, since all bus Z-indexes are between 0 and 999
+        markerId: MarkerId('stop_${entry.stop.id}_${entry.routeKey}'),
+        position: entry.stop.location,
+        flat: true,
+        icon:
+            // TODO: Reimplement this isRide/isNotRide/isFavorite/etc logic
+            (displayFancyIcons)
+              ? (
+                await MapImageService.getFancyStopIcon(
+                  entry.stop.id,
+                  favoriteStops.contains(entry.stop.id),
+                  entry.stop.isRide,
+                  entry.stop.rotation,
+                  routesServed.toList()
+                )
+              ) : (
+                favoriteStops.contains(entry.stop.id) // Used to be isFavorite
+                ? (entry.stop.isRide ? _favRideStopIcon : _favStopIcon)
+                : (entry.stop.isRide ? _rideStopIcon : _stopIcon)
+            ),
+        consumeTapEvents: true,
+        onTap: () {
+          showRipple(entry.stop.location);
+          onStopClicked(entry.stop);
+        },
+        rotation: displayFancyIcons ? 0.0 : entry.stop.rotation,
+        anchor: displayFancyIcons ? MapImageService.getFancyStopIconOffset() : Offset(0.5, 0.5),
+      );
+
+      markersCache[entry.stop.id] = marker;
+
+    }
+    markers = markersCache.values.toSet(); // Update global markers list
+  }
+
+    
   Future<void> reloadAllMarkers() async {
     try {
       markersCache.clear();
       _markerGeneration++;
 
-      // FUTURE TODO: Create these icons asynchronously and CACHE THEM so they don't block when we're trying to load them all. Make sure they display all available routes even if only a few are selected (so the cache doesn't become invalid when the user selects different routes)
+      preprocessStopsToReload(routesCache);
+      await reloadPreprocessedMarkersSegment(stopsToReload.length); // Reload ALL the markers at once. This also updates the markers variable
 
-      await reloadMarkersForRoutes(routesCache); // Reload all the markers all at once
-
-      // for (final r in routesCache) {
-      //   if (!selectedRoutes.contains(r.routeId))
-      //     continue; // Skip deselected routes
-      //   // Create unique key for each route variant (content-based hash)
-      //   final routeKey = '${r.routeId}_${Object.hashAll(r.points)}';
-      //   // Use backend color if available, otherwise fallback to service
-      //   final routeColor = r.color ?? RouteColorService.getRouteColor(r.routeId);
-
-      //   if (!markersCache.containsKey(routeKey)) {
-      //     // Prevent duplicate copies of the same stop on top of each other
-      //     markersCache[routeKey] = {};
-      //     for (final (idx, stop) in r.stops) {
-      //       // iterate through all stops in this route
-      //       // TODO: Implement favorite stops
-      //       // final isFavorite = _favoriteStops.contains(stop.id);
-
-
-      //       // TODO: ****** See why the duplicate cache isn't working in some cases!
-
-      //       // List<String> routesServed = ["BB", "CS", "CN", "CSX"];
-      //       Set<String> routesServed = stopIdToRouteIds[stop.id] ?? {};
-
-      //       final marker = Marker(
-      //         zIndexInt:
-      //             2000, // Put bus stops on top of buses, since all bus Z-indexes are between 0 and 999
-      //         markerId: MarkerId('stop_${stop.id}_${Object.hashAll(r.points)}'),
-      //         position: stop.location,
-      //         flat: true,
-      //         // icon: BitmapDescriptor.defaultMarker,
-      //         icon:
-      //             // TODO: Reimplement this isRide/isNotRide/isFavorite/etc logic
-      //             // favoriteStops.contains(stop.id) // Used to be isFavorite
-      //             // ? (stop.isRide ? MapImageService.favRideStopIcon : MapImageService.favStopIcon)
-      //             // : (stop.isRide ? MapImageService.rideStopIcon : MapImageService. stopIcon),
-      //             (displayFancyIcons) ? await MapImageService.getFancyStopIcon(stop.id, stop.rotation, routesServed.toList()) : MapImageService.stopIcon,
-
-      //             // NEXT STEPS TODO:
-      //             // * Stagger the marker updates across frames, instead of trying to load them in all at once. Process maybe 50-100 markers at a time before waiting
-      //             // * Add support for favorited stops (add the favorite/nonfavorite flag as part of the cache key to make sure our cache won't give us an old icon by mistake')
-      //             // * See if I can fix the rotation bug? Some stops have strange rotation--see if there is an existing function to "smooth out" the rotation so that it follows the polyline
-      //             // * Make the TheRide stop numbers ovals instead of circles
-      //             // * Also sort the list of stops every time!
-      //             // * And figure out why I'm getting so many ErrorSummary errors
-      //             // We can also think about "snapping"/"binning" the rotation to e.g. 20-degree increments to make the cache a little smaller
-
-      //             // TODO: Maybe only generate fancy stop icons if we can confirm the Marker is within view?
-
-
-      //             // favoriteStops.contains(stop.id) // Used to be isFavorite
-      //             // ? (stop.isRide ? _favRideStopIcon : _favStopIcon)
-      //             // : (stop.isRide ? _rideStopIcon : _stopIcon),
-      //         consumeTapEvents: true,
-      //         onTap: () {
-      //           onStopClicked(stop);
-      //         },
-      //         rotation: displayFancyIcons ? 0.0 : stop.rotation,
-      //         anchor: displayFancyIcons ? MapImageService.getFancyStopIconOffset() : Offset(0.5, 0.5),
-      //       );
-      //       // _routeStopMarkers[routeKey]?[stop.id] = marker;
-
-      //       markersCache[routeKey]?[stop.id] = marker;
-
-      //       // gets first marker of this stop and adds it to the favorited stop markers
-      //       // if (isFavorite && !_displayedFavoriteStopMarkers.containsKey(stop.id)) {
-      //       //   _displayedFavoriteStopMarkers[stop.id] = marker;
-      //       // }
-      //       // _stopIsRide[stop.id] = stop.isRide;
-      //     }
-      //   }
-      // }
-
-      // markers = {};
-      // markers = markersCache.values.expand((Map<String, Marker> m) {
-      //   return m.values;
-      // }).toSet();
     } catch (err) {
       debugPrint("Error: $err");
     }
@@ -298,19 +253,21 @@ class BaseRoutesLayer extends CompositeMapLayer {
   Future<void> reloadAllMarkersStaggered() async {
     // Accomplishes the same function as reloadAllMarkers(), but for big marker changes (i.e. adding fancy stop icons) where reloading everything on one frame causes lots of stuttering. It spreads the work across several frames to reduce jank
     _markerGeneration++;
-    
 
-    for (int i = 0; i < (routesCache.length / 3); i++) {
-      // debugPrint("Reloading markers (staggered) for route ${routesCache[i].routeId}");
-      // await reloadMarkersForRoutes([routesCache[i]]);
-      await reloadMarkersForRoutes(routesCache.sublist(i * 3, math.min((i + 1) * 3, routesCache.length)));
-      // if (isVisible) onUpdate();
+    int initialMarkerGeneration = _markerGeneration;
+
+    preprocessStopsToReload(routesCache);
+
+    while (stopsToReloadCursor < stopsToReload.length) {
+
+      if (initialMarkerGeneration < _markerGeneration) break; // Race condition prevention--if _markerGeneration is newer, then some future call to reloadAllMarkersStaggered() is already happening and this one should stop
+
+      await reloadPreprocessedMarkersSegment(STAGGERED_RELOAD_CHUNK_SIZE);
       if (isVisible) onUpdate();
       await SchedulerBinding.instance.endOfFrame;
       await Future.delayed(Duration(milliseconds: 200));
-      
     }
-
+    
     if (isVisible) onUpdate();
 
   }
@@ -343,8 +300,14 @@ class BaseRoutesLayer extends CompositeMapLayer {
     polylines = polylinesCache.values.toSet();
   }
 
+  @override
   void setOnUpdate(Function() callback) {
     onUpdate = callback;
+  }
+
+  @override
+  void setShowRipple(Function(LatLng) callback) {
+    showRipple = callback;
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -363,11 +326,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
         await rootBundle.load('assets/favbusStopRide.png'),
       );
 
-      // Refresh markers with new icons
-      // TODO: See if we need this!
-      // if (mounted) {
-      //   _refreshAllMarkers();
-      // }
     } catch (e) {
       // Fallback to default markers if custom loading fails
       // These are now set as initial values
