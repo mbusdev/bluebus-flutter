@@ -57,7 +57,7 @@ class LiveBusesLayer extends CompositeMapLayer {
   late Animation<double> animation;
   int nextAnimationFrameTime = 0;
   int animationStartedTime = 0;
-  static const int FRAME_DURATION = 200; // Frame duration in ms for animations
+  static const int FRAME_DURATION = 100; // Frame duration in ms for animations
   static const int ANIMATION_DURATION =
       11000; //4000; // Animation duration in ms
 

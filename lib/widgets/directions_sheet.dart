@@ -23,9 +23,10 @@ class DirectionsSheet extends StatefulWidget {
   final void Function(Location, bool) onChangeSelection;
   final void Function(Journey)? onSelectJourney;
   final void Function(Map<String, double>, Map<String, double>)? onResolved;final ScrollController? scrollController;
+  Function(Journey)? onStartNavigation;
 
 
-  const DirectionsSheet({
+  DirectionsSheet({
     Key? key,
     required this.origin,
     required this.dest,
@@ -36,6 +37,7 @@ class DirectionsSheet extends StatefulWidget {
     required this.scrollController, 
     this.onSelectJourney,
     this.onResolved,
+    this.onStartNavigation,
   }) : super(key: key);
 
   @override
@@ -292,6 +294,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                 onChangeSelection: widget.onChangeSelection,
                 onSelectJourney: widget.onSelectJourney,
                 scrollController: widget.scrollController,
+                onStartNavigation: widget.onStartNavigation,
               );
             } else if (journeyload.hasError) {
               WidgetsBinding.instance.addPostFrameCallback((_) {

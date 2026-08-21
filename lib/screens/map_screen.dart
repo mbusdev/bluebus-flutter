@@ -124,6 +124,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       {}; // maps from route to a map of stopID to marker
   // Whether a journey search overlay is currently active (shows only journey path)
   bool _journeyOverlayActive = false;
+  bool _navigationOverlayEnabled = false;
+  bool _floorplanOverlayEnabled = false;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
   // static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
@@ -178,6 +180,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     navigationManager.setMapLayer(navigationLayer);
     navigationLayer.init();
+    navigationLayer.isVisible = false; // Hide the navigation layer until we're ready to show it
 
     hideJourney(); // Hide the journey layer until we're ready to use it
 
@@ -596,6 +599,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     _mapController?.dispose();
     super.dispose();
+  }
+
+  void hideNavigation() {
+    _navigationOverlayEnabled = false;
+
+    navigationLayer.isVisible = false;
+    journeyLayer.isVisible = false;
+    baseRoutesLayer.isVisible = true;
+    liveBusesLayer.isVisible = true;
+
+    navigationLayer.reload();
   }
 
   // Compute a lightweight fingerprint of the routes list to detect changes
@@ -1126,14 +1140,39 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 _lastJourneyRequestDest = dest;
               },
               scrollController: scrollController,
+              onStartNavigation: (Journey journey) {
+                // TODO: Pass in the Journey from here and give it to the navigation overlay
+                _bottomSheetController?.close();
+
+                baseRoutesLayer.isVisible = false;
+                liveBusesLayer.isVisible = false;
+                journeyLayer.isVisible = false;
+                navigationLayer.isVisible = true;
+
+                navigationLayer.reload(); // This reloads the map
+
+                navigationManager.initFromJourney(
+                  journey,
+                  getColor(context, ColorType.mapWalkingLine)
+                );
+
+                setState(() {
+                  _navigationOverlayEnabled = true;
+                  
+                });
+
+
+                // TODO: Center the map to the start location
+
+              },
             );
           },
         );
       },
     );
-    _bottomSheetController?.closed.then((_) {
-      hideJourney();
-    });
+    // _bottomSheetController?.closed.then((_) {
+    //   hideJourney();
+    // });
   }
 
   _showJourneySheetOnReopen() {
@@ -1165,7 +1204,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 15),
-                  JourneyBody(journey: currDisplayed),
+                  JourneyBody(
+                    journey: currDisplayed,
+                    ),
                 ],
               ),
             );
@@ -1507,6 +1548,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   onPopInvokedWithResult: (didPop, result) {
                     hideJourney(); // Hide the journey if it's showing right now
 
+                    if (_navigationOverlayEnabled) {
+                      hideNavigation();
+                    }
+
+                    _floorplanOverlayEnabled = false;
+
                     // If showing a persistent bottom sheet, close it.
                     // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
                     if (_bottomSheetController != null) {
@@ -1514,6 +1561,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       _bottomSheetController = null;
                       _removeSearchLocationMarker();
                     }
+
+                    setState(() {}); // Make sure the widgets reload
                   },
                   child: Stack(
                     children: [
@@ -1521,9 +1570,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         child: CompositeMapWidget(
                           initialCenter: startLatLng,
                           mapLayers: [
-                            // baseRoutesLayer,
-                            // liveBusesLayer,
-                            // journeyLayer,
+                            baseRoutesLayer,
+                            liveBusesLayer,
+                            journeyLayer,
                             navigationLayer
                           ],
                           onMapCreated: _onMapCreated,
@@ -2212,21 +2261,36 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           ),
                                         ),
                                       ),
+
+                                      FilledButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _floorplanOverlayEnabled = true;
+                                          });
+                                        },
+                                        child: Text("Floorplan")
+                                      )
                                     ],
                                   ),
                           ],
                         ),
                       ),
-                      // Positioned.fill(
-                      //   child: RepaintBoundary(
-                      //     child: FloorplanOverlay()
-                      //   )
-                      // ),
-                      Positioned.fill(
+                      _floorplanOverlayEnabled ? Positioned.fill(
+                        child: RepaintBoundary(
+                          child: FloorplanOverlay(
+                            onClosed: () {
+                              setState(() {
+                                _floorplanOverlayEnabled = false;
+                              });
+                            }
+                          )
+                        )
+                      ) : SizedBox.shrink(),
+                      _navigationOverlayEnabled ? Positioned.fill(
                         child: RepaintBoundary(
                           child: NavigationOverlay(navigationManager: navigationManager)
                         )
-                      ),
+                      ) : SizedBox.shrink(),
                     ],
                   ),
                 )

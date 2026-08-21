@@ -141,6 +141,11 @@ class _FloorSelectorState extends State<FloorSelector> {
 
 class FloorplanOverlay extends StatefulWidget {
   // const FloorplanOverlauy
+  Function? onClosed;
+
+  FloorplanOverlay({
+    required this.onClosed
+  });
 
   @override
   State<StatefulWidget> createState() => _FloorplanOverlayState();
@@ -188,7 +193,7 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> {
                       icon: Icon(Icons.arrow_back),
                       iconSize: 30,
                       onPressed: () { 
-
+                        widget.onClosed?.call();
                       },
                       style: IconButton.styleFrom(backgroundColor: Colors.white), // TODO: Make this dynamic for light/dark mode
                     ),

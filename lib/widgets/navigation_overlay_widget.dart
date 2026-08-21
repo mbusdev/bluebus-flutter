@@ -178,46 +178,40 @@ class _NavigationOverlayState extends State<NavigationOverlay>
           padding: EdgeInsetsGeometry.only(left: 10, right: 10, top: 70),
           child: Column( // Core column for vertical layout
             children: [
-              MaterialButton(
-                color: Colors.blue.shade900,
-                child: Text(planJourneyInProgress ? "Loading..." : "Init stages from /plan-journey"),
-                onPressed: () async {
-                  setState(() {
-                    planJourneyInProgress = true;
-                  });
-                  try {
-                    // Try both forwards and reverse directions
-                    final fut1 = JourneyRepository.planJourney(
-                      originLat: 42.274014,
-                      originLon: -83.753664,
-                      destLat: 42.297493,
-                      destLon: -83.710782,
-                    );
-                    final fut2 = JourneyRepository.planJourney(
-                      originLat: 42.297493,
-                      originLon: -83.710782,
-                      destLat: 42.274014,
-                      destLon: -83.753664,
-                    );
-                    final journeys = (await Future.wait([fut1, fut2]))
-                      .expand((x) => x)
-                      .toList();
+              // MaterialButton(
+              //   color: Colors.blue.shade900,
+              //   child: Text(planJourneyInProgress ? "Loading..." : "Init stages from /plan-journey"),
+              //   onPressed: () async {
+              //     setState(() {
+              //       planJourneyInProgress = true;
+              //     });
+              //     try {
+              //       // Try both forwards and reverse directions
+              //       final fut1 = JourneyRepository.planJourney(
+              //         originLat: 42.274014,
+              //         originLon: -83.753664,
+              //         destLat: 42.297493,
+              //         destLon: -83.710782,
+              //       );
+              //       final fut2 = JourneyRepository.planJourney(
+              //         originLat: 42.297493,
+              //         originLon: -83.710782,
+              //         destLat: 42.274014,
+              //         destLon: -83.753664,
+              //       );
+              //       final journeys = (await Future.wait([fut1, fut2]))
+              //         .expand((x) => x)
+              //         .toList();
 
-                    // Pick a random journey
-                    widget.navigationManager.initFromJourney(journeys[Random().nextInt(journeys.length)]);
-                  } finally {
-                    setState(() {
-                      planJourneyInProgress = false;
-                    });
-                  }
-                }
-              ),
-
-              MaterialButton(
-                color: Colors.red.shade900,
-                child: Text("Show Oops dialog"),
-                onPressed: () => widget.navigationManager.showOopsDialog(),
-              ),
+              //       // Pick a random journey
+              //       widget.navigationManager.initFromJourney(journeys[Random().nextInt(journeys.length)]);
+              //     } finally {
+              //       setState(() {
+              //         planJourneyInProgress = false;
+              //       });
+              //     }
+              //   }
+              // ),
 
 
               Row( // Top header row
@@ -391,7 +385,11 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 ],
               ),
             
-
+              MaterialButton(
+                color: Colors.red.shade900,
+                child: Text("Show Oops dialog"),
+                onPressed: () => widget.navigationManager.showOopsDialog(),
+              ),
               // Expanded(child: SizedBox.expand()),
               // SizedBox.expand(),
               // const Spacer(),
