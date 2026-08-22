@@ -67,6 +67,8 @@ flutter:
   assets:
     - assets/
     - assets/portraits/
+    - assets/floorplans/
+    - assets/floorplans/icons/
 
 flutter_launcher_icons:
   android: true

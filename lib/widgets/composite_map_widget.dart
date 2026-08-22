@@ -6,6 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+/// Zoom the map opens at. Layers that switch behaviour on zoom use this as
+/// their starting point, since onCameraMove only fires once the user moves.
+const double INITIAL_MAP_ZOOM = 15.0;
+
 // Define the CompositeMapLayer
 abstract class CompositeMapLayer {
   // Every CompositeMapLayer must have these five things
@@ -21,6 +25,10 @@ abstract class CompositeMapLayer {
 
   // Optional: If they need, CompositeMapLayers can include these things
   void onCameraMove(CameraPosition oldPosition, CameraPosition newPosition) {}
+
+  // Optional: Filled shapes this layer draws. Defaults to none so layers that
+  // only deal in lines and markers don't have to think about it.
+  Set<Polygon> get polygons => const {};
 }
 
 // TODO: Extend the MapController back to map_screen.dart so it can move the camera and stuff
@@ -127,6 +135,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
   GoogleMapController? _mapController;
   Set<Marker> allMarkers = {};
   Set<Polyline> allPolylines = {};
+  Set<Polygon> allPolygons = {};
   CameraPosition? oldCameraPosition;
   ValueNotifier<List<Offset>> _ripples = ValueNotifier([]);
   final _rebuildWatchdog = RebuildWatchdog('CompositeMapWidget');
@@ -187,6 +196,10 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
       if (!layer.isVisible) return {};
       return layer.polylines;
     }).toSet();
+    allPolygons = widget.mapLayers.expand<Polygon>((CompositeMapLayer layer) {
+      if (!layer.isVisible) return {};
+      return layer.polygons;
+    }).toSet();
 
     return Stack(
       children: [
@@ -199,6 +212,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
             myLocationButtonEnabled: false,
             markers: allMarkers,
             polylines: allPolylines,
+            polygons: allPolygons,
             cameraTargetBounds: CameraTargetBounds(
               LatLngBounds(
                 southwest: LatLng(
@@ -215,7 +229,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
             // markers: curMarkers.union(widget.staticMarkers),
             initialCameraPosition: CameraPosition(
               target: widget.initialCenter,
-              zoom: 15.0,
+              zoom: INITIAL_MAP_ZOOM,
             ),
             style: isDarkMode(context) ? _darkMapStyle : _lightMapStyle,
             onMapCreated: (GoogleMapController controller) {
