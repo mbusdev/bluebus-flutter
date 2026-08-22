@@ -45,7 +45,12 @@ dev_dependencies:
   carapacik_lints: ^3.12.0
   json_serializable: ^6.14.0
   retrofit_generator: ^10.2.7
-  swagger_parser: ^1.44.0
+  # swagger_parser: ^1.44.0
+  swagger_parser:
+    git:
+      url: https://github.com/mbusdev/swagger_parser.git
+      path: swagger_parser
+      ref: main
 
 flutter:
   fonts:
@@ -89,7 +94,7 @@ flutter_launcher_icons:
   min_sdk_android: 21 # android min sdk min:16, default 21
 
 swagger_parser:
-  schema_url: https://docs.mb.thething.fyi/refs/heads/nav/plan-journey-bus-polylines/openapi/spec.json
+  schema_url: https://docs.mb.thething.fyi/refs/heads/mock-backend-2/openapi/spec.json
   output_directory: lib/backend/
   name: backend
   language: dart

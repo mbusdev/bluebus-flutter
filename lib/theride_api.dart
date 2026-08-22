@@ -14,7 +14,7 @@ class RideAPI {
   // Fetch all routes and their polylines/stops
   static Future<List<BusRouteLine>> fetchRoutes(Function(String route, String error) onError) async {
     try {
-      final routes = await _client.getMbusApiV3GetAllRideRoutes();
+      final routes = await _client.getApiV4AllRideRoutes();
       await RouteColorService.initialize();
 
       return routes
