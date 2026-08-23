@@ -79,7 +79,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     Loadpoint("Initializing...", 0),
   );
   GoogleMapController? _mapController;
-  CameraPosition? _currentCameraPos;
+  final ValueNotifier<CameraPosition?> _currentCameraPos =
+      ValueNotifier<CameraPosition?>(null);
   bool? _userLocVisible;
   static const _defaultCenter = LatLng(42.276463, -83.7374598);
   static LatLng startLatLng = _defaultCenter;
@@ -183,7 +184,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     navigationManager.setMapLayer(navigationLayer);
     navigationLayer.init();
-    navigationLayer.isVisible = false; // Hide the navigation layer until we're ready to show it
+    navigationLayer.isVisible =
+        false; // Hide the navigation layer until we're ready to show it
 
     hideJourney(); // Hide the journey layer until we're ready to use it
 
@@ -285,11 +287,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     final prefs = await SharedPreferences.getInstance();
     globalFollowDistanceThresholdMeters =
-      prefs.getDouble('follow_distance_threshold_meters') ??
-      globalFollowDistanceThresholdMeters;
+        prefs.getDouble('follow_distance_threshold_meters') ??
+        globalFollowDistanceThresholdMeters;
     globalGpsUpdateDistanceFilterMeters =
-      prefs.getInt('gps_update_distance_filter_meters') ??
-      globalGpsUpdateDistanceFilterMeters;
+        prefs.getInt('gps_update_distance_filter_meters') ??
+        globalGpsUpdateDistanceFilterMeters;
 
     screenRadius = await ScreenCornerRadius.get(); // load screen radius
     screenRadiusLoaded = true;
@@ -340,12 +342,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
     }
 
-    void onBusError(String route, String error) =>
-      showMaizebusOKDialog(
-        contextIn: context,
-        title: "Error loading route $route. We are aware of the issue, and it will be fixed shortly.",
-        content: error
-      );
+    void onBusError(String route, String error) => showMaizebusOKDialog(
+      contextIn: context,
+      title:
+          "Error loading route $route. We are aware of the issue, and it will be fixed shortly.",
+      content: error,
+    );
 
     // loading all this data in parallel
     await Future.wait([
@@ -389,7 +391,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     await Future.delayed(const Duration(milliseconds: 180));
   }
 
-    Future<void> startLocationUpdates() async {
+  Future<void> startLocationUpdates() async {
     if (!await Geolocator.isLocationServiceEnabled()) return;
 
     LocationPermission perm = await Geolocator.checkPermission();
@@ -409,41 +411,42 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       distanceFilter: globalGpsUpdateDistanceFilterMeters,
     );
 
-    _posSub = Geolocator.getPositionStream(locationSettings: settings).listen(
-      (Position p) async {
-        // Keep this lightweight; do a minimal amount of work here and defer heavy updates.
-        if (!mounted || _mapController == null) return;
+    _posSub = Geolocator.getPositionStream(locationSettings: settings).listen((
+      Position p,
+    ) async {
+      // Keep this lightweight; do a minimal amount of work here and defer heavy updates.
+      if (!mounted || _mapController == null) return;
 
-        // If follow mode is disabled, don't recenter automatically.
-        if (!_followUser) return;
-        if (_userHasInteractedWithMap) return;
+      // If follow mode is disabled, don't recenter automatically.
+      if (!_followUser) return;
+      if (_userHasInteractedWithMap) return;
 
-        // Only move camera if user has moved more than threshold to avoid jitter.
-        final shouldMove = _lastCenteredPos == null ||
-            Geolocator.distanceBetween(
-                  _lastCenteredPos!.latitude,
-                  _lastCenteredPos!.longitude,
-                  p.latitude,
-                  p.longitude,
-                ) >
-                globalFollowDistanceThresholdMeters;
+      // Only move camera if user has moved more than threshold to avoid jitter.
+      final shouldMove =
+          _lastCenteredPos == null ||
+          Geolocator.distanceBetween(
+                _lastCenteredPos!.latitude,
+                _lastCenteredPos!.longitude,
+                p.latitude,
+                p.longitude,
+              ) >
+              globalFollowDistanceThresholdMeters;
 
-        if (!shouldMove) return;
+      if (!shouldMove) return;
 
-        _lastCenteredPos = p;
+      _lastCenteredPos = p;
 
-        // Center on the new streamed position while preserving the current camera view.
-        await _centerOnLocation(
-          false,
-          lat: p.latitude,
-          long: p.longitude,
-          zoom: _currentCameraPos?.zoom,
-          bearing: _currentCameraPos?.bearing,
-        );
+      // Center on the new streamed position while preserving the current camera view.
+      await _centerOnLocation(
+        false,
+        lat: p.latitude,
+        long: p.longitude,
+        zoom: _currentCameraPos.value?.zoom,
+        bearing: _currentCameraPos.value?.bearing,
+      );
 
-        // TODO: Update any navigation manager / UI that depends on live position here.
-      },
-    );
+      // TODO: Update any navigation manager / UI that depends on live position here.
+    });
 
     // TODO: Consider throttling updates or using a timer if animateCamera is too frequent.
   }
@@ -587,6 +590,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   @override
   void dispose() {
     _loadingMessageNotifier.dispose();
+    _currentCameraPos.dispose();
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
@@ -1157,17 +1161,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                 navigationManager.initFromJourney(
                   journey,
-                  getColor(context, ColorType.mapWalkingLine)
+                  getColor(context, ColorType.mapWalkingLine),
                 );
 
                 setState(() {
                   _navigationOverlayEnabled = true;
-                  
                 });
 
-
                 // TODO: Center the map to the start location
-
               },
             );
           },
@@ -1208,9 +1209,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 15),
-                  JourneyBody(
-                    journey: currDisplayed,
-                    ),
+                  JourneyBody(journey: currDisplayed),
                 ],
               ),
             );
@@ -1240,14 +1239,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _onCameraMove(CameraPosition position) {
     if (!mounted) return;
+    _currentCameraPos.value = position;
     if (!_isProgrammaticCameraMove) {
       _userHasInteractedWithMap = true;
     }
-
-    // Note: Please avoid calling setState() inside _onCameraMove since Flutter has to rebuild the map each time and it causes stuttering. Thanks!
-    // setState(() {
-    //   _currentCameraPos = position;
-    // });
   }
 
   void _onCameraIdle() async {
@@ -1480,12 +1475,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _setMapToNorth() async {
-    if (_mapController != null && _currentCameraPos != null) {
+    final cameraPosition = _currentCameraPos.value;
+    if (_mapController != null && cameraPosition != null) {
       await _mapController!.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
-            target: _currentCameraPos!.target, // current position
-            zoom: _currentCameraPos!.zoom,
+            target: cameraPosition.target, // current position
+            zoom: cameraPosition.zoom,
             bearing: 0, // face north
           ),
         ),
@@ -1578,7 +1574,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             baseRoutesLayer,
                             liveBusesLayer,
                             journeyLayer,
-                            navigationLayer
+                            navigationLayer,
                           ],
                           onMapCreated: _onMapCreated,
                           onCameraMove: _onCameraMove,
@@ -1846,7 +1842,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
                             ),
 
-
                             // reminder widget
                             SizedBox(height: 30.0),
                             _journeyOverlayActive || _isOffline
@@ -1861,130 +1856,78 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
                             Spacer(),
 
-                            (!_journeyOverlayActive)
-                                ? Padding(
-                                    padding: const EdgeInsets.only(bottom: 20),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Column(
-                                          spacing: 10,
+                            ValueListenableBuilder<CameraPosition?>(
+                              valueListenable: _currentCameraPos,
+                              builder: (context, cameraPosition, child) {
+                                return (!_journeyOverlayActive)
+                                    ? Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 20,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
                                           children: [
-                                            // face north button is only visible when not facing north
-                                            Visibility(
-                                              visible:
-                                                  _currentCameraPos != null &&
-                                                  _currentCameraPos!.bearing !=
-                                                      0,
-                                              child: DecoratedBox(
-                                                decoration: BoxDecoration(
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: getColor(
-                                                        context,
-                                                        ColorType
-                                                            .mapButtonShadow,
-                                                      ).withAlpha(50),
-                                                      blurRadius: 4,
-                                                      offset: Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                  borderRadius:
-                                                      BorderRadius.circular(25),
-                                                ),
-                                                child: FloatingActionButton.small(
-                                                  onPressed: _setMapToNorth,
-                                                  heroTag: 'north_fab',
-                                                  backgroundColor: getColor(
-                                                    context,
-                                                    ColorType
-                                                        .mapButtonSecondary,
-                                                  ),
-                                                  elevation: 0,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          56,
+                                            Column(
+                                              spacing: 10,
+                                              children: [
+                                                // face north button is only visible when not facing north
+                                                Visibility(
+                                                  visible:
+                                                      _currentCameraPos.value !=
+                                                          null &&
+                                                      _currentCameraPos
+                                                              .value!
+                                                              .bearing !=
+                                                          0,
+                                                  child: DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: getColor(
+                                                            context,
+                                                            ColorType
+                                                                .mapButtonShadow,
+                                                          ).withAlpha(50),
+                                                          blurRadius: 4,
+                                                          offset: Offset(0, 2),
                                                         ),
-                                                  ),
-                                                  child: Transform.rotate(
-                                                    angle:
-                                                        _currentCameraPos !=
-                                                            null
-                                                        ? (-_currentCameraPos!
-                                                                      .bearing -
-                                                                  45) *
-                                                              vec_math.degrees2Radians
-                                                        : 0,
-                                                    child: FaIcon(
-                                                      FontAwesomeIcons.compass,
-                                                      color: getColor(
+                                                      ],
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            25,
+                                                          ),
+                                                    ),
+                                                    child: FloatingActionButton.small(
+                                                      onPressed: _setMapToNorth,
+                                                      heroTag: 'north_fab',
+                                                      backgroundColor: getColor(
                                                         context,
                                                         ColorType
-                                                            .mapButtonPrimary,
+                                                            .mapButtonSecondary,
                                                       ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-
-                                            // location button
-                                            AnimatedSwitcher(
-                                              duration: const Duration(
-                                                milliseconds: 250,
-                                              ),
-                                              child:
-                                                  !(_userLocVisible == null ||
-                                                      _userLocVisible!)
-                                                  ?
-                                                    // if not needed, sized box
-                                                    SizedBox.shrink()
-                                                  :
-                                                    // otherwise, normal button
-                                                    DecoratedBox(
-                                                      decoration: BoxDecoration(
-                                                        boxShadow: [
-                                                          BoxShadow(
-                                                            color: getColor(
-                                                              context,
-                                                              ColorType
-                                                                  .mapButtonShadow,
-                                                            ).withAlpha(50),
-                                                            blurRadius: 4,
-                                                            offset: Offset(
-                                                              0,
-                                                              2,
-                                                            ),
-                                                          ),
-                                                        ],
+                                                      elevation: 0,
+                                                      shape: RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius.circular(
-                                                              25,
+                                                              56,
                                                             ),
                                                       ),
-                                                      child: FloatingActionButton.small(
-                                                        onPressed: () {
-                                                          _setFollowMode(true);
-                                                          _centerOnLocation(
-                                                            true,
-                                                          );
-                                                        },
-                                                        heroTag: 'location_fab',
-                                                        backgroundColor: getColor(
-                                                          context,
-                                                          ColorType
-                                                              .mapButtonSecondary,
-                                                        ),
-                                                        elevation: 0,
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                56,
-                                                              ),
-                                                        ),
-                                                        child: Icon(
-                                                          Icons.my_location,
+                                                      child: Transform.rotate(
+                                                        angle:
+                                                            _currentCameraPos
+                                                                    .value !=
+                                                                null
+                                                            ? (-_currentCameraPos
+                                                                          .value!
+                                                                          .bearing -
+                                                                      45) *
+                                                                  vec_math
+                                                                      .degrees2Radians
+                                                            : 0,
+                                                        child: FaIcon(
+                                                          FontAwesomeIcons
+                                                              .compass,
                                                           color: getColor(
                                                             context,
                                                             ColorType
@@ -1993,13 +1936,87 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                         ),
                                                       ),
                                                     ),
+                                                  ),
+                                                ),
+
+                                                // location button
+                                                AnimatedSwitcher(
+                                                  duration: const Duration(
+                                                    milliseconds: 250,
+                                                  ),
+                                                  child:
+                                                      !(_userLocVisible ==
+                                                              null ||
+                                                          _userLocVisible!)
+                                                      ?
+                                                        // if not needed, sized box
+                                                        SizedBox.shrink()
+                                                      :
+                                                        // otherwise, normal button
+                                                        DecoratedBox(
+                                                          decoration: BoxDecoration(
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: getColor(
+                                                                  context,
+                                                                  ColorType
+                                                                      .mapButtonShadow,
+                                                                ).withAlpha(50),
+                                                                blurRadius: 4,
+                                                                offset: Offset(
+                                                                  0,
+                                                                  2,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  25,
+                                                                ),
+                                                          ),
+                                                          child: FloatingActionButton.small(
+                                                            onPressed: () {
+                                                              _setFollowMode(
+                                                                true,
+                                                              );
+                                                              _centerOnLocation(
+                                                                true,
+                                                              );
+                                                            },
+                                                            heroTag:
+                                                                'location_fab',
+                                                            backgroundColor:
+                                                                getColor(
+                                                                  context,
+                                                                  ColorType
+                                                                      .mapButtonSecondary,
+                                                                ),
+                                                            elevation: 0,
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    56,
+                                                                  ),
+                                                            ),
+                                                            child: Icon(
+                                                              Icons.my_location,
+                                                              color: getColor(
+                                                                context,
+                                                                ColorType
+                                                                    .mapButtonPrimary,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
-                                  )
-                                : SizedBox.shrink(),
+                                      )
+                                    : SizedBox.shrink();
+                              },
+                            ),
 
                             // if showing journey, show close and reopen button
                             (_journeyOverlayActive)
@@ -2273,29 +2290,35 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             _floorplanOverlayEnabled = true;
                                           });
                                         },
-                                        child: Text("Floorplan")
-                                      )
+                                        child: Text("Floorplan"),
+                                      ),
                                     ],
                                   ),
                           ],
                         ),
                       ),
-                      _floorplanOverlayEnabled ? Positioned.fill(
-                        child: RepaintBoundary(
-                          child: FloorplanOverlay(
-                            onClosed: () {
-                              setState(() {
-                                _floorplanOverlayEnabled = false;
-                              });
-                            }
-                          )
-                        )
-                      ) : SizedBox.shrink(),
-                      _navigationOverlayEnabled ? Positioned.fill(
-                        child: RepaintBoundary(
-                          child: NavigationOverlay(navigationManager: navigationManager)
-                        )
-                      ) : SizedBox.shrink(),
+                      _floorplanOverlayEnabled
+                          ? Positioned.fill(
+                              child: RepaintBoundary(
+                                child: FloorplanOverlay(
+                                  onClosed: () {
+                                    setState(() {
+                                      _floorplanOverlayEnabled = false;
+                                    });
+                                  },
+                                ),
+                              ),
+                            )
+                          : SizedBox.shrink(),
+                      _navigationOverlayEnabled
+                          ? Positioned.fill(
+                              child: RepaintBoundary(
+                                child: NavigationOverlay(
+                                  navigationManager: navigationManager,
+                                ),
+                              ),
+                            )
+                          : SizedBox.shrink(),
                     ],
                   ),
                 )
