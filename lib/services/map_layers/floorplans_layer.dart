@@ -57,8 +57,14 @@ class FloorplansLayer extends CompositeMapLayer {
     return all[_floorIndex];
   }
 
-  /// Loads the floorplan and builds the first floor's geometry.
-  Future<void> load() async {
+  Future<void>? _loading;
+
+  /// Loads the floorplan and builds the first floor's geometry. Awaiting this
+  /// more than once is free -- the work only happens on the first call, so
+  /// anything that needs the floors can just await it.
+  Future<void> load() => _loading ??= _load();
+
+  Future<void> _load() async {
     try {
       _source = await FloorplanService.loadDuderstadt();
     } catch (err) {

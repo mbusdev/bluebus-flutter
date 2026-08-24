@@ -2355,6 +2355,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                           ? Positioned.fill(
                               child: RepaintBoundary(
                                 child: FloorplanOverlay(
+                                  floorplansLayer: floorplansLayer,
                                   onClosed: () {
                                     setState(() {
                                       _floorplanOverlayEnabled = false;

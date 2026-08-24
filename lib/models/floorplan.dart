@@ -119,6 +119,32 @@ class FloorplanFloor {
     }
     return null;
   }
+
+  /// The first number in the floor's name, e.g. "Floor 3" -> 3.
+  static final RegExp _numberInName = RegExp(r'\d+');
+
+  /// Where this floor sits in the building, used to order the floor picker.
+  ///
+  /// The data carries no explicit level, so this reads one out of [name]:
+  /// numbered floors use their number and basements count downward from the
+  /// ground. Best effort -- a name we can't read lands at 0.
+  int get level {
+    final Match? match = _numberInName.firstMatch(name);
+    final int? number = match == null ? null : int.parse(match[0]!);
+    if (_isBasement) return -(number ?? 1);
+    return number ?? 0;
+  }
+
+  /// Short label for the floor picker, which only has room for a character or
+  /// two: "Floor 3" -> "3", "Basement" -> "B".
+  String get shortName {
+    if (_isBasement) return 'B';
+    final Match? match = _numberInName.firstMatch(name);
+    if (match != null) return match[0]!;
+    return name.isEmpty ? '?' : name[0].toUpperCase();
+  }
+
+  bool get _isBasement => name.toLowerCase().startsWith('b');
 }
 
 /// A straight wall segment in plan pixels.
