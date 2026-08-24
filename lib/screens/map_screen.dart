@@ -306,6 +306,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       Position? pos = await Geolocator.getLastKnownPosition();
       if (pos != null) {
         startLatLng = LatLng(pos.latitude, pos.longitude);
+        _currentCameraPos.value = CameraPosition(
+          target: startLatLng,
+          zoom: 15.0,
+          bearing: 0.0,
+        );
       }
     }
 
@@ -411,11 +416,18 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       accuracy: LocationAccuracy.bestForNavigation,
       distanceFilter: globalGpsUpdateDistanceFilterMeters,
     );
+    var isFirstLocationUpdate = true;
 
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen((
       Position p,
     ) async {
       log("Received location update: ${p.latitude}, ${p.longitude}");
+      if (isFirstLocationUpdate) {
+        isFirstLocationUpdate = false;
+        log("Ignoring first location update");
+        return;
+      }
+
       // Keep this lightweight; do a minimal amount of work here and defer heavy updates.
       if (!mounted || _mapController == null) {
         if (!mounted) log("Ignoring location update: widget not mounted");
@@ -430,23 +442,45 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         log("Ignoring location update: user has interacted with map");
         return;
       }
+      final lastCentered = _lastCenteredPos;
+      
+      final cameraTarget = _currentCameraPos.value?.target;
 
       // Only move camera if user has moved more than threshold to avoid jitter.
       final shouldMove =
-          _lastCenteredPos == null ||
+          lastCentered == null ||
           Geolocator.distanceBetween(
-                _lastCenteredPos!.latitude,
-                _lastCenteredPos!.longitude,
+                lastCentered.latitude,
+                lastCentered.longitude,
                 p.latitude,
                 p.longitude,
               ) >
               globalFollowDistanceThresholdMeters;
-      if (shouldMove) {
+
+      final userMoved = lastCentered == null
+          ? false
+          : cameraTarget != null &&
+                Geolocator.distanceBetween(
+                      lastCentered.latitude,
+                      lastCentered.longitude,
+                      cameraTarget.latitude,
+                      cameraTarget.longitude,
+                    ) ==
+                    0;
+      if (cameraTarget == null) {
+        log("null camera target");
+        return;
+      }
+
+      if (shouldMove && !userMoved) {
         log("Centering map on new location: ${p.latitude}, ${p.longitude}");
       } else {
         log("Ignoring location update: ${p.latitude}, ${p.longitude}");
+        log(
+          "Camera Position: ${cameraTarget.latitude}, ${cameraTarget.longitude}",
+        );
       }
-      if (!shouldMove) return;
+      if (!(shouldMove && !userMoved)) return;
 
       _lastCenteredPos = p;
 
@@ -1255,11 +1289,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (!mounted) return;
     _currentCameraPos.value = position;
     if (!_isProgrammaticCameraMove) {
+      log("noted nonprogrammatic camera move");
       _userHasInteractedWithMap = true;
     }
   }
 
   void _onCameraIdle() async {
+    // The next camera movement is user-controlled unless a new animation starts.
+    _isProgrammaticCameraMove = false;
+
     // check if user location is within viewport bounds
     LatLngBounds? viewportBounds = await _mapController?.getVisibleRegion();
     if (viewportBounds != null) {
