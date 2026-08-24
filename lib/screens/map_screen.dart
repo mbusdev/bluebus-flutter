@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
+import 'dart:developer';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -69,7 +70,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // TODO: Follow-mode state. When true, the map recenters on location updates.
   Position? _lastCenteredPos;
   bool _userHasInteractedWithMap = false;
-  bool _isProgrammaticCameraMove = false;
+  bool _isProgrammaticCameraMove = true;
 
   bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
@@ -414,12 +415,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen((
       Position p,
     ) async {
+      log("Received location update: ${p.latitude}, ${p.longitude}");
       // Keep this lightweight; do a minimal amount of work here and defer heavy updates.
-      if (!mounted || _mapController == null) return;
+      if (!mounted || _mapController == null) {
+        if (!mounted) log("Ignoring location update: widget not mounted");
+        if (_mapController == null)
+          log("Ignoring location update: map controller not initialized");
+        return;
+      }
 
       // If follow mode is disabled, don't recenter automatically.
       if (!_followUser) return;
-      if (_userHasInteractedWithMap) return;
+      if (_userHasInteractedWithMap) {
+        log("Ignoring location update: user has interacted with map");
+        return;
+      }
 
       // Only move camera if user has moved more than threshold to avoid jitter.
       final shouldMove =
@@ -431,7 +441,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 p.longitude,
               ) >
               globalFollowDistanceThresholdMeters;
-
+      if (shouldMove) {
+        log("Centering map on new location: ${p.latitude}, ${p.longitude}");
+      } else {
+        log("Ignoring location update: ${p.latitude}, ${p.longitude}");
+      }
       if (!shouldMove) return;
 
       _lastCenteredPos = p;
@@ -1469,8 +1483,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           ),
         );
       } finally {
-        _isProgrammaticCameraMove = false;
-        _userHasInteractedWithMap = false; // Reset user interaction flag after programmatic move
+        _isProgrammaticCameraMove = true;
+        _userHasInteractedWithMap =
+            false; // Reset user interaction flag after programmatic move
       }
     }
   }
