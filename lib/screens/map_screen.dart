@@ -1470,6 +1470,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       } finally {
         _isProgrammaticCameraMove = false;
+        _userHasInteractedWithMap = false; // Reset user interaction flag after programmatic move
       }
     }
   }

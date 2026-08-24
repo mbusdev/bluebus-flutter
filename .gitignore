@@ -136,3 +136,4 @@ local.properties
 
 # floorplan jsons
 assets/floorplans/*.json
+android/app/src/main/kotlin/com/ishankumar/bluebus/MainActivity.kt
