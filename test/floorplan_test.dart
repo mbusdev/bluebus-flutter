@@ -41,11 +41,36 @@ void main() {
 
     test('parses the asset', () {
       expect(source.floorplan.building, 'Duderstadt');
-      expect(source.floorplan.floors, hasLength(1));
+      expect(source.floorplan.floors, hasLength(2));
+
+      expect(floor.name, 'Floor 1');
       expect(floor.walls, hasLength(919));
       expect(floor.rooms, hasLength(147));
       expect(floor.pois, hasLength(195));
-      expect(floor.outline, hasLength(224));
+      expect(floor.outline, hasLength(84));
+
+      final FloorplanFloor basement = source.floorplan.floors[1];
+      expect(basement.name, 'Basement');
+      expect(basement.walls, hasLength(418));
+      expect(basement.rooms, hasLength(76));
+      expect(basement.pois, hasLength(78));
+      expect(basement.outline, hasLength(33));
+    });
+
+    test('lands every floor on the same building', () {
+      // The floors are drawn in their own pixel spaces at different scales, so
+      // the only thing tying them together is the shared waypoint pair.
+      for (final FloorplanFloor other in source.floorplan.floors) {
+        final FloorplanProjection otherProjection = FloorplanProjection.forFloor(
+          other,
+          waypoint1: source.waypoint1,
+          waypoint2: source.waypoint2,
+        )!;
+
+        for (final LatLng corner in otherProjection.toLatLngList(other.outline)) {
+          expect(_metersBetween(corner, source.waypoint1), lessThan(200));
+        }
+      }
     });
 
     test('projects each waypoint back onto its real world position', () {
@@ -99,6 +124,101 @@ void main() {
         ),
         lessThan(200),
       );
+    });
+  });
+
+  group('Floor ordering', () {
+    FloorplanFloor floorNamed(String name) => FloorplanFloor(
+      id: name,
+      name: name,
+      pxPerMeter: 1.0,
+      width: 0.0,
+      height: 0.0,
+      walls: const [],
+      rooms: const [],
+      pois: const [],
+      outline: const [],
+      nav: const FloorplanNavGraph(nodes: [], edges: []),
+    );
+
+    test('reads a level and a short label out of the floor name', () {
+      expect(floorNamed('Floor 1').level, 1);
+      expect(floorNamed('Floor 1').shortName, '1');
+
+      expect(floorNamed('Floor 12').level, 12);
+      expect(floorNamed('Floor 12').shortName, '12');
+
+      expect(floorNamed('Basement').level, -1);
+      expect(floorNamed('Basement').shortName, 'B');
+
+      expect(floorNamed('B2').level, -2);
+      expect(floorNamed('B2').shortName, 'B');
+    });
+
+    test('falls back to something harmless for an unreadable name', () {
+      expect(floorNamed('Mezzanine').level, 0);
+      expect(floorNamed('Mezzanine').shortName, 'M');
+      expect(floorNamed('').level, 0);
+      expect(floorNamed('').shortName, '?');
+    });
+
+    test('orders the real floors with the basement at the bottom', () async {
+      final GeoreferencedFloorplan source =
+          await FloorplanService.loadDuderstadt();
+      final List<FloorplanFloor> ordered = [...source.floorplan.floors]
+        ..sort((a, b) => b.level.compareTo(a.level));
+
+      expect([for (final f in ordered) f.shortName], ['1', 'B']);
+    });
+  });
+
+  group('FloorplansLayer floor switching', () {
+    late FloorplansLayer layer;
+
+    setUp(() async {
+      layer = FloorplansLayer();
+      await layer.load();
+      // Zoom in far enough that the detailed plan is what's drawn.
+      layer.onCameraMove(
+        const CameraPosition(target: LatLng(42.2912, -83.7167), zoom: 15.0),
+        const CameraPosition(target: LatLng(42.2912, -83.7167), zoom: 18.0),
+      );
+    });
+
+    int segmentsDrawn() => layer.polylines.fold(
+      0,
+      (total, polyline) => total + polyline.points.length - 1,
+    );
+
+    test('starts on the first floor', () {
+      expect(layer.activeFloor!.name, 'Floor 1');
+      expect(segmentsDrawn(), 919);
+    });
+
+    test('swaps the drawn geometry when the basement is picked', () async {
+      await layer.setFloorIndex(1);
+
+      expect(layer.activeFloor!.name, 'Basement');
+      expect(segmentsDrawn(), 418);
+      expect(
+        layer.polygons,
+        hasLength(1 + layer.activeFloor!.rooms.length),
+      );
+      // Nothing from floor 1 should be left behind.
+      expect(
+        layer.polygons.where(
+          (p) => p.polygonId.value.contains('n2b1-f34'),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('switches back to the first floor', () async {
+      await layer.setFloorIndex(1);
+      await layer.setFloorIndex(0);
+
+      expect(layer.activeFloor!.name, 'Floor 1');
+      expect(segmentsDrawn(), 919);
     });
   });
 

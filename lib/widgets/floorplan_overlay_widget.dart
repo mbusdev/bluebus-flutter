@@ -1,4 +1,6 @@
 import 'package:bluebus/constants.dart';
+import 'package:bluebus/models/floorplan.dart';
+import 'package:bluebus/services/map_layers/floorplans_layer.dart';
 import 'package:flutter/material.dart';
 
 
@@ -7,22 +9,44 @@ const FLOOR_SELECTOR_ITEM_HEIGHT = 60.0;
 const FLOOR_SELECTOR_BORDER_RADIUS = 25.0;
 const FLOOR_SELECTED_HIGHLIGHT_MARGIN = 5.0;
 class FloorSelector extends StatefulWidget {
-  // const FloorSelector
+  /// Short labels for the floors, in the order they're drawn -- top to bottom.
+  final List<String> floors;
+
+  /// Which of [floors] starts out selected.
+  final int initialIndex;
+
+  /// Called with the index into [floors] whenever the selection changes.
+  final void Function(int index) onFloorSelected;
+
+  const FloorSelector({
+    super.key,
+    required this.floors,
+    required this.initialIndex,
+    required this.onFloorSelected,
+  });
 
   @override
   State<StatefulWidget> createState() => _FloorSelectorState();
 }
 
 class _FloorSelectorState extends State<FloorSelector> {
-  List<String> floors = ["1", "2", "3"];
-  int selectedIndex = 1;
+  late int selectedIndex = widget.initialIndex;
   double yDragDistance = 0.0;
 
+  List<String> get floors => widget.floors;
+
   void snapToIndex(int index) {
+    // A fling can overshoot the ends of the list, so land on the nearest floor
+    // that actually exists.
+    final int clamped = index.clamp(0, floors.length - 1);
+    final bool changed = clamped != selectedIndex;
+
     setState(() {
       yDragDistance = 0;
-      selectedIndex = index;
+      selectedIndex = clamped;
     });
+
+    if (changed) widget.onFloorSelected(clamped);
   }
   
 
@@ -143,8 +167,13 @@ class FloorplanOverlay extends StatefulWidget {
   // const FloorplanOverlauy
   Function? onClosed;
 
+  /// The map layer this overlay drives. Picking a floor here is what swaps the
+  /// geometry drawn on the map underneath.
+  final FloorplansLayer floorplansLayer;
+
   FloorplanOverlay({
-    required this.onClosed
+    required this.onClosed,
+    required this.floorplansLayer
   });
 
   @override
@@ -152,7 +181,52 @@ class FloorplanOverlay extends StatefulWidget {
 }
 
 class _FloorplanOverlayState extends State<FloorplanOverlay> {
-  List<String> floors = ["1", "2", "3"]; // TODO: Change type as necessary
+  /// The building's floors ordered the way the selector shows them: the top of
+  /// the building at the top of the list. Empty until the floorplan loads.
+  List<FloorplanFloor> floors = const [];
+  int selectedIndex = 0;
+  bool loadFinished = false;
+
+  FloorplansLayer get layer => widget.floorplansLayer;
+
+  @override
+  void initState() {
+    super.initState();
+    loadFloors();
+  }
+
+  /// The map screen kicks the load off at startup, so this has almost always
+  /// finished already -- awaiting it just covers opening the overlay early.
+  Future<void> loadFloors() async {
+    await layer.load();
+    if (!mounted) return;
+
+    final List<FloorplanFloor> ordered = [...layer.floors]
+      ..sort((a, b) => b.level.compareTo(a.level));
+    final FloorplanFloor? active = layer.activeFloor;
+    final int activeIndex = active == null ? -1 : ordered.indexOf(active);
+
+    setState(() {
+      floors = ordered;
+      selectedIndex = activeIndex < 0 ? 0 : activeIndex;
+      loadFinished = true;
+    });
+  }
+
+  void selectFloor(int index) {
+    setState(() {
+      selectedIndex = index;
+    });
+    // The selector works in display order, the layer in the data's own order.
+    layer.setFloorIndex(layer.floors.indexOf(floors[index]));
+  }
+
+  String get title {
+    if (floors.isEmpty) {
+      return loadFinished ? "Floorplan unavailable" : "Loading floorplan...";
+    }
+    return "${layer.floorplan?.building ?? ''} ${floors[selectedIndex].name}".trim();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +236,9 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: maizeBusBlue,
+            // Transparent so the floorplan the map is drawing underneath shows
+            // through -- this overlay is just the chrome around it.
+            color: Colors.transparent,
             // gradient: LinearGradient(
             //   begin: Alignment.topLeft,
             //   end: Alignment(0.8, 1),
@@ -207,7 +283,7 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> {
                         child: Padding(
                           padding: EdgeInsetsGeometry.only(left: 20, right: 20, top: 7, bottom: 7),
                           child: Text(
-                            "Duderstadt Floor 400",
+                            title,
                             style: TextStyle(color: Colors.black,),
                             textAlign: TextAlign.center,
                           ),
@@ -228,7 +304,13 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> {
                   children: [
 
 
-                    FloorSelector(),
+                    // Nothing to pick between until the floorplan has loaded.
+                    if (floors.isNotEmpty)
+                      FloorSelector(
+                        floors: [for (final floor in floors) floor.shortName],
+                        initialIndex: selectedIndex,
+                        onFloorSelected: selectFloor,
+                      ),
 
 
                     // IconButton.filled(
