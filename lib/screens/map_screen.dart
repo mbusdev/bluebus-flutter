@@ -69,7 +69,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   StreamSubscription<Position>? _posSub;
   // TODO: Follow-mode state. When true, the map recenters on location updates.
   Position? _lastCenteredPos;
-  bool _userHasInteractedWithMap = false;
+  final ValueNotifier<bool> _userHasInteractedWithMap =
+      ValueNotifier<bool>(false);
   bool _isProgrammaticCameraMove = true;
 
   bool _followUser = true;
@@ -82,8 +83,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   final ValueNotifier<CameraPosition?> _currentCameraPos =
       ValueNotifier<CameraPosition?>(null);
-    final ValueNotifier<Position?> _currentPhonePosition =
-      ValueNotifier<Position?>(null);
   bool? _userLocVisible;
   static const _defaultCenter = LatLng(42.276463, -83.7374598);
   static LatLng startLatLng = _defaultCenter;
@@ -307,7 +306,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // permission = await Geolocator.requestPermission();
       Position? pos = await Geolocator.getLastKnownPosition();
       if (pos != null) {
-        _currentPhonePosition.value = pos;
         startLatLng = LatLng(pos.latitude, pos.longitude);
         _currentCameraPos.value = CameraPosition(
           target: startLatLng,
@@ -425,7 +423,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       Position p,
     ) async {
       log("Received location update: ${p.latitude}, ${p.longitude}");
-      _currentPhonePosition.value = p;
       if (isFirstLocationUpdate) {
         isFirstLocationUpdate = false;
         log("Ignoring first location update");
@@ -442,7 +439,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
       // If follow mode is disabled, don't recenter automatically.
       if (!_followUser) return;
-      if (_userHasInteractedWithMap) {
+      if (_userHasInteractedWithMap.value) {
         log("Ignoring location update: user has interacted with map");
         return;
       }
@@ -510,7 +507,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (!enabled) return;
       // When enabling follow mode, reset last-centered so next position recenters immediately.
       _lastCenteredPos = null;
-      _userHasInteractedWithMap = false;
+      _userHasInteractedWithMap.value = false;
     });
   }
 
@@ -643,7 +640,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void dispose() {
     _loadingMessageNotifier.dispose();
     _currentCameraPos.dispose();
-    _currentPhonePosition.dispose();
+    _userHasInteractedWithMap.dispose();
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
@@ -1295,8 +1292,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _currentCameraPos.value = position;
     if (!_isProgrammaticCameraMove) {
       log("noted nonprogrammatic camera move");
-      _userHasInteractedWithMap = true;
+      _userHasInteractedWithMap.value = true;
     }
+    
   }
 
   void _onCameraIdle() async {
@@ -1527,7 +1525,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         );
       } finally {
         _isProgrammaticCameraMove = true;
-        _userHasInteractedWithMap =
+        _userHasInteractedWithMap.value =
             false; // Reset user interaction flag after programmatic move
       }
     }
@@ -1999,74 +1997,57 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                 ),
 
                                                 // location button
-                                                AnimatedSwitcher(
-                                                  duration: const Duration(
-                                                    milliseconds: 250,
-                                                  ),
-                                                  child:
-                                                      !(_userLocVisible ==
-                                                              null ||
-                                                          _userLocVisible!)
-                                                      ?
-                                                        // if not needed, sized box
-                                                        SizedBox.shrink()
-                                                      :
-                                                        // otherwise, normal button
-                                                        DecoratedBox(
-                                                          decoration: BoxDecoration(
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonShadow,
-                                                                ).withAlpha(50),
-                                                                blurRadius: 4,
-                                                                offset: Offset(
-                                                                  0,
-                                                                  2,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  25,
-                                                                ),
-                                                          ),
-                                                          child: FloatingActionButton.small(
-                                                            onPressed: () {
-                                                              _setFollowMode(
-                                                                true,
-                                                              );
-                                                              _centerOnLocation(
-                                                                true,
-                                                              );
-                                                            },
-                                                            heroTag:
-                                                                'location_fab',
-                                                            backgroundColor:
-                                                                getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonSecondary,
-                                                                ),
-                                                            elevation: 0,
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    56,
+                                                ValueListenableBuilder<bool>(
+                                                  valueListenable:
+                                                      _userHasInteractedWithMap,
+                                                  builder: (context, userMoved, child) {
+                                                    return AnimatedSwitcher(
+                                                      duration: const Duration(milliseconds: 250),
+                                                      child: userMoved &&
+                                                              (_userLocVisible == null ||
+                                                                  _userLocVisible!)
+                                                          ? DecoratedBox(
+                                                              decoration: BoxDecoration(
+                                                                boxShadow: [
+                                                                  BoxShadow(
+                                                                    color: getColor(
+                                                                      context,
+                                                                      ColorType.mapButtonShadow,
+                                                                    ).withAlpha(50),
+                                                                    blurRadius: 4,
+                                                                    offset: Offset(0, 2),
                                                                   ),
-                                                            ),
-                                                            child: Icon(
-                                                              Icons.my_location,
-                                                              color: getColor(
-                                                                context,
-                                                                ColorType
-                                                                    .mapButtonPrimary,
+                                                                ],
+                                                                borderRadius:
+                                                                    BorderRadius.circular(25),
                                                               ),
-                                                            ),
-                                                          ),
-                                                        ),
+                                                              child: FloatingActionButton.small(
+                                                                onPressed: () {
+                                                                  _setFollowMode(true);
+                                                                  _centerOnLocation(true);
+                                                                },
+                                                                heroTag: 'location_fab',
+                                                                backgroundColor: getColor(
+                                                                  context,
+                                                                  ColorType.mapButtonSecondary,
+                                                                ),
+                                                                elevation: 0,
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(56),
+                                                                ),
+                                                                child: Icon(
+                                                                  Icons.my_location,
+                                                                  color: getColor(
+                                                                    context,
+                                                                    ColorType.mapButtonPrimary,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            )
+                                                          : SizedBox.shrink(),
+                                                    );
+                                                  },
                                                 ),
                                               ],
                                             ),
