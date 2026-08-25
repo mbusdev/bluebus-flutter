@@ -82,6 +82,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   final ValueNotifier<CameraPosition?> _currentCameraPos =
       ValueNotifier<CameraPosition?>(null);
+    final ValueNotifier<Position?> _currentPhonePosition =
+      ValueNotifier<Position?>(null);
   bool? _userLocVisible;
   static const _defaultCenter = LatLng(42.276463, -83.7374598);
   static LatLng startLatLng = _defaultCenter;
@@ -305,6 +307,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // permission = await Geolocator.requestPermission();
       Position? pos = await Geolocator.getLastKnownPosition();
       if (pos != null) {
+        _currentPhonePosition.value = pos;
         startLatLng = LatLng(pos.latitude, pos.longitude);
         _currentCameraPos.value = CameraPosition(
           target: startLatLng,
@@ -422,6 +425,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       Position p,
     ) async {
       log("Received location update: ${p.latitude}, ${p.longitude}");
+      _currentPhonePosition.value = p;
       if (isFirstLocationUpdate) {
         isFirstLocationUpdate = false;
         log("Ignoring first location update");
@@ -639,6 +643,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void dispose() {
     _loadingMessageNotifier.dispose();
     _currentCameraPos.dispose();
+    _currentPhonePosition.dispose();
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
@@ -1928,13 +1933,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                 // face north button is only visible when not facing north
                                                 Visibility(
                                                   visible:
-                                                      _currentCameraPos.value !=
-                                                          null &&
-                                                      _currentCameraPos
-                                                              .value!
-                                                              .bearing !=
-                                                          0,
-                                                  child: DecoratedBox(
+                                                    _currentCameraPos.value !=
+                                                      null &&
+                                                    _currentCameraPos
+                                                        .value!
+                                                        .bearing !=
+                                                      0,
+                                                      child: DecoratedBox(
                                                     decoration: BoxDecoration(
                                                       boxShadow: [
                                                         BoxShadow(
