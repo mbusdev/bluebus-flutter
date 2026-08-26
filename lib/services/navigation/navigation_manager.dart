@@ -89,9 +89,24 @@ sealed class NavigationStage {
     return false;
   }
 
-  final _eventController = StreamController<StageEvent>();
+  // Broadcast so the NavigationManager can unsubscribe and resubscribe to the
+  // same stage (e.g. when the user pages backwards) without the stream
+  // complaining that it has already been listened to.
+  final _eventController = StreamController<StageEvent>.broadcast();
 
-  Stream<StageEvent> get events => _eventController.stream;
+  Stream<StageEvent> get events => _eventController.stream; // The NavigationManager does yourStage.events to listen in
+
+  /// How a stage talks back to the NavigationManager. Call this from your
+  /// stage (usually from receiveLocationUpdate) when something happens:
+  ///    emit(StageComplete())                        // Your stage is done, move on to the next one
+  ///    emit(StageReroute(RerouteReason.wrongBus))   // Something went wrong--this is what pops the "Oops" dialog
+  ///    emit(StageReroute(RerouteReason.walkPathChanged))
+  /// Note to all frontend devs: Feel free to add additional RerouteReasons if you need them!
+  @protected
+  void emit(StageEvent event) {
+    if (_eventController.isClosed) return;
+    _eventController.add(event);
+  }
 
   void dispose() {
     _eventController.close();
@@ -104,7 +119,7 @@ sealed class NavigationStage {
   void receiveLocationUpdate(LatLng newLocation) {
     // Do whatever you need to with the current location.
     // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
-    //    _controller.add(StageComplete()) // If the user has reached the end!
+    //    emit(StageComplete()) // If the user has reached the end!
   }
 
 }
