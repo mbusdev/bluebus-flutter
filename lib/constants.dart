@@ -1,3 +1,5 @@
+import 'package:bluebus/backend/backend/backend_client.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -42,6 +44,8 @@ const String BACKEND_URL = String.fromEnvironment(
 const String backendOpenApiUrl = String.fromEnvironment(
   'BACKEND_OPENAPI_URL'
 );
+
+final BackendClient backendClient = BackendClient(Dio(BaseOptions(baseUrl: backendOpenApiUrl)));
 
 List<Map<String, String>> globalAvailableRoutes = [];
 

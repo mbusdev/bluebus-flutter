@@ -94,7 +94,7 @@ class JourneyLayer extends CompositeMapLayer {
             markerId: MarkerId('journey_bus_${bus.id}'),
             consumeTapEvents: true,
             position: bus.position,
-            icon: busIcon!,
+            icon: busIcon,
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5),
             onTap: () => _showBusSheet(bus.id),
@@ -138,20 +138,19 @@ class JourneyLayer extends CompositeMapLayer {
   }
 
   Future<void> addBusLegMarkersAndPolylines(
-    Leg leg,
+    BusLeg leg,
     Journey journey,
     int legIndex,
   ) async {
     // This accepts a bus leg that goes from, e.g. CCTC (C251) through several stops to a destination, e.g. Stop C251
     // and adds the necessary markers and polylines to the markers and polylines Sets
 
-    if (leg.rt != null) activeJourneyRoutes.add(leg.rt!);
-    if (leg.trip != null) activeJourneyBusIds.add(leg.trip!.vid);
+    activeJourneyRoutes.add(leg.rt);
+    final vid = leg.trip.vid;
+    if (vid != null) activeJourneyBusIds.add(vid);
 
     final rt = leg.rt;
-    final line = rt != null
-      ? determineRouteOfBusLeg(routesCache, rt, leg.originID, leg.destinationID)
-      : null;
+    final line = determineRouteOfBusLeg(routesCache, rt, leg.originID, leg.destinationID);
 
     // debugPrint("Tracing path from ${leg.originID} to ${leg.destinationID}");
 
@@ -175,7 +174,7 @@ class JourneyLayer extends CompositeMapLayer {
           jointType: JointType.round,
           polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
           points: [startLatLng, endLatLng],
-          color: RouteColorService.getRouteColor(leg.rt!),
+          color: RouteColorService.getRouteColor(leg.rt),
           width: 6,
         );
         polylines.add(polyline);
@@ -186,14 +185,14 @@ class JourneyLayer extends CompositeMapLayer {
           jointType: JointType.round,
           polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
           points: segment,
-          color: RouteColorService.getRouteColor(leg.rt!),
+          color: RouteColorService.getRouteColor(leg.rt),
           width: 6,
         );
         polylines.add(polyline);
       }
 
       // add stop markers at endpoints of the segment (boarding/getting off)
-      if ((segment?.first != null || startLatLng != null)) {
+      if ((segment?.first != null)) {
         // Making sure the marker has a valid location
 
         // BitmapDescriptor iconBitmap = await RouteIcon.small(
@@ -211,13 +210,13 @@ class JourneyLayer extends CompositeMapLayer {
                 _getOn ??
                 // iconBitmap ??
                 BitmapDescriptor.defaultMarkerWithHue(
-                  colorToHue(RouteColorService.getRouteColor(leg.rt!)),
+                  colorToHue(RouteColorService.getRouteColor(leg.rt)),
                 ),
             anchor: Offset(0.5, 0.5),
           ),
         );
       }
-      if ((segment?.last != null || endLatLng != null)) {
+      if ((segment?.last != null)) {
         // Making sure the marker has a valid location
         markers.add(
           Marker(
@@ -227,7 +226,7 @@ class JourneyLayer extends CompositeMapLayer {
             icon:
                 _getOff ??
                 BitmapDescriptor.defaultMarkerWithHue(
-                  colorToHue(RouteColorService.getRouteColor(leg.rt!)),
+                  colorToHue(RouteColorService.getRouteColor(leg.rt)),
                 ),
           ),
         );
@@ -236,7 +235,7 @@ class JourneyLayer extends CompositeMapLayer {
   }
 
   void addWalkingLegMarkersAndPolylines(
-    Leg leg,
+    WalkingLeg leg,
     Journey journey,
     int legIndex,
   ) {
@@ -253,9 +252,9 @@ class JourneyLayer extends CompositeMapLayer {
       startLatLng = getLatLongFromStopID(prevLeg.destinationID);
     }
 
-    List<LatLng> pathCoords = leg.pathCoords ?? [];
+    List<LatLng> pathCoords = leg.pathCoords;
 
-    if (leg.pathCoords == null) {
+    if (leg.pathCoords.length < 2) {
       if (startLatLng != null && endLatLng != null) {
         // If there's no path available, draw a straight line if we can
         pathCoords = [startLatLng, endLatLng];
@@ -318,27 +317,22 @@ class JourneyLayer extends CompositeMapLayer {
     activeJourneyBusIds.clear();
     activeJourneyRoutes.clear();
 
-    final allPoints = <LatLng>[];
-
     // First, analyze the journey to find which legs are bus and which are walking
 
     for (int legIndex = 0; legIndex < journey.legs.length; legIndex++) {
       final leg = journey.legs[legIndex];
 
       if (leg.destinationID == "VIRTUAL_DESTINATION" &&
-          leg.pathCoords != null &&
-          leg.pathCoords!.isNotEmpty) {
-        addRouteEndMarker(leg.pathCoords!.last, journey);
+          leg is WalkingLeg &&
+          leg.pathCoords.isNotEmpty) {
+        addRouteEndMarker(leg.pathCoords.last, journey);
       }
 
-      // Determine if this is a walking or bus leg - walking legs don't have rt or trip
-      final bool isBusLeg = leg.rt != null && leg.trip != null;
-      // Determine leg type for processing
-
-      if (isBusLeg) {
-        addBusLegMarkersAndPolylines(leg, journey, legIndex);
-      } else {
-        addWalkingLegMarkersAndPolylines(leg, journey, legIndex);
+      switch (leg) {
+        case BusLeg():
+          addBusLegMarkersAndPolylines(leg, journey, legIndex);
+        case WalkingLeg():
+          addWalkingLegMarkersAndPolylines(leg, journey, legIndex);
       }
     }
 

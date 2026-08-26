@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:bluebus/backend/backend/backend_client.dart';
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
@@ -9,12 +8,11 @@ import 'services/route_color_service.dart';
 
 class BlueBusApi {
   static const String baseUrl = BACKEND_URL;
-  static final BackendClient _client = BackendClient(Dio(BaseOptions(baseUrl: backendOpenApiUrl)));
 
   // Fetch all routes and their polylines/stops
   static Future<List<BusRouteLine>> fetchRoutes(Function(String route, String error) onError) async {
     try {
-      final routes = await _client.getApiV4AllMbusRoutes();
+      final routes = await backendClient.getApiV4AllMbusRoutes();
       await RouteColorService.initialize();
 
       return routes
