@@ -61,35 +61,6 @@ String formatSecondsToTimeNoAMPM(int utcSeconds) {
 }
 
 
-// helper class to display legs with expanded property
-class LegToDisplay {
-  final String origin;
-  final String destination;
-  final double duration;
-  final int startTime;
-  final int endTime;
-  final List<StopTime>? stopTimes;
-  final Trip? trip;
-  final String? rt;
-  final String originID;
-  final String destinationID;
-
-  bool expanded = false;
-
-  LegToDisplay({
-    required this.origin,
-    required this.destination,
-    required this.duration,
-    required this.startTime,
-    required this.endTime,
-    this.stopTimes,
-    this.trip,
-    this.rt,
-    required this.originID,
-    required this.destinationID,
-  });
-}
-
 class JourneyResultsWidget extends StatefulWidget {
   final List<Journey> journeys;
   final String start;
@@ -98,9 +69,10 @@ class JourneyResultsWidget extends StatefulWidget {
   final Map<String, double>? dest;
   final void Function(Location, bool) onChangeSelection;
   final void Function(Journey)? onSelectJourney;
+  Function(Journey)? onStartNavigation;
   final ScrollController? scrollController;
 
-  const JourneyResultsWidget({
+  JourneyResultsWidget({
     super.key,
     required this.journeys,
     required this.start,
@@ -109,6 +81,7 @@ class JourneyResultsWidget extends StatefulWidget {
     required this.dest,
     required this.onChangeSelection,
     this.onSelectJourney,
+    this.onStartNavigation,
     required this.scrollController
   });
 
@@ -238,7 +211,10 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(left: 16, right: 16),
-                    child: JourneyBody(journey: journey),
+                    child: JourneyBody(
+                      journey: journey,
+                      onStartNavigation: widget.onStartNavigation,
+                    ),
                   ),
                 ],
               ),
@@ -423,33 +399,18 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
 
 class JourneyBody extends StatefulWidget {
   final Journey journey;
-  const JourneyBody({super.key, required this.journey});
+  Function(Journey)? onStartNavigation = (Journey _) {};
+  JourneyBody({
+    super.key, 
+    required this.journey, 
+    this.onStartNavigation
+  });
 
   @override
   State<JourneyBody> createState() => _JourneyBodyState();
 }
 
 class _JourneyBodyState extends State<JourneyBody> {
-  late List<LegToDisplay> legsToDisplay;
-  void initState() {
-    super.initState();
-    // Initialize the list of legs from the journey prop
-    legsToDisplay = widget.journey.legs.map((leg) {
-      return LegToDisplay(
-        origin: leg.origin,
-        destination: leg.destination,
-        duration: leg.duration,
-        startTime: leg.startTime,
-        endTime: leg.endTime,
-        stopTimes: leg.stopTimes,
-        trip: leg.trip,
-        rt: leg.rt,
-        originID: leg.originID,
-        destinationID: leg.destinationID,
-      );
-    }).toList();
-  }
-
   //function to get intermediary stops between start and end
   (bool, List<(String,int)>) intermediaryBusStops(
     String orgID,
@@ -511,8 +472,8 @@ class _JourneyBodyState extends State<JourneyBody> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // map each leg
-        ...legsToDisplay.map((leg) {
-          int index = legsToDisplay.indexOf(leg);
+        ...widget.journey.legs.map((leg) {
+          int index = widget.journey.legs.indexOf(leg);
 
           // walk or bus?
           if (leg.rt == null) {
@@ -617,6 +578,35 @@ class _JourneyBodyState extends State<JourneyBody> {
             );
           }
         }),
+
+        Row(
+          children: [
+            Spacer(),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: getColor(context, ColorType.mapButtonPrimary),
+                foregroundColor: getColor(context, ColorType.mapButtonIcon),
+
+              ),
+              onPressed: () {
+                debugPrint("onStartNavigation call!");
+                widget.onStartNavigation?.call(widget.journey);
+              },
+              icon: Icon(Icons.assistant_navigation),
+              // child: Text("Start navigation"),
+              label: Text(
+                "Start navigation",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+            ),
+          ],
+        ),
+        
+
+        const SizedBox(height: 10)
       ],
     );
   }

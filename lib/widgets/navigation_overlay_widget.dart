@@ -2,10 +2,12 @@
 import 'dart:math';
 
 import 'package:bluebus/constants.dart';
+import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/dialog.dart';
+import 'package:bluebus/widgets/floating_draggable_sheet.dart';
 import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -33,14 +35,11 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   TimelineInfo timelineInfo = TimelineInfo();
 
   void updateTimeline() { // Call this after all the stages are loaded (or stages change)
-    // debugPrint("***** Updating timeline!");
     timelineInfo = widget.navigationManager.getTimeline();
-    // debugPrint("***** Timeline now has ${timelineSteps.length} things!");
   }
 
   @override
   void initState() {
-    // debugPrint("HELLO YELLO WE ARE IN IN/ITSTATE");
     super.initState();
     updateTimeline();
     widget.navigationManager.registerOverlay(this); // does not set to null, see the navigation manager
@@ -181,46 +180,40 @@ class _NavigationOverlayState extends State<NavigationOverlay>
           padding: EdgeInsetsGeometry.only(left: 10, right: 10, top: 70),
           child: Column( // Core column for vertical layout
             children: [
-              MaterialButton(
-                color: Colors.blue.shade900,
-                child: Text(planJourneyInProgress ? "Loading..." : "Init stages from /plan-journey"),
-                onPressed: () async {
-                  setState(() {
-                    planJourneyInProgress = true;
-                  });
-                  try {
-                    // Try both forwards and reverse directions
-                    final fut1 = JourneyRepository.planJourney(
-                      originLat: 42.274014,
-                      originLon: -83.753664,
-                      destLat: 42.297493,
-                      destLon: -83.710782,
-                    );
-                    final fut2 = JourneyRepository.planJourney(
-                      originLat: 42.297493,
-                      originLon: -83.710782,
-                      destLat: 42.274014,
-                      destLon: -83.753664,
-                    );
-                    final journeys = (await Future.wait([fut1, fut2]))
-                      .expand((x) => x)
-                      .toList();
+              // MaterialButton(
+              //   color: Colors.blue.shade900,
+              //   child: Text(planJourneyInProgress ? "Loading..." : "Init stages from /plan-journey"),
+              //   onPressed: () async {
+              //     setState(() {
+              //       planJourneyInProgress = true;
+              //     });
+              //     try {
+              //       // Try both forwards and reverse directions
+              //       final fut1 = JourneyRepository.planJourney(
+              //         originLat: 42.274014,
+              //         originLon: -83.753664,
+              //         destLat: 42.297493,
+              //         destLon: -83.710782,
+              //       );
+              //       final fut2 = JourneyRepository.planJourney(
+              //         originLat: 42.297493,
+              //         originLon: -83.710782,
+              //         destLat: 42.274014,
+              //         destLon: -83.753664,
+              //       );
+              //       final journeys = (await Future.wait([fut1, fut2]))
+              //         .expand((x) => x)
+              //         .toList();
 
-                    // Pick a random journey
-                    widget.navigationManager.initFromJourney(journeys[Random().nextInt(journeys.length)]);
-                  } finally {
-                    setState(() {
-                      planJourneyInProgress = false;
-                    });
-                  }
-                }
-              ),
-
-              MaterialButton(
-                color: Colors.red.shade900,
-                child: Text("Show Oops dialog"),
-                onPressed: () => widget.navigationManager.showOopsDialog(),
-              ),
+              //       // Pick a random journey
+              //       widget.navigationManager.initFromJourney(journeys[Random().nextInt(journeys.length)]);
+              //     } finally {
+              //       setState(() {
+              //         planJourneyInProgress = false;
+              //       });
+              //     }
+              //   }
+              // ),
 
 
               Row( // Top header row
@@ -394,7 +387,11 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 ],
               ),
             
-
+              MaterialButton(
+                color: Colors.red.shade900,
+                child: Text("Show Oops dialog"),
+                onPressed: () => widget.navigationManager.showOopsDialog(),
+              ),
               // Expanded(child: SizedBox.expand()),
               // SizedBox.expand(),
               // const Spacer(),
@@ -424,19 +421,20 @@ class _NavigationOverlayState extends State<NavigationOverlay>
         // TODO: Add a scrim that fades in when you drag up on the progress bar so that the background is darkened behind the DraggableScrollableSheet
         
         
-        DraggableScrollableSheet(
-          initialChildSize: 0.12, // TODO: Compute the height of the progress bar dynamically instead of using 12% of screen height as a hardcoded number
-          minChildSize: 0.12,
-          maxChildSize: 0.85,
-          snap: true,
+        FloatingDraggableSheet(
+          collapsedSize: 0.14, // TODO: Compute the height of the progress bar dynamically instead of using 14% of screen height as a hardcoded number
+          expandedSize: 0.85,
+          screenCornerRadius: globalScreenBottomRadius,
+          color: getColor(context, ColorType.infoCardColor),
+          boxShadow: [
+            BoxShadow(
+              color: getColor(context, ColorType.mapButtonShadow),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
           builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: getColor(context, ColorType.infoCardColor),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
-                boxShadow: [ /* TODO: Add a nice box shadow */ ]
-              ),
-              child: ListView(
+            return ListView(
                 controller: scrollController,
                 padding: EdgeInsets.all(15),
                 children: [
@@ -470,8 +468,8 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
-                        width: 50,
-                        height: 4,
+                        width: 60,
+                        height: 5,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: Colors.grey.shade400, // TODO: Make this a real color in constants.dart
@@ -491,25 +489,32 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                         LayoutBuilder(
                           builder: (context, constraints) {
 
-                            const double dotSize = 24.0;
-                            final double dotLeft = (constraints.maxWidth * this.timelineInfo.activePositionPercentage) - (dotSize / 2);
+                            const double dotSize = 30.0;
+                            const double barHeight = 15.0;
+                            const double topPadding = dotSize;
+                            const double bottomPadding = 10.0; // Space between the bar and the ETA text below it
+                            final double progressWidth = constraints.maxWidth * this.timelineInfo.activePositionPercentage;
+                            final double dotLeft = progressWidth - (dotSize / 2);
+                            // Centers the dot on the bar independently of the paddings above/below it
+                            const double dotTop = topPadding + (barHeight / 2) - (dotSize / 2);
 
 
                             return Stack(
                               clipBehavior: Clip.none,
-                              alignment: Alignment.center,
                               children: [
                                 Padding(
-                                  padding: EdgeInsets.only(top: dotSize, bottom: dotSize),
+                                  padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: Row(
+                                    child: Stack(
+                                      children: [
+                                        Row(
                                   
                                     children: this.timelineInfo.timelineSteps.map((item) {
                                         return Flexible(
                                           flex: item.estimated_time.floor(), // Proportionally sizes to each item's time
                                           child: Container(
-                                            height: 10,
+                                            height: barHeight,
                                             decoration: BoxDecoration(color: item.color),
                                           )
                                         );
@@ -535,6 +540,17 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                                       //   decoration: BoxDecoration(color: Colors.green),
                                       // ),
                                     ),
+                                        Positioned( // Progress fill covering everything before the dot
+                                          left: 0,
+                                          top: 0,
+                                          bottom: 0,
+                                          width: progressWidth,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(color: maizeBusBlue),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               
@@ -550,21 +566,16 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                             
                               Positioned( // TODO: Make this thing animate smoooooothly!
                                 left: dotLeft,
-                                // top: -dotSize / 4,
-                                // top: -dotSize,
+                                top: dotTop,
                                 child: Container(
                                   width: dotSize, 
                                   height: dotSize, 
                                   decoration: BoxDecoration(
-                                    color: Color(0xFF4286F5), 
+                                    color: Colors.white, 
                                     border: Border.all(
-                                      color: Colors.white,
-                                      // color: Color(0x666896DD),
-                                      width: 2.0
+                                      color: maizeBusBlue,
+                                      width: 5
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(color: Color(0x666896DD), spreadRadius: 16)
-                                    ],
                                     shape: BoxShape.circle
                                   ),
                                 ),
@@ -575,12 +586,13 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                       ),
                       Padding(
                         padding: EdgeInsets.only(left: 10, right: 10, bottom: 5),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text("Arrive in 10 mins"),
-                            Text("ETA 9:35PM")
-                          ],
+                        child: Text(
+                          "eta 3:21 ● 21 min",
+                          style: TextStyle(
+                            color: maizeBusBlue,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18
+                          ),
                         )
                       )
                     ]
@@ -590,7 +602,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                   SizedBox.square(dimension: 20.0,),
           
                   Column(
-                    
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: widget.navigationManager.stageList.asMap().entries.map((entry) {
 
                       int index = entry.key;
@@ -599,11 +611,12 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                       bool shouldRoundTopCorners = (index == 0) || stage.hasRoundedCorners();
 
                       return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           
                           Row(
                               children: [
-                                Padding(padding: EdgeInsets.only(left: 20)),
+                                Padding(padding: EdgeInsets.only(left: 10)),
                                 Container( // Gray background behind colorful line segment
                                   width: 30,
                                   height: 50,
@@ -764,7 +777,6 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                     
               // )
                 ]
-              )
             );
           }
         ),

@@ -133,3 +133,7 @@ app.*.symbols
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
 local.properties
+
+# floorplan jsons
+assets/floorplans/*.json
+android/app/src/main/kotlin/com/ishankumar/bluebus/MainActivity.kt

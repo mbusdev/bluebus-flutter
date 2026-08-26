@@ -550,6 +550,8 @@ class Walking extends NavigationStage {
     const LatLng(42.2775215703816,  -83.73809993417933),
     const LatLng(42.278481544159916, -83.73811396072821),
   ];
+  Leg? leg;
+  Color color = Colors.black;
 
   LatLng? currWalkingPos = const LatLng(42.27831772684626, -83.73599054149456); //near cctc (replace w user's location)
 
@@ -576,6 +578,10 @@ class Walking extends NavigationStage {
     return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
+  void setColor(Color newColor) {
+    color = newColor; // Flutter won't let us call getColor(context, ...) because we can only get context from inside a widget. Thus, we have to thread it through all the way from map_screen.dart. Great.
+  }
+
   //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
   @override
   bool receiveLocationUpdate(LatLng newLocation) {
@@ -590,8 +596,7 @@ class Walking extends NavigationStage {
     // if it has reached new waypoint, update index, length left, and percent complete
     _nextIndex++;
 
-    // TODO:
-    // update length and percent_complete here
+    // TODO: update length and percent_complete here
 
     return true;
   }
@@ -659,21 +664,45 @@ class Walking extends NavigationStage {
 
   // Initializes the Walking stage given a Leg.
   @override
-  void initWithLeg(Leg leg) {
-    final path = leg.pathCoords;
+  void initWithLeg(Leg leg_in) {
+    final path = leg_in.pathCoords;
+    leg = leg_in;
 
     if (path == null || path.isEmpty) {
       throw ArgumentError(
-        'Walking leg from ${leg.origin} to ${leg.destination} has no path.',
+        'Walking leg from ${leg_in.origin} to ${leg_in.destination} has no path.',
       );
     }
 
     points = List<LatLng>.unmodifiable(path);
     _nextIndex = 0;
 
-    length = leg.duration;
+    length = leg_in.duration;
     percent_complete = 0.0;
   }
+
+  @override
+  List<Polyline> getPolylines() {
+    return [
+      Polyline(
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
+        polylineId: PolylineId('navigation_walking_${leg?.hashCode ?? "00"}'),
+        points: points,
+        color: color, // Walk line color
+        width: 8, // line width
+        patterns: [
+          PatternItem.dot,
+          // PatternItem.dash(30), // Longer dashes
+          PatternItem.gap(15), // Longer gaps
+        ],
+      )
+    ];
+
+  }
+
+  
 }
 
 
@@ -986,17 +1015,16 @@ class NavigationManager {
     _activateStageSub(stageList[currentStage]);
   }
 
-  void initFromJourney(Journey journey) {
+  void initFromJourney(Journey journey, Color walkingLineColor) {
 
     this.stageList.clear();
 
     for (Leg leg in journey.legs) {
-      // if (leg.")
-      debugPrint("Adding ${leg.origin}->${leg.destination} leg");
       // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
 
       if (leg.mode == LegMode.walk) {
         Walking walkingStage = Walking();
+        walkingStage.setColor(walkingLineColor); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
         walkingStage.initWithLeg(leg);
         this.stageList.add(walkingStage);
       } else if (leg.mode == LegMode.bus) {

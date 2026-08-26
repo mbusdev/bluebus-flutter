@@ -157,7 +157,7 @@ const Map<ColorType, Color> lightColors = {
   ColorType.secondaryButtonText: maizeBusBlue,
 
   ColorType.mapWalkingLine: Color.fromARGB(255, 7, 55, 97),
-  ColorType.navigationStepsGray: Color.fromARGB(255, 217, 217, 217)
+  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237)
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -198,7 +198,7 @@ const Map<ColorType, Color> darkColors = {
   ColorType.secondaryButtonText: Color.fromARGB(255, 49, 129, 199),
 
   ColorType.mapWalkingLine: Color.fromARGB(255, 178, 219, 255),
-  ColorType.navigationStepsGray: Color.fromARGB(255, 93, 93, 93)
+  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237)
 };
 
 // returns true if the current theme is dark mode

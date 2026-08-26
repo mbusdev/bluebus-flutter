@@ -1,9 +1,14 @@
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
+import 'package:bluebus/utils/rebuild_watchdog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+/// Zoom the map opens at. Layers that switch behaviour on zoom use this as
+/// their starting point, since onCameraMove only fires once the user moves.
+const double INITIAL_MAP_ZOOM = 15.0;
 
 // Define the CompositeMapLayer
 abstract class CompositeMapLayer {
@@ -13,10 +18,17 @@ abstract class CompositeMapLayer {
   Set<Marker> get markers;
   Function() get onUpdate;
   void setOnUpdate(Function() fn);
+  void setShowRipple(Function(LatLng) fn) {
+    debugPrint("Warning: setShowRipple called but method was not overridden.");
+  }
   void dispose() {}
 
   // Optional: If they need, CompositeMapLayers can include these things
   void onCameraMove(CameraPosition oldPosition, CameraPosition newPosition) {}
+
+  // Optional: Filled shapes this layer draws. Defaults to none so layers that
+  // only deal in lines and markers don't have to think about it.
+  Set<Polygon> get polygons => const {};
 }
 
 // TODO: Extend the MapController back to map_screen.dart so it can move the camera and stuff
@@ -42,15 +54,110 @@ class CompositeMapWidget extends StatefulWidget {
   }
 }
 
+class _RippleWidget extends StatefulWidget {
+  final Offset center;
+  final VoidCallback onComplete;
+
+  const _RippleWidget({
+    super.key,
+    required this.center,
+    required this.onComplete
+  });
+
+  @override
+  State<_RippleWidget> createState() => _RippleWidgetState();
+}
+
+class _RippleWidgetState extends State<_RippleWidget> with SingleTickerProviderStateMixin {
+
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+
+  double _maxRadius = 32;
+  static const _duration = Duration(milliseconds: 350);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: _duration
+    )..addStatusListener((status) {
+      if (status == AnimationStatus.completed) widget.onComplete();
+    })..forward();
+
+    _scale = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut
+    );
+
+    _opacity = Tween<double>(begin: 0.7, end: 0.0)
+      .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final radius = _maxRadius * _scale.value;
+        return Positioned(
+          left: widget.center.dx - radius,
+          top: widget.center.dy - radius,
+          width: radius * 2,
+          height: radius * 2,
+          child: Opacity(
+            opacity: _opacity.value,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black)
+            )
+          )
+        );
+      },
+    );
+    
+    
+    
+  }
+
+}
+
 class CompositeMapWidgetState extends State<CompositeMapWidget>
     with SingleTickerProviderStateMixin {
   GoogleMapController? _mapController;
   Set<Marker> allMarkers = {};
   Set<Polyline> allPolylines = {};
+  Set<Polygon> allPolygons = {};
   CameraPosition? oldCameraPosition;
+  ValueNotifier<List<Offset>> _ripples = ValueNotifier([]);
+  final _rebuildWatchdog = RebuildWatchdog('CompositeMapWidget');
 
   void reloadMap() {
     setState(() {}); // Rebuild with updated markers
+  }
+  void showRipple(LatLng location) async {
+    if (_mapController == null) {
+      debugPrint("mapcontroller is null!!!!!!!!!");
+      return;
+    }
+    debugPrint("Showing ripple at $location");
+    ScreenCoordinate coord = await _mapController!.getScreenCoordinate(location);
+    debugPrint("Got screen coordinate of $coord");
+    if (!mounted) return;
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final offset = Offset(coord.x / devicePixelRatio, coord.y / devicePixelRatio);
+    _ripples.value = [..._ripples.value, offset];
+  }
+  void _removeRipple(Offset offset) {
+    _ripples.value = _ripples.value.where((r) => r != offset).toList();
   }
 
   // GoogleMaps styles
@@ -71,6 +178,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
     _loadMapStyles();
     widget.mapLayers.forEach((CompositeMapLayer layer) {
       layer.setOnUpdate(reloadMap);
+      layer.setShowRipple(showRipple);
       if (layer is LiveBusesLayer) {
         layer.initWithTickerProvider(this);
       }
@@ -79,6 +187,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
 
   @override
   Widget build(BuildContext context) {
+    _rebuildWatchdog.tick();
     allMarkers = widget.mapLayers.expand<Marker>((CompositeMapLayer layer) {
       if (!layer.isVisible) return {};
       return layer.markers;
@@ -87,64 +196,93 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
       if (!layer.isVisible) return {};
       return layer.polylines;
     }).toSet();
+    allPolygons = widget.mapLayers.expand<Polygon>((CompositeMapLayer layer) {
+      if (!layer.isVisible) return {};
+      return layer.polygons;
+    }).toSet();
 
-    return RepaintBoundary(
-      child: GoogleMap(
-        compassEnabled: false,
-        myLocationEnabled: true,
-        mapToolbarEnabled: false,
-        zoomControlsEnabled: false,
-        myLocationButtonEnabled: false,
-        markers: allMarkers,
-        polylines: allPolylines,
-        cameraTargetBounds: CameraTargetBounds(
-          LatLngBounds(
-            southwest: LatLng(
-              42.217530,
-              -83.84367266,
-            ), // Southern and Westernmost point
-            northeast: LatLng(
-              42.328602,
-              -83.53892646,
-            ), // Northern and Easternmost point
+    return Stack(
+      children: [
+        RepaintBoundary(
+          child: GoogleMap(
+            compassEnabled: false,
+            myLocationEnabled: true,
+            mapToolbarEnabled: false,
+            zoomControlsEnabled: false,
+            myLocationButtonEnabled: false,
+            markers: allMarkers,
+            polylines: allPolylines,
+            polygons: allPolygons,
+            cameraTargetBounds: CameraTargetBounds(
+              LatLngBounds(
+                southwest: LatLng(
+                  42.217530,
+                  -83.84367266,
+                ), // Southern and Westernmost point
+                northeast: LatLng(
+                  42.328602,
+                  -83.53892646,
+                ), // Northern and Easternmost point
+              ),
+            ),
+            minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
+            // markers: curMarkers.union(widget.staticMarkers),
+            initialCameraPosition: CameraPosition(
+              target: widget.initialCenter,
+              zoom: INITIAL_MAP_ZOOM,
+            ),
+            style: isDarkMode(context) ? _darkMapStyle : _lightMapStyle,
+            onMapCreated: (GoogleMapController controller) {
+              _mapController = controller;
+              widget.mapLayers.forEach((CompositeMapLayer layer) {
+                if (layer is JourneyLayer) {
+                  layer.setMapController(controller);
+                }
+              });
+              widget.onMapCreated(controller);
+            },
+            onCameraMove: (CameraPosition position) {
+
+              if (oldCameraPosition == null) {
+                // First camera update
+                oldCameraPosition = position;
+
+              } else if (oldCameraPosition?.target != position.target ||
+                        oldCameraPosition?.tilt != position.tilt ||
+                        oldCameraPosition?.zoom != position.zoom) {
+                for (CompositeMapLayer layer in widget.mapLayers) {
+                  layer.onCameraMove(oldCameraPosition!, position);
+                }
+                oldCameraPosition = position;
+              }
+
+              widget.onCameraMove?.call(position);
+            },
+            onCameraIdle: widget.onCameraIdle,
           ),
         ),
-        minMaxZoomPreference: const MinMaxZoomPreference(10, 21),
-        // markers: curMarkers.union(widget.staticMarkers),
-        initialCameraPosition: CameraPosition(
-          target: widget.initialCenter,
-          zoom: 15.0,
-        ),
-        style: isDarkMode(context) ? _darkMapStyle : _lightMapStyle,
-        onMapCreated: (GoogleMapController controller) {
-          _mapController = controller;
-          widget.mapLayers.forEach((CompositeMapLayer layer) {
-            if (layer is JourneyLayer) {
-              layer.setMapController(controller);
-            }
-          });
-          widget.onMapCreated(controller);
-        },
-        onCameraMove: (CameraPosition position) {
 
-          if (oldCameraPosition == null) {
-            // First camera update
-            oldCameraPosition = position;
+        IgnorePointer(
+          child: ValueListenableBuilder<List<Offset>>(
+            valueListenable: _ripples,
+            builder: (context, ripples, _) {
+              return Stack(
+                children: ripples.map((offset) {
+                  return _RippleWidget(
+                    key: ObjectKey(offset),
+                    center: offset,
+                    onComplete: () => _removeRipple(offset)
 
-          } else if (oldCameraPosition?.target != position.target ||
-                     oldCameraPosition?.tilt != position.tilt ||
-                     oldCameraPosition?.zoom != position.zoom) {
-            for (CompositeMapLayer layer in widget.mapLayers) {
-              layer.onCameraMove(oldCameraPosition!, position);
-            }
-            oldCameraPosition = position;
-          }
-
-          widget.onCameraMove?.call(position);
-        },
-        onCameraIdle: widget.onCameraIdle,
-      ),
+                  );
+                }).toList()
+              );
+            },
+          ),
+        )
+      ],
     );
+    
+    
   }
 
   @override

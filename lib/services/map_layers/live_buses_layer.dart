@@ -46,6 +46,11 @@ class LiveBusesLayer extends CompositeMapLayer {
   };
 
   @override
+  Function(LatLng) showRipple = (LatLng location) {
+    debugPrint("Error: showRipple called but callback was not registered!");
+  };
+
+  @override
   Set<Polyline> polylines = {};
 
   bool isAnimating = false;
@@ -71,6 +76,11 @@ class LiveBusesLayer extends CompositeMapLayer {
   @override
   void setOnUpdate(Function() callback) {
     onUpdate = callback;
+  }
+
+  @override
+  void setShowRipple(Function(LatLng) callback) {
+    showRipple = callback;
   }
 
   void initWithTickerProvider(TickerProvider tickerProviderIn) {
@@ -103,7 +113,10 @@ class LiveBusesLayer extends CompositeMapLayer {
       icon: icon,
       rotation: bus.heading,
       anchor: const Offset(0.5, 0.5),
-      onTap: () => onBusClicked(bus),
+      onTap: () {
+        showRipple(bus.position);
+        onBusClicked(bus);
+      },
     );
   }
 
@@ -185,6 +198,7 @@ class LiveBusesLayer extends CompositeMapLayer {
             rotation: interpolatedHeading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
             onTap: () {
+              showRipple(interpolatedPosition);
               try {
                 Haptics.vibrate(HapticsType.light);
               } catch (e) {}
@@ -283,7 +297,6 @@ class LiveBusesLayer extends CompositeMapLayer {
     controller?.forward();
     controller?.repeat();
 
-    debugPrint("***** Finished starting animation");
   }
 
   void reload() {
