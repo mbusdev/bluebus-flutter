@@ -1,3 +1,5 @@
+import 'package:bluebus/backend/backend/backend_client.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -38,6 +40,13 @@ const String BACKEND_URL = String.fromEnvironment(
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://35.3.198.105:3000/mbus/api/v3');
 //const String BACKEND_URL = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://35.2.102.249:3000/mbus/api/v3/');
 
+// base url to use when for backend requests via openapi generated clients
+const String backendOpenApiUrl = String.fromEnvironment(
+  'BACKEND_OPENAPI_URL'
+);
+
+final BackendClient backendClient = BackendClient(Dio(BaseOptions(baseUrl: backendOpenApiUrl)));
+
 List<Map<String, String>> globalAvailableRoutes = [];
 
 // Mapping from route code to full name
@@ -54,6 +63,7 @@ const Map<String, String> fallback_code_to_name = {
 
 final _whitespacePattern = RegExp(r'\s+');
 
+// KEEP THIS IN SYNC WITH THE CORRESPONDING FUNCTION IN THE BACKEND
 String normalizeStopName(String rawStopName) {
   // Remove random characters (add them to list if needed), collapse whitespace to a single space, and trim edges.
   return rawStopName

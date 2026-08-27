@@ -224,25 +224,16 @@ class NavOnBus extends NavigationStage {
 
   @override
   void initWithLeg(Leg leg) {
-    if (leg.mode != LegMode.bus) {
+    if (leg is! BusLeg) {
       throw ArgumentError("leg is of the wrong type");
     }
-    final rt = leg.rt;
-    final trip = leg.trip;
-    if (rt == null ||
-        trip == null ||
-        // leg.stopTimes == null ||
-        leg.originID == '' ||
-        leg.destinationID == '') {
-      throw FormatException("leg was malformed");
-    }
-    if (trip.stopTimes.length < 2) throw FormatException("trip is too short");
+    if (leg.trip.stopTimes.length < 2) throw FormatException("trip is too short");
     // TODO: use info from backend instead of this placeholder, check that line
     // has the same number of stops
     final points = <LatLng>[];
     final stops = <(int, BusStop)>[];
 
-    for (final st in trip.stopTimes.skipWhile(
+    for (final st in leg.trip.stopTimes.skipWhile(
       (st) => st.stop != leg.originID,
     )) {
       final loc = getLatLongFromStopID(st.stop);
@@ -254,21 +245,21 @@ class NavOnBus extends NavigationStage {
           id: st.stop,
           name: getStopNameFromID(st.stop),
           location: loc,
-          routeId: rt,
+          routeId: leg.rt,
           rotation: 0.0,
-          isRide: isRide(rt),
+          isRide: isRide(leg.rt),
         ),
       ));
     }
     final line = BusRouteLine(
-      routeId: rt,
+      routeId: leg.rt,
       points: points,
       stops: stops,
-      color: RouteColorService.getRouteColor(rt),
+      color: RouteColorService.getRouteColor(leg.rt),
       imageUrl: null,
     );
     state = NavOnBusState(
-      trip: trip,
+      trip: leg.trip,
       departureStop: leg.originID,
       arrivalStop: leg.destinationID,
       line: line,
@@ -550,7 +541,7 @@ class Walking extends NavigationStage {
     const LatLng(42.2775215703816,  -83.73809993417933),
     const LatLng(42.278481544159916, -83.73811396072821),
   ];
-  Leg? leg;
+  WalkingLeg? leg;
   Color color = Colors.black;
 
   LatLng? currWalkingPos = const LatLng(42.27831772684626, -83.73599054149456); //near cctc (replace w user's location)
@@ -665,10 +656,11 @@ class Walking extends NavigationStage {
   // Initializes the Walking stage given a Leg.
   @override
   void initWithLeg(Leg leg_in) {
+    if (leg_in is! WalkingLeg) throw ArgumentError('Leg was not a walking leg');
     final path = leg_in.pathCoords;
     leg = leg_in;
 
-    if (path == null || path.isEmpty) {
+    if (path.isEmpty) {
       throw ArgumentError(
         'Walking leg from ${leg_in.origin} to ${leg_in.destination} has no path.',
       );
@@ -1022,16 +1014,17 @@ class NavigationManager {
     for (Leg leg in journey.legs) {
       // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
 
-      if (leg.mode == LegMode.walk) {
-        Walking walkingStage = Walking();
-        walkingStage.setColor(walkingLineColor); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
-        walkingStage.initWithLeg(leg);
-        this.stageList.add(walkingStage);
-      } else if (leg.mode == LegMode.bus) {
-        NavOnBus onBusStage = NavOnBus();
-        onBusStage.initWithLeg(leg);
-        this.stageList.add(onBusStage);
-      }
+      switch (leg) {
+        case BusLeg():
+          NavOnBus onBusStage = NavOnBus();
+          onBusStage.initWithLeg(leg);
+          this.stageList.add(onBusStage);
+        case WalkingLeg():
+          Walking walkingStage = Walking();
+          walkingStage.setColor(walkingLineColor); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
+          walkingStage.initWithLeg(leg);
+          this.stageList.add(walkingStage);
+      } 
     }
 
     // this.stageList.add(

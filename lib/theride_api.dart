@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'package:bluebus/utils/geometry.dart';
+import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'constants.dart';
-import 'models/bus_stop.dart';
 import 'models/bus.dart';
 import 'models/bus_route_line.dart';
 import 'services/route_color_service.dart';
@@ -13,129 +11,31 @@ class RideAPI {
 
   // Fetch all routes and their polylines/stops
   static Future<List<BusRouteLine>> fetchRoutes(Function(String route, String error) onError) async {
-    final response = await http.get(Uri.parse('$baseUrl/getAllRideRoutes'));
-    if (response.statusCode != 200) throw Exception('Failed to load routes');
-    final data = jsonDecode(response.body);
-    final routes = <BusRouteLine>[];
-    final routeJson = data['routes'] as Map<String, dynamic>;
+    try {
+      final routes = await backendClient.getApiV4AllRideRoutes();
+      await RouteColorService.initialize();
 
-    await RouteColorService.initialize();
+      return routes
+        .map((r) {
+          final routeColor = RouteColorService.getRouteColor(r.routeId);
+          final routeImageUrl = RouteColorService.getRouteImageUrl(r.routeId);
 
-    routeJson.forEach((routeId, subroutes) {
-      for (final subroute in subroutes) {
-        try {
-          final points = <LatLng>[];
-          final stops = <(int, BusStop)>[];
-          
-          // Cast to list to be able to be able to get different elements
-          final pointList = subroute['pt'] as List; 
+          return BusRouteLine.fromBackend(r, routeColor, routeImageUrl);
+        })
+        .toList();
+    } on DioException catch (e) {
+      final res = e.response;
 
-          for (int i = 0; i < pointList.length; i++) {
-            final point = pointList[i];
-            final isLast = i == pointList.length - 1; // bool to check if last
-            points.add(
-              LatLng(
-                point['lat']?.toDouble() ?? 0,
-                point['lon']?.toDouble() ?? 0,
-              ),
-            );
-            if (point['typ'] == 'S') {
-              // get rotation of stop
-              double stopRotation;
-              if (isLast) {
-                // use the previous 2 points to calculate rotation
-                stopRotation = pointRotation(
-                  pointList[i - 2]['lat']?.toDouble() ?? 0,
-                  pointList[i - 2]['lon']?.toDouble() ?? 0,
-                  pointList[i - 1]['lat']?.toDouble() ?? 0,
-                  pointList[i - 1]['lon']?.toDouble() ?? 0,
-                );
-              } else {
-                // use the next 2 points to calculate rotation
-                stopRotation = pointRotation(
-                  pointList[i + 1]['lat']?.toDouble() ?? 0,
-                  pointList[i + 1]['lon']?.toDouble() ?? 0,
-                  pointList[i + 2]['lat']?.toDouble() ?? 0,
-                  pointList[i + 2]['lon']?.toDouble() ?? 0,
-                );
-              }
-              stops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
-
-            }
-          }
-
-          // Get route color and image
-          final routeColor = RouteColorService.getRouteColor(routeId);
-          final routeImageUrl = RouteColorService.getRouteImageUrl(routeId);
-
-          routes.add(
-            BusRouteLine(
-              routeId: routeId,
-              points: points,
-              stops: stops,
-              color: routeColor,
-              imageUrl: routeImageUrl,
-            ),
-          );
-
-          // Handle detour points if present
-          if (subroute.containsKey('dtrpt')) {
-            final detourPoints = <LatLng>[];
-            final detourStops = <(int, BusStop)>[];
-
-            // Cast to list to be able to be able to get different elements
-            final detourPointList = subroute['dtrpt'] as List; 
-
-            for (int i = 0; i < detourPointList.length; i++) {
-              final point = detourPointList[i];
-              final isLast = i == detourPointList.length - 1; // bool to check if last
-
-              detourPoints.add(
-                LatLng(
-                  point['lat']?.toDouble() ?? 0,
-                  point['lon']?.toDouble() ?? 0,
-                ),
-              );
-              if (point['typ'] == 'S') {
-                // get rotation of stop
-                double stopRotation;
-                if (isLast) {
-                  // use the previous 2 points to calculate rotation
-                  stopRotation = pointRotation(
-                    detourPointList[i - 2]['lat']?.toDouble() ?? 0,
-                    detourPointList[i - 2]['lon']?.toDouble() ?? 0,
-                    detourPointList[i - 1]['lat']?.toDouble() ?? 0,
-                    detourPointList[i - 1]['lon']?.toDouble() ?? 0,
-                  );
-                } else {
-                  // use the next 2 points to calculate rotation
-                  stopRotation = pointRotation(
-                    detourPointList[i + 1]['lat']?.toDouble() ?? 0,
-                    detourPointList[i + 1]['lon']?.toDouble() ?? 0,
-                    detourPointList[i + 2]['lat']?.toDouble() ?? 0,
-                    detourPointList[i + 2]['lon']?.toDouble() ?? 0,
-                  );
-                }
-                detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
-              }
-            }
-
-            routes.add(
-              BusRouteLine(
-                routeId: routeId,
-                points: detourPoints,
-                stops: detourStops,
-                color: routeColor,
-                imageUrl: routeImageUrl,
-              ),
-            );
-          }
-        } catch (e) {
-          onError(routeId, e.toString());
-        }
+      if (res != null && res.statusCode != 200) {
+        onError("", "Failed to load routes");
+        throw Exception('Failed to load routes');
       }
-    });
-    return routes;
+      onError("", e.message ?? e.toString());
+      rethrow;
+    } catch (e) {
+      onError("", e.toString());
+      rethrow;
+    }
   }
 
   // Fetch all buses and their positions
