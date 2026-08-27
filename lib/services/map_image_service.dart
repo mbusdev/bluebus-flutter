@@ -382,6 +382,25 @@ class MapImageService {
     // textPainter.paint(canvas, Offset(0,0));
   }
 
+  static void drawRouteOverflowIconOntoCanvas(Canvas canvas, int x, int y, int width, int height, int numOverflowed) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: "+$numOverflowed",
+        style: TextStyle(
+          fontSize: width * 0.65,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -1,
+          fontFamily: 'Urbanist'
+        )
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr
+    )..layout(minWidth: 0, maxWidth: width.toDouble());
+
+    textPainter.paint(canvas, Offset(x + width / 2 - (textPainter.width / 2), y + height / 2 - (textPainter.height / 2)));
+
+  }
+
   static void drawRotatedImage(
     Canvas canvas,
     ui.Image image,
@@ -471,6 +490,21 @@ class MapImageService {
         // If the route icon is going to get clipped, wrap to the next row
         yDrawPos += ROW_ICON_SIZE.toInt() + FANCY_STOP_ICON_SMALLMARGIN;
         xDrawPos = FANCY_STOP_ICON_XHEADROOM + STOP_ICON_WIDTH + FANCY_STOP_ICON_MARGIN;
+      }
+
+      if (i == 5 && routesServed.length > 6) {
+      // if (i == 5) {
+        // We're on the last element and there will be overflow
+        debugPrint("DRAWING OVERFLOW ICON!! $stopId");
+        drawRouteOverflowIconOntoCanvas(
+          canvas,
+          xDrawPos,
+          yDrawPos,
+          ROW_ICON_SIZE.toInt(),
+          ROW_ICON_SIZE.toInt(),
+          (routesServed.length - 6) + 1
+        );
+        break;
       }
       
       String routeId = routesServed[i];

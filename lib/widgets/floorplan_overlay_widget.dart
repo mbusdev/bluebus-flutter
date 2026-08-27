@@ -9,6 +9,7 @@ import 'package:bluebus/services/map_layers/floorplans_layer.dart';
 import 'package:bluebus/utils/floorplan_projection.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 
 
 const FLOOR_SELECTOR_WIDTH = 50.0;
@@ -535,8 +536,9 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
     });
   }
 
-  void selectFloor(int index) {
+  void selectFloor(int index) async {
     final double oldValue = _floorOffset.value;
+    await Haptics.vibrate(HapticsType.medium);
     setState(() {
       selectedIndex = index;
       _floorOffset = Tween<double>(begin: oldValue, end: index.toDouble())
@@ -617,22 +619,22 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                             padding: EdgeInsetsGeometry.only(top: 30 * entry.key.toDouble() ),
                             child: Stack(
                               children: [
-                                ClipPath(
-                                  clipper: FloorOutlineClipper(
-                                    outline: entry.value.outline,
-                                    scaleFactor: scaleFactor * 1.2,
-                                    offsetX: offsetX - (50 / scaleFactor),
-                                    offsetY: offsetY
-                                  ),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                                    child: SizedBox(
-                                      width: MediaQuery.sizeOf(context).width + 200,
-                                      height: 300
-                                      // color: Colors.transparent
-                                    )
-                                  )
-                                ),
+                                // ClipPath(
+                                //   clipper: FloorOutlineClipper(
+                                //     outline: entry.value.outline,
+                                //     scaleFactor: scaleFactor * 1.2,
+                                //     offsetX: offsetX - (50 / scaleFactor),
+                                //     offsetY: offsetY
+                                //   ),
+                                //   child: BackdropFilter(
+                                //     filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                                //     child: SizedBox(
+                                //       width: MediaQuery.sizeOf(context).width + 200,
+                                //       height: 300
+                                //       // color: Colors.transparent
+                                //     )
+                                //   )
+                                // ),
                                 CustomPaint(
                                   size: Size(MediaQuery.sizeOf(context).width + 200, 300),
                                   painter: FloorplanPreviewPainter(
