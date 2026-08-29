@@ -1,5 +1,6 @@
 // import 'dart:js_interop';
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:bluebus/constants.dart';
@@ -650,16 +651,24 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                                 //     )
                                 //   )
                                 // ),
-                                CustomPaint(
-                                  size: Size(MediaQuery.sizeOf(context).width + 200, 300),
-                                  painter: FloorplanPreviewPainter(
-                                    floor: entry.value,
-                                    isActive: entry.key == selectedIndex,
-                                    scaleFactor: scaleFactor * 1.2,
-                                    offsetX: offsetX - (50 / scaleFactor),
-                                    offsetY: offsetY
-                                  ),
-                                ),
+                                Transform.scale(
+                                  scaleY: 0.75,
+                                  child: Transform.rotate(
+                                    angle: -1 * math.pi / 4, // 45°, in radians — because of course Flutter didn't give you a degrees param
+                                    child: CustomPaint(
+                                      size: Size(MediaQuery.sizeOf(context).width + 200, 300),
+                                      painter: FloorplanPreviewPainter(
+                                        floor: entry.value,
+                                        isActive: entry.key == selectedIndex,
+                                        scaleFactor: scaleFactor * 1.2,
+                                        offsetX: offsetX - (50 / scaleFactor),
+                                        offsetY: offsetY
+                                      ),
+                                    ),
+                                  )
+                                )
+
+                                
                                 
                               ]
                             )    
