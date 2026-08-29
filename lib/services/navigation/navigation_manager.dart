@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
 import 'dart:math' as math;
-
+import 'package:geolocator/geolocator.dart';
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus.dart';
@@ -18,7 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-enum LineType { Dotted, Dashed}
+enum LineType { Dotted, Dashed }
 
 class NavigationStageStep {
   String title;
@@ -32,7 +32,7 @@ class NavigationStageStep {
     this.subtitle,
     required this.time,
     required this.color,
-    required this.lineType
+    required this.lineType,
   });
 
   String getTitle() {
@@ -54,7 +54,6 @@ class NavigationStageStep {
   LineType getLineType() {
     return lineType;
   }
-
 }
 
 sealed class NavigationStage {
@@ -67,12 +66,15 @@ sealed class NavigationStage {
     return "Swim for 200 meters"; // Subtitle displayed on the big bar at the top
   }
 
-  double length = 0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
-  double percent_complete = 0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
-  
+  double length =
+      0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
+  double percent_complete =
+      0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
+
   List<NavigationStageStep> getSteps() {
     return []; // Get navigation stage steps
   }
+
   List<Marker> getMarkers() {
     return [];
   }
@@ -89,12 +91,19 @@ sealed class NavigationStage {
     return false;
   }
 
+  void receiveLocationUpdate(Position p) {
+    // Do whatever you need to with the current location.
+    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
+    //    emit(StageComplete()) // If the user has reached the end!
+  }
+
   // Broadcast so the NavigationManager can unsubscribe and resubscribe to the
   // same stage (e.g. when the user pages backwards) without the stream
   // complaining that it has already been listened to.
   final _eventController = StreamController<StageEvent>.broadcast();
 
-  Stream<StageEvent> get events => _eventController.stream; // The NavigationManager does yourStage.events to listen in
+  Stream<StageEvent> get events => _eventController
+      .stream; // The NavigationManager does yourStage.events to listen in
 
   /// How a stage talks back to the NavigationManager. Call this from your
   /// stage (usually from receiveLocationUpdate) when something happens:
@@ -115,39 +124,33 @@ sealed class NavigationStage {
   void initWithLeg(Leg leg) {
     // Do cool stuff to set up your Stage with an e.g. walking or bus leg
   }
-
-  void receiveLocationUpdate(LatLng newLocation) {
-    // Do whatever you need to with the current location.
-    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
-    //    emit(StageComplete()) // If the user has reached the end!
-  }
-
 }
 
 enum RerouteReason {
   wrongBus,
-  walkPathChanged
+  walkPathChanged,
   // Feel free to add additional reasons as necessary
 }
 
-
-class BusPromptOption { 
-  // DISCLAIMER: STRUCTURES SUBJECT TO CHANGE BECAUSE IM NOT SURE IF WE HAVE CUSTOM STRUCTURES 
+class BusPromptOption {
+  // DISCLAIMER: STRUCTURES SUBJECT TO CHANGE BECAUSE IM NOT SURE IF WE HAVE CUSTOM STRUCTURES
   // going to remove this soon probably, since i can use the bus structure...
   final String code; // "CN" "BB"...
-  final String label; // expanded name 
-  final Color color; 
+  final String label; // expanded name
+  final Color color;
   final String? busNumber; // 3067 :)
   BusPromptOption({
-    required this.code, 
-    required this.label, 
-    required this.color, 
-    this.busNumber
+    required this.code,
+    required this.label,
+    required this.color,
+    this.busNumber,
   });
 }
 
 sealed class StageEvent {}
+
 class StageComplete extends StageEvent {}
+
 class StageReroute extends StageEvent {
   final RerouteReason reason; // e.g. wrong bus, missed stop
   StageReroute(this.reason);
@@ -176,11 +179,11 @@ class NavOnBusState {
 
   List<(int, BusStop)> get stops {
     final (depIdx, (depPointIdx, _)) = _line.stops.indexed.firstWhere(
-      (x) => x.$2.$2.id == _departureStop
+      (x) => x.$2.$2.id == _departureStop,
     );
     final (arrIdx, (arrPointIdx, _)) = _line.stops.indexed
-      .skip(depIdx)
-      .firstWhere((x) => x.$2.$2.id == _arrivalStop);
+        .skip(depIdx)
+        .firstWhere((x) => x.$2.$2.id == _arrivalStop);
     return _line.stops
         .sublist(depIdx, arrIdx + 1)
         .map(
@@ -193,11 +196,11 @@ class NavOnBusState {
 
   List<LatLng> get points {
     final (depIdx, (depPointIdx, _)) = _line.stops.indexed.firstWhere(
-      (x) => x.$2.$2.id == _departureStop
+      (x) => x.$2.$2.id == _departureStop,
     );
     final (arrIdx, (arrPointIdx, _)) = _line.stops.indexed
-      .skip(depIdx)
-      .firstWhere((x) => x.$2.$2.id == _arrivalStop);
+        .skip(depIdx)
+        .firstWhere((x) => x.$2.$2.id == _arrivalStop);
     return _line.points.sublist(depPointIdx, arrPointIdx + 1);
   }
 
@@ -286,8 +289,8 @@ class NavOnBus extends NavigationStage {
   }
 
   @override
-  void receiveLocationUpdate(LatLng newLocation) {
-    lastPosition = newLocation;
+  void receiveLocationUpdate(Position p) {
+    lastPosition = LatLng(p.latitude, p.longitude);
     // TODO: determine if stage is over
   }
 
@@ -365,7 +368,9 @@ class NavOnBus extends NavigationStage {
     final pos = lastPosition;
     if (pos == null) return 0;
     // project lastPosition onto polyline
-    final (idx, _) = pos.nearestPolylineIndexAndDistanceContinuous(state.points);
+    final (idx, _) = pos.nearestPolylineIndexAndDistanceContinuous(
+      state.points,
+    );
     // return how many stops were passed
     return state.stops.takeWhile((x) => x.$1 <= idx).length - 1;
   }
@@ -424,24 +429,30 @@ class NavOnBus extends NavigationStage {
   }
 }
 
-typedef Edge = ({ BusStop from, BusStop to, List<LatLng> points });
-typedef AdjacencyEntry = ({ BusStop from, Set<({ BusStop stop, List<LatLng> points })> tos });
+typedef Edge = ({BusStop from, BusStop to, List<LatLng> points});
+typedef AdjacencyEntry = ({
+  BusStop from,
+  Set<({BusStop stop, List<LatLng> points})> tos,
+});
 BusRouteLine? determineRouteOfBusLeg(
-  Map<String, List<BusRouteLine>> routesCache, String rt, String originID, String destinationID
+  Map<String, List<BusRouteLine>> routesCache,
+  String rt,
+  String originID,
+  String destinationID,
 ) {
   List<BusRouteLine> candidates = routesCache[rt] ?? [];
 
   // happy path
-  final directLine = candidates
-    .where((line) {
-      final stpids = line.stops.map((s) => s.$2.id);
-      return stpids.skipWhile((stpid) => stpid != originID).contains(destinationID);
-    })
-    .firstOrNull;
+  final directLine = candidates.where((line) {
+    final stpids = line.stops.map((s) => s.$2.id);
+    return stpids
+        .skipWhile((stpid) => stpid != originID)
+        .contains(destinationID);
+  }).firstOrNull;
   if (directLine != null) return directLine;
 
   // big sad path: graph traverse the entire route...
-  final Map<String, AdjacencyEntry> adjacency = {};  // for stpids
+  final Map<String, AdjacencyEntry> adjacency = {}; // for stpids
   // make the adjacency structure ...
   for (final line in candidates) {
     (int, BusStop)? prev;
@@ -449,8 +460,10 @@ BusRouteLine? determineRouteOfBusLeg(
       if (prev != null) {
         final (prevIdx, prevStop) = prev;
         // ignore: prefer_collection_literals (for better type inference)
-        adjacency.putIfAbsent(prevStop.id, () => (from: prevStop, tos: Set()))
-          .tos.add((stop: stop, points: line.points.sublist(prevIdx, i + 1)));
+        adjacency
+            .putIfAbsent(prevStop.id, () => (from: prevStop, tos: Set()))
+            .tos
+            .add((stop: stop, points: line.points.sublist(prevIdx, i + 1)));
       }
       prev = (i, stop);
     }
@@ -473,8 +486,10 @@ BusRouteLine? determineRouteOfBusLeg(
       for (final entry in neighbors.tos) {
         queue.addLast((
           entry.stop.id,
-          edges.followedBy([(from: neighbors.from, to: entry.stop, points: entry.points)]).toList()
-         ));
+          edges.followedBy([
+            (from: neighbors.from, to: entry.stop, points: entry.points),
+          ]).toList(),
+        ));
       }
     }
   }
@@ -487,9 +502,9 @@ BusRouteLine? determineRouteOfBusLeg(
   for (final e in edges) {
     points.removeLast();
     points.addAll(e.points);
-    stops.add((points.length - 1, e.to));    
+    stops.add((points.length - 1, e.to));
   }
-  
+
   return BusRouteLine(
     points: points,
     stops: stops,
@@ -499,19 +514,19 @@ BusRouteLine? determineRouteOfBusLeg(
   );
 }
 
-class ChooseBus extends NavigationStage{
+class ChooseBus extends NavigationStage {
   String title = "Choose a Bus";
-  //Not sure if we actually need this. Depends on if we want to filter out some buses from certain stops. 
+  //Not sure if we actually need this. Depends on if we want to filter out some buses from certain stops.
   List<Bus> potentialBuses = [];
   List<BusStop> potentialStops = [];
-  // If you have a list of buses to board and stops, 
+  // If you have a list of buses to board and stops,
   // this can help you display a bus and the stop you will board
-  // This could be simplified more, probably by picking up data from another function 
+  // This could be simplified more, probably by picking up data from another function
 }
 
 // oops stage
 // TODOs: MOVING TO NAVIGATION MANAGER
-// class MissedBus extends NavigationStage { 
+// class MissedBus extends NavigationStage {
 //   // using the new title information method
 //   @override
 //   String getTitle() {
@@ -519,53 +534,58 @@ class ChooseBus extends NavigationStage{
 //     return "Oops!";
 //   }
 
-//   // information for the popup 
+//   // information for the popup
 //   @override
-//   String getSubtitle() { 
-//     // Looks like these are for pop-ups, so maybe this can be part of a user prompt? 
+//   String getSubtitle() {
+//     // Looks like these are for pop-ups, so maybe this can be part of a user prompt?
 //     return "Looks like you might've missed your bus! Would you like to re-route?";
 //   }
 
 //   String route; // current route
 //   String nearest_stop; // nearest stop: ideally to get off
-//   String c_bus; // current bus i am/was on 
+//   String c_bus; // current bus i am/was on
 //   String c_pos; // current position (maybe not str lat lng?)
 
 //   MissedBus({
 //     // Constructor for more stuff
-//     required this.route, 
+//     required this.route,
 //     required this.nearest_stop,
 //     required this.c_bus,
 //     required this.c_pos,
 //   });
 // }
 
-
-//I believe this is just NavWalking but I'm doing it here to be sure. 
+//I believe this is just NavWalking but I'm doing it here to be sure.
 class Walking extends NavigationStage {
-  List<LatLng> points = [ //dummy pts taken from google maps by the cctc (replace later)
+  List<LatLng> points = [
+    //dummy pts taken from google maps by the cctc (replace later)
     const LatLng(42.27792397921826, -83.73596985653457),
     const LatLng(42.27756042901099, -83.7359661838265),
     const LatLng(42.27754197988967, -83.73706331473826),
-    const LatLng(42.2775215703816,  -83.73809993417933),
+    const LatLng(42.2775215703816, -83.73809993417933),
     const LatLng(42.278481544159916, -83.73811396072821),
   ];
   Leg? leg;
   Color color = Colors.black;
 
-  LatLng? currWalkingPos = const LatLng(42.27831772684626, -83.73599054149456); //near cctc (replace w user's location)
+  LatLng? currWalkingPos = const LatLng(
+    42.27831772684626,
+    -83.73599054149456,
+  ); //near cctc (replace w user's location)
 
   int _nextIndex = 0;
   static const double _reachThresholdMeters = 15.0;
 
   double _distMeters(LatLng a, LatLng b) {
     const R = 6371000.0;
-    final dLat = (b.latitude  - a.latitude)  * math.pi / 180;
+    final dLat = (b.latitude - a.latitude) * math.pi / 180;
     final dLon = (b.longitude - a.longitude) * math.pi / 180;
-    final s = math.sin(dLat / 2) * math.sin(dLat / 2) +
+    final s =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(a.latitude * math.pi / 180) *
-        math.cos(b.latitude * math.pi / 180) *
-        math.sin(dLon / 2) * math.sin(dLon / 2);
+            math.cos(b.latitude * math.pi / 180) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
     return 2 * R * math.asin(math.sqrt(s));
   }
 
@@ -574,19 +594,23 @@ class Walking extends NavigationStage {
     final lat1 = a.latitude * math.pi / 180;
     final lat2 = b.latitude * math.pi / 180;
     final y = math.sin(dLon) * math.cos(lat2);
-    final x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    final x =
+        math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
     return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
   void setColor(Color newColor) {
-    color = newColor; // Flutter won't let us call getColor(context, ...) because we can only get context from inside a widget. Thus, we have to thread it through all the way from map_screen.dart. Great.
+    color =
+        newColor; // Flutter won't let us call getColor(context, ...) because we can only get context from inside a widget. Thus, we have to thread it through all the way from map_screen.dart. Great.
   }
 
   //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
   @override
-  bool receiveLocationUpdate(LatLng newLocation) {
-    currWalkingPos = newLocation;
-    
+  bool receiveLocationUpdate(Position p) {
+    LatLng newLocation = LatLng(p.latitude, p.longitude);
+    currWalkingPos = LatLng(p.latitude, p.longitude);
+
     // check if it has not reached new waypoint
     if (_nextIndex >= points.length ||
         _distMeters(newLocation, points[_nextIndex]) > _reachThresholdMeters) {
@@ -618,7 +642,8 @@ class Walking extends NavigationStage {
   // in feet based on the current user position
   double getDistanceLeftFeet() {
     double distLeft = 0;
-    if (currWalkingPos != null) { // if GPS is broken/off, use distance from _nextIndex to the destination
+    if (currWalkingPos != null) {
+      // if GPS is broken/off, use distance from _nextIndex to the destination
       distLeft = _distMeters(currWalkingPos!, points[_nextIndex]);
     }
     // calculate remaining walking distance
@@ -697,17 +722,12 @@ class Walking extends NavigationStage {
           // PatternItem.dash(30), // Longer dashes
           PatternItem.gap(15), // Longer gaps
         ],
-      )
+      ),
     ];
-
   }
-
-  
 }
 
-
 class DemoStage extends NavigationStage {
-
   String getTitle() {
     return "This is a demo! #$favoriteNumber";
   }
@@ -733,11 +753,12 @@ class DemoStage extends NavigationStage {
     required this.startPoint,
     required this.endPoint,
     required this.color,
-    required this.lineType
+    required this.lineType,
   });
 
   @override
-  Color getColor() { // Return a random color
+  Color getColor() {
+    // Return a random color
     // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
     return color;
   }
@@ -746,26 +767,30 @@ class DemoStage extends NavigationStage {
   List<Marker> getMarkers() {
     return [
       Marker(
-        markerId: MarkerId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
-        position: this.startPoint
+        markerId: MarkerId(
+          "${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}",
+        ),
+        position: this.startPoint,
       ),
       Marker(
-        markerId: MarkerId("${this.favoriteNumber}-${this.endPoint.latitude}-${this.endPoint.longitude}"),
-        position: this.endPoint
-      )
+        markerId: MarkerId(
+          "${this.favoriteNumber}-${this.endPoint.latitude}-${this.endPoint.longitude}",
+        ),
+        position: this.endPoint,
+      ),
     ];
   }
+
   @override
   List<Polyline> getPolylines() {
     return [
       Polyline(
-        polylineId: PolylineId("${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}"),
-        points: [
-          this.startPoint,
-          this.endPoint
-        ],
-        color: this.getColor()
-      )
+        polylineId: PolylineId(
+          "${this.favoriteNumber}-${this.startPoint.latitude}-${this.startPoint.longitude}",
+        ),
+        points: [this.startPoint, this.endPoint],
+        color: this.getColor(),
+      ),
     ];
   }
 
@@ -777,15 +802,17 @@ class DemoStage extends NavigationStage {
         time: '1:23 AM',
         color: getColor(), // Use the stage's color in our demo
         // lineType: LineType.Dashed,
-        lineType: this.lineType
+        lineType: this.lineType,
       ),
       NavigationStageStep(
-        title: favoriteNumber == 3 ? "Step 2 I'm making this title really long to test text wrapping. It's getting even longer now--practically absurd for the name of a bus stop but great for UI testing. " : "Step 2",
+        title: favoriteNumber == 3
+            ? "Step 2 I'm making this title really long to test text wrapping. It's getting even longer now--practically absurd for the name of a bus stop but great for UI testing. "
+            : "Step 2",
         subtitle: "Step 2 subtitle",
         time: '4:56 AM',
         color: getColor(), // Use the stage's color in our demo
         // lineType: LineType.Dashed,
-        lineType: this.lineType
+        lineType: this.lineType,
       ),
       NavigationStageStep(
         title: "Step 3",
@@ -793,8 +820,8 @@ class DemoStage extends NavigationStage {
         time: '7:89 AM',
         color: getColor(), // Use the stage's color in our demo
         // lineType: LineType.Dashed,
-        lineType: this.lineType
-      )
+        lineType: this.lineType,
+      ),
     ]; // Get navigation stage steps
   }
 
@@ -804,7 +831,8 @@ class DemoStage extends NavigationStage {
 
   final _eventController = StreamController<StageEvent>();
 
-  Stream<StageEvent> get events => _eventController.stream; // This is so the NavigationController can do yourStage.events and access your event controller
+  Stream<StageEvent> get events => _eventController
+      .stream; // This is so the NavigationController can do yourStage.events and access your event controller
 
   // To add stage events (i.e. if you miss the bus):
   // _eventController.add(StageReroute(RerouteReason.wrongBus))
@@ -821,14 +849,14 @@ class DemoStage extends NavigationStage {
     // Do cool stuff to set up your Stage with an e.g. walking or bus leg
   }
 
-  void receiveLocationUpdate(LatLng newLocation) {
+  void receiveLocationUpdate(Position p) {
     // Do whatever you need to with the current location.
     // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
     //    _eventController.add(StageComplete()) // If the user has reached the end!
   }
 }
 
-class TimelineStep { 
+class TimelineStep {
   double estimated_time;
   double percentage;
   Color color;
@@ -836,18 +864,18 @@ class TimelineStep {
   TimelineStep({
     required this.estimated_time,
     required this.percentage, // Percentage of the entire progress bar occupied by this timeline step
-    required this.color
+    required this.color,
   });
 }
 
 class TimelineInfo {
   List<TimelineStep> timelineSteps = [];
-  double activePositionPercentage = 0.0; // e.g. if the user is 31% of the way through the whole trip, this equals 0.31
+  double activePositionPercentage =
+      0.0; // e.g. if the user is 31% of the way through the whole trip, this equals 0.31
   TimelineInfo({
     List<TimelineStep>? timelineSteps,
-    this.activePositionPercentage = 0.0
+    this.activePositionPercentage = 0.0,
   }) : timelineSteps = timelineSteps ?? [];
-
 }
 
 class NavigationManager {
@@ -856,39 +884,37 @@ class NavigationManager {
   StreamSubscription<StageEvent>? _stageEventSub;
 
   int currentStage = 0; // Stores the current navigation state index
-  List<NavigationStage> stageList =
-      [
-        DemoStage(
-          favoriteNumber: 1,
-          length: 15,
-          percent_complete: 0.80,
-          startPoint: LatLng(42.281973, -83.765719),
-          endPoint: LatLng(42.281291, -83.743918),
-          color: darkColors[ColorType.navigationStepsGray]!, // TODO: Make this dynamic. This will be messy since we need to do something about context in getColor(context, color Type)
-          lineType: LineType.Dashed
-        ),
-        DemoStage(
-          favoriteNumber: 2,
-          length: 33,
-          percent_complete: 0.23,
-          startPoint: LatLng(42.281291, -83.743918),
-          endPoint: LatLng(42.287031, -83.743532),
-          color: Colors.purple,
-          lineType: LineType.Dotted
-        ),
-        DemoStage(
-          favoriteNumber: 3,
-          length: 4,
-          percent_complete: 0.0,
-          startPoint: LatLng(42.287031, -83.743532),
-          endPoint: LatLng(42.289689, -83.738435),
-          color: darkColors[ColorType.navigationStepsGray]!,
-          lineType: LineType.Dashed
-        ),
-
-        
-      
-      ]; // Stores all the states for users to page back and forth
+  List<NavigationStage> stageList = [
+    DemoStage(
+      favoriteNumber: 1,
+      length: 15,
+      percent_complete: 0.80,
+      startPoint: LatLng(42.281973, -83.765719),
+      endPoint: LatLng(42.281291, -83.743918),
+      color:
+          darkColors[ColorType
+              .navigationStepsGray]!, // TODO: Make this dynamic. This will be messy since we need to do something about context in getColor(context, color Type)
+      lineType: LineType.Dashed,
+    ),
+    DemoStage(
+      favoriteNumber: 2,
+      length: 33,
+      percent_complete: 0.23,
+      startPoint: LatLng(42.281291, -83.743918),
+      endPoint: LatLng(42.287031, -83.743532),
+      color: Colors.purple,
+      lineType: LineType.Dotted,
+    ),
+    DemoStage(
+      favoriteNumber: 3,
+      length: 4,
+      percent_complete: 0.0,
+      startPoint: LatLng(42.287031, -83.743532),
+      endPoint: LatLng(42.289689, -83.738435),
+      color: darkColors[ColorType.navigationStepsGray]!,
+      lineType: LineType.Dashed,
+    ),
+  ]; // Stores all the states for users to page back and forth
   NavigationLayer? mapLayer;
 
   NavigationOverlayHost? _overlay;
@@ -900,6 +926,13 @@ class NavigationManager {
   void unregisterOverlay(NavigationOverlayHost overlay) {
     if (_overlay == overlay) {
       _overlay = null;
+    }
+  }
+
+  void receiveLocationUpdate(Position p) {
+    stageList[currentStage].receiveLocationUpdate(p);
+    if (currentStage < stageList.length - 1) {
+      stageList[currentStage + 1].receiveLocationUpdate(p);
     }
   }
 
@@ -920,9 +953,9 @@ class NavigationManager {
     _stageEventSub = stage.events.listen((event) {
       switch (event) {
         case StageComplete():
-          // Move on to the next stage
+        // Move on to the next stage
         case StageReroute(:final reason):
-          // Handle the reroute
+        // Handle the reroute
       }
     });
   }
@@ -933,15 +966,14 @@ class NavigationManager {
   }
 
   TimelineInfo getTimeline() {
-
     // TODO: Also return the user's position in the whole journey
-    
+
     double total_estimated_time = 0.0;
-    double activePositionTime = 0.0; // This is the active position percentage before dividing by total estimated trip length
+    double activePositionTime =
+        0.0; // This is the active position percentage before dividing by total estimated trip length
     double activePositionPercentage = 0.0;
 
     for (int i = 0; i < stageList.length; i++) {
-
       double currentStageLength = stageList[i].length;
 
       total_estimated_time += currentStageLength;
@@ -949,27 +981,30 @@ class NavigationManager {
       if (i < currentStage) {
         activePositionTime = activePositionTime + currentStageLength;
       } else if (i == currentStage) {
-        activePositionTime += currentStageLength * stageList[i].percent_complete;
+        activePositionTime +=
+            currentStageLength * stageList[i].percent_complete;
       }
-      
     }
     activePositionPercentage = activePositionTime / total_estimated_time;
 
     List<TimelineStep> timelineSteps = [];
 
     for (int i = 0; i < stageList.length; i++) {
-      timelineSteps.add(TimelineStep(
-        estimated_time: stageList[i].length,
-        percentage: stageList[i].length / total_estimated_time,
-        color: stageList[i].getColor()
-        // TODO: Define a color for the stage in the stage itself
-        // color: Colors.red
-        )
+      timelineSteps.add(
+        TimelineStep(
+          estimated_time: stageList[i].length,
+          percentage: stageList[i].length / total_estimated_time,
+          color: stageList[i].getColor(),
+          // TODO: Define a color for the stage in the stage itself
+          // color: Colors.red
+        ),
       );
     }
 
-    return TimelineInfo(timelineSteps: timelineSteps, activePositionPercentage: activePositionPercentage);
-
+    return TimelineInfo(
+      timelineSteps: timelineSteps,
+      activePositionPercentage: activePositionPercentage,
+    );
   }
 
   // Some way for the navigation widget to
@@ -985,20 +1020,26 @@ class NavigationManager {
   //    Allen: Add UI to ask the user about which new bus to take [Check with Ishan and Harvey]
   //      Isaac: I'll talk to Ishan (gc with Allen+Ishan+Harvey) about what the final logic is for the "Oops" stage
 
-  void rebuildMarkersAndPolylines() { // Call this whenever markers or polylines change
+  void rebuildMarkersAndPolylines() {
+    // Call this whenever markers or polylines change
     if (this.mapLayer == null) {
-      debugPrint("Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!");
+      debugPrint(
+        "Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!",
+      );
       return;
     }
-    Set<Marker> markersToDisplay = stageList.expand((NavigationStage stage) => stage.getMarkers()).toSet();
-    Set<Polyline> polylinesToDisplay = stageList.expand((NavigationStage stage) => stage.getPolylines()).toSet();
+    Set<Marker> markersToDisplay = stageList
+        .expand((NavigationStage stage) => stage.getMarkers())
+        .toSet();
+    Set<Polyline> polylinesToDisplay = stageList
+        .expand((NavigationStage stage) => stage.getPolylines())
+        .toSet();
 
     this.mapLayer!.setMarkers(markersToDisplay);
     this.mapLayer!.setPolylines(polylinesToDisplay);
     this.mapLayer!.reload();
 
     // FUTURE TODO: Get some sample data for polylines/markers and conditionally show them on the map--define a "navigation mode" that can be active (or not) in map_screen.dart
-    
   }
 
   NavigationStage getCurrentStage() {
@@ -1016,7 +1057,6 @@ class NavigationManager {
   }
 
   void initFromJourney(Journey journey, Color walkingLineColor) {
-
     this.stageList.clear();
 
     for (Leg leg in journey.legs) {
@@ -1024,7 +1064,9 @@ class NavigationManager {
 
       if (leg.mode == LegMode.walk) {
         Walking walkingStage = Walking();
-        walkingStage.setColor(walkingLineColor); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
+        walkingStage.setColor(
+          walkingLineColor,
+        ); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
         walkingStage.initWithLeg(leg);
         this.stageList.add(walkingStage);
       } else if (leg.mode == LegMode.bus) {
@@ -1048,11 +1090,9 @@ class NavigationManager {
 
     _overlay?.onNavigationUpdated();
     rebuildMarkersAndPolylines();
-
   }
 
   // TODO: Add start()/stop() methods
-
 
   // - Allen: Get “Oops” code started. Find a way to talk to the NavigationOverlayWidget
   // - Find a way to get the two to talk to each other: I.e. whenever `NavigationOverlayWidget` is created, it calls a specific method inside NavigationManager that says "Hey, I'm here, please save me in a member variable", so when the "Oops" stage happens later you can call localReferenceToOverlayWidget.displayOopsDialog(...)

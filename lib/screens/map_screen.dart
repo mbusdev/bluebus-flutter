@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:developer';
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/screens/new_features_screen.dart';
@@ -69,8 +70,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   StreamSubscription<Position>? _posSub;
   // TODO: Follow-mode state. When true, the map recenters on location updates.
   Position? _lastCenteredPos;
-  final ValueNotifier<bool> _userHasInteractedWithMap =
-      ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _userHasInteractedWithMap = ValueNotifier<bool>(
+    false,
+  );
   bool _isProgrammaticCameraMove = true;
 
   bool _followUser = true;
@@ -83,7 +85,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   final ValueNotifier<CameraPosition?> _currentCameraPos =
       ValueNotifier<CameraPosition?>(null);
-    bool? _userLocVisible;
+  bool? _userLocVisible;
   static const _defaultCenter = LatLng(42.276463, -83.7374598);
   static LatLng startLatLng = _defaultCenter;
 
@@ -424,6 +426,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen((
       Position p,
     ) async {
+      navigationManager.receiveLocationUpdate(p);
       // log("Received location update: ${p.latitude}, ${p.longitude}");
       if (isFirstLocationUpdate) {
         isFirstLocationUpdate = false;
@@ -436,7 +439,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         if (!mounted) log("Ignoring location update: widget not mounted");
         if (_mapController == null)
           // log("Ignoring location update: map controller not initialized");
-        return;
+          return;
       }
 
       // If follow mode is disabled, don't recenter automatically.
@@ -446,7 +449,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return;
       }
       final lastCentered = _lastCenteredPos;
-      
+
       final cameraTarget = _currentCameraPos.value?.target;
 
       // Only move camera if user has moved more than threshold to avoid jitter.
@@ -1294,7 +1297,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // log("noted nonprogrammatic camera move");
       _userHasInteractedWithMap.value = true;
     }
-    
   }
 
   void _onCameraIdle() async {
@@ -1917,13 +1919,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                 // face north button is only visible when not facing north
                                                 Visibility(
                                                   visible:
-                                                    _currentCameraPos.value !=
-                                                      null &&
-                                                    _currentCameraPos
-                                                        .value!
-                                                        .bearing !=
-                                                      0,
-                                                      child: DecoratedBox(
+                                                      _currentCameraPos.value !=
+                                                          null &&
+                                                      _currentCameraPos
+                                                              .value!
+                                                              .bearing !=
+                                                          0,
+                                                  child: DecoratedBox(
                                                     decoration: BoxDecoration(
                                                       boxShadow: [
                                                         BoxShadow(
@@ -1988,7 +1990,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                       _userHasInteractedWithMap,
                                                   builder: (context, userMoved, child) {
                                                     return AnimatedSwitcher(
-                                                      duration: const Duration(milliseconds: 250),
+                                                      duration: const Duration(
+                                                        milliseconds: 250,
+                                                      ),
                                                       child: userMoved
                                                           ? DecoratedBox(
                                                               decoration: BoxDecoration(
@@ -1996,35 +2000,54 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                   BoxShadow(
                                                                     color: getColor(
                                                                       context,
-                                                                      ColorType.mapButtonShadow,
+                                                                      ColorType
+                                                                          .mapButtonShadow,
                                                                     ).withAlpha(50),
-                                                                    blurRadius: 4,
-                                                                    offset: Offset(0, 2),
+                                                                    blurRadius:
+                                                                        4,
+                                                                    offset:
+                                                                        Offset(
+                                                                          0,
+                                                                          2,
+                                                                        ),
                                                                   ),
                                                                 ],
                                                                 borderRadius:
-                                                                    BorderRadius.circular(25),
+                                                                    BorderRadius.circular(
+                                                                      25,
+                                                                    ),
                                                               ),
                                                               child: FloatingActionButton.small(
                                                                 onPressed: () {
-                                                                  _setFollowMode(true);
-                                                                  _centerOnLocation(true);
+                                                                  _setFollowMode(
+                                                                    true,
+                                                                  );
+                                                                  _centerOnLocation(
+                                                                    true,
+                                                                  );
                                                                 },
-                                                                heroTag: 'location_fab',
-                                                                backgroundColor: getColor(
-                                                                  context,
-                                                                  ColorType.mapButtonSecondary,
-                                                                ),
+                                                                heroTag:
+                                                                    'location_fab',
+                                                                backgroundColor:
+                                                                    getColor(
+                                                                      context,
+                                                                      ColorType
+                                                                          .mapButtonSecondary,
+                                                                    ),
                                                                 elevation: 0,
                                                                 shape: RoundedRectangleBorder(
                                                                   borderRadius:
-                                                                      BorderRadius.circular(56),
+                                                                      BorderRadius.circular(
+                                                                        56,
+                                                                      ),
                                                                 ),
                                                                 child: Icon(
-                                                                  Icons.my_location,
+                                                                  Icons
+                                                                      .my_location,
                                                                   color: getColor(
                                                                     context,
-                                                                    ColorType.mapButtonPrimary,
+                                                                    ColorType
+                                                                        .mapButtonPrimary,
                                                                   ),
                                                                 ),
                                                               ),
