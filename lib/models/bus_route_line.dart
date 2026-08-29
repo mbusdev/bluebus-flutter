@@ -5,15 +5,18 @@ import 'bus_stop.dart';
 class BusRouteLine {
   final String routeId;
   final List<LatLng> points;
-  final List<BusStop> stops;
+
+  /// bus stops along with the index of the associated point
+  // INVARIANT: indicies are in ascending order
+  final List<(int, BusStop)> stops;
   final Color? color;
   final String? imageUrl;
 
   BusRouteLine({
-    required this.routeId, 
-    required this.points, 
+    required this.routeId,
+    required this.points,
     required this.stops,
     this.color,
     this.imageUrl,
   });
-} 
+}

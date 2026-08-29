@@ -23,9 +23,10 @@ class DirectionsSheet extends StatefulWidget {
   final void Function(Location, bool) onChangeSelection;
   final void Function(Journey)? onSelectJourney;
   final void Function(Map<String, double>, Map<String, double>)? onResolved;final ScrollController? scrollController;
+  Function(Journey)? onStartNavigation;
 
 
-  const DirectionsSheet({
+  DirectionsSheet({
     Key? key,
     required this.origin,
     required this.dest,
@@ -36,6 +37,7 @@ class DirectionsSheet extends StatefulWidget {
     required this.scrollController, 
     this.onSelectJourney,
     this.onResolved,
+    this.onStartNavigation,
   }) : super(key: key);
 
   @override
@@ -292,6 +294,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                 onChangeSelection: widget.onChangeSelection,
                 onSelectJourney: widget.onSelectJourney,
                 scrollController: widget.scrollController,
+                onStartNavigation: widget.onStartNavigation,
               );
             } else if (journeyload.hasError) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -302,20 +305,20 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                 if (journeyload.error is LocationError) {
                 showMaizebusOKDialog(
                   contextIn: context,
-                  title: const Text("Location Error"),
-                  content: const Text("Please make sure you have location permissions enabled in settings before trying to get directions"),
+                  title: "Location Error",
+                  content: "Please make sure you have location permissions enabled in settings before trying to get directions",
                 );
                 } else if (journeyload.error is NotInAnnArborError) {
                   showMaizebusOKDialog(
                     contextIn: context,
-                    title: const Text("Not in Ann Arbor"),
-                    content: const Text("Please make sure you are in Ann Arbor before trying to get on-campus bus directions"),
+                    title: "Not in Ann Arbor",
+                    content: "Please make sure you are in Ann Arbor before trying to get on-campus bus directions",
                   );
                 } else {
                   showMaizebusOKDialog(
                     contextIn: context,
-                    title: const Text("Unknown Error"),
-                    content: const Text("An unknown error occurred while trying to get directions. Please contact contact@maizebus.com if this persists."),
+                    title: "Unknown Error",
+                    content: "An unknown error occurred while trying to get directions. Please contact contact@maizebus.com if this persists.",
                   );
                 }
               });

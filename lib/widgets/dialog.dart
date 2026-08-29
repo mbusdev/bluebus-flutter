@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 /// maizebus style to all dialogs in the app.
 Future<T?> showMaizebusOKDialog<T>({
   required BuildContext contextIn,
-  Widget? title,
-  Widget? content,
+  required String title,
+  required String content,
 }) {
   return showDialog<T>(
     context: contextIn,
@@ -32,8 +32,8 @@ Future<T?> showMaizebusOKDialog<T>({
         actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
         actionsAlignment: MainAxisAlignment.end,
         
-        title: title,
-        content: content,
+        title: Text(title),
+        content: Text(content),
         actions: [
           SizedBox(
             width: double.infinity,

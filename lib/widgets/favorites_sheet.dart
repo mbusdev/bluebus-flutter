@@ -52,7 +52,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
           if (!mounted) return; // makes sure widget hasn't been closed while waiting for this
           final map = <String, String>{};
           for (final r in routes) {
-            for (final s in r.stops) {
+            for (final (_, s) in r.stops) {
               if (!map.containsKey(s.id)) map[s.id] = s.name;
             }
           }
@@ -68,7 +68,7 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
           if (!mounted) return; // makes sure widget hasn't been closed while waiting for this
           final map = <String, String>{};
           for (final r in routes) {
-            for (final s in r.stops) {
+            for (final (_, s) in r.stops) {
               if (!map.containsKey(s.id)) map[s.id] = s.name;
             }
           }
@@ -160,8 +160,8 @@ class _FavoritesSheetState extends State<FavoritesSheet> {
                   
                                   showMaizebusOKDialog(
                                     contextIn: context,
-                                    title: const Text("No Favorites"),
-                                    content: const Text("Hit the heart icon on a stop to add it to your favorites and see it here!"),
+                                    title: "No Favorites",
+                                    content: "Hit the heart icon on a stop to add it to your favorites and see it here!",
                                   );
                                 });
                   

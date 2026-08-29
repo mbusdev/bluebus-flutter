@@ -246,7 +246,7 @@ class ReminderWidget extends StatelessWidget {
       child: Row(
         spacing: 10,
         children: [
-          RouteIcon.medium(rtid, type: RouteIconType.normal),
+          RouteIcon.medium(rtid),
           Expanded(
             child: Text(
               stopName,
