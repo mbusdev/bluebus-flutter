@@ -21,6 +21,45 @@ double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   return angle;
 }
 
+double routeStopRotation(List<dynamic> points, int stopIndex) {
+  final currentStop = points[stopIndex];
+
+  (double, double) averageLocation(List<dynamic> stops) {
+    final locations = stops.isEmpty ? [currentStop] : stops;
+    // find sum of lat/lng and divide by the amount to get average
+    final latitude =  locations.fold<double>(0, (sum, stop) => sum + (stop['lat']?.toDouble() ?? 0)) / locations.length;
+    final longitude = locations.fold<double>(0, (sum, stop) => sum + (stop['lon']?.toDouble() ?? 0)) / locations.length;
+    return (latitude, longitude);
+  }
+
+  // deal with edge cases at start/end of list by reading next four or previous four points
+  if (stopIndex >= points.length - 2) {
+    final prevTwo = averageLocation(points.getRange(stopIndex - 2, stopIndex).toList());
+    final prevFour = averageLocation(points.getRange(stopIndex - 4, stopIndex - 2).toList());
+    return pointRotation(prevTwo.$1, prevTwo.$2, prevFour.$1, prevFour.$2);
+  } else if (stopIndex <= 2) {
+    final nextTwo = averageLocation(points.getRange(stopIndex + 1, stopIndex + 3).toList());
+    final nextFour = averageLocation(points.getRange(stopIndex + 3, stopIndex + 5).toList());
+    return pointRotation(nextTwo.$1, nextTwo.$2, nextFour.$1, nextFour.$2);
+  }
+
+  final stopsRange = 2;
+
+  // get rotation from the average of the previous stopsRange stops to the average location of the next 3 stops
+  final previousStops = points
+      .take(stopIndex).toList()
+      .reversed
+      .take(stopsRange).toList();
+  final nextStops = points
+      .skip(stopIndex + 1)
+      .take(stopsRange).toList();
+
+  final previous = averageLocation(previousStops);
+  final next = averageLocation(nextStops);
+
+  return pointRotation(previous.$1, previous.$2, next.$1, next.$2);
+}
+
 extension LatLngListHelpers on List<LatLng> {
   double totalDistance() {
     double acc = 0.0;
