@@ -10,6 +10,7 @@ import 'package:bluebus/providers/theme_provider.dart';
 import 'package:bluebus/screens/new_features_screen.dart';
 import 'package:bluebus/services/map_image_service.dart';
 import 'package:bluebus/services/map_layers/base_routes_layer.dart';
+import 'package:bluebus/services/map_layers/demo_buildings_layer.dart'; // DEMO BUILDINGS
 import 'package:bluebus/services/map_layers/floorplans_layer.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
@@ -157,6 +158,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final JourneyLayer journeyLayer = JourneyLayer();
   final NavigationLayer navigationLayer = NavigationLayer();
   final FloorplansLayer floorplansLayer = FloorplansLayer();
+  final DemoBuildingsLayer demoBuildingsLayer = DemoBuildingsLayer(); // DEMO BUILDINGS
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -1615,6 +1617,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         child: CompositeMapWidget(
                           initialCenter: startLatLng,
                           mapLayers: [
+                            demoBuildingsLayer, // DEMO BUILDINGS
                             floorplansLayer,
                             baseRoutesLayer,
                             liveBusesLayer,
