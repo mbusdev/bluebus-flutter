@@ -424,10 +424,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _posSub = Geolocator.getPositionStream(locationSettings: settings).listen((
       Position p,
     ) async {
-      log("Received location update: ${p.latitude}, ${p.longitude}");
+      // log("Received location update: ${p.latitude}, ${p.longitude}");
       if (isFirstLocationUpdate) {
         isFirstLocationUpdate = false;
-        log("Ignoring first location update");
+        // log("Ignoring first location update");
         return;
       }
 
@@ -435,14 +435,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (!mounted || _mapController == null) {
         if (!mounted) log("Ignoring location update: widget not mounted");
         if (_mapController == null)
-          log("Ignoring location update: map controller not initialized");
+          // log("Ignoring location update: map controller not initialized");
         return;
       }
 
       // If follow mode is disabled, don't recenter automatically.
       if (!_followUser) return;
       if (_userHasInteractedWithMap.value) {
-        log("Ignoring location update: user has interacted with map");
+        // log("Ignoring location update: user has interacted with map");
         return;
       }
       final lastCentered = _lastCenteredPos;
@@ -471,17 +471,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     ) ==
                     0;
       if (cameraTarget == null) {
-        log("null camera target");
+        // log("null camera target");
         return;
       }
 
       if (shouldMove && !userMoved) {
-        log("Centering map on new location: ${p.latitude}, ${p.longitude}");
+        // log("Centering map on new location: ${p.latitude}, ${p.longitude}");
       } else {
-        log("Ignoring location update: ${p.latitude}, ${p.longitude}");
-        log(
-          "Camera Position: ${cameraTarget.latitude}, ${cameraTarget.longitude}",
-        );
+        // log("Ignoring location update: ${p.latitude}, ${p.longitude}");
+        // log("Camera Position: ${cameraTarget.latitude}, ${cameraTarget.longitude}",);
       }
       if (!(shouldMove && !userMoved)) return;
 
@@ -1293,7 +1291,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     if (!mounted) return;
     _currentCameraPos.value = position;
     if (!_isProgrammaticCameraMove) {
-      log("noted nonprogrammatic camera move");
+      // log("noted nonprogrammatic camera move");
       _userHasInteractedWithMap.value = true;
     }
     
