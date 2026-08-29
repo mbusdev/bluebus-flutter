@@ -1,4 +1,5 @@
 import 'package:bluebus/widgets/dialog.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/journey.dart';
@@ -297,6 +298,9 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                 onStartNavigation: widget.onStartNavigation,
               );
             } else if (journeyload.hasError) {
+              if (kDebugMode) {
+                debugPrint(journeyload.error.toString());
+              }
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!context.mounted) return;
 

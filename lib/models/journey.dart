@@ -48,10 +48,13 @@ sealed class Leg {
   }
 }
 
+typedef BusPathSegment = ({ String? rt, List<LatLng> path });
+typedef StopCoord = ({ String? rt, LatLng location, int segmentIdx, int idxInSegment });
+
 class BusLeg extends Leg {
   final String destinationName;
-  final List<({ String? rt, List<LatLng> path })> busPathSegments;
-  final List<({ String? rt, LatLng location })> stopCoords;
+  final List<BusPathSegment> busPathSegments;
+  final List<StopCoord> stopCoords;
   final String mode;
   final List<StopTime> stopTimes;
   final Trip trip;
@@ -64,7 +67,14 @@ class BusLeg extends Leg {
           .map((e) => (rt: e.rt, path: e.path.map(latLngFromBackend).toList()))
           .toList(),
       stopCoords = leg.stopCoords
-          .map((e) => (rt: e.rt, location: latLngFromBackend(e.location)))
+          .map(
+            (e) => (
+              rt: e.rt,
+              location: latLngFromBackend(e.location),
+              segmentIdx: e.segmentIdx.toInt(),
+              idxInSegment: e.idxInSegment.toInt(),
+            ),
+          )
           .toList(),
       mode = leg.mode,
       stopTimes = leg.stopTimes.map((e) => StopTime.fromBackend(e)).toList(),
