@@ -35,6 +35,7 @@ class MapImageService {
   static BitmapDescriptor? _busIcon;
 
   static Map<String, BitmapDescriptor> _fancyStopIconsCache = {}; // Cache for fancy stop icons. Key format is "[rotation],[buscode],[buscode],...", such as "274,NW,CS,CX,BB"
+  static Map<String, BitmapDescriptor> _normalStopIconsCache = {};
 
   // TODO: Maybe make this manage stop icons too?
 
@@ -427,7 +428,7 @@ class MapImageService {
 
     // String cacheKey = rotation.round().toString() + "," + routesServed.join(",");
     // String cacheKey = routesServed.join(","); // Temporary, for testing
-    String cacheKey = "${stopId}_$isFavorite";
+    String cacheKey = "fancyicon_${stopId}_$isFavorite";
 
 
     if (_fancyStopIconsCache.containsKey(cacheKey)) {
@@ -526,6 +527,60 @@ class MapImageService {
 
     BitmapDescriptor output = BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
     _fancyStopIconsCache[cacheKey] = output;
+    return output;
+  }
+
+  static Future<BitmapDescriptor> getNormalStopIcon(String stopId, bool isFavorite, bool isRide, double rotation) async {
+
+    // String cacheKey = rotation.round().toString() + "," + routesServed.join(",");
+    // String cacheKey = routesServed.join(","); // Temporary, for testing
+    String cacheKey = "normalicon_${stopId}_$isFavorite";
+
+
+    if (_normalStopIconsCache.containsKey(cacheKey)) {
+      return _normalStopIconsCache[cacheKey]!;
+    }
+
+    // TODO: Add the bus stop icon type (favorite, nonfavorite, TheRide favorite, etc)
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // debugPrint("Generating icon for ${routesServed.join(",")}");
+
+    // int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
+    // int total_height = STOP_ICON_HEIGHT;
+
+    try {
+      if (!_stopIconsInitialized) {
+        // debugPrint("Stop icons not initialized, loading...");
+        await _loadStopIcons();
+      }
+
+      ui.Image? targetImage = isFavorite ?
+          (isRide ? _favRideStopIconImage : _favStopIconImage) :
+          (isRide ? _rideStopIconImage : _stopIconImage);
+
+      drawRotatedImage(
+        canvas,
+        targetImage!,
+        Offset(
+          (STOP_ICON_WIDTH.toDouble() / 2),
+          (STOP_ICON_HEIGHT.toDouble() / 2)),
+        degreesToRadians(rotation)
+      );
+
+      // canvas.drawImage(_stopIconImage!, Offset(FANCY_STOP_ICON_XHEADROOM.toDouble(), FANCY_STOP_ICON_YHEADROOM.toDouble()), Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
+    } catch (err) {}
+
+    // canvas.drawRect(Rect.fromLTWH(STOP_ICON_WIDTH.toDouble(), 0, (FANCY_STOP_ICON_WIDTH - STOP_ICON_WIDTH).toDouble(), STOP_ICON_HEIGHT.toDouble()), paint);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(STOP_ICON_WIDTH.toInt(), STOP_ICON_HEIGHT);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+
+    BitmapDescriptor output = BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+    _normalStopIconsCache[cacheKey] = output;
     return output;
   }
 
