@@ -83,7 +83,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   GoogleMapController? _mapController;
   final ValueNotifier<CameraPosition?> _currentCameraPos =
       ValueNotifier<CameraPosition?>(null);
-  bool? _userLocVisible;
+    bool? _userLocVisible;
   static const _defaultCenter = LatLng(42.276463, -83.7374598);
   static LatLng startLatLng = _defaultCenter;
 
@@ -1300,20 +1300,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _onCameraIdle() async {
     // The next camera movement is user-controlled unless a new animation starts.
     _isProgrammaticCameraMove = false;
-
-    // check if user location is within viewport bounds
-    LatLngBounds? viewportBounds = await _mapController?.getVisibleRegion();
-    if (viewportBounds != null) {
-      Position? pos = await _getLastKnownLocation();
-      if (pos != null) {
-        if (!mounted) return;
-        setState(() {
-          _userLocVisible = !viewportBounds.contains(
-            LatLng(pos.latitude, pos.longitude),
-          );
-        });
-      }
-    }
   }
 
   void _showBusSheet(String busID) {
@@ -2003,9 +1989,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                   builder: (context, userMoved, child) {
                                                     return AnimatedSwitcher(
                                                       duration: const Duration(milliseconds: 250),
-                                                      child: userMoved &&
-                                                              (_userLocVisible == null ||
-                                                                  _userLocVisible!)
+                                                      child: userMoved
                                                           ? DecoratedBox(
                                                               decoration: BoxDecoration(
                                                                 boxShadow: [
@@ -2045,7 +2029,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                 ),
                                                               ),
                                                             )
-                                                          : SizedBox.shrink(),
+                                                          : const SizedBox.shrink(),
                                                     );
                                                   },
                                                 ),
