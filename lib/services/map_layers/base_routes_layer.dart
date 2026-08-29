@@ -96,6 +96,12 @@ class BaseRoutesLayer extends CompositeMapLayer {
           stopIdToStop![entry.key]!.rotation,
           entry.value.toList()
         ); // Pre-cache each icon so it's faster later!
+        await MapImageService.getNormalStopIcon(
+          entry.key,
+          favoriteStops.contains(entry.key),
+          stopIdToStop[entry.key]?.isRide ?? false,
+          stopIdToStop![entry.key]!.rotation
+        );
       } catch (err) {}
     }
 
@@ -217,16 +223,24 @@ class BaseRoutesLayer extends CompositeMapLayer {
                   routesServed.toList()
                 )
               ) : (
-                favoriteStops.contains(entry.stop.id) // Used to be isFavorite
-                ? (entry.stop.isRide ? _favRideStopIcon : _favStopIcon)
-                : (entry.stop.isRide ? _rideStopIcon : _stopIcon)
+
+                await MapImageService.getNormalStopIcon(
+                  entry.stop.id,
+                  favoriteStops.contains(entry.stop.id),
+                  entry.stop.isRide,
+                  entry.stop.rotation
+                )
+                // favoriteStops.contains(entry.stop.id) // Used to be isFavorite
+                // ? (entry.stop.isRide ? _favRideStopIcon : _favStopIcon)
+                // : (entry.stop.isRide ? _rideStopIcon : _stopIcon)
             ),
         consumeTapEvents: true,
         onTap: () {
           showRipple(entry.stop.location);
           onStopClicked(entry.stop);
         },
-        rotation: displayFancyIcons ? 0.0 : entry.stop.rotation,
+        rotation: 0.0,
+        // rotation: displayFancyIcons ? 0.0 : entry.stop.rotation,
         anchor: displayFancyIcons ? MapImageService.getFancyStopIconOffset() : Offset(0.5, 0.5),
       );
 
