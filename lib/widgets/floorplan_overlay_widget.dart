@@ -142,7 +142,6 @@ class _FloorSelectorState extends State<FloorSelector> {
 
                   return InkWell(
                     onTap: () {
-                      debugPrint("Clicked!");
                       snapToIndex(index);
                       // setState(() {
                       //   selectedIndex = index;
@@ -537,6 +536,7 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
   }
 
   void selectFloor(int index) async {
+    // _controller.reset();
     final double oldValue = _floorOffset.value;
     await Haptics.vibrate(HapticsType.medium);
     setState(() {
@@ -548,6 +548,21 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
     _controller.forward(from: 0);
     // The selector works in display order, the layer in the data's own order.
     layer.setFloorIndex(layer.floors.indexOf(floors[index]));
+  }
+
+  void preselectFloor(int index) async {
+    // _controller.reset();
+    final double oldValue = _floorOffset.value;
+    await Haptics.vibrate(HapticsType.medium);
+    setState(() {
+      selectedIndex = index;
+      _floorOffset = Tween<double>(begin: oldValue, end: index.toDouble())
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo));
+    });
+
+    _controller.forward(from: 0);
+    // The selector works in display order, the layer in the data's own order.
+    // layer.setFloorIndex(layer.floors.indexOf(floors[index]));
   }
 
   // void preselectFloor(int index) {
@@ -730,7 +745,7 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                         floors: [for (final floor in floors) floor.shortName],
                         initialIndex: selectedIndex,
                         onFloorSelected: selectFloor,
-                        onFloorPreselected: selectFloor,
+                        onFloorPreselected: preselectFloor,
                       ),
 
 

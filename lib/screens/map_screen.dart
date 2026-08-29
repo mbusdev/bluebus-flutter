@@ -225,7 +225,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void onStopClicked(BusStop stop) {
     try {
       Haptics.vibrate(HapticsType.light);
-    } catch (e) {}
+    } catch (e) {
+      debugPrint("Haptics error: $e");
+    }
 
     _showStopSheet(
       stop.id,
