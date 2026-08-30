@@ -32,7 +32,6 @@ class RideAPI {
 
           for (int i = 0; i < pointList.length; i++) {
             final point = pointList[i];
-            final isLast = i == pointList.length - 1; // bool to check if last
             points.add(
               LatLng(
                 point['lat']?.toDouble() ?? 0,
@@ -40,25 +39,7 @@ class RideAPI {
               ),
             );
             if (point['typ'] == 'S') {
-              // get rotation of stop
-              double stopRotation;
-              if (isLast) {
-                // use the previous 2 points to calculate rotation
-                stopRotation = pointRotation(
-                  pointList[i - 2]['lat']?.toDouble() ?? 0,
-                  pointList[i - 2]['lon']?.toDouble() ?? 0,
-                  pointList[i - 1]['lat']?.toDouble() ?? 0,
-                  pointList[i - 1]['lon']?.toDouble() ?? 0,
-                );
-              } else {
-                // use the next 2 points to calculate rotation
-                stopRotation = pointRotation(
-                  pointList[i + 1]['lat']?.toDouble() ?? 0,
-                  pointList[i + 1]['lon']?.toDouble() ?? 0,
-                  pointList[i + 2]['lat']?.toDouble() ?? 0,
-                  pointList[i + 2]['lon']?.toDouble() ?? 0,
-                );
-              }
+              final stopRotation = routeStopRotation(pointList, i);
               stops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
 
             }
@@ -88,8 +69,6 @@ class RideAPI {
 
             for (int i = 0; i < detourPointList.length; i++) {
               final point = detourPointList[i];
-              final isLast = i == detourPointList.length - 1; // bool to check if last
-
               detourPoints.add(
                 LatLng(
                   point['lat']?.toDouble() ?? 0,
@@ -97,25 +76,7 @@ class RideAPI {
                 ),
               );
               if (point['typ'] == 'S') {
-                // get rotation of stop
-                double stopRotation;
-                if (isLast) {
-                  // use the previous 2 points to calculate rotation
-                  stopRotation = pointRotation(
-                    detourPointList[i - 2]['lat']?.toDouble() ?? 0,
-                    detourPointList[i - 2]['lon']?.toDouble() ?? 0,
-                    detourPointList[i - 1]['lat']?.toDouble() ?? 0,
-                    detourPointList[i - 1]['lon']?.toDouble() ?? 0,
-                  );
-                } else {
-                  // use the next 2 points to calculate rotation
-                  stopRotation = pointRotation(
-                    detourPointList[i + 1]['lat']?.toDouble() ?? 0,
-                    detourPointList[i + 1]['lon']?.toDouble() ?? 0,
-                    detourPointList[i + 2]['lat']?.toDouble() ?? 0,
-                    detourPointList[i + 2]['lon']?.toDouble() ?? 0,
-                  );
-                }
+                final stopRotation = routeStopRotation(detourPointList, i);
                 detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
               }
             }
