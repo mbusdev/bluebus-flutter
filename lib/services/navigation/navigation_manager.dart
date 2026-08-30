@@ -881,7 +881,8 @@ class NavigationManager {
   // Overlay can display the "which bus are you on?" prompt
   // We can call this
   void showOopsDialog() {
-    _overlay?.displayOopsDialog();
+    // we're gonna do this for demo day, but this will be gone for mb3 
+    _overlay?.displayOopsDialog(Bus(fullness: "34", id: "123", position: LatLng(12.0, 12.0), routeId: "BB", heading: 1.0));
   }
 
   void _activateStageSub(NavigationStage stage) {
@@ -1030,7 +1031,7 @@ class NavigationManager {
 }
 
 abstract class NavigationOverlayHost {
-  void displayOopsDialog(); // just for the Oops state for now...
+  void displayOopsDialog(Bus bus); // just for the Oops state for now...
   void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
 // TODO: Call dispose() on stages as they are removed
