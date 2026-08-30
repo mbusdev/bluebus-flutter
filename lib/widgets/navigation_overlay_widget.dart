@@ -61,6 +61,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   }
 
   // the regular busOptions button 
+  // NOTE: Currently not in use to match UI refactor but will leave it here for someone to use maybe 
   Widget busOptionButton(
     Bus bus, 
     VoidCallback onTap
@@ -104,56 +105,38 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     );
   }
 
-  // making this reusable, bit unecessary but if you need a red button with text!
+  // Special missedBusButton widget to trigger a reroute later...
+  // Notes: Can choose custom text
   Widget missedBusButton(VoidCallback onTap, Text text) {
     return SizedBox(
-      width: double.infinity,
+      width: 100.0,
+      height: 50.0,
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         ),
         child: text, // using passed in text parameter 
       ),
-    ); // the beautiful pill of doom and despair
+    ); // big beautiful pill (bbp)
   }
 
   // The code below should diplay the "which bus are you on" popup from UI Team 
   // Should currently show (#4) (Version of the design..)
   @override
-  void displayOopsDialog() {
+  void displayOopsDialog(Bus bus) {
     showUndismissableMaizebusDialog(
       contextIn: context,
       title: Text("Which bus are you on?"),
       // Builder so the buttons below get a context underneath the dialog route and can pop it
       content: Builder(
-        builder: (dialogContext) => Column(
+        builder: (dialogContext) => Row(
           mainAxisSize: MainAxisSize.min,
-          spacing: 10.0,
+          spacing: 1.0,
           children: [ // All of this data is currently placeholder
-            busOptionButton(Bus(id: "1234",
-                                position: LatLng(12.1, 12.1),
-                                routeId: "NES",
-                                heading: 12.0,
-                                fullness: "67%",
-                                routeColor: Color.fromARGB(255, 9, 9, 239)),
-                                () {
-                                  debugPrint("Oops dialog: picked bus 1234 (NES)");
-                                  Navigator.pop(dialogContext);
-                                }),
-            busOptionButton(Bus(id: "5678",
-                                position: LatLng(12.1, 12.1),
-                                routeId: "BB",
-                                heading: 12.0,
-                                fullness: "67%",
-                                routeColor: Color.fromARGB(255, 9, 9, 239)),
-                                () {
-                                  debugPrint("Oops dialog: picked bus 5678 (BB)");
-                                  Navigator.pop(dialogContext);
-                                }),
             missedBusButton(() {
               debugPrint("Oops dialog: user missed the bus");
               Navigator.pop(dialogContext);
