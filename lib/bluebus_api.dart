@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as Math;
+import 'package:bluebus/utils/geometry.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -64,26 +65,29 @@ class BlueBusApi {
             );
             if (point['typ'] == 'S') {
               // get rotation of stop
-              if (isLast){
-                // use the previous 2 points to calculate rotation
-                double stopRotation = pointRotation(
-                  pointList[i - 2]['lat']?.toDouble() ?? 0,
-                  pointList[i - 2]['lon']?.toDouble() ?? 0,
-                  pointList[i - 1]['lat']?.toDouble() ?? 0,
-                  pointList[i - 1]['lon']?.toDouble() ?? 0,
-                );
-                stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
+              // if (isLast){
+              //   // use the previous 2 points to calculate rotation
+              //   double stopRotation = pointRotation(
+              //     pointList[i - 2]['lat']?.toDouble() ?? 0,
+              //     pointList[i - 2]['lon']?.toDouble() ?? 0,
+              //     pointList[i - 1]['lat']?.toDouble() ?? 0,
+              //     pointList[i - 1]['lon']?.toDouble() ?? 0,
+              //   );
+              //   stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
                 
-              } else {
-                // use the next 2 points to calculate rotation
-                double stopRotation = pointRotation(
-                  pointList[i + 1]['lat']?.toDouble() ?? 0,
-                  pointList[i + 1]['lon']?.toDouble() ?? 0,
-                  pointList[i + 2]['lat']?.toDouble() ?? 0,
-                  pointList[i + 2]['lon']?.toDouble() ?? 0,
-                );
-                stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
-              }
+              // } else {
+              //   // use the next 2 points to calculate rotation
+              //   double stopRotation = pointRotation(
+              //     pointList[i + 1]['lat']?.toDouble() ?? 0,
+              //     pointList[i + 1]['lon']?.toDouble() ?? 0,
+              //     pointList[i + 2]['lat']?.toDouble() ?? 0,
+              //     pointList[i + 2]['lon']?.toDouble() ?? 0,
+              //   );
+              //   stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
+              // }
+
+              final stopRotation = routeStopRotation(pointList, i);
+              stops.add(BusStop.fromJson(point, routeId, stopRotation, false));
 
             }
           }

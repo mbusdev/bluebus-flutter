@@ -128,6 +128,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
+  // Hue fallback icons, cached by hue so repeated calls reuse the same
+  // instance. BitmapDescriptor has no ==, so building a new one every time
+  // would make otherwise identical markers compare unequal
+  final Map<double, BitmapDescriptor> _fallbackBusIcons = {};
 
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
@@ -150,6 +154,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   BusProvider? _busProviderRef;
   VoidCallback? _busProviderListener;
   int _routesFingerprint = 0;
+  int _busesFingerprint = 0;
 
   // store persistent bottom sheet controller
   PersistentBottomSheetController? _bottomSheetController;
@@ -174,14 +179,28 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       try {
         _busProviderRef = Provider.of<BusProvider>(context, listen: false);
         _busProviderListener = () {
+          if (!mounted) return;
           final routes = _busProviderRef?.routes ?? [];
           final newFp = _computeRoutesFingerprint(routes);
           if (newFp != _routesFingerprint) {
             _routesFingerprint = newFp;
             _handleRoutesUpdated(routes);
           }
+
+          // Bus positions update far more often than routes, so gate them on
+          // their own fingerprint. This is what drives marker updates now,
+          // instead of build() scheduling one on every frame
+          final buses = _busProviderRef?.buses ?? [];
+          final newBusFp = _computeBusesFingerprint(buses);
+          if (newBusFp != _busesFingerprint) {
+            _busesFingerprint = newBusFp;
+            _updateDisplayedBuses(buses);
+          }
         };
         _busProviderRef?.addListener(_busProviderListener!);
+        // Pick up whatever the provider already holds, since the listener
+        // only fires on future changes
+        _busProviderListener!();
       } catch (e, stackTrace) {
         debugPrint(
           'Error obtaining BusProvider or registering route listener in MapScreen.initState: $e',
@@ -694,6 +713,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     return h;
   }
 
+  // Compute a lightweight fingerprint of the buses list to detect changes
+  int _computeBusesFingerprint(List<Bus> buses) {
+    int h = 1;
+    for (final b in buses) {
+      h = 31 * h + b.id.hashCode;
+      h = 31 * h + b.routeId.hashCode;
+      h = 31 * h + b.position.hashCode;
+      h = 31 * h + b.heading.hashCode;
+      h = 31 * h + (b.routeColor?.hashCode ?? 0);
+    }
+    return h;
+  }
+
   // Called when provider reports routes changed
   void _handleRoutesUpdated(List<BusRouteLine> routes) {
     // Evict stale cached overlays for routes that changed
@@ -747,10 +779,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         }
       }
     }
+    final newAvailableRoutes = routeIdToName.entries
+        .map((e) => {'id': e.key, 'name': e.value})
+        .toList();
+
+    // Skip the rebuild when the route list is unchanged
+    if (listEquals(
+      _availableRoutes.map((r) => '${r['id']} ${r['name']}').toList(),
+      newAvailableRoutes.map((r) => '${r['id']} ${r['name']}').toList(),
+    )) {
+      return;
+    }
+
     setState(() {
-      _availableRoutes = routeIdToName.entries
-          .map((e) => {'id': e.key, 'name': e.value})
-          .toList();
+      _availableRoutes = newAvailableRoutes;
       globalAvailableRoutes = _availableRoutes;
     });
   }
@@ -929,7 +971,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
     // null case or error contacting server case
-    if (allBuses == []) return;
+    if (allBuses.isEmpty) return;
 
     final selectedBusMarkers = allBuses
         .where((bus) => _selectedRoutes.contains(bus.routeId))
@@ -939,23 +981,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
 
           // Use route specific bus icon if available, otherwise fallback to default
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+          final busIcon = _busIconFor(bus.routeId, routeColor);
 
           return Marker(
             flat: true,
             markerId: MarkerId('bus_${bus.id}'),
             consumeTapEvents: true,
             position: bus.position,
-            icon: busIcon!,
+            icon: busIcon,
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
             onTap: () {
@@ -969,31 +1002,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         .toSet();
 
     // Update journey bus markers if journey is active
+    Set<Marker>? journeyBusMarkers;
     if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
-      _displayedJourneyBusMarkers.clear();
+      journeyBusMarkers = <Marker>{};
       for (final bus in allBuses) {
         // Show buses that are on routes used in the journey
         if (_activeJourneyBusIds.contains(bus.id)) {
           final routeColor =
               bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+          final busIcon = _busIconFor(bus.routeId, routeColor);
 
-          _displayedJourneyBusMarkers.add(
+          journeyBusMarkers.add(
             Marker(
               flat: true,
               markerId: MarkerId('journey_bus_${bus.id}'),
               consumeTapEvents: true,
               position: bus.position,
-              icon: busIcon!,
+              icon: busIcon,
               rotation: bus.heading,
               anchor: const Offset(0.5, 0.5),
               onTap: () => _showBusSheet(bus.id),
@@ -1003,8 +1028,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
 
+    // Only rebuild if something actually changed. Marker's == compares every
+    // visible field (but not onTap), so this is a real content comparison.
+    // Without it every call schedules a frame, and any caller running per
+    // frame turns into an endless build/setState cycle
+    final busesChanged = !setEquals(_displayedBusMarkers, selectedBusMarkers);
+    final journeyChanged =
+        journeyBusMarkers != null &&
+        !setEquals(_displayedJourneyBusMarkers, journeyBusMarkers);
+    if (!busesChanged && !journeyChanged) return;
+
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
+      if (journeyBusMarkers != null) {
+        _displayedJourneyBusMarkers = journeyBusMarkers;
+      }
       _updateAllDisplayedMarkers();
     });
   }
@@ -1014,6 +1052,22 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         .union(_displayedBusMarkers)
         .union(_displayedJourneyMarkers)
         .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
+  }
+
+  /// Pick the icon for a bus: route specific first, then the generic bus icon,
+  /// then a plain hue marker. The hue markers are cached because
+  /// BitmapDescriptor uses identity equality, so building a fresh one each
+  /// call would make two otherwise identical markers compare unequal
+  BitmapDescriptor _busIconFor(String routeId, Color routeColor) {
+    final routeIcon = _routeBusIcons[routeId];
+    if (routeIcon != null) return routeIcon;
+    if (_busIcon != null) return _busIcon!;
+
+    final hue = _colorToHue(routeColor);
+    return _fallbackBusIcons.putIfAbsent(
+      hue,
+      () => BitmapDescriptor.defaultMarkerWithHue(hue),
+    );
   }
 
   /// Convert a Color to a BitmapDescriptor hue value
@@ -2009,13 +2063,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   @override
   Widget build(BuildContext context) {
-    // Only update bus markers when buses change
-    final busProvider = Provider.of<BusProvider>(context);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (busProvider.buses.isNotEmpty) {
-        _updateDisplayedBuses(busProvider.buses);
-      }
-    });
+    debugPrint("Got build() call");
+    // Bus markers are updated by _busProviderListener when the buses actually
+    // change, not from here. Scheduling the update from build() meant every
+    // setState queued another one, which setState'd again, forever.
+    // listen: false for the same reason: nothing in build() needs to rebuild
+    // on provider changes, the listener already drives the marker state
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     if (!globallPaddingHasBeenSet) {
       // set all padding
