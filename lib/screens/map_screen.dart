@@ -6,7 +6,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
-import 'package:bluebus/screens/new_features_screen.dart';
+import 'package:bluebus/screens/banner_screen.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/dialog.dart';
@@ -29,6 +29,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
+import '../models/banner_message.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 //import '../models/bus_stop.dart';
@@ -89,6 +90,12 @@ class MaizeBusCore extends StatefulWidget {
 class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
   late Journey currDisplayed;
+
+  // Set once startup data comes back. Null until then (and if the
+  // backend sends no banner), so always null-check before using in build().
+  BannerMessage? _bannerMessage;
+
+  
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -273,6 +280,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       startupData = await _getStartupData();
     }
 
+    // no setState needed, build() re-runs when _dataLoadingFuture completes
+    _bannerMessage = startupData.bannerMessage;
+
     // moving this here fixes loading bug
     await RouteColorService.initialize();
 
@@ -290,6 +300,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         title: Text(startupData.persistantMessageTitle),
         content: Text(startupData.persistantMessage),
       );
+    }
+
+    // a banner with no title has nothing to say, whatever its source claimed
+    if (_bannerMessage != null && _bannerMessage!.shortTitle == '') {
+      _bannerMessage!.isActive = false;
     }
 
     void onBusError(String route, String error) =>
@@ -546,12 +561,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final data = json.decode(response.body);
         final message = data['why_update_message'];
         final p_message = data['persistant_message'];
+
+        // Hardcoded for now. Once the API returns 'banner_message', swap this for:
+        // final banner_message = data['banner_message'] != null
+        //     ? BannerMessage.fromJson(data['banner_message'])
+        //     : null;
+        // (Sep 4 2026)
+        // final banner_message = BannerMessage.hardcoded;
+        final banner_message = (data['banner_message'] != null)
+          ? BannerMessage.fromJson(data['banner_message'])
+          : BannerMessage.none;
+
         return StartupDataHolder(
           data['min_supported_version'],
           message['title'],
           message['subtitle'],
           p_message['title'],
           p_message['subtitle'],
+          banner_message,
         );
       } else if (kDebugMode) {
         debugPrint(
@@ -2321,13 +2348,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                               mainAxisAlignment:
                                                   MainAxisAlignment.end,
                                               children: [
-                                                (NEW_BUTTON_SHOW_TIME.isBefore(
-                                                          DateTime.now(),
-                                                        ) &&
-                                                        NEW_BUTTON_HIDE_TIME
-                                                            .isAfter(
-                                                              DateTime.now(),
-                                                            ))
+                                                (_bannerMessage?.isActive ?? false)
                                                     ? CustomPaint(
                                                         foregroundPainter:
                                                             ProgressCirclePainter(
@@ -2372,7 +2393,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                       (
                                                                         context,
                                                                       ) =>
-                                                                          NewFeaturesScreen(),
+                                                                          BannerScreen(url: _bannerMessage?.url ?? ""),
                                                                 ),
                                                               );
                                                             },
@@ -2382,7 +2403,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                             heroTag: 'new_fab',
                                                             elevation: 0,
                                                             child: Text(
-                                                              "New!",
+                                                              _bannerMessage?.shortTitle ?? "New!",
                                                               style: TextStyle(
                                                                 color: getColor(
                                                                   context,

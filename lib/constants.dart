@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'models/banner_message.dart';
 
 // UPDATE WHEN RELAUNCH
 final String currentVersion = '2.0.2';
@@ -406,7 +407,8 @@ class StartupDataHolder {
   String updateMessage;
   String persistantMessageTitle;
   String persistantMessage;
-  StartupDataHolder(this.version, this.updateTitle, this.updateMessage, this.persistantMessageTitle, this.persistantMessage);
+  BannerMessage? bannerMessage;
+  StartupDataHolder(this.version, this.updateTitle, this.updateMessage, this.persistantMessageTitle, this.persistantMessage, this.bannerMessage);
 }
 
 class Loadpoint {
