@@ -36,7 +36,7 @@ class BannerMessage {
   static final BannerMessage hardcoded = BannerMessage(
     shortTitle: 'JOIN',
     url: 'https://www.maizebus.com/',
-    location: LatLng(12.345, 67.890),
+    location: LatLng(42.278653, -83.728791),
     isActive: true, // flip to false to switch the banner off without deleting it
   );
   static final BannerMessage none = BannerMessage(

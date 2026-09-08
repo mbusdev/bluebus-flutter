@@ -80,6 +80,46 @@ Future<BitmapDescriptor> resizeImage(ByteData image) async {
   return BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
 }
 
+// Draws a filled circle with `label` centered on it in white text, for use as
+// a marker icon. `label` is truncated to 5 characters -- past that it starts
+// running off the circle
+Future<BitmapDescriptor> _drawLabeledCircleMarker(
+  String label, {
+  Color color = maizeBusBlue,
+  double size = 80,
+}) async {
+  final truncated = label.length > 5 ? label.substring(0, 5) : label;
+
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  final center = Offset(size / 2, size / 2);
+
+  canvas.drawCircle(center, size / 2, Paint()..color = color);
+
+  final textPainter = TextPainter(
+    text: TextSpan(
+      text: truncated,
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontFamily: "Urbanist",
+        fontSize: 26,
+      ),
+    ),
+    textAlign: TextAlign.center,
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: size);
+  textPainter.paint(
+    canvas,
+    center - Offset(textPainter.width / 2, textPainter.height / 2),
+  );
+
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(size.toInt(), size.toInt());
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+  return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
+}
+
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
 
@@ -132,6 +172,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   BitmapDescriptor? _favRideStopIcon;
   BitmapDescriptor? _getOn;
   BitmapDescriptor? _getOff;
+  // Drawn (not asset-based) placeholder icon for the banner_message marker --
+  // a labeled circle. Swap for a real design once one exists (Sep 6 2026)
+  BitmapDescriptor? _bannerIcon;
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -450,6 +493,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
       _getOn = await resizeImage(await rootBundle.load('assets/getOn.png'));
       _getOff = await resizeImage(await rootBundle.load('assets/getOff.png'));
+      _bannerIcon = await _drawLabeledCircleMarker(
+        _bannerMessage?.shortTitle ?? '',
+      );
 
       // Load route specific bus icons
       await _loadRouteSpecificBusIcons();
@@ -471,6 +517,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
       _favRideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueAzure,
+      );
+      _bannerIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueYellow,
       );
     }
   }
@@ -567,10 +616,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         //     ? BannerMessage.fromJson(data['banner_message'])
         //     : null;
         // (Sep 4 2026)
-        // final banner_message = BannerMessage.hardcoded;
-        final banner_message = (data['banner_message'] != null)
-          ? BannerMessage.fromJson(data['banner_message'])
-          : BannerMessage.none;
+
+
+        final banner_message = BannerMessage.hardcoded;
+
+        // final banner_message = (data['banner_message'] != null)
+        //   ? BannerMessage.fromJson(data['banner_message'])
+        //   : BannerMessage.none;
+
 
         return StartupDataHolder(
           data['min_supported_version'],
@@ -1078,7 +1131,36 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _allDisplayedStopMarkers = _displayedStopMarkers
         .union(_displayedBusMarkers)
         .union(_displayedJourneyMarkers)
-        .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
+        .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {})
+        .union(_bannerMarker != null ? {_bannerMarker!} : {});
+  }
+
+  // Marker for the active banner_message, if any. Null when there's no
+  // banner to show, so it drops out of _updateAllDisplayedMarkers() cleanly
+  Marker? get _bannerMarker {
+    final banner = _bannerMessage;
+    if (banner == null || !banner.isActive) return null;
+
+    return Marker(
+      markerId: const MarkerId('banner_message'),
+      position: banner.location,
+      icon:
+          _bannerIcon ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+      flat: true,
+      anchor: const Offset(0.5, 0.5),
+      consumeTapEvents: true,
+      onTap: () {
+        try {
+          Haptics.vibrate(HapticsType.light);
+        } catch (e) {}
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => BannerScreen(url: banner.url),
+          ),
+        );
+      },
+    );
   }
 
   /// Pick the icon for a bus: route specific first, then the generic bus icon,
@@ -2219,6 +2301,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         .union(
                                           _searchLocationMarker != null
                                               ? {_searchLocationMarker!}
+                                              : {},
+                                        )
+                                        .union(
+                                          _bannerMarker != null
+                                              ? {_bannerMarker!}
                                               : {},
                                         ),
                               darkMapStyle: _darkMapStyle,
