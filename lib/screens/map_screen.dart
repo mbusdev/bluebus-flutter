@@ -41,8 +41,8 @@ import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
 
-final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
-final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
+// DateTime bannerShowTime = DateTime.parse("2026-03-16 00:00:00Z");
+// DateTime bannerHideTime = DateTime.parse("2026-03-24 00:00:00Z");
 
 // Function to calculate rotation angle between two geographical points
 // (used for bus stop icon orientation)
@@ -2435,14 +2435,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                               mainAxisAlignment:
                                                   MainAxisAlignment.end,
                                               children: [
-                                                (_bannerMessage?.isActive ?? false)
+                                                ((_bannerMessage?.isActive ?? false) && (
+                                                  (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
+                                                  (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
+                                                 ))
                                                     ? CustomPaint(
                                                         foregroundPainter:
                                                             ProgressCirclePainter(
                                                               startTime:
-                                                                  NEW_BUTTON_SHOW_TIME,
+                                                                  _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               endTime:
-                                                                  NEW_BUTTON_HIDE_TIME,
+                                                                  _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               currentTime:
                                                                   DateTime.now(),
                                                             ),

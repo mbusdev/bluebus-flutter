@@ -4,6 +4,8 @@ class BannerMessage {
   final String shortTitle;
   final String url;
   final LatLng location;
+  final DateTime showTime;
+  final DateTime hideTime;
 
   // Whether the banner should actually be shown. False by default: it's only
   // true if the hardcoded banner is switched on below, or one came back from
@@ -15,18 +17,22 @@ class BannerMessage {
     required this.shortTitle,
     required this.url,
     required this.location,
+    required this.showTime,
+    required this.hideTime,
     this.isActive = false,
   });
 
   factory BannerMessage.fromJson(Map<String, dynamic> json) {
     return BannerMessage(
-      shortTitle: json['shortTitle'] ?? '',
-      url: json['linkUrl'] ?? '',
+      shortTitle: json['shortTitle'] ?? 'https://www.maizebus.com',
+      url: json['linkUrl'] ?? 'https://www.maizebus.com',
       location: LatLng(
         json['latitude']?.toDouble() ?? 0,
         json['longitude']?.toDouble() ?? 0,
       ),
       isActive: true, // TODO: Check this!
+      showTime: DateTime.parse(json['showTime'] ?? "2000-01-01 17:14:00Z"),
+      hideTime: DateTime.parse(json["hideTime"] ?? "2035-01-01 17:14:00Z")
     );
   }
 
@@ -38,11 +44,15 @@ class BannerMessage {
     url: 'https://www.maizebus.com/',
     location: LatLng(42.278653, -83.728791),
     isActive: true, // flip to false to switch the banner off without deleting it
+    showTime: DateTime.parse("2026-03-16 00:00:00Z"),
+    hideTime: DateTime.parse("2030-03-24 00:00:00Z")
   );
   static final BannerMessage none = BannerMessage(
     shortTitle: '',
     url: '',
     location: LatLng(0,0),
-    isActive: false
+    isActive: false,
+    showTime: DateTime.parse("2026-03-16 00:00:00Z"),
+    hideTime: DateTime.parse("2030-03-24 00:00:00Z")
   );
 }
