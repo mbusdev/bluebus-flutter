@@ -618,11 +618,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         // (Sep 4 2026)
 
 
-        final banner_message = BannerMessage.hardcoded;
+        // final banner_message = BannerMessage.hardcoded;
 
-        // final banner_message = (data['banner_message'] != null)
-        //   ? BannerMessage.fromJson(data['banner_message'])
-        //   : BannerMessage.none;
+        final banner_message = (data['banner_message'] != null)
+          ? BannerMessage.fromJson(data['banner_message'])
+          : BannerMessage.none;
 
 
         return StartupDataHolder(
