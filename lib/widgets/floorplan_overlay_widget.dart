@@ -17,6 +17,103 @@ const FLOOR_SELECTOR_WIDTH = 50.0;
 const FLOOR_SELECTOR_ITEM_HEIGHT = 60.0;
 const FLOOR_SELECTOR_BORDER_RADIUS = 25.0;
 const FLOOR_SELECTED_HIGHLIGHT_MARGIN = 5.0;
+
+/// Compact control shown once the user is zoomed in close enough to a
+/// building with floorplan data, but hasn't opened the full floor picker
+/// yet -- just a floor button and a room-search bar, sitting where the
+/// normal map's bottom controls usually are. Tapping either one opens the
+/// full [FloorplanOverlay] floor picker.
+class FloorplanEntryBar extends StatelessWidget {
+  final VoidCallback onOpenFloorplan;
+
+  const FloorplanEntryBar({super.key, required this.onOpenFloorplan});
+
+  @override
+  Widget build(BuildContext context) {
+    // Mirrors the box model of the normal bus/favorites/search row exactly
+    // (bare Row, 45x45 circular button, 45-tall search button, no extra
+    // wrapping padding) so the two swap in at the same screen position
+    // instead of one sitting higher/lower than the other.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        SizedBox(
+          width: 45,
+          height: 45,
+          child: FittedBox(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: getColor(context, ColorType.mapButtonShadow),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: FloatingActionButton(
+                onPressed: onOpenFloorplan,
+                heroTag: 'floorplan_entry_fab',
+                backgroundColor:
+                    Colors.white, // TODO: Make dynamic for light/dark mode
+                elevation: 0, // handle shadow ourselves
+                child: Image.asset(
+                  'assets/floor-plan-symbol.png',
+                  width: 44,
+                  height: 44,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // search
+        Expanded(
+          child: SizedBox(
+            height: 45,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: getColor(context, ColorType.mapButtonShadow),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: ElevatedButton.icon(
+                onPressed: onOpenFloorplan,
+                style: ElevatedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  backgroundColor:
+                      Colors.white, // TODO: Make dynamic for light/dark mode
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 8,
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.search_sharp,
+                  color: Colors.black,
+                  size: 28,
+                ),
+                label: const Text(
+                  "Room #",
+                  style: TextStyle(color: Colors.black, fontSize: 18),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class FloorSelector extends StatefulWidget {
   /// Short labels for the floors, in the order they're drawn -- top to bottom.
   final List<String> floors;
@@ -580,6 +677,7 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
   }
 
   String get floorName {
+    if (selectedIndex < 0 || selectedIndex >= floors.length) return "";
     return floors[selectedIndex].name;
   }
 
@@ -693,8 +791,11 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton.filled(
-                      icon: Icon(Icons.arrow_back),
-                      iconSize: 30,
+                      icon: Image.asset(
+                        'assets/back-button-symbol.png',
+                        width: 20,
+                        height: 20,
+                      ),
                       onPressed: () { 
                         widget.onClosed?.call();
                       },
