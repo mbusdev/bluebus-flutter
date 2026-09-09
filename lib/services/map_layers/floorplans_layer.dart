@@ -49,6 +49,33 @@ class FloorplansLayer extends CompositeMapLayer {
 
   Floorplan? get floorplan => _source?.floorplan;
 
+  /// Rough lat/lng bounding box of the loaded building's footprint, used to
+  /// tell whether the camera is currently over it. Null until the footprint
+  /// has been projected (i.e. once the zoom has crossed [FLOORPLAN_OUTLINE_ZOOM]
+  /// at least once).
+  LatLngBounds? get footprintBounds {
+    if (_footprintPolygons.isEmpty) return null;
+    final List<LatLng> points = _footprintPolygons.first.points;
+    if (points.isEmpty) return null;
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final LatLng point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+  }
+
   List<FloorplanFloor> get floors => _source?.floorplan.floors ?? const [];
 
   FloorplanFloor? get activeFloor {
