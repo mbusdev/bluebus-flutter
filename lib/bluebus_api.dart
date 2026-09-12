@@ -52,7 +52,7 @@ class BlueBusApi {
           final stops = <BusStop>[];
           
           // Cast to list to be able to be able to get different elements
-          final pointList = subroute['pt'] as List; 
+          List pointList = subroute['pt'] as List;
 
           for (int i = 0; i < pointList.length; i++) {
             final point = pointList[i];

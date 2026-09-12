@@ -865,9 +865,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     // Skip the rebuild when the route list is unchanged
     if (listEquals(
-      _availableRoutes.map((r) => '${r['id']} ${r['name']}').toList(),
-      newAvailableRoutes.map((r) => '${r['id']} ${r['name']}').toList(),
-    )) {
+      _availableRoutes.map((r) => '${r['id']}-${r['name']}').toList(),
+      newAvailableRoutes.map((r) => '${r['id']}-${r['name']}').toList(),
+    )) { 
       return;
     }
 

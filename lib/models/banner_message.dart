@@ -23,6 +23,15 @@ class BannerMessage {
   });
 
   factory BannerMessage.fromJson(Map<String, dynamic> json) {
+    DateTime showTime = DateTime.parse("2000-01-01 17:14:00Z");
+    DateTime endTime = DateTime.parse("2035-01-01 17:14:00Z");
+    try {
+      showTime = DateTime.parse(json['showTime'] ?? "2000-01-01 17:14:00Z");
+    } catch (err) {}
+    try {
+      endTime = DateTime.parse(json['showTime'] ?? "2035-01-01 17:14:00Z");
+    } catch (err) {}
+
     return BannerMessage(
       shortTitle: json['shortTitle'] ?? 'https://www.maizebus.com',
       url: json['linkUrl'] ?? 'https://www.maizebus.com',
@@ -30,9 +39,9 @@ class BannerMessage {
         json['latitude']?.toDouble() ?? 0,
         json['longitude']?.toDouble() ?? 0,
       ),
-      isActive: true, // TODO: Check this!
-      showTime: DateTime.parse(json['showTime'] ?? "2000-01-01 17:14:00Z"),
-      hideTime: DateTime.parse(json["hideTime"] ?? "2035-01-01 17:14:00Z")
+      isActive: true,
+      showTime: showTime,
+      hideTime: endTime
     );
   }
 
