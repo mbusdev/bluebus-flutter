@@ -607,7 +607,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     try {
       final response = await http.get(Uri.parse('$BACKEND_URL/getStartupInfo'));
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        // final data = json.decode(response.body);
+        final data = json.decode()
         final message = data['why_update_message'];
         final p_message = data['persistant_message'];
 
@@ -621,7 +622,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           ? BannerMessage.fromJson(data['banner_message'])
           : BannerMessage.none;
 
-        // banner_message = BannerMessage.hardcoded;
+        banner_message = BannerMessage.hardcoded;
 
 
         return StartupDataHolder(

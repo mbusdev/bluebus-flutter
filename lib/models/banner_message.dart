@@ -30,14 +30,14 @@ class BannerMessage {
       showTime = DateTime.parse(json['showTime'] ?? "2000-01-01 17:14:00Z");
     } catch (err) {}
     try {
-      endTime = DateTime.parse(json['showTime'] ?? "2035-01-01 17:14:00Z");
+      endTime = DateTime.parse(json['endTime'] ?? "2035-01-01 17:14:00Z");
     } catch (err) {}
 
     bool locationExists = (json['latitude']?.toDouble() ?? 0) != 0 && (json['longitude']?.toDouble() ?? 0) != 0; // Make sure lat/lon is neither missing nor zero
 
     return BannerMessage(
       shortTitle: json['shortTitle'] ?? '',
-      url: json['linkUrl'] ?? 'https://www.maizebus.com',
+      url: json['url'] ?? 'https://www.maizebus.com',
       location: locationExists ? LatLng(
         json['latitude']?.toDouble() ?? 0,
         json['longitude']?.toDouble() ?? 0,
