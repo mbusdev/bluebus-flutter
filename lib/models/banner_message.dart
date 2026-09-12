@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class BannerMessage {
   final String shortTitle;
   final String url;
-  final LatLng location;
+  LatLng? location;
   final DateTime showTime;
   final DateTime hideTime;
 
@@ -16,7 +17,7 @@ class BannerMessage {
   BannerMessage({
     required this.shortTitle,
     required this.url,
-    required this.location,
+    this.location,
     required this.showTime,
     required this.hideTime,
     this.isActive = false,
@@ -32,13 +33,15 @@ class BannerMessage {
       endTime = DateTime.parse(json['showTime'] ?? "2035-01-01 17:14:00Z");
     } catch (err) {}
 
+    bool locationExists = (json['latitude']?.toDouble() ?? 0) != 0 && (json['longitude']?.toDouble() ?? 0) != 0; // Make sure lat/lon is neither missing nor zero
+
     return BannerMessage(
-      shortTitle: json['shortTitle'] ?? 'https://www.maizebus.com',
+      shortTitle: json['shortTitle'] ?? '',
       url: json['linkUrl'] ?? 'https://www.maizebus.com',
-      location: LatLng(
+      location: locationExists ? LatLng(
         json['latitude']?.toDouble() ?? 0,
         json['longitude']?.toDouble() ?? 0,
-      ),
+      ) : null,
       isActive: true,
       showTime: showTime,
       hideTime: endTime

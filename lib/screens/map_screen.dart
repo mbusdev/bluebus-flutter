@@ -617,12 +617,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         //     : null;
         // (Sep 4 2026)
 
-
-        // final banner_message = BannerMessage.hardcoded;
-
-        final banner_message = (data['banner_message'] != null)
+        BannerMessage banner_message = (data['banner_message'] != null)
           ? BannerMessage.fromJson(data['banner_message'])
           : BannerMessage.none;
+
+        // banner_message = BannerMessage.hardcoded;
 
 
         return StartupDataHolder(
@@ -1140,10 +1139,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   Marker? get _bannerMarker {
     final banner = _bannerMessage;
     if (banner == null || !banner.isActive) return null;
+    if (banner.location == null) return null; // No location marker to show--the banner doesn't need to have one
 
     return Marker(
       markerId: const MarkerId('banner_message'),
-      position: banner.location,
+      position: banner.location!,
       icon:
           _bannerIcon ??
           BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
@@ -2172,7 +2172,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("Got build() call");
     // Bus markers are updated by _busProviderListener when the buses actually
     // change, not from here. Scheduling the update from build() meant every
     // setState queued another one, which setState'd again, forever.
