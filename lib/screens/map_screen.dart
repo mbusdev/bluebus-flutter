@@ -607,23 +607,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     try {
       final response = await http.get(Uri.parse('$BACKEND_URL/getStartupInfo'));
       if (response.statusCode == 200) {
-        // final data = json.decode(response.body);
-        final data = json.decode()
+        final data = json.decode(response.body);
         final message = data['why_update_message'];
         final p_message = data['persistant_message'];
 
-        // Hardcoded for now. Once the API returns 'banner_message', swap this for:
-        // final banner_message = data['banner_message'] != null
-        //     ? BannerMessage.fromJson(data['banner_message'])
-        //     : null;
-        // (Sep 4 2026)
-
-        BannerMessage banner_message = (data['banner_message'] != null)
+        final banner_message = (data['banner_message'] != null)
           ? BannerMessage.fromJson(data['banner_message'])
           : BannerMessage.none;
-
-        banner_message = BannerMessage.hardcoded;
-
 
         return StartupDataHolder(
           data['min_supported_version'],
@@ -1050,8 +1040,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
-    // null case or error contacting server case
-    if (allBuses.isEmpty) return;
+    // Earlier code exited early if the list was empty. we don't want that
+    // because we want to always run this because if the list is empty
+    // that could mean the api says no more buses and we need to clear them
+    // from the screen.
 
     final selectedBusMarkers = allBuses
         .where((bus) => _selectedRoutes.contains(bus.routeId))
@@ -2653,7 +2645,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                   45) *
                                                               (math.pi / 180)
                                                         : 0,
-                                                    child: Icon(
+                                                    child: FaIcon(
                                                       FontAwesomeIcons.compass,
                                                       color: getColor(
                                                         context,
