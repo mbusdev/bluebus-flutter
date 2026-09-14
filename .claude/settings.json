@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter --version)",
+      "Bash(java -version)",
+      "Bash(flutter build *)",
+      "Bash(awk 'NR>=2011 && NR<=2863' lib/screens/map_screen.dart)",
+      "Bash(dart analyze *)"
+    ]
+  }
+}

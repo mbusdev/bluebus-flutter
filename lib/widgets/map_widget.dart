@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -103,10 +106,18 @@ class _AndroidMapState extends State<AndroidMap>
   Set<Marker>? _pendingDynamicMarkers;
   int? mapId;
   static const int _targetFps = 8;
-  // static const int _animationDurationMs = 10900;
-  static const int _animationDurationMs = 100;
-  late final Duration _minFrameGap =
-      Duration(milliseconds: (1000 / _targetFps).floor());
+  // Bus positions are polled every 5s (BusRepository.busUpdateInterval), so
+  // spread the interpolation over half of that. It used to be 100ms, which was
+  // both shorter than the frame gap below and too brief to see
+  static const int _animationDurationMs = 2500;
+  // Never let the throttle outlast the animation, or every intermediate frame
+  // is skipped and only the completion snap paints (buses teleport)
+  late final Duration _minFrameGap = Duration(
+    milliseconds: math.min(
+      (1000 / _targetFps).floor(),
+      _animationDurationMs ~/ 4,
+    ),
+  );
   Duration _lastPaint = Duration.zero;
 
   double _shortestAngleDelta(double fromDeg, double toDeg) {
@@ -168,15 +179,12 @@ class _AndroidMapState extends State<AndroidMap>
           _lerpLng(start.position.longitude, target.position.longitude, t);
       final double rot = start.rotation +
           _shortestAngleDelta(start.rotation, target.rotation) * t;
-      interpolated.add(Marker(
-        markerId: id,
-        anchor: target.anchor,
-        onTap: target.onTap,
-        icon: target.icon,
-        position: LatLng(lat, lng),
-        rotation: rot,
-        zIndex: target.zIndex,
-        consumeTapEvents: target.consumeTapEvents,
+      // copyWith keeps every field we aren't interpolating. Rebuilding the
+      // Marker by hand silently dropped flat: true, so the bus icons
+      // billboarded mid-animation and snapped back flat at the end
+      interpolated.add(target.copyWith(
+        positionParam: LatLng(lat, lng),
+        rotationParam: rot,
       ));
     }
     setState(() {
@@ -215,7 +223,13 @@ class _AndroidMapState extends State<AndroidMap>
 
   @override
   void didUpdateWidget(AndroidMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
     final incoming = widget.dynamicMarkers;
+    // The parent rebuilds for plenty of reasons that have nothing to do with
+    // bus positions. Restarting the animation on those just yanks it back to
+    // frame 0, so the buses never get anywhere
+    if (setEquals(oldWidget.dynamicMarkers, incoming)) return;
+
     if (_controller.isAnimating) {
       _hasPending = true;
       _pendingDynamicMarkers = incoming;
@@ -225,7 +239,6 @@ class _AndroidMapState extends State<AndroidMap>
       };
       _startAnimation(incoming);
     }
-    super.didUpdateWidget(oldWidget);
   }
 
   @override

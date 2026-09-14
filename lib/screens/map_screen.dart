@@ -6,7 +6,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/theme_provider.dart';
-import 'package:bluebus/screens/new_features_screen.dart';
+import 'package:bluebus/screens/banner_screen.dart';
 import 'package:bluebus/widgets/building_sheet.dart';
 import 'package:bluebus/widgets/bus_sheet.dart';
 import 'package:bluebus/widgets/dialog.dart';
@@ -29,6 +29,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
+import '../models/banner_message.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 //import '../models/bus_stop.dart';
@@ -40,8 +41,8 @@ import '../constants.dart';
 import './settings.dart';
 //import 'dart:convert';
 
-final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
-final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
+// DateTime bannerShowTime = DateTime.parse("2026-03-16 00:00:00Z");
+// DateTime bannerHideTime = DateTime.parse("2026-03-24 00:00:00Z");
 
 // Function to calculate rotation angle between two geographical points
 // (used for bus stop icon orientation)
@@ -79,6 +80,46 @@ Future<BitmapDescriptor> resizeImage(ByteData image) async {
   return BitmapDescriptor.fromBytes(stopData!.buffer.asUint8List());
 }
 
+// Draws a filled circle with `label` centered on it in white text, for use as
+// a marker icon. `label` is truncated to 5 characters -- past that it starts
+// running off the circle
+Future<BitmapDescriptor> _drawLabeledCircleMarker(
+  String label, {
+  Color color = maizeBusBlue,
+  double size = 80,
+}) async {
+  final truncated = label.length > 5 ? label.substring(0, 5) : label;
+
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  final center = Offset(size / 2, size / 2);
+
+  canvas.drawCircle(center, size / 2, Paint()..color = color);
+
+  final textPainter = TextPainter(
+    text: TextSpan(
+      text: truncated,
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontFamily: "Urbanist",
+        fontSize: 26,
+      ),
+    ),
+    textAlign: TextAlign.center,
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: size);
+  textPainter.paint(
+    canvas,
+    center - Offset(textPainter.width / 2, textPainter.height / 2),
+  );
+
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(size.toInt(), size.toInt());
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+  return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
+}
+
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
 
@@ -89,6 +130,12 @@ class MaizeBusCore extends StatefulWidget {
 class _MaizeBusCoreState extends State<MaizeBusCore> {
   late bool canVibrate;
   late Journey currDisplayed;
+
+  // Set once startup data comes back. Null until then (and if the
+  // backend sends no banner), so always null-check before using in build().
+  BannerMessage? _bannerMessage;
+
+  
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -125,9 +172,16 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   BitmapDescriptor? _favRideStopIcon;
   BitmapDescriptor? _getOn;
   BitmapDescriptor? _getOff;
+  // Drawn (not asset-based) placeholder icon for the banner_message marker --
+  // a labeled circle. Swap for a real design once one exists (Sep 6 2026)
+  BitmapDescriptor? _bannerIcon;
 
   // Route specific bus icons
   final Map<String, BitmapDescriptor> _routeBusIcons = {};
+  // Hue fallback icons, cached by hue so repeated calls reuse the same
+  // instance. BitmapDescriptor has no ==, so building a new one every time
+  // would make otherwise identical markers compare unequal
+  final Map<double, BitmapDescriptor> _fallbackBusIcons = {};
 
   // Memoization caches
   final Map<String, Polyline> _routePolylines = {};
@@ -150,6 +204,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   BusProvider? _busProviderRef;
   VoidCallback? _busProviderListener;
   int _routesFingerprint = 0;
+  int _busesFingerprint = 0;
 
   // store persistent bottom sheet controller
   PersistentBottomSheetController? _bottomSheetController;
@@ -174,14 +229,28 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       try {
         _busProviderRef = Provider.of<BusProvider>(context, listen: false);
         _busProviderListener = () {
+          if (!mounted) return;
           final routes = _busProviderRef?.routes ?? [];
           final newFp = _computeRoutesFingerprint(routes);
           if (newFp != _routesFingerprint) {
             _routesFingerprint = newFp;
             _handleRoutesUpdated(routes);
           }
+
+          // Bus positions update far more often than routes, so gate them on
+          // their own fingerprint. This is what drives marker updates now,
+          // instead of build() scheduling one on every frame
+          final buses = _busProviderRef?.buses ?? [];
+          final newBusFp = _computeBusesFingerprint(buses);
+          if (newBusFp != _busesFingerprint) {
+            _busesFingerprint = newBusFp;
+            _updateDisplayedBuses(buses);
+          }
         };
         _busProviderRef?.addListener(_busProviderListener!);
+        // Pick up whatever the provider already holds, since the listener
+        // only fires on future changes
+        _busProviderListener!();
       } catch (e, stackTrace) {
         debugPrint(
           'Error obtaining BusProvider or registering route listener in MapScreen.initState: $e',
@@ -254,6 +323,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       startupData = await _getStartupData();
     }
 
+    // no setState needed, build() re-runs when _dataLoadingFuture completes
+    _bannerMessage = startupData.bannerMessage;
+
     // moving this here fixes loading bug
     await RouteColorService.initialize();
 
@@ -271,6 +343,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         title: Text(startupData.persistantMessageTitle),
         content: Text(startupData.persistantMessage),
       );
+    }
+
+    // a banner with no title has nothing to say, whatever its source claimed
+    if (_bannerMessage != null && _bannerMessage!.shortTitle == '') {
+      _bannerMessage!.isActive = false;
     }
 
     void onBusError(String route, String error) =>
@@ -416,6 +493,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
       _getOn = await resizeImage(await rootBundle.load('assets/getOn.png'));
       _getOff = await resizeImage(await rootBundle.load('assets/getOff.png'));
+      _bannerIcon = await _drawLabeledCircleMarker(
+        _bannerMessage?.shortTitle ?? '',
+      );
 
       // Load route specific bus icons
       await _loadRouteSpecificBusIcons();
@@ -437,6 +517,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       );
       _favRideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueAzure,
+      );
+      _bannerIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueYellow,
       );
     }
   }
@@ -527,12 +610,18 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final data = json.decode(response.body);
         final message = data['why_update_message'];
         final p_message = data['persistant_message'];
+
+        final banner_message = (data['banner_message'] != null)
+          ? BannerMessage.fromJson(data['banner_message'])
+          : BannerMessage.none;
+
         return StartupDataHolder(
           data['min_supported_version'],
           message['title'],
           message['subtitle'],
           p_message['title'],
           p_message['subtitle'],
+          banner_message,
         );
       } else if (kDebugMode) {
         debugPrint(
@@ -694,6 +783,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     return h;
   }
 
+  // Compute a lightweight fingerprint of the buses list to detect changes
+  int _computeBusesFingerprint(List<Bus> buses) {
+    int h = 1;
+    for (final b in buses) {
+      h = 31 * h + b.id.hashCode;
+      h = 31 * h + b.routeId.hashCode;
+      h = 31 * h + b.position.hashCode;
+      h = 31 * h + b.heading.hashCode;
+      h = 31 * h + (b.routeColor?.hashCode ?? 0);
+    }
+    return h;
+  }
+
   // Called when provider reports routes changed
   void _handleRoutesUpdated(List<BusRouteLine> routes) {
     // Evict stale cached overlays for routes that changed
@@ -747,10 +849,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         }
       }
     }
+    final newAvailableRoutes = routeIdToName.entries
+        .map((e) => {'id': e.key, 'name': e.value})
+        .toList();
+
+    // Skip the rebuild when the route list is unchanged
+    if (listEquals(
+      _availableRoutes.map((r) => '${r['id']}-${r['name']}').toList(),
+      newAvailableRoutes.map((r) => '${r['id']}-${r['name']}').toList(),
+    )) { 
+      return;
+    }
+
     setState(() {
-      _availableRoutes = routeIdToName.entries
-          .map((e) => {'id': e.key, 'name': e.value})
-          .toList();
+      _availableRoutes = newAvailableRoutes;
       globalAvailableRoutes = _availableRoutes;
     });
   }
@@ -928,8 +1040,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _updateDisplayedBuses(List<Bus> allBuses) {
-    // null case or error contacting server case
-    if (allBuses == []) return;
+    // Earlier code exited early if the list was empty. we don't want that
+    // because we want to always run this because if the list is empty
+    // that could mean the api says no more buses and we need to clear them
+    // from the screen.
 
     final selectedBusMarkers = allBuses
         .where((bus) => _selectedRoutes.contains(bus.routeId))
@@ -939,23 +1053,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
 
           // Use route specific bus icon if available, otherwise fallback to default
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+          final busIcon = _busIconFor(bus.routeId, routeColor);
 
           return Marker(
             flat: true,
             markerId: MarkerId('bus_${bus.id}'),
             consumeTapEvents: true,
             position: bus.position,
-            icon: busIcon!,
+            icon: busIcon,
             rotation: bus.heading,
             anchor: const Offset(0.5, 0.5), // Center the icon on the position
             onTap: () {
@@ -969,31 +1074,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         .toSet();
 
     // Update journey bus markers if journey is active
+    Set<Marker>? journeyBusMarkers;
     if (_journeyOverlayActive && _activeJourneyBusIds.isNotEmpty) {
-      _displayedJourneyBusMarkers.clear();
+      journeyBusMarkers = <Marker>{};
       for (final bus in allBuses) {
         // Show buses that are on routes used in the journey
         if (_activeJourneyBusIds.contains(bus.id)) {
           final routeColor =
               bus.routeColor ?? RouteColorService.getRouteColor(bus.routeId);
-          BitmapDescriptor? busIcon;
-          if (_routeBusIcons.containsKey(bus.routeId)) {
-            busIcon = _routeBusIcons[bus.routeId];
-          } else if (_busIcon != null) {
-            busIcon = _busIcon;
-          } else {
-            busIcon = BitmapDescriptor.defaultMarkerWithHue(
-              _colorToHue(routeColor),
-            );
-          }
+          final busIcon = _busIconFor(bus.routeId, routeColor);
 
-          _displayedJourneyBusMarkers.add(
+          journeyBusMarkers.add(
             Marker(
               flat: true,
               markerId: MarkerId('journey_bus_${bus.id}'),
               consumeTapEvents: true,
               position: bus.position,
-              icon: busIcon!,
+              icon: busIcon,
               rotation: bus.heading,
               anchor: const Offset(0.5, 0.5),
               onTap: () => _showBusSheet(bus.id),
@@ -1003,8 +1100,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
     }
 
+    // Only rebuild if something actually changed. Marker's == compares every
+    // visible field (but not onTap), so this is a real content comparison.
+    // Without it every call schedules a frame, and any caller running per
+    // frame turns into an endless build/setState cycle
+    final busesChanged = !setEquals(_displayedBusMarkers, selectedBusMarkers);
+    final journeyChanged =
+        journeyBusMarkers != null &&
+        !setEquals(_displayedJourneyBusMarkers, journeyBusMarkers);
+    if (!busesChanged && !journeyChanged) return;
+
     setState(() {
       _displayedBusMarkers = selectedBusMarkers;
+      if (journeyBusMarkers != null) {
+        _displayedJourneyBusMarkers = journeyBusMarkers;
+      }
       _updateAllDisplayedMarkers();
     });
   }
@@ -1013,7 +1123,53 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _allDisplayedStopMarkers = _displayedStopMarkers
         .union(_displayedBusMarkers)
         .union(_displayedJourneyMarkers)
-        .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {});
+        .union(_searchLocationMarker != null ? {_searchLocationMarker!} : {})
+        .union(_bannerMarker != null ? {_bannerMarker!} : {});
+  }
+
+  // Marker for the active banner_message, if any. Null when there's no
+  // banner to show, so it drops out of _updateAllDisplayedMarkers() cleanly
+  Marker? get _bannerMarker {
+    final banner = _bannerMessage;
+    if (banner == null || !banner.isActive) return null;
+    if (banner.location == null) return null; // No location marker to show--the banner doesn't need to have one
+
+    return Marker(
+      markerId: const MarkerId('banner_message'),
+      position: banner.location!,
+      icon:
+          _bannerIcon ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+      flat: true,
+      anchor: const Offset(0.5, 0.5),
+      consumeTapEvents: true,
+      onTap: () {
+        try {
+          Haptics.vibrate(HapticsType.light);
+        } catch (e) {}
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => BannerScreen(url: banner.url),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Pick the icon for a bus: route specific first, then the generic bus icon,
+  /// then a plain hue marker. The hue markers are cached because
+  /// BitmapDescriptor uses identity equality, so building a fresh one each
+  /// call would make two otherwise identical markers compare unequal
+  BitmapDescriptor _busIconFor(String routeId, Color routeColor) {
+    final routeIcon = _routeBusIcons[routeId];
+    if (routeIcon != null) return routeIcon;
+    if (_busIcon != null) return _busIcon!;
+
+    final hue = _colorToHue(routeColor);
+    return _fallbackBusIcons.putIfAbsent(
+      hue,
+      () => BitmapDescriptor.defaultMarkerWithHue(hue),
+    );
   }
 
   /// Convert a Color to a BitmapDescriptor hue value
@@ -2009,13 +2165,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   @override
   Widget build(BuildContext context) {
-    // Only update bus markers when buses change
-    final busProvider = Provider.of<BusProvider>(context);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (busProvider.buses.isNotEmpty) {
-        _updateDisplayedBuses(busProvider.buses);
-      }
-    });
+    // Bus markers are updated by _busProviderListener when the buses actually
+    // change, not from here. Scheduling the update from build() meant every
+    // setState queued another one, which setState'd again, forever.
+    // listen: false for the same reason: nothing in build() needs to rebuild
+    // on provider changes, the listener already drives the marker state
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     if (!globallPaddingHasBeenSet) {
       // set all padding
@@ -2138,6 +2293,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         .union(
                                           _searchLocationMarker != null
                                               ? {_searchLocationMarker!}
+                                              : {},
+                                        )
+                                        .union(
+                                          _bannerMarker != null
+                                              ? {_bannerMarker!}
                                               : {},
                                         ),
                               darkMapStyle: _darkMapStyle,
@@ -2267,20 +2427,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                               mainAxisAlignment:
                                                   MainAxisAlignment.end,
                                               children: [
-                                                (NEW_BUTTON_SHOW_TIME.isBefore(
-                                                          DateTime.now(),
-                                                        ) &&
-                                                        NEW_BUTTON_HIDE_TIME
-                                                            .isAfter(
-                                                              DateTime.now(),
-                                                            ))
+                                                ((_bannerMessage?.isActive ?? false) && (
+                                                  (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
+                                                  (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
+                                                 ))
                                                     ? CustomPaint(
                                                         foregroundPainter:
                                                             ProgressCirclePainter(
                                                               startTime:
-                                                                  NEW_BUTTON_SHOW_TIME,
+                                                                  _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               endTime:
-                                                                  NEW_BUTTON_HIDE_TIME,
+                                                                  _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               currentTime:
                                                                   DateTime.now(),
                                                             ),
@@ -2318,7 +2475,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                       (
                                                                         context,
                                                                       ) =>
-                                                                          NewFeaturesScreen(),
+                                                                          BannerScreen(url: _bannerMessage?.url ?? ""),
                                                                 ),
                                                               );
                                                             },
@@ -2328,7 +2485,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                             heroTag: 'new_fab',
                                                             elevation: 0,
                                                             child: Text(
-                                                              "New!",
+                                                              _bannerMessage?.shortTitle ?? "New!",
                                                               style: TextStyle(
                                                                 color: getColor(
                                                                   context,
@@ -2488,7 +2645,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                   45) *
                                                               (math.pi / 180)
                                                         : 0,
-                                                    child: Icon(
+                                                    child: FaIcon(
                                                       FontAwesomeIcons.compass,
                                                       color: getColor(
                                                         context,
