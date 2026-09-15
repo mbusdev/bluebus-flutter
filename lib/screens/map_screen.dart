@@ -140,6 +140,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   /// reveals the compact "open floorplan" entry control; the picker itself
   /// only opens once the user taps that button.
   bool _nearFloorplanBuilding = false;
+
+  /// Whether the floorplan entry control should take over the bottom controls
+  /// slot. It replaces the bus browsing controls, which aren't much use once
+  /// you're inside a building -- but an active journey owns that same slot for
+  /// its own controls, so the swap is suppressed until the journey ends.
+  /// Otherwise the two would render on top of each other, and the "Steps"
+  /// button would be unreachable without zooming back out.
+  bool get _floorplanControlsTakeOver =>
+      _nearFloorplanBuilding && !_journeyOverlayActive;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
   // static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
@@ -2112,7 +2121,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                               alignment: Alignment.bottomCenter,
                               children: [
                                 IgnorePointer(
-                                  ignoring: _nearFloorplanBuilding,
+                                  ignoring: _floorplanControlsTakeOver,
                                   child: AnimatedSlide(
                                     duration: const Duration(
                                       milliseconds: 300,
@@ -2122,7 +2131,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     // screen while the floorplan entry
                                     // controls slide up into place at the
                                     // same time.
-                                    offset: _nearFloorplanBuilding
+                                    offset: _floorplanControlsTakeOver
                                         ? const Offset(0, 2)
                                         : Offset.zero,
                                     child: (_journeyOverlayActive)
@@ -2402,7 +2411,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                 // opens the full floor picker.
                                 IgnorePointer(
                                   ignoring:
-                                      !_nearFloorplanBuilding ||
+                                      !_floorplanControlsTakeOver ||
                                       _floorplanOverlayEnabled,
                                   child: AnimatedSlide(
                                     duration: const Duration(
@@ -2410,7 +2419,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
                                     curve: Curves.easeInOut,
                                     offset:
-                                        (_nearFloorplanBuilding &&
+                                        (_floorplanControlsTakeOver &&
                                             !_floorplanOverlayEnabled)
                                         ? Offset.zero
                                         : const Offset(0, 2),
