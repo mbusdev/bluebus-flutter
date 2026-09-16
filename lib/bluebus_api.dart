@@ -50,48 +50,51 @@ class BlueBusApi {
           final routeColor = RouteColorService.getRouteColor(routeId);
           final routeImageUrl = RouteColorService.getRouteImageUrl(routeId);
 
-          routes.add(
-            BusRouteLine(
-              routeId: routeId,
-              points: points,
-              stops: stops,
-              color: routeColor,
-              imageUrl: routeImageUrl,
-            ),
-          );
-
-          // Handle detour points if present
-          if (subroute.containsKey('dtrpt')) {
-            final detourPoints = <LatLng>[];
-            final detourStops = <(int, BusStop)>[];
-
-            // Cast to list to be able to be able to get different elements
-            final detourPointList = subroute['dtrpt'] as List; 
-
-            for (int i = 0; i < detourPointList.length; i++) {
-              final point = detourPointList[i];
-              detourPoints.add(
-                LatLng(
-                  point['lat']?.toDouble() ?? 0,
-                  point['lon']?.toDouble() ?? 0,
-                ),
-              );
-              if (point['typ'] == 'S') {
-                final stopRotation = routeStopRotation(detourPointList, i);
-                detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, false)));
-              }
-            }
-
+          // if (subroute.containsKey('dtrpt')) {
+            // Only show the main route if there is no detour
             routes.add(
               BusRouteLine(
                 routeId: routeId,
-                points: detourPoints,
-                stops: detourStops,
+                points: points,
+                stops: stops,
                 color: routeColor,
                 imageUrl: routeImageUrl,
               ),
             );
-          }
+          // }
+
+          // Handle detour points if present
+          // if (!subroute.containsKey('dtrpt')) {
+          //   final detourPoints = <LatLng>[];
+          //   final detourStops = <(int, BusStop)>[];
+
+          //   // Cast to list to be able to be able to get different elements
+         //   final detourPointList = subroute['dtrpt'] as List; 
+
+            // for (int i = 0; i < detourPointList.length; i++) {
+            //   final point = detourPointList[i];
+            //   detourPoints.add(
+            //     LatLng(
+            //       point['lat']?.toDouble() ?? 0,
+            //       point['lon']?.toDouble() ?? 0,
+            //     ),
+            //   );
+            //   if (point['typ'] == 'S') {
+            //     final stopRotation = routeStopRotation(detourPointList, i);
+            //     detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, false)));
+            //   }
+            // }
+
+          //   routes.add(
+          //     BusRouteLine(
+          //       routeId: routeId,
+          //       points: detourPoints,
+          //       stops: detourStops,
+          //       color: routeColor,
+          //       imageUrl: routeImageUrl,
+          //     ),
+          //   );
+          // }
         } catch (e) {
           onError(routeId, e.toString());
         }

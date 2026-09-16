@@ -66,6 +66,12 @@ sealed class NavigationStage {
     return "Swim for 200 meters"; // Subtitle displayed on the big bar at the top
   }
 
+  // Summary text shown in the steps list. Unlike getTitle(), this describes the
+  // whole stage rather than the next thing to do, so override it if the two differ.
+  String getFixedTitle() {
+    return getTitle();
+  }
+
   double length =
       0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
   double percent_complete =
@@ -301,8 +307,9 @@ class NavOnBus extends NavigationStage {
     return "(${state.rt}) Ride $stopsRemaining more stops";
   }
 
+  @override
   String getFixedTitle() {
-    return "Board ${state.rt}";
+    return "Board ${RouteColorService.getRouteName(state.rt)}";
   }
 
   @override
@@ -392,6 +399,11 @@ class NavOnBus extends NavigationStage {
     steps[steps.length - 1].title =
         "Get off at ${steps[steps.length - 1].title}";
     return steps;
+  }
+
+  @override
+  bool hasRoundedCorners() {
+    return true;
   }
 
   @override
@@ -655,9 +667,9 @@ class Walking extends NavigationStage {
 
   // Get summary text that shows up in steps view
   // such as "Walk 67 ft"
-  // @override
+  @override
   String getFixedTitle() {
-    return "Walk ${getDistanceLeftFeet().round()} ft";
+    return "Walk ${(length / 60).ceil()} min";
   }
 
   @override
@@ -734,6 +746,10 @@ class DemoStage extends NavigationStage {
 
   String getSubtitle() {
     return "Look, here's a subtitle too #$favoriteNumber";
+  }
+
+  String getFixedTitle() {
+    return "Demo fixed title!";
   }
 
   double length = 15.0; // In minutes

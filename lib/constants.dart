@@ -116,7 +116,11 @@ enum ColorType {
   secondaryButtonText,
 
   mapWalkingLine, // Color for the walking line on the map
-  navigationStepsGray
+  navigationStepsGray,
+  navigationCardFG,
+  navigationCardProgressFG,
+  navigationCardProgressBG,
+  navigationTopCardBG
 }
 
 const Map<ColorType, Color> lightColors = {
@@ -157,7 +161,11 @@ const Map<ColorType, Color> lightColors = {
   ColorType.secondaryButtonText: maizeBusBlue,
 
   ColorType.mapWalkingLine: Color.fromARGB(255, 7, 55, 97),
-  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237)
+  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237),
+  ColorType.navigationCardFG: maizeBusBlue,
+  ColorType.navigationCardProgressFG: maizeBusBlue,
+  ColorType.navigationCardProgressBG: Color(0xFFDBE4ED),
+  ColorType.navigationTopCardBG: Color(0xFF0B5394),
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -198,7 +206,11 @@ const Map<ColorType, Color> darkColors = {
   ColorType.secondaryButtonText: Color.fromARGB(255, 49, 129, 199),
 
   ColorType.mapWalkingLine: Color.fromARGB(255, 178, 219, 255),
-  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237)
+  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237),
+  ColorType.navigationCardFG: Colors.white,
+  ColorType.navigationCardProgressFG: Color(0xFF3181C7),
+  ColorType.navigationCardProgressBG: Color(0xFFDBE4ED),
+  ColorType.navigationTopCardBG: Color(0xFF0B5394),
 };
 
 // returns true if the current theme is dark mode
