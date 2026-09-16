@@ -11,6 +11,7 @@ import 'package:bluebus/screens/new_features_screen.dart';
 import 'package:bluebus/services/map_image_service.dart';
 import 'package:bluebus/services/map_layers/base_routes_layer.dart';
 import 'package:bluebus/services/map_layers/demo_buildings_layer.dart'; // DEMO BUILDINGS
+import 'package:bluebus/services/floorplan_style.dart';
 import 'package:bluebus/services/map_layers/floorplans_layer.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
@@ -133,6 +134,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   bool _journeyOverlayActive = false;
   bool _navigationOverlayEnabled = false;
   bool _floorplanOverlayEnabled = false;
+
+  /// True once the camera is zoomed in over a building we have floorplan
+  /// data for. Doesn't open the full floor picker by itself -- it just
+  /// reveals the compact "open floorplan" entry control; the picker itself
+  /// only opens once the user taps that button.
+  bool _nearFloorplanBuilding = false;
+
+  /// Whether the floorplan entry control should take over the bottom controls
+  /// slot. It replaces the bus browsing controls, which aren't much use once
+  /// you're inside a building -- but an active journey owns that same slot for
+  /// its own controls, so the swap is suppressed until the journey ends.
+  /// Otherwise the two would render on top of each other, and the "Steps"
+  /// button would be unreachable without zooming back out.
+  bool get _floorplanControlsTakeOver =>
+      _nearFloorplanBuilding && !_journeyOverlayActive;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
   // static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
@@ -1299,6 +1315,35 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // log("noted nonprogrammatic camera move");
       _userHasInteractedWithMap.value = true;
     }
+
+    _updateFloorplanOverlayForCamera(position);
+  }
+
+  /// Shows/hides the compact "open floorplan" entry control based on whether
+  /// the camera is zoomed in over a building we have real floorplan data
+  /// for. (The DEMO BUILDINGS footprints from [demoBuildingsLayer] are
+  /// intentionally not considered here -- they have no floors to show.)
+  /// Only reveals the entry control -- the full floor picker only opens once
+  /// the user taps it. If the user zooms/pans away from the building while
+  /// the picker is open, it closes automatically along with the entry
+  /// control.
+  void _updateFloorplanOverlayForCamera(CameraPosition position) {
+    final LatLngBounds? bounds = floorplansLayer.footprintBounds;
+    final bool overBuilding =
+        bounds != null && bounds.contains(position.target);
+    final bool zoomedInEnough = position.zoom >= FLOORPLAN_DETAIL_ZOOM;
+    final bool nearBuilding = overBuilding && zoomedInEnough;
+
+    final bool nextOverlayEnabled = nearBuilding && _floorplanOverlayEnabled;
+    if (nearBuilding == _nearFloorplanBuilding &&
+        nextOverlayEnabled == _floorplanOverlayEnabled) {
+      return;
+    }
+
+    setState(() {
+      _nearFloorplanBuilding = nearBuilding;
+      _floorplanOverlayEnabled = nextOverlayEnabled;
+    });
   }
 
   void _onCameraIdle() async {
@@ -2069,8 +2114,28 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             ),
 
                             // if showing journey, show close and reopen button
-                            (_journeyOverlayActive)
-                                ? Row(
+                            // -- swaps with the floorplan entry controls
+                            // below via a Stack so both occupy the same
+                            // screen position.
+                            Stack(
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                IgnorePointer(
+                                  ignoring: _floorplanControlsTakeOver,
+                                  child: AnimatedSlide(
+                                    duration: const Duration(
+                                      milliseconds: 300,
+                                    ),
+                                    curve: Curves.easeInOut,
+                                    // Slide the whole row out below the
+                                    // screen while the floorplan entry
+                                    // controls slide up into place at the
+                                    // same time.
+                                    offset: _floorplanControlsTakeOver
+                                        ? const Offset(0, 2)
+                                        : Offset.zero,
+                                    child: (_journeyOverlayActive)
+                                      ? Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       DecoratedBox(
@@ -2334,33 +2399,69 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         ),
                                       ),
 
-                                      FilledButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            _floorplanOverlayEnabled = true;
-                                          });
-                                        },
-                                        child: Text("Floorplan"),
-                                      ),
-                                    ],
+                                      ],
                                   ),
+                                  ),
+                                ),
+
+                                // Compact "open floorplan" entry control:
+                                // just the floor button + search bar, shown
+                                // once zoomed in near a building with
+                                // floorplan data. Tapping the floor button
+                                // opens the full floor picker.
+                                IgnorePointer(
+                                  ignoring:
+                                      !_floorplanControlsTakeOver ||
+                                      _floorplanOverlayEnabled,
+                                  child: AnimatedSlide(
+                                    duration: const Duration(
+                                      milliseconds: 300,
+                                    ),
+                                    curve: Curves.easeInOut,
+                                    offset:
+                                        (_floorplanControlsTakeOver &&
+                                            !_floorplanOverlayEnabled)
+                                        ? Offset.zero
+                                        : const Offset(0, 2),
+                                    child: FloorplanEntryBar(
+                                      onOpenFloorplan: () {
+                                        setState(() {
+                                          _floorplanOverlayEnabled = true;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
-                      _floorplanOverlayEnabled
-                          ? Positioned.fill(
-                              child: RepaintBoundary(
-                                child: FloorplanOverlay(
-                                  floorplansLayer: floorplansLayer,
-                                  onClosed: () {
-                                    setState(() {
-                                      _floorplanOverlayEnabled = false;
-                                    });
-                                  },
-                                ),
+                      // Kept mounted at all times (rather than toggled with
+                      // a ternary) so it can slide up into place instead of
+                      // just popping in -- see _updateFloorplanOverlayForCamera.
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          ignoring: !_floorplanOverlayEnabled,
+                          child: AnimatedSlide(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            offset: _floorplanOverlayEnabled
+                                ? Offset.zero
+                                : const Offset(0, 1),
+                            child: RepaintBoundary(
+                              child: FloorplanOverlay(
+                                floorplansLayer: floorplansLayer,
+                                onClosed: () {
+                                  setState(() {
+                                    _floorplanOverlayEnabled = false;
+                                  });
+                                },
                               ),
-                            )
-                          : SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ),
                       _navigationOverlayEnabled
                           ? Positioned.fill(
                               child: RepaintBoundary(

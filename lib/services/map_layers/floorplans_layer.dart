@@ -47,7 +47,43 @@ class FloorplansLayer extends CompositeMapLayer {
   Set<Polyline> _wallPolylines = const {};
   Set<Marker> _poiMarkers = const {};
 
+  /// Cached bounding box of the footprint above -- see [footprintBounds].
+  LatLngBounds? _footprintBounds;
+
   Floorplan? get floorplan => _source?.floorplan;
+
+  /// Rough lat/lng bounding box of the loaded building's footprint, used to
+  /// tell whether the camera is currently over it. Null until the footprint
+  /// has been projected, i.e. until [load] has run and the active floor has
+  /// both its waypoints -- it does not depend on the current zoom.
+  ///
+  /// Recomputed only in [_rebuild] rather than per read: this is polled on
+  /// every camera frame, and walking the whole outline there would allocate
+  /// a new bounds object each frame for a value that only changes when the
+  /// geometry does.
+  LatLngBounds? get footprintBounds => _footprintBounds;
+
+  /// Bounding box of [outline], or null if there's nothing to bound.
+  static LatLngBounds? _boundsOf(List<LatLng> outline) {
+    if (outline.isEmpty) return null;
+
+    double minLat = outline.first.latitude;
+    double maxLat = outline.first.latitude;
+    double minLng = outline.first.longitude;
+    double maxLng = outline.first.longitude;
+
+    for (final LatLng point in outline) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+  }
 
   List<FloorplanFloor> get floors => _source?.floorplan.floors ?? const [];
 
@@ -104,6 +140,7 @@ class FloorplansLayer extends CompositeMapLayer {
     final int generation = ++_buildGeneration;
 
     _footprintPolygons = const {};
+    _footprintBounds = null;
     _detailedPolygons = const {};
     _wallPolylines = const {};
     _poiMarkers = const {};
@@ -128,6 +165,7 @@ class FloorplansLayer extends CompositeMapLayer {
         final List<LatLng> outline = projection.toLatLngList(floor.outline);
 
         _footprintPolygons = {_buildFootprintPolygon(floor, outline)};
+        _footprintBounds = _boundsOf(outline);
         _detailedPolygons = {
           _buildBasePolygon(floor, outline),
           ..._buildRoomPolygons(floor, projection),
