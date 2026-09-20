@@ -648,8 +648,8 @@ class MapImageService {
         canvas,
         targetImage!,
         Offset(
-          (STOP_ICON_WIDTH.toDouble() / 2),
-          (STOP_ICON_HEIGHT.toDouble() / 2),
+          (STOP_ICON_WIDTH.toDouble() / 2) + 2, // + 2 to avoid clipping
+          (STOP_ICON_HEIGHT.toDouble() / 2) + 2, // + 2 to avoid clipping
         ),
         degreesToRadians(rotation),
       );
@@ -661,8 +661,8 @@ class MapImageService {
 
     final picture = recorder.endRecording();
     final img = await picture.toImage(
-      STOP_ICON_WIDTH.toInt(),
-      STOP_ICON_HEIGHT,
+      STOP_ICON_WIDTH.toInt() + 4,
+      STOP_ICON_HEIGHT + 4, // + 4 to avoid clipping
     );
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
 
