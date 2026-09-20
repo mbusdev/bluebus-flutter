@@ -60,19 +60,22 @@ class MapImageService {
   );
   static BitmapDescriptor favRideStopIcon =
       BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
-  static BitmapDescriptor? _navigationBusStopIcon;
+  static BitmapDescriptor? _getOffBusStopIcon;
+  static BitmapDescriptor? _getOnBusStopIcon;
 
   static ui.Image? _stopIconImage;
   static ui.Image? _rideStopIconImage;
   static ui.Image? _favStopIconImage;
   static ui.Image? _favRideStopIconImage;
-  static ui.Image? _navigationBusStopImage;
+  static ui.Image? _getOffBusStopImage;
+  static ui.Image? _getOnBusStopImage;
 
   static ByteData? _stopIconBytes;
   static ByteData? _rideStopIconBytes;
   static ByteData? _favStopIconBytes;
   static ByteData? _favRideStopIconBytes;
-  static ByteData? _navigationBusStopBytes;
+  static ByteData? _getOffBusStopBytes;
+  static ByteData? _getOnBusStopBytes;
 
   static bool _stopIconsInitialized = false;
 
@@ -260,13 +263,15 @@ class MapImageService {
       _favRideStopIconBytes = await rootBundle.load(
         'assets/favbusStopRide.png',
       );
-      _navigationBusStopBytes = await rootBundle.load('assets/getOff.png');
+      _getOffBusStopBytes = await rootBundle.load('assets/getOff.png');
+      _getOnBusStopBytes = await rootBundle.load('assets/getOn.png');
 
       _stopIconImage = await _decode(_stopIconBytes!);
       _rideStopIconImage = await _decode(_rideStopIconBytes!);
       _favStopIconImage = await _decode(_favStopIconBytes!);
       _favRideStopIconImage = await _decode(_favRideStopIconBytes!);
-      _navigationBusStopImage = await _decode(_navigationBusStopBytes!);
+      _getOffBusStopImage = await _decode(_getOffBusStopBytes!);
+      _getOnBusStopImage = await _decode(_getOnBusStopBytes!);
 
       // Load stop icons
       stopIcon = await MapImageService.resizeImage(_stopIconBytes!);
@@ -275,8 +280,11 @@ class MapImageService {
       favRideStopIcon = await MapImageService.resizeImage(
         _favRideStopIconBytes!,
       );
-      _navigationBusStopIcon = await MapImageService.resizeImage(
-        _navigationBusStopBytes!,
+      _getOffBusStopIcon = await MapImageService.resizeImage(
+        _getOffBusStopBytes!,
+      );
+      _getOnBusStopIcon = await MapImageService.resizeImage(
+        _getOnBusStopBytes!,
       );
 
       _stopIconsInitialized = true;
@@ -683,8 +691,12 @@ class MapImageService {
     // return Offset(0.5, 0.5);
   }
 
-  static BitmapDescriptor? getNavigationBusStop() {
-    return _navigationBusStopIcon;
+  static BitmapDescriptor? getOffBusStop() {
+    return _getOffBusStopIcon;
+  }
+
+  static BitmapDescriptor? getOnBusStop(){
+    return _getOnBusStopIcon;
   }
 
   static Future<void> loadData() async {

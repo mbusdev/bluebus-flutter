@@ -982,7 +982,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _searchLocationMarker = Marker(
       markerId: const MarkerId('search_location'),
       position: LatLng(lat, lon),
-      icon:  MapImageService.getNavigationBusStop() ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure,),
+      icon:  MapImageService.getOnBusStop() ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure,),
       consumeTapEvents: false,
     );
     setState(() {});

@@ -17,6 +17,7 @@ import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:bluebus/services/map_image_service.dart';
 
 enum LineType { Dotted, Dashed }
 
@@ -227,6 +228,7 @@ class NavOnBusState {
 class NavOnBus extends NavigationStage {
   late NavOnBusState state;
   late BitmapDescriptor stopBitmap;
+
   LatLng? lastPosition;
 
   NavOnBus();
@@ -291,6 +293,7 @@ class NavOnBus extends NavigationStage {
     // pictureInfo.
     // svg.clipBehavior
     // stopBitmap = BitmapDescriptor.bytes();
+
     stopBitmap = BitmapDescriptor.defaultMarker;
   }
 
@@ -416,7 +419,11 @@ class NavOnBus extends NavigationStage {
               flat: true,
               position: stop.location,
               zIndex: 2000,
-              icon: stopBitmap,
+              icon: stop.id == state.departureStop
+                  ? MapImageService.getOnBusStop() ?? stopBitmap
+                  : stop.id == state.arrivalStop
+                      ? MapImageService.getOffBusStop() ?? stopBitmap
+                      : stopBitmap,
             ),
           },
         )
