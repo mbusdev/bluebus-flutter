@@ -155,9 +155,11 @@ class _ExpandableStopWidgetState extends State<ExpandableStopWidget> {
 
                   SizedBox(width: 5),
                   if (widget.busProvider.containsBus(widget.vehicleId))
-                    is_expanded
+                    (is_expanded
                         ? Icon(Icons.expand_less)
-                        : Icon(Icons.expand_more),
+                        : Icon(Icons.expand_more))
+                  else
+                    SizedBox(width: 24),
                 ],
               ),
             ),
