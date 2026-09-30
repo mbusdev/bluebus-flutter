@@ -47,7 +47,10 @@ class RideAPI {
               ),
             );
             if (point['typ'] == 'S') {
-              final stopRotation = routeStopRotation(pointList, i);
+              List<LatLng> latLngPoints = pointList.map((dynamic stop_json) {
+                return LatLng(stop_json["lat"], stop_json["lon"]);
+              }).toList();
+              final stopRotation = routeStopRotation(latLngPoints, i);
               stops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
 
             }
@@ -68,37 +71,37 @@ class RideAPI {
           );
 
           // Handle detour points if present
-          if (subroute.containsKey('dtrpt')) {
-            final detourPoints = <LatLng>[];
-            final detourStops = <(int, BusStop)>[];
+          // if (subroute.containsKey('dtrpt')) {
+          //   final detourPoints = <LatLng>[];
+          //   final detourStops = <(int, BusStop)>[];
 
-            // Cast to list to be able to be able to get different elements
-            final detourPointList = subroute['dtrpt'] as List; 
+          //   // Cast to list to be able to be able to get different elements
+          //   final detourPointList = subroute['dtrpt'] as List; 
 
-            for (int i = 0; i < detourPointList.length; i++) {
-              final point = detourPointList[i];
-              detourPoints.add(
-                LatLng(
-                  point['lat']?.toDouble() ?? 0,
-                  point['lon']?.toDouble() ?? 0,
-                ),
-              );
-              if (point['typ'] == 'S') {
-                final stopRotation = routeStopRotation(detourPointList, i);
-                detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
-              }
-            }
+          //   for (int i = 0; i < detourPointList.length; i++) {
+          //     final point = detourPointList[i];
+          //     detourPoints.add(
+          //       LatLng(
+          //         point['lat']?.toDouble() ?? 0,
+          //         point['lon']?.toDouble() ?? 0,
+          //       ),
+          //     );
+          //     if (point['typ'] == 'S') {
+          //       final stopRotation = routeStopRotation(detourPointList, i);
+          //       detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
+          //     }
+          //   }
 
-            routes.add(
-              BusRouteLine(
-                routeId: routeId,
-                points: detourPoints,
-                stops: detourStops,
-                color: routeColor,
-                imageUrl: routeImageUrl,
-              ),
-            );
-          }
+          //   routes.add(
+          //     BusRouteLine(
+          //       routeId: routeId,
+          //       points: detourPoints,
+          //       stops: detourStops,
+          //       color: routeColor,
+          //       imageUrl: routeImageUrl,
+          //     ),
+          //   );
+          // }
         } catch (e) {
           onError(routeId, e.toString());
         }

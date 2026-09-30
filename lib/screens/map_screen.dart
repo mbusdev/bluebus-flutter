@@ -770,6 +770,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final newRouteIds = routes.map((r) => r.routeId).toSet();
 
     journeyLayer.setRoutesCache(routes);
+    liveBusesLayer.setRoutesCache(routes);
 
     _routePolylines.removeWhere((key, _) {
       for (final id in newRouteIds) {
@@ -1409,16 +1410,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _showBusSheet(String busID) {
-    showModalBottomSheet(
+    // TODO: Allow the user to drag the top half of the map
+    // TODO: Fix the back button (maybe bring back the sheet stack? That might be messy now that our bus sheet is different)--it should take the user back to the previous camera position/zoom on the map
+    // 
+
+    // showModalBottomSheet(
+    _bottomSheetController = showBottomSheet(
       context: context,
-      isScrollControlled: true,
-      isDismissible: true,
+      // isScrollControlled: true,
+      // isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         child: DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          maxChildSize: 0.85,
           snap: true,
+          snapSizes: [0.5, 0.9],
+          initialChildSize: 0.5,
+          // initialChildSize: 0.85,
+          // maxChildSize: 0.85,
+          // snap: true,
 
           builder: (BuildContext context, ScrollController scrollController) {
             return BusSheet(
@@ -1493,6 +1502,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           showBusSheet: (busId) {
             // When someone clicks "See all stops for this bus" this callback runs
             Navigator.pop(context); // Close the current modal
+            centerOnBusID(busProvider, busId);
+
             _showBusSheet(busId);
           },
           busProvider: busProvider,
@@ -1574,6 +1585,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
 
     return null;
+  }
+
+  Future<void> centerOnBusID(BusProvider busProvider, String busId) async {
+    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    final state = liveBusesLayer.busAnimationCache[busId];
+    LatLng? pos = state?.lastInterpolatedPosition ??
+        state?.bus.position ??
+        busProvider.buses.where((b) => b.id == busId).firstOrNull?.position;
+
+    if (pos != null) {
+      pos = LatLng(pos.latitude + latitude_adjust, pos.longitude);
+      await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
+    }
   }
 
   Future<void> _centerOnLocation(

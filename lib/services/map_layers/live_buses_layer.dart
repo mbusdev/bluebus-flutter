@@ -1,7 +1,10 @@
 import 'dart:math';
 
 import 'package:bluebus/models/bus.dart';
+import 'package:bluebus/models/bus_route_line.dart';
+import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/utils/geometry.dart';
 import 'package:bluebus/widgets/composite_map_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -53,6 +56,8 @@ class LiveBusesLayer extends CompositeMapLayer {
   @override
   Set<Polyline> polylines = {};
 
+  Map<String, List<BusRouteLine>> routesCache = {};
+
   bool isAnimating = false;
   late Animation<double> animation;
   int nextAnimationFrameTime = 0;
@@ -81,6 +86,13 @@ class LiveBusesLayer extends CompositeMapLayer {
   @override
   void setShowRipple(Function(LatLng) callback) {
     showRipple = callback;
+  }
+
+  void setRoutesCache(List<BusRouteLine> routes) {
+    routesCache.clear();
+    for (BusRouteLine l in routes) {
+      routesCache.putIfAbsent(l.routeId, () => []).add(l);
+    }
   }
 
   void initWithTickerProvider(TickerProvider tickerProviderIn) {
@@ -163,11 +175,15 @@ class LiveBusesLayer extends CompositeMapLayer {
                 (busAnimationCache[busId]!.fromHeading! -
                 busAnimationCache[busId]!.toHeading!);
 
-            if (headingDelta.abs() > (360 + headingDelta).abs()) {
-              // Might need to fix this
-              headingDelta =
-                  360 + headingDelta; // Turn the tightest direction possible
+            if (headingDelta > 180) {
+              headingDelta = 360 - headingDelta; // Turn the tightest direction possible
             }
+
+            // if (headingDelta.abs() > (360 + headingDelta).abs()) {
+            //   // Might need to fix this
+            //   headingDelta =
+            //       360 + headingDelta; // Turn the tightest direction possible
+            // }
 
             if ((headingDelta).abs() < 120) {
               // Don't animate heading changes of more than 120 degrees to avoid weird spinning if the bus turns 180
@@ -203,59 +219,12 @@ class LiveBusesLayer extends CompositeMapLayer {
                 Haptics.vibrate(HapticsType.light);
               } catch (e) {}
               onBusClicked(busAnimationCache[busId]!.bus);
-              // _showBusSheet(bus.id);
             },
           );
 
-          // return Marker();
         })
         .toSet();
 
-    // busAnimationCache.where((bus) => selectedRoutes.contains(bus.routeId))
-    // // .map((bus) {
-    // .forEach((bus) {
-
-    //   // Update all cached markers with new location data (location is contained inside bus object)
-    //   if (busAnimationCache.containsKey(bus.id)) {
-    //     busAnimationCache[bus.id]?.prevBus = busAnimationCache[bus.id]?.bus;
-    //     busAnimationCache[bus.id]?.bus = bus;
-    //   } else {
-    //     busAnimationCache[bus.id] = BusAnimationState(
-    //       bus: bus,
-    //       busIcon: MapImageService.getBusIcon(bus),
-    //       markerId: MarkerId('bus_${bus.id}')
-    //     );
-    //   }
-    // });
-
-    // //TODO: Start the animation here!
-    // startAnimation();
-
-    //   // Use route specific bus icon if available, otherwise fallback to default
-    //   BitmapDescriptor? busIcon = MapImageService.getBusIcon(bus);
-
-    //   // NEXT STEPS TODO: Get bus animations working on android, and get the live updating to work!
-
-    //   // Maybe try Project SmoothBus(TM) again?
-
-    //   return Marker(
-    //     flat: true,
-    //     markerId: MarkerId('bus_${bus.id}'),
-    //     consumeTapEvents: true,
-    //     position: bus.position,
-    //     icon: busIcon,
-    //     rotation: bus.heading,
-    //     anchor: const Offset(0.5, 0.5), // Center the icon on the position
-    //     onTap: () {
-    //       try {
-    //         Haptics.vibrate(HapticsType.light);
-    //       } catch (e) {}
-    //       onBusClicked(bus);
-    //       // _showBusSheet(bus.id);
-    //     },
-    //   );
-    // })
-    // .toSet();
   }
 
   void startAnimation() {
@@ -336,7 +305,48 @@ class LiveBusesLayer extends CompositeMapLayer {
         busAnimationCache[bus.id]?.fromHeading =
             busAnimationCache[bus.id]?.lastInterpolatedHeading;
         busAnimationCache[bus.id]?.toPosition = bus.position;
-        busAnimationCache[bus.id]?.toHeading = bus.heading;
+
+
+
+        
+
+        //double routeStopRotation(List<dynamic> points, int stopIndex) {
+
+
+        // This bit of code is for resolving some of the strange bus rotations we've noticed.
+        // If a bus is currently on a route, Clever Devices's API seems to report its
+        // heading by calculating the angle of the polyline segment closest to the bus.
+        // This causes problems sometimes since bus stops on sidewalks cause the polyline
+        // to "jut out", which confuses Clever Devices's API and makes the bus appear
+        // perpendicular to the road.
+        // This code checks to see if the bus is at one of these bus stops. If it is,
+        // it finds a smoother angle to render to prevent these perpendicular buses.
+        int closestStopIndex = -1;
+        double newHeading = 0;
+        if (routesCache[bus.routeId] != null) {
+          routesCache[bus.routeId]?.forEach((BusRouteLine line) {
+            line.stops.forEach(((int, BusStop) entry) {
+              // entry.$1 is the index, entry.$2 is the LatLng
+              double dist = bus.position.haversineDistanceMetersTo(entry.$2.location);
+              if (dist < 8) { // Closer than 8 meters
+                // debugPrint("line.points = ${line.points}, stopIndex: ${entry.$1}");
+                newHeading = routeStopRotation(line.points, entry.$1);
+                // debugPrint("Bus is at stop ${entry.$2.id}, so its new heading is $newHeading");
+                closestStopIndex = entry.$1;
+              }
+            });
+          });
+        }
+
+        if (closestStopIndex == -1) {
+          // No stop was close enough to trigger our heading correction
+          busAnimationCache[bus.id]?.toHeading = bus.heading;
+        } else {
+          busAnimationCache[bus.id]?.toHeading = newHeading;
+        }
+
+
+
       } else {
         // If we get here, the previous position either doesn't exist or is too old. Create a new BusAnimationState from scratch
 

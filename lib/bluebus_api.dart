@@ -59,7 +59,10 @@ class BlueBusApi {
               ),
             );
             if (point['typ'] == 'S') {
-              final stopRotation = routeStopRotation(pointList, i);
+              List<LatLng> latLngPoints = pointList.map((dynamic stop_json) {
+                return LatLng(stop_json["lat"], stop_json["lon"]);
+              }).toList();
+              final stopRotation = routeStopRotation(latLngPoints, i);
               stops.add((i, BusStop.fromJson(point, routeId, stopRotation, false)));
             }
           }
