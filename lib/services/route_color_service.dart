@@ -1,3 +1,4 @@
+import 'package:bluebus/services/bus_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -16,7 +17,8 @@ class RouteColorService {
     if (_isInitialized) return;
     
     try {
-      await _fetchFrontendData();
+      // await _fetchFrontendData();
+      await _fetchFrontendDataWithCache();
       _isInitialized = true;
       _lastError = null;
     } catch (e) {
@@ -27,17 +29,36 @@ class RouteColorService {
     }
   }
 
+  static Future<void> _fetchFrontendDataWithCache() async {
+    String? cachedResponse = await BusRepository.getFromCache('frontend-data-${await AppInfo.version()}');
+    debugPrint("Cached frontend data is $cachedResponse");
+    if (cachedResponse == null) {
+      return _fetchFrontendData(); // Block until frontend data is downloaded
+    }
+    debugPrint("Cache hit for _fetchFrontendDataWithCache()");
+    final cachedData = jsonDecode(cachedResponse);
+    
+    _parseFrontendData(cachedData); // Use the cached data for now
+    _fetchFrontendData(); // Asynchronously load frontend data (fire-and-forget)
+    return;
+  }
+  // TODO: Run testing to make sure the cache works!
+
   // Fetch all frontend data from the backend
   static Future<void> _fetchFrontendData() async {
+    // return; // Temporarily skip
     final response = await http.get(Uri.parse('$BACKEND_URL/getFrontendData'));
     
     if (response.statusCode == 200) {
+      BusRepository.writeToCache('frontend-data-${await AppInfo.version()}', response.body);
       final data = jsonDecode(response.body);
       _parseFrontendData(data);
     } else {
       throw Exception('Failed to fetch frontend data: ${response.statusCode}');
     }
   }
+
+  // TODO: Fix the bug where the app crashes if you start it offline with an empty cache
 
   // Parse the frontend data response
   static void _parseFrontendData(Map<String, dynamic> data) {

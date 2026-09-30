@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as Math;
+import 'package:bluebus/services/bus_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -17,7 +18,24 @@ class BlueBusApi {
   static Future<List<BusRouteLine>> fetchRoutes(Function(String route, String error) onError) async {
     final response = await http.get(Uri.parse('$baseUrl/getAllRoutes'));
     if (response.statusCode != 200) throw Exception('Failed to load routes');
-    final data = jsonDecode(response.body);
+
+    BusRepository.writeToCache('bluebus-routes-cache-v${await AppInfo.version()}', response.body);
+
+    return processRoutesJson(response.body, onError);
+  }
+
+  // static Future<List<BusRouteLine>> fetchRoutesWithCache(Function(String route, String error) onError) async {
+  //   String? cachedRoutes = await BusRepository.getFromCache('bluebuscache-v${await AppInfo.version()}');
+
+  //   if (cachedRoutes == null) {
+  //     return fetchRoutes(onError)
+  //   }
+
+  //   TODO: Right now we have a return statement that processes the updated routes, but that won't work since we return the routes TWICE--once when we load from cache and a second time when the web request goes through. Make sure the app reflects the changes when the real web request goes through, not just when the cache returns a result. Also finish this function and add another version into theride_api.dart as well
+  // }
+
+  static Future<List<BusRouteLine>> processRoutesJson(String jsonBody, Function(String route, String error) onError) async {
+    final data = jsonDecode(jsonBody);
     final routes = <BusRouteLine>[];
     final routeJson = data['routes'] as Map<String, dynamic>;
 

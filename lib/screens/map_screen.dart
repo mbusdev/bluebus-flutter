@@ -1,9 +1,10 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, SocketException;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:developer';
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/services/map_layers/search_result_layer.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -175,6 +176,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final NavigationLayer navigationLayer = NavigationLayer();
   final FloorplansLayer floorplansLayer = FloorplansLayer();
   final DemoBuildingsLayer demoBuildingsLayer = DemoBuildingsLayer(); // DEMO BUILDINGS
+  final SearchResultLayer searchResultLayer = SearchResultLayer();
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -304,46 +306,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
-  Future<void> _loadAllData() async {
-    ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
-    theme.onSystemThemeUpdate(context);
-    await theme.loadTheme();
-
-    final prefs = await SharedPreferences.getInstance();
-    globalFollowDistanceThresholdMeters =
-        prefs.getDouble('follow_distance_threshold_meters') ??
-        globalFollowDistanceThresholdMeters;
-    globalGpsUpdateDistanceFilterMeters =
-        prefs.getInt('gps_update_distance_filter_meters') ??
-        globalGpsUpdateDistanceFilterMeters;
-
-    screenRadius = await ScreenCornerRadius.get(); // load screen radius
-    screenRadiusLoaded = true;
-    globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
-
-    //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always) {
-      // permission = await Geolocator.requestPermission();
-      Position? pos = await Geolocator.getLastKnownPosition();
-      if (pos != null) {
-        startLatLng = LatLng(pos.latitude, pos.longitude);
-        _currentCameraPos.value = CameraPosition(
-          target: startLatLng,
-          zoom: 15.0,
-          bearing: 0.0,
-        );
-      }
-    }
-
-    canVibrate = await Haptics.canVibrate();
-    final busProvider = Provider.of<BusProvider>(context, listen: false);
-
-    _loadingMessageNotifier.value = Loadpoint('Contacting server...', 1);
+  void downloadStartupData() async { // TODO: Test to make sure this works with startup data
     StartupDataHolder? startupData = await _getStartupData();
-
-    // keep trying to reach server. Can't start without this
+    // keep trying to reach server.
     while (startupData == null) {
       if (kDebugMode) {
         debugPrint("retrying _getStartupData");
@@ -352,24 +317,32 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       startupData = await _getStartupData();
     }
 
-    // moving this here fixes loading bug
-    await RouteColorService.initialize();
-
-    if (!isCurrentVersionEqualOrHigher(startupData.version)) {
+    if (!isCurrentVersionEqualOrHigher(startupData!.version)) {
       showUndismissableMaizebusDialog(
         contextIn: context,
-        title: Text(startupData.updateTitle),
-        content: Text(startupData.updateMessage),
+        title: Text(startupData!.updateTitle),
+        content: Text(startupData!.updateMessage),
       );
     }
 
-    if (startupData.persistantMessageTitle != '') {
+    if (startupData!.persistantMessageTitle != '') {
       showMaizebusOKDialog(
         contextIn: context,
-        title: startupData.persistantMessageTitle,
-        content: startupData.persistantMessage,
+        title: startupData!.persistantMessageTitle,
+        content: startupData!.persistantMessage,
       );
     }
+  }
+
+  Future<void> _loadAllData() async {
+    ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
+    theme.onSystemThemeUpdate(context);
+    await theme.loadTheme(); // loadTheme() happens in the Future.wait below
+
+    
+
+    // canVibrate = await Haptics.canVibrate();
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     void onBusError(String route, String error) => showMaizebusOKDialog(
       contextIn: context,
@@ -378,13 +351,98 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       content: error,
     );
 
+    // StartupDataHolder? startupData;
+
+    // debugPrint("***** START TIME: ${DateTime.now().millisecondsSinceEpoch}");
+    int startTime = DateTime.now().millisecondsSinceEpoch;
+
+    // startupData = await _getStartupData(); // Load startup data asynchronously with the routes
+    downloadStartupData(); // Download it but don't wait around for it to finish
+
+    _loadingMessageNotifier.value = Loadpoint('Loading data...', 1);
     // loading all this data in parallel
-    await Future.wait([
-      // _loadCustomMarkers(),
-      busProvider.loadRoutes(onBusError),
-      _loadSelectedRoutes(),
-      _loadFavoriteStops(),
-    ]);
+    
+    bool shouldRetryInit = true;
+
+    while (shouldRetryInit) {
+      try {
+        await Future.wait([
+          // (() async {
+          //    // Load startup data asynchronously with the routes
+          // })(),
+          (() async {
+            //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
+            LocationPermission permission = await Geolocator.checkPermission();
+            if (permission == LocationPermission.whileInUse ||
+                permission == LocationPermission.always) {
+              // permission = await Geolocator.requestPermission();
+              Position? pos = await Geolocator.getLastKnownPosition();
+              if (pos != null) {
+                startLatLng = LatLng(pos.latitude, pos.longitude);
+                _currentCameraPos.value = CameraPosition(
+                  target: startLatLng,
+                  zoom: 15.0,
+                  bearing: 0.0,
+                );
+              }
+            }
+          })(),
+          (() async {
+            canVibrate = await Haptics.canVibrate();
+          })(),
+          (() async {
+            final prefs = await SharedPreferences.getInstance();
+            globalFollowDistanceThresholdMeters =
+                prefs.getDouble('follow_distance_threshold_meters') ??
+                globalFollowDistanceThresholdMeters;
+            globalGpsUpdateDistanceFilterMeters =
+                prefs.getInt('gps_update_distance_filter_meters') ??
+                globalGpsUpdateDistanceFilterMeters;
+          })(),
+          (() async {
+            screenRadius = await ScreenCornerRadius.get(); // load screen radius
+            screenRadiusLoaded = true;
+            globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
+          })(),
+          
+          busProvider.loadRoutesWithCache(onBusError),
+          _loadSelectedRoutes(),
+          _loadFavoriteStops(),
+        ]);
+        shouldRetryInit = false;
+      } catch (err) {
+        debugPrint("$err");
+        if (err is SocketException) {
+          // We'll get a SocketException if the app can't download data from the network and there's no cache available
+          _loadingMessageNotifier.value = Loadpoint('Waiting for network...', 1);
+        } else {
+          _loadingMessageNotifier.value = Loadpoint('An error occured, retrying...', 1);
+        }
+        await Future.delayed(const Duration(seconds: 2));
+      }
+      
+    }
+    // debugPrint("***** TIME TAKEN: ${DateTime.now().millisecondsSinceEpoch - startTime}");
+
+    // StartupDataHolder? startupData = await _getStartupData();
+
+    
+
+    // moving this here fixes loading bug
+    await RouteColorService.initialize();
+
+    
+
+    _loadingMessageNotifier.value = Loadpoint('Loading routes and stops...', 1);
+
+    // loading all this data in parallel
+    // (this was moved north)
+    // await Future.wait([
+    //   // _loadCustomMarkers(),
+    //   busProvider.loadRoutes(onBusError),
+    //   _loadSelectedRoutes(),
+    //   _loadFavoriteStops(),
+    // ]);
 
     // actions that depend on the data loaded earlier
     _loadingMessageNotifier.value = Loadpoint('Loading bus images...', 2);
@@ -979,19 +1037,16 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Show a red pin marker at search location
   void _showSearchLocationMarker(double lat, double lon) {
-    _searchLocationMarker = Marker(
-      markerId: const MarkerId('search_location'),
-      position: LatLng(lat, lon),
-      icon:  MapImageService.getOnBusStop() ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure,),
-      consumeTapEvents: false,
-    );
-    setState(() {});
+    // debugPrint("****** SHOWING SEARCH RESULT MARKER AT LATLNG ${lat} ${lon}");
+    searchResultLayer.isVisible = true;
+    searchResultLayer.setPosition(LatLng(lat, lon));
+
   }
 
   // Remove the search location marker
   void _removeSearchLocationMarker() {
-    _searchLocationMarker = null;
-    setState(() {});
+    searchResultLayer.isVisible = false;
+    searchResultLayer.reload();
   }
 
   // Save selected routes to persistent storage
@@ -1087,10 +1142,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             } else {
               // Location has no coordinates
             }
-          },
+          }
         );
       },
     );
+    
   }
 
   void _showBuildingSheet(Location place) {
@@ -1123,6 +1179,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       },
     );
     _bottomSheetController?.closed.then((_) {
+      _removeSearchLocationMarker();
       hideJourney();
     });
   }
@@ -1630,8 +1687,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return AnimatedSwitcher(
           duration: Duration(milliseconds: 200),
 
-          child: (snapshot.connectionState == ConnectionState.done)
-              ? PopScope(
+          // child: (snapshot.connectionState == ConnectionState.done)
+              // ? 
+          child: Stack(
+            children: [
+              
+
+
+            
+              PopScope(
                   //for switch animation
                   key: ValueKey(1),
 
@@ -1668,6 +1732,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             liveBusesLayer,
                             journeyLayer,
                             navigationLayer,
+                            searchResultLayer
                           ],
                           onMapCreated: _onMapCreated,
                           onCameraMove: _onCameraMove,
@@ -2474,19 +2539,36 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     ],
                   ),
                 )
-              : Container(
-                  //for switch animation
-                  key: ValueKey(0),
+                , (snapshot.connectionState != ConnectionState.done) ? Container(
+                //for switch animation
+                key: ValueKey(0),
+                
 
-                  color: getColor(context, ColorType.background),
+                color: getColor(context, ColorType.background),
 
-                  child: ValueListenableBuilder<Loadpoint>(
-                    valueListenable: _loadingMessageNotifier,
-                    builder: (context, loadpoint, child) {
-                      return LoadingScreen(loadpoint: loadpoint);
-                    },
-                  ),
+                child: ValueListenableBuilder<Loadpoint>(
+                  valueListenable: _loadingMessageNotifier,
+                  builder: (context, loadpoint, child) {
+                    return LoadingScreen(loadpoint: loadpoint);
+                  },
                 ),
+              ) : SizedBox.shrink(),
+                
+                ],
+          )
+              // : Container(
+              //     //for switch animation
+              //     key: ValueKey(0),
+
+              //     color: getColor(context, ColorType.background),
+
+              //     child: ValueListenableBuilder<Loadpoint>(
+              //       valueListenable: _loadingMessageNotifier,
+              //       builder: (context, loadpoint, child) {
+              //         return LoadingScreen(loadpoint: loadpoint);
+              //       },
+              //     ),
+              //   ),
         );
       },
     );

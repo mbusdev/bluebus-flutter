@@ -38,6 +38,24 @@ const FANCY_STOP_ICON_WIDTH =
 
 const FANCY_STOP_ICON_HEIGHT = 65 + FANCY_STOP_ICON_XHEADROOM * 2;
 
+class IconSet {
+  // Wraps up the ByteData, Image, and BitmapDescriptor all in one so it's neat and tidy
+  ByteData bytes;
+  ui.Image image;
+  BitmapDescriptor bitmapDescriptor;
+  IconSet({
+    required this.bytes,
+    required this.image,
+    required this.bitmapDescriptor
+  });
+  static Future<IconSet> loadFrom(String assetPath) async {
+    ByteData bytes = await rootBundle.load(assetPath);
+    ui.Image image = await MapImageService._decode(bytes);
+    BitmapDescriptor bmpDesc = await MapImageService.resizeImage(bytes);
+    return IconSet(bytes: bytes, image: image, bitmapDescriptor: bmpDesc);
+  }
+}
+
 class MapImageService {
   // Route specific bus icons
   static Map<String, BitmapDescriptor> _routeBusIcons = {};
@@ -49,31 +67,42 @@ class MapImageService {
 
   // TODO: Maybe make this manage stop icons too?
 
-  static BitmapDescriptor stopIcon = BitmapDescriptor.defaultMarkerWithHue(
-    BitmapDescriptor.hueAzure,
-  );
-  static BitmapDescriptor rideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
-    BitmapDescriptor.hueAzure,
-  );
-  static BitmapDescriptor favStopIcon = BitmapDescriptor.defaultMarkerWithHue(
-    BitmapDescriptor.hueAzure,
-  );
-  static BitmapDescriptor favRideStopIcon =
-      BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+  static IconSet? stopIcon;
+  static IconSet? rideStopIcon;
+  static IconSet? favStopIcon;
+  static IconSet? favRideStopIcon;
+  static IconSet? navigationBusStop;
+  
+
+  // static BitmapDescriptor stopIcon = BitmapDescriptor.defaultMarkerWithHue(
+  //   BitmapDescriptor.hueAzure,
+  // );
+  // static BitmapDescriptor rideStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+  //   BitmapDescriptor.hueAzure,
+  // );
+  // static BitmapDescriptor favStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+  //   BitmapDescriptor.hueAzure,
+  // );
+  // static BitmapDescriptor favRideStopIcon =
+  //     BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
   static BitmapDescriptor? _getOffBusStopIcon;
   static BitmapDescriptor? _getOnBusStopIcon;
+  static BitmapDescriptor navigationIntermediateStopIcon = BitmapDescriptor.defaultMarkerWithHue(
+    BitmapDescriptor.hueCyan
+  );
 
-  static ui.Image? _stopIconImage;
-  static ui.Image? _rideStopIconImage;
-  static ui.Image? _favStopIconImage;
-  static ui.Image? _favRideStopIconImage;
+  // static ui.Image? _stopIconImage;
+  // static ui.Image? _rideStopIconImage;
+  // static ui.Image? _favStopIconImage;
+  // static ui.Image? _favRideStopIconImage;
   static ui.Image? _getOffBusStopImage;
   static ui.Image? _getOnBusStopImage;
+  
 
-  static ByteData? _stopIconBytes;
-  static ByteData? _rideStopIconBytes;
-  static ByteData? _favStopIconBytes;
-  static ByteData? _favRideStopIconBytes;
+  // static ByteData? _stopIconBytes;
+  // static ByteData? _rideStopIconBytes;
+  // static ByteData? _favStopIconBytes;
+  // static ByteData? _favRideStopIconBytes;
   static ByteData? _getOffBusStopBytes;
   static ByteData? _getOnBusStopBytes;
 
@@ -162,19 +191,41 @@ class MapImageService {
   }
 
   // Set a fallback bus icon for a route
-  static void _setFallbackBusIcon(String routeId) {
+  static BitmapDescriptor _getFallbackBusIcon(String routeId) {
     try {
       final routeColor = RouteColorService.getRouteColor(routeId);
-      _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(
+      // _routeBusIcons[routeId] = BitmapDescriptor.defaultMarkerWithHue(
+      //   colorToHue(routeColor),
+      // );
+      return BitmapDescriptor.defaultMarkerWithHue(
         colorToHue(routeColor),
       );
     } catch (e) {
       // error handling
+      return BitmapDescriptor.defaultMarker;
     }
   }
 
+  static Future<BitmapDescriptor> _getRouteBusIcon(String routeId, bool shouldRefreshAssets) async  {
+    // Try to load from cache first if not forcing refresh
+    if (!shouldRefreshAssets) {
+      final cachedIcon = await _loadCachedBusIcon(routeId);
+      if (cachedIcon != null) {
+        // _routeBusIcons[routeId] = cachedIcon;
+        return cachedIcon;
+      }
+    }
+
+    // Load from backend if cache miss or forcing refresh
+    final imageUrl = RouteColorService.getRouteImageUrl(routeId);
+    if (imageUrl != null) {
+      return _downloadRouteBusIcon(routeId, imageUrl);
+    } else {
+      return _getFallbackBusIcon(routeId);
+    }
+  }
   // Load a specific route's bus icon
-  static Future<void> _loadRouteBusIcon(String routeId, String imageUrl) async {
+  static Future<BitmapDescriptor> _downloadRouteBusIcon(String routeId, String imageUrl) async {
     try {
       final response = await http.get(Uri.parse(imageUrl));
 
@@ -195,25 +246,27 @@ class MapImageService {
 
           if (data != null) {
             final processedBytes = data.buffer.asUint8List();
-            _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(
-              processedBytes,
-            );
-
-            // Cache the processed icon for future use
+            // _routeBusIcons[routeId] = BitmapDescriptor.fromBytes(
+            //   processedBytes,
+            // );
             await _cacheBusIcon(routeId, processedBytes);
+            return BitmapDescriptor.fromBytes(processedBytes);
+
+            // // Cache the processed icon for future use
+            
           } else {
-            _setFallbackBusIcon(routeId);
+            return _getFallbackBusIcon(routeId);
           }
         } catch (codecError) {
-          _setFallbackBusIcon(routeId);
+          return _getFallbackBusIcon(routeId);
         }
       } else {
         // Set fallback icon for this route
-        _setFallbackBusIcon(routeId);
+        return _getFallbackBusIcon(routeId);
       }
     } catch (e) {
       // Set fallback icon for this route
-      _setFallbackBusIcon(routeId);
+      return _getFallbackBusIcon(routeId);
     }
   }
 
@@ -229,24 +282,18 @@ class MapImageService {
 
       final routeIds = RouteColorService.definedRouteIds;
 
-      for (final routeId in routeIds) {
-        // Try to load from cache first if not forcing refresh
-        if (!shouldRefreshAssets) {
-          final cachedIcon = await _loadCachedBusIcon(routeId);
-          if (cachedIcon != null) {
-            _routeBusIcons[routeId] = cachedIcon;
-            continue;
-          }
-        }
+      await Future.wait(
+        routeIds.map((routeId) async {
+          BitmapDescriptor icon = await _getRouteBusIcon(routeId, shouldRefreshAssets);
+          _routeBusIcons[routeId] = icon;
+        })
+      );
 
-        // Load from backend if cache miss or forcing refresh
-        final imageUrl = RouteColorService.getRouteImageUrl(routeId);
-        if (imageUrl != null) {
-          await _loadRouteBusIcon(routeId, imageUrl);
-        } else {
-          _setFallbackBusIcon(routeId);
-        }
-      }
+      // for (final routeId in routeIds) {
+      //   initRoute
+      //   // _routeBusIcons[routeId] = whatever the thing is
+      //   // TODO: Cache the bus icon here too
+      // }
     } catch (e) {
       // Fallback to default bus icon
       _busIcon = BitmapDescriptor.defaultMarkerWithHue(
@@ -257,29 +304,31 @@ class MapImageService {
 
   static Future<void> _loadStopIcons() async {
     try {
-      _stopIconBytes = await rootBundle.load('assets/busStop.png');
-      _rideStopIconBytes = await rootBundle.load('assets/busStopRide.png');
-      _favStopIconBytes = await rootBundle.load('assets/favbusStop.png');
-      _favRideStopIconBytes = await rootBundle.load(
-        'assets/favbusStopRide.png',
+
+      List<IconSet> results = await Future.wait([
+        IconSet.loadFrom('assets/busStop.png'),
+        IconSet.loadFrom('assets/busStopRide.png'),
+        IconSet.loadFrom('assets/favbusStop.png'),
+        IconSet.loadFrom('assets/favbusStopRide.png'),
+        IconSet.loadFrom('assets/getOff.png')
+      ]);
+      stopIcon = results[0];
+      rideStopIcon = results[1];
+      favStopIcon = results[2];
+      favRideStopIcon = results[3];
+      navigationBusStop = results[4];
+
+
+      navigationIntermediateStopIcon = await MapImageService.resizeImageCustom(
+        await rootBundle.load('assets/intermediate_stop.png'), 20, 20
       );
+
       _getOffBusStopBytes = await rootBundle.load('assets/getOff.png');
       _getOnBusStopBytes = await rootBundle.load('assets/getOn.png');
 
-      _stopIconImage = await _decode(_stopIconBytes!);
-      _rideStopIconImage = await _decode(_rideStopIconBytes!);
-      _favStopIconImage = await _decode(_favStopIconBytes!);
-      _favRideStopIconImage = await _decode(_favRideStopIconBytes!);
       _getOffBusStopImage = await _decode(_getOffBusStopBytes!);
       _getOnBusStopImage = await _decode(_getOnBusStopBytes!);
 
-      // Load stop icons
-      stopIcon = await MapImageService.resizeImage(_stopIconBytes!);
-      rideStopIcon = await MapImageService.resizeImage(_rideStopIconBytes!);
-      favStopIcon = await MapImageService.resizeImage(_favStopIconBytes!);
-      favRideStopIcon = await MapImageService.resizeImage(
-        _favRideStopIconBytes!,
-      );
       _getOffBusStopIcon = await MapImageService.resizeImage(
         _getOffBusStopBytes!,
       );
@@ -313,7 +362,7 @@ class MapImageService {
     // if (!_routeBusIcons.containsKey(routeId)) {
     final imageUrl = RouteColorService.getRouteImageUrl(routeId);
     if (imageUrl != null) {
-      await _loadRouteBusIcon(routeId, imageUrl);
+      await _downloadRouteBusIcon(routeId, imageUrl);
       return _routeBusIcons[routeId];
     }
     // }
@@ -333,14 +382,18 @@ class MapImageService {
     _loadRouteSpecificBusIcons();
   }
 
+  static Future<BitmapDescriptor> resizeImage(ByteData image) {
+    return resizeImageCustom(image, 65, 65);
+  }
+
   // NEXT STEPS TODO: Figure out how to create a Canvas that's the right size, add the stop image to it, and then add extra stuff (e.g. rectangles) just to show we can
-  static Future<BitmapDescriptor> resizeImage(ByteData image) async {
+  static Future<BitmapDescriptor> resizeImageCustom(ByteData image, int width, int height) async {
     // Load and resize stop icon
     final stopBytes = image;
     final stopCodec = await ui.instantiateImageCodec(
       stopBytes.buffer.asUint8List(),
-      targetWidth: 65,
-      targetHeight: 65,
+      targetWidth: width,
+      targetHeight: height,
     );
     final stopFrame = await stopCodec.getNextFrame();
     final stopData = await stopFrame.image.toByteData(
@@ -528,8 +581,8 @@ class MapImageService {
       }
 
       ui.Image? targetImage = isFavorite
-          ? (isRide ? _favRideStopIconImage : _favStopIconImage)
-          : (isRide ? _rideStopIconImage : _stopIconImage);
+          ? (isRide ? favRideStopIcon!.image : favStopIcon!.image)
+          : (isRide ? rideStopIcon!.image : stopIcon!.image);
 
       drawRotatedImage(
         canvas,
@@ -649,8 +702,8 @@ class MapImageService {
       }
 
       ui.Image? targetImage = isFavorite
-          ? (isRide ? _favRideStopIconImage : _favStopIconImage)
-          : (isRide ? _rideStopIconImage : _stopIconImage);
+          ? (isRide ? favRideStopIcon!.image : favStopIcon!.image)
+          : (isRide ? rideStopIcon!.image : stopIcon!.image);
 
       drawRotatedImage(
         canvas,
@@ -691,7 +744,11 @@ class MapImageService {
     // return Offset(0.5, 0.5);
   }
 
-  static BitmapDescriptor? getOffBusStop() {
+  static BitmapDescriptor? getNavigationBusStop() {
+    return navigationBusStop!.bitmapDescriptor;
+  }
+
+    static BitmapDescriptor? getOffBusStop() {
     return _getOffBusStopIcon;
   }
 

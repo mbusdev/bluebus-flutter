@@ -1,14 +1,50 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
+
 import '../bluebus_api.dart';
 import '../theride_api.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
+
+class AppInfo {
+  static String? _version;
+
+  /// e.g. "2.0.2+8" — version and build number from pubspec.yaml
+  static Future<String> version() async {
+    if (_version != null) return _version!;
+    final info = await PackageInfo.fromPlatform();
+    _version = '${info.version}+${info.buildNumber}';
+    return _version!;
+  }
+}
 
 class BusRepository {
   List<BusRouteLine> _routes = [];
   static List<Bus> _buses = [];
   Timer? _busUpdateTimer;
   final Duration busUpdateInterval;
+
+  static Future<String?> getFromCache(String key) async {
+    final cacheDir = await getTemporaryDirectory();
+    final file = File('${cacheDir.path}/$key');
+    
+    if (await file.exists()) {
+      return file.readAsString();
+    } else {
+      // debugPrint("********** FILE DOES NOT EXIST");
+      return null;
+    }
+  }
+
+  static Future<void> writeToCache(String key, String contents) async {
+    // debugPrint("Writing to cache: $contents");
+    final cacheDir = await getTemporaryDirectory();
+    final file = File('${cacheDir.path}/$key');
+    await file.writeAsString(contents);
+  }
 
   BusRepository({this.busUpdateInterval = const Duration(seconds: 5)});
 
@@ -20,6 +56,28 @@ class BusRepository {
     ]);
 
     // merging both route lists
+    _routes = results.expand((routes) => routes).toList();
+    return _routes;
+  }
+
+  Future<List<BusRouteLine>> fetchRoutesFromCacheAndHTTP(Function(String route, String error) onError) async {
+    String? blueBusCachedResponse = await getFromCache('bluebus-routes-cache-v${await AppInfo.version()}');
+    String? theRideCachedResponse = await getFromCache('theride-routes-cache-v${await AppInfo.version()}');
+    
+    debugPrint("Bluebus cache response: ${blueBusCachedResponse?.substring(0, 20)}");
+    debugPrint("Theride cache response: ${theRideCachedResponse?.substring(0, 20)}");
+
+    if (blueBusCachedResponse == null || theRideCachedResponse == null) {
+      debugPrint("Routes cache is missing--redownloading via HTTP");
+      List<BusRouteLine> routes = await fetchRoutes(onError); // Wait for the HTTP download
+      return routes;
+    }
+    
+    final results = await Future.wait([
+      BlueBusApi.processRoutesJson(blueBusCachedResponse, onError),
+      RideAPI.processRoutesJson(theRideCachedResponse, onError), 
+    ]);
+
     _routes = results.expand((routes) => routes).toList();
     return _routes;
   }

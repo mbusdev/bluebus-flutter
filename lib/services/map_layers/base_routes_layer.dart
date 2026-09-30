@@ -86,7 +86,36 @@ class BaseRoutesLayer extends CompositeMapLayer {
       }
     }
 
-    // debugPrint("Pre-generating fancy stop icons");
+    // Polylines are cheap and we can update them right now while the fancy stop icons take longer
+    reloadPolylines();
+    if (isVisible) onUpdate();
+
+
+// TODO: When internet reconnects, check if we need to redownload routes?
+    // await Future.wait(
+    //   stopIdToRouteIds.entries.map((MapEntry entry) async {
+    //     try {
+    //       await MapImageService.getFancyStopIcon(
+    //         entry.key,
+    //         favoriteStops.contains(entry.key),
+    //         stopIdToStop[entry.key]?.isRide ?? false,
+    //         stopIdToStop![entry.key]!.rotation,
+    //         entry.value.toList()
+    //       ); // Pre-cache each icon so it's faster later!
+    //       await MapImageService.getNormalStopIcon(
+    //         entry.key,
+    //         favoriteStops.contains(entry.key),
+    //         stopIdToStop[entry.key]?.isRide ?? false,
+    //         stopIdToStop![entry.key]!.rotation
+    //       );
+    //     } catch (err) {}
+    //   })
+    // );
+
+
+    // TODO: Put these pregenerated stop icons in a cache! Much less expensive to use later
+
+    debugPrint("Pre-generating fancy stop icons");
     for (MapEntry entry in stopIdToRouteIds.entries) {
       try {
         await MapImageService.getFancyStopIcon(

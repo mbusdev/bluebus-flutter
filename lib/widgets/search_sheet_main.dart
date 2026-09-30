@@ -319,6 +319,8 @@ class LocationSearchBar extends HookWidget {
                             size: 40,
                             color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
                           ),
+
+                          // NEXT STEPS TODO: Get building markers to show up
                     onTap: () {
                       controller.text = loc.name;
                       onLocationSelected(loc, loc.isBusStop, loc.stopId ?? "");

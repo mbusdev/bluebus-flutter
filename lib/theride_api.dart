@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/utils/geometry.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -15,7 +16,14 @@ class RideAPI {
   static Future<List<BusRouteLine>> fetchRoutes(Function(String route, String error) onError) async {
     final response = await http.get(Uri.parse('$baseUrl/getAllRideRoutes'));
     if (response.statusCode != 200) throw Exception('Failed to load routes');
-    final data = jsonDecode(response.body);
+
+    BusRepository.writeToCache('theride-routes-cache-v${await AppInfo.version()}', response.body);
+    
+    return processRoutesJson(response.body, onError);
+  }
+
+  static Future<List<BusRouteLine>> processRoutesJson(String jsonBody, Function(String route, String error) onError) async {
+    final data = jsonDecode(jsonBody);
     final routes = <BusRouteLine>[];
     final routeJson = data['routes'] as Map<String, dynamic>;
 
