@@ -51,13 +51,16 @@ class LocationSearchBar extends HookWidget {
           buildingLocs = buildingLocations.map((building) {
             final name = building['buildingName'] as String;
             final abbrev = building['abbrev'] as String?;
+            final address = building['address'] as String?;
             final altName = building['altName'] as String?;
             final lat = building['lat'] as double;
             final long = building['long'] as double;
             return Location(
               name,
               (abbrev != null) ? abbrev : "",
-              [if (abbrev != null) abbrev, if (altName != null) altName],
+              [if (abbrev != null) abbrev, 
+               if (altName != null) altName, 
+               if (address != null) address,],
               false,
               latlng: LatLng(lat, long),
             );
