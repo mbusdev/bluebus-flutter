@@ -178,6 +178,9 @@ class LiveBusesLayer extends CompositeMapLayer {
             if (headingDelta > 180) {
               headingDelta = 360 - headingDelta; // Turn the tightest direction possible
             }
+            if (headingDelta < -180) {
+              headingDelta = headingDelta + 360;
+            }
 
             // if (headingDelta.abs() > (360 + headingDelta).abs()) {
             //   // Might need to fix this

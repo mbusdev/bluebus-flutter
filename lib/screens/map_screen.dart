@@ -260,6 +260,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void onBusClicked(Bus b) {
+    centerOnBus(b);
     _showBusSheet(b.id);
   }
 
@@ -1598,6 +1599,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       pos = LatLng(pos.latitude + latitude_adjust, pos.longitude);
       await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
     }
+  }
+  Future<void> centerOnBus(Bus b) async {
+    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    LatLng pos = LatLng(b.position.latitude + latitude_adjust, b.position.longitude);
+    await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
   }
 
   Future<void> _centerOnLocation(
