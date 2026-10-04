@@ -8,8 +8,9 @@ import 'package:bluebus/services/map_layers/search_result_layer.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
-import 'package:bluebus/screens/new_features_screen.dart';
+import 'package:bluebus/screens/banner_screen.dart';
 import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/services/map_layers/banner_layer.dart';
 import 'package:bluebus/services/map_layers/base_routes_layer.dart';
 import 'package:bluebus/services/map_layers/demo_buildings_layer.dart'; // DEMO BUILDINGS
 import 'package:bluebus/services/floorplan_style.dart';
@@ -44,6 +45,7 @@ import 'package:vector_math/vector_math_64.dart' as vec_math;
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
+import '../models/banner_message.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 //import '../models/bus_stop.dart';
@@ -55,8 +57,8 @@ import '../constants.dart';
 import './settings.dart';
 import 'package:screen_corner_radius/screen_corner_radius.dart';
 
-final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
-final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
+// DateTime bannerShowTime = DateTime.parse("2026-03-16 00:00:00Z");
+// DateTime bannerHideTime = DateTime.parse("2026-03-24 00:00:00Z");
 
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
@@ -80,6 +82,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
+
+  // Set once startup data comes back. Null until then (and if the
+  // backend sends no banner), so always null-check before using in build().
+  BannerMessage? _bannerMessage;
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -177,6 +183,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final FloorplansLayer floorplansLayer = FloorplansLayer();
   final DemoBuildingsLayer demoBuildingsLayer = DemoBuildingsLayer(); // DEMO BUILDINGS
   final SearchResultLayer searchResultLayer = SearchResultLayer();
+  final BannerLayer bannerLayer = BannerLayer();
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -198,6 +205,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     navigationManager.init();
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
+    bannerLayer.init((banner) {
+      try {
+        Haptics.vibrate(HapticsType.light);
+      } catch (e) {}
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => BannerScreen(url: banner.url)),
+      );
+    });
     floorplansLayer.load();
     journeyLayer.init(
       _showBusSheet,
@@ -317,6 +332,19 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       await Future.delayed(Duration(seconds: 2));
       startupData = await _getStartupData();
     }
+
+    final banner = startupData.bannerMessage;
+    // a banner with no title has nothing to say, whatever its source claimed
+    if (banner != null && banner.shortTitle == '') {
+      banner.isActive = false;
+    }
+    // startup data arrives after the first build, so setState to show the banner
+    if (mounted) {
+      setState(() {
+        _bannerMessage = banner;
+      });
+    }
+    bannerLayer.setBanner(banner);
 
     if (!isCurrentVersionEqualOrHigher(startupData!.version)) {
       showUndismissableMaizebusDialog(
@@ -683,12 +711,20 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final data = json.decode(response.body);
         final message = data['why_update_message'];
         final p_message = data['persistant_message'];
+
+        BannerMessage banner_message = (data['banner_message'] != null)
+          ? BannerMessage.fromJson(data['banner_message'])
+          : BannerMessage.none;
+
+        // banner_message = BannerMessage.hardcoded;
+
         return StartupDataHolder(
           data['min_supported_version'],
           message['title'],
           message['subtitle'],
           p_message['title'],
           p_message['subtitle'],
+          banner_message,
         );
       } else if (kDebugMode) {
         debugPrint(
@@ -1762,7 +1798,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             liveBusesLayer,
                             journeyLayer,
                             navigationLayer,
-                            searchResultLayer
+                            searchResultLayer,
+                            bannerLayer,
                           ],
                           onMapCreated: _onMapCreated,
                           onCameraMove: _onCameraMove,
@@ -1882,20 +1919,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                               mainAxisAlignment:
                                                   MainAxisAlignment.end,
                                               children: [
-                                                (NEW_BUTTON_SHOW_TIME.isBefore(
-                                                          DateTime.now(),
-                                                        ) &&
-                                                        NEW_BUTTON_HIDE_TIME
-                                                            .isAfter(
-                                                              DateTime.now(),
-                                                            ))
+                                                ((_bannerMessage?.isActive ?? false) && (
+                                                  (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
+                                                  (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
+                                                 ))
                                                     ? CustomPaint(
                                                         foregroundPainter:
                                                             ProgressCirclePainter(
                                                               startTime:
-                                                                  NEW_BUTTON_SHOW_TIME,
+                                                                  _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               endTime:
-                                                                  NEW_BUTTON_HIDE_TIME,
+                                                                  _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               currentTime:
                                                                   DateTime.now(),
                                                             ),
@@ -1933,14 +1967,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                       (
                                                                         context,
                                                                       ) =>
-                                                                          NewFeaturesScreen(),
+                                                                          BannerScreen(url: _bannerMessage?.url ?? ""),
                                                                 ),
                                                               );
                                                             },
                                                             heroTag: 'new_fab',
                                                             elevation: 0,
                                                             child: Text(
-                                                              "New!",
+                                                              _bannerMessage?.shortTitle ?? "New!",
                                                               style: TextStyle(
                                                                 color: getColor(
                                                                   context,
