@@ -57,6 +57,9 @@ jobs:
         run: flutter build apk --debug --no-pub
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
+  style_check:
+    runs-on: ubuntu-latest
+    steps:
       - name: Run style checks
         run: python3 ./test/debug_print_check.py
         env:
