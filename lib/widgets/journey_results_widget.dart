@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/innerShadow.dart';
 import 'package:bluebus/utils/time.dart';
@@ -264,7 +266,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                       Navigator.pop(context);
                                       widget.onChangeSelection(location, true);
                                     } else {
-                                      print(
+                                      stderr.writeln(
                                         "Error: The selected location '${location.name}' has no coordinates.",
                                       );
                                     }
@@ -323,7 +325,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                       Navigator.pop(context);
                                       widget.onChangeSelection(location, false);
                                     } else {
-                                      print(
+                                      stderr.writeln(
                                         "Error: The selected location '${location.name}' has no coordinates.",
                                       );
                                     }
@@ -589,7 +591,6 @@ class _JourneyBodyState extends State<JourneyBody> {
 
               ),
               onPressed: () {
-                debugPrint("onStartNavigation call!");
                 widget.onStartNavigation?.call(widget.journey);
               },
               icon: Icon(Icons.assistant_navigation),

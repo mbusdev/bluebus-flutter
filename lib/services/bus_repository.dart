@@ -34,13 +34,11 @@ class BusRepository {
     if (await file.exists()) {
       return file.readAsString();
     } else {
-      // debugPrint("********** FILE DOES NOT EXIST");
       return null;
     }
   }
 
   static Future<void> writeToCache(String key, String contents) async {
-    // debugPrint("Writing to cache: $contents");
     final cacheDir = await getTemporaryDirectory();
     final file = File('${cacheDir.path}/$key');
     await file.writeAsString(contents);
@@ -64,11 +62,7 @@ class BusRepository {
     String? blueBusCachedResponse = await getFromCache('bluebus-routes-cache-v${await AppInfo.version()}');
     String? theRideCachedResponse = await getFromCache('theride-routes-cache-v${await AppInfo.version()}');
     
-    debugPrint("Bluebus cache response: ${blueBusCachedResponse?.substring(0, 20)}");
-    debugPrint("Theride cache response: ${theRideCachedResponse?.substring(0, 20)}");
-
     if (blueBusCachedResponse == null || theRideCachedResponse == null) {
-      debugPrint("Routes cache is missing--redownloading via HTTP");
       List<BusRouteLine> routes = await fetchRoutes(onError); // Wait for the HTTP download
       return routes;
     }

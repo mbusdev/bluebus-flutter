@@ -1,4 +1,6 @@
 
+import 'dart:io';
+
 import 'package:bluebus/models/floorplan.dart';
 import 'package:bluebus/services/floorplan_marker_service.dart';
 import 'package:bluebus/services/floorplan_service.dart';
@@ -104,7 +106,7 @@ class FloorplansLayer extends CompositeMapLayer {
     try {
       _source = await FloorplanService.loadDuderstadt();
     } catch (err) {
-      debugPrint('FloorplansLayer: failed to load floorplan ($err)');
+      stderr.writeln('FloorplansLayer: failed to load floorplan ($err)');
       return;
     }
     await _rebuild();
@@ -158,7 +160,7 @@ class FloorplansLayer extends CompositeMapLayer {
       if (projection == null) {
         // Without both waypoints we can't know where the floor sits in the
         // world, so there's nothing safe to draw.
-        debugPrint(
+        stderr.writeln(
           'FloorplansLayer: floor "${floor.id}" is missing its waypoints',
         );
       } else {

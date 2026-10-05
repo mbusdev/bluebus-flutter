@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:bluebus/models/bus.dart';
@@ -17,7 +18,7 @@ class SearchResultLayer extends CompositeMapLayer {
 
   @override
   Function() onUpdate = () {
-    debugPrint("Error: onUpdate called but callback was not registered!");
+    stderr.writeln("Error: onUpdate called but callback was not registered!");
   };
 
   @override

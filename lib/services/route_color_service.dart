@@ -31,11 +31,9 @@ class RouteColorService {
 
   static Future<void> _fetchFrontendDataWithCache() async {
     String? cachedResponse = await BusRepository.getFromCache('frontend-data-${await AppInfo.version()}');
-    debugPrint("Cached frontend data is $cachedResponse");
     if (cachedResponse == null) {
       return _fetchFrontendData(); // Block until frontend data is downloaded
     }
-    debugPrint("Cache hit for _fetchFrontendDataWithCache()");
     final cachedData = jsonDecode(cachedResponse);
     
     _parseFrontendData(cachedData); // Use the cached data for now

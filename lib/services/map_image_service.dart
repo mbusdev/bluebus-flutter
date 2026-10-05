@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -338,7 +339,7 @@ class MapImageService {
 
       _stopIconsInitialized = true;
     } catch (e) {
-      debugPrint("Error! $e");
+      stderr.writeln("Error! $e");
       // Fallback to default markers if custom loading fails
       // These are now set as initial values
     }
@@ -417,7 +418,7 @@ class MapImageService {
     } else if (_busIcon != null) {
       return _busIcon!;
     } else {
-      debugPrint(
+      debugPrint( // LINTER_OVERRIDE
         "WARN: getBusIcon found no icon currently loaded, returning defaultMarkerWithHue",
       );
       return BitmapDescriptor.defaultMarkerWithHue(colorToHue(routeColor));
@@ -565,18 +566,12 @@ class MapImageService {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    // debugPrint("Generating icon for ${routesServed.join(",")}");
-
-    // int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
-    // int total_height = STOP_ICON_HEIGHT;
-
     final paint = Paint()
       ..color = Colors.green
       ..style = PaintingStyle.fill;
 
     try {
       if (!_stopIconsInitialized) {
-        // debugPrint("Stop icons not initialized, loading...");
         await _loadStopIcons();
       }
 
@@ -631,7 +626,6 @@ class MapImageService {
       if (i == 5 && routesServed.length > 6) {
         // if (i == 5) {
         // We're on the last element and there will be overflow
-        debugPrint("DRAWING OVERFLOW ICON!! $stopId");
         drawRouteOverflowIconOntoCanvas(
           canvas,
           xDrawPos,
@@ -677,8 +671,6 @@ class MapImageService {
     bool isRide,
     double rotation,
   ) async {
-    // String cacheKey = rotation.round().toString() + "," + routesServed.join(",");
-    // String cacheKey = routesServed.join(","); // Temporary, for testing
     String cacheKey = "normalicon_${stopId}_$isFavorite";
 
     if (_normalStopIconsCache.containsKey(cacheKey)) {
@@ -690,14 +682,8 @@ class MapImageService {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    // debugPrint("Generating icon for ${routesServed.join(",")}");
-
-    // int total_width = STOP_ICON_WIDTH * 2 + STOP_ICON_WIDTH;
-    // int total_height = STOP_ICON_HEIGHT;
-
     try {
       if (!_stopIconsInitialized) {
-        // debugPrint("Stop icons not initialized, loading...");
         await _loadStopIcons();
       }
 
@@ -739,9 +725,7 @@ class MapImageService {
         (STOP_ICON_WIDTH.toDouble() / 2 + FANCY_STOP_ICON_XHEADROOM) /
         FANCY_STOP_ICON_WIDTH.toDouble();
     double offsetY = 0.5;
-    // debugPrint("Offset X: $offsetX, Y: $offsetY");
     return Offset(offsetX, offsetY);
-    // return Offset(0.5, 0.5);
   }
 
   static BitmapDescriptor? getNavigationBusStop() {

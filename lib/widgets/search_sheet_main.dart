@@ -121,7 +121,7 @@ class LocationSearchBar extends HookWidget {
 
         return allLocs;
       } catch (e) {
-        print('Failed to fetch locations: $e');
+        stderr.writeln('Failed to fetch locations: $e');
         refreshKey.value++;
         return <Location>[];
       }

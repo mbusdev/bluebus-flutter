@@ -1,4 +1,4 @@
-import 'dart:io' show Platform, SocketException;
+import 'dart:io' show Platform, SocketException, stderr;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
@@ -201,7 +201,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     super.initState();
     _setupConnectivityMonitoring();
 
-    // debugPrint("MAP SCREEN INITSTATE===================");
     navigationManager.init();
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
@@ -251,10 +250,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         };
         _busProviderRef?.addListener(_busProviderListener!);
       } catch (e, stackTrace) {
-        debugPrint(
+        stderr.writeln(
           'Error obtaining BusProvider or registering route listener in MapScreen.initState: $e',
         );
-        debugPrint(stackTrace.toString());
+        stderr.writeln(stackTrace.toString());
       }
     });
   }
@@ -263,7 +262,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     try {
       Haptics.vibrate(HapticsType.light);
     } catch (e) {
-      debugPrint("Haptics error: $e");
+      stderr.writeln("Haptics error: $e");
     }
 
     _showStopSheet(
@@ -327,7 +326,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // keep trying to reach server.
     while (startupData == null) {
       if (kDebugMode) {
-        debugPrint("retrying _getStartupData");
+        debugPrint("retrying _getStartupData"); // LINTER_OVERRIDE
       }
       await Future.delayed(Duration(seconds: 2));
       startupData = await _getStartupData();
@@ -380,12 +379,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       content: error,
     );
 
-    // StartupDataHolder? startupData;
 
-    // debugPrint("***** START TIME: ${DateTime.now().millisecondsSinceEpoch}");
     int startTime = DateTime.now().millisecondsSinceEpoch;
 
-    // startupData = await _getStartupData(); // Load startup data asynchronously with the routes
     downloadStartupData(); // Download it but don't wait around for it to finish
 
     _loadingMessageNotifier.value = Loadpoint('Loading data...', 1);
@@ -440,7 +436,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         ]);
         shouldRetryInit = false;
       } catch (err) {
-        debugPrint("$err");
+        stderr.writeln("$err");
         if (err is SocketException) {
           // We'll get a SocketException if the app can't download data from the network and there's no cache available
           _loadingMessageNotifier.value = Loadpoint('Waiting for network...', 1);
@@ -451,11 +447,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       }
       
     }
-    // debugPrint("***** TIME TAKEN: ${DateTime.now().millisecondsSinceEpoch - startTime}");
-
-    // StartupDataHolder? startupData = await _getStartupData();
-
-    
 
     // moving this here fixes loading bug
     await RouteColorService.initialize();
@@ -480,7 +471,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _updateAvailableRoutes(busProvider.routes);
     _cacheRouteOverlays(busProvider.routes);
 
-    debugPrint("******* Caching routes");
     baseRoutesLayer.cacheRoutes(busProvider.routes);
 
     // update the map with previously selected routes.
@@ -727,14 +717,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           banner_message,
         );
       } else if (kDebugMode) {
-        debugPrint(
+        stderr.writeln(
           "Got non-OK response for startup data: ${response.statusCode}",
         );
-        debugPrint(response.body);
+        stderr.writeln(response.body);
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint("Couldn't load startup data: ${e.toString()}");
+        stderr.writeln("Couldn't load startup data: ${e.toString()}");
       }
       return null;
     }
@@ -764,7 +754,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       try {
         _busProviderRef!.removeListener(_busProviderListener!);
       } catch (e, stackTrace) {
-        debugPrint(
+        stderr.writeln(
           'Error removing _busProviderListener in MapScreen.dispose: $e',
         );
         debugPrintStack(stackTrace: stackTrace);
@@ -1075,7 +1065,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Show a red pin marker at search location
   void _showSearchLocationMarker(double lat, double lon) {
-    // debugPrint("****** SHOWING SEARCH RESULT MARKER AT LATLNG ${lat} ${lon}");
     searchResultLayer.isVisible = true;
     searchResultLayer.setPosition(LatLng(lat, lon));
 

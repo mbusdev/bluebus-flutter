@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/firebase_options.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -46,7 +48,7 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: null,
     );
     if ((initialized == null || !initialized) && kDebugMode) {
-      debugPrint("Failed to initialize notifications!");
+      stderr.writeln("Failed to initialize notifications!");
     }
 
     // Push Notifications
@@ -80,17 +82,17 @@ class NotificationService {
         .getAPNSToken(); // ensure it exists for iOS to work
     _registrationToken = await FirebaseMessaging.instance.getToken();
     if (kDebugMode) {
-      debugPrint("apns token:");
-      debugPrint(apnsToken);
-      debugPrint(_registrationToken);
+      // debugPrint("apns token:");
+      // debugPrint(apnsToken);
+      // debugPrint(_registrationToken);
     }
 
     if (!_listeningForForegroundMessages) {
       _listeningForForegroundMessages = true;
-      print("Now listening for onMessage");
+      // print("Now listening for onMessage");
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print("MESSAGE!");
-        debugPrint("Got a message: $message");
+        // print("MESSAGE!");
+        // debugPrint("Got a message: $message");
         if (message.notification != null) {
           NotificationService.sendLocalNotification(
             message.notification?.title,
@@ -113,7 +115,7 @@ class NotificationService {
           })
           .onError((err) {
             if (kDebugMode) {
-              debugPrint("fcm token refresh error: $err");
+              stderr.writeln("fcm token refresh error: $err");
             }
           });
     }

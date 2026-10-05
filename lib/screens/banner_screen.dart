@@ -72,8 +72,6 @@ class _BannerScreenState extends State<BannerScreen> {
   void initState() {
     super.initState();
 
-    debugPrint("Showing URL ${widget.url}");
-
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..loadRequest(

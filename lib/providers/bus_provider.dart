@@ -37,7 +37,7 @@ class BusProvider extends ChangeNotifier {
       _routes = await repository.fetchRoutesFromCacheAndHTTP(onError); // This loads from cache or via HTTP if cache isn't present
       
     } catch (e) {
-      debugPrint("Routes loading error!!");
+      stderr.writeln("Routes loading error!!");
       _error = e.toString();
       // let futureBuilder catch the error up in the chain
       rethrow;

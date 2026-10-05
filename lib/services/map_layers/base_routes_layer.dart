@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:bluebus/models/bus_route_line.dart';
@@ -32,10 +33,10 @@ class BaseRoutesLayer extends CompositeMapLayer {
   Function() onUpdate = () {};
   @override
   Function(LatLng) showRipple = (LatLng location) {
-    debugPrint("Warning! showRipple called but no callback was registered");
+    stderr.writeln("Warning! showRipple called but no callback was registered");
   };
   Function(BusStop) onStopClicked = (BusStop s) {
-    debugPrint("Warning! onStopClicked called but no callback was registered");
+    stderr.writeln("Warning! onStopClicked called but no callback was registered");
   };
 
   bool displayFancyIcons = false; // Whether we're zoomed in far enough to show fancy stop icons
@@ -115,7 +116,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
 
     // TODO: Put these pregenerated stop icons in a cache! Much less expensive to use later
 
-    debugPrint("Pre-generating fancy stop icons");
     for (MapEntry entry in stopIdToRouteIds.entries) {
       try {
         await MapImageService.getFancyStopIcon(
@@ -289,7 +289,7 @@ class BaseRoutesLayer extends CompositeMapLayer {
       await reloadPreprocessedMarkersSegment(stopsToReload.length); // Reload ALL the markers at once. This also updates the markers variable
 
     } catch (err) {
-      debugPrint("Error: $err");
+      stderr.writeln("Error: $err");
     }
   }
 

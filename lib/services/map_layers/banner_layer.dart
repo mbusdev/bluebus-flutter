@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:bluebus/constants.dart';
@@ -59,7 +60,7 @@ class BannerLayer extends CompositeMapLayer {
 
   @override
   Function() onUpdate = () {
-    debugPrint("Error: onUpdate called but callback was not registered!");
+    stderr.writeln("Error: onUpdate called but callback was not registered!");
   };
 
   @override

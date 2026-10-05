@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 import 'dart:math';
 import 'dart:math' as math;
 import 'package:bluebus/services/map_image_service.dart';
@@ -1052,7 +1053,7 @@ class NavigationManager {
   void rebuildMarkersAndPolylines() {
     // Call this whenever markers or polylines change
     if (this.mapLayer == null) {
-      debugPrint(
+      stderr.writeln(
         "Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!",
       );
       return;

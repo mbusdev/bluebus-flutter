@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus.dart';
@@ -27,7 +29,7 @@ class JourneyLayer extends CompositeMapLayer {
   Function() onUpdate = () {};
 
   Function(String s) _showBusSheet = (String s) {
-    debugPrint("Error: _showBusSheet was called but callback was never set");
+    stderr.writeln("Error: _showBusSheet was called but callback was never set");
   };
 
   BitmapDescriptor? _getOn;

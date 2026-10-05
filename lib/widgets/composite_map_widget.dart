@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
@@ -19,7 +21,7 @@ abstract class CompositeMapLayer {
   Function() get onUpdate;
   void setOnUpdate(Function() fn);
   void setShowRipple(Function(LatLng) fn) {
-    debugPrint("Warning: setShowRipple called but method was not overridden.");
+    stderr.writeln("Warning: setShowRipple called but method was not overridden.");
   }
   void dispose() {}
 
@@ -145,12 +147,9 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
   }
   void showRipple(LatLng location) async {
     if (_mapController == null) {
-      debugPrint("mapcontroller is null!!!!!!!!!");
       return;
     }
-    debugPrint("Showing ripple at $location");
     ScreenCoordinate coord = await _mapController!.getScreenCoordinate(location);
-    debugPrint("Got screen coordinate of $coord");
     if (!mounted) return;
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     final offset = Offset(coord.x / devicePixelRatio, coord.y / devicePixelRatio);

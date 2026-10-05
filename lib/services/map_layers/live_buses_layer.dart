@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:bluebus/models/bus.dart';
@@ -45,12 +46,12 @@ class LiveBusesLayer extends CompositeMapLayer {
 
   @override
   Function() onUpdate = () {
-    debugPrint("Error: onUpdate called but callback was not registered!");
+    stderr.writeln("Error: onUpdate called but callback was not registered!");
   };
 
   @override
   Function(LatLng) showRipple = (LatLng location) {
-    debugPrint("Error: showRipple called but callback was not registered!");
+    stderr.writeln("Error: showRipple called but callback was not registered!");
   };
 
   @override
@@ -75,7 +76,7 @@ class LiveBusesLayer extends CompositeMapLayer {
       {}; // Maps Bus ID -> BusAnimationState
 
   Function(Bus b) onBusClicked = (Bus b) {
-    debugPrint("Error: onBusClicked callback was called but never intiialized");
+    stderr.writeln("Error: onBusClicked callback was called but never intiialized");
   };
 
   @override
