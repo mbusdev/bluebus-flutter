@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 jobs:
-  verify_target_branch_is_not_main:
+  check_target:
     runs-on: ubuntu-latest
     steps:
       - name: Verify target branch is not main
