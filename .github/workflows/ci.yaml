@@ -65,3 +65,23 @@ jobs:
         run: python3 test/debug_print_check.py
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+name: Verify target branch is not main
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check-target:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify target branch is not main
+        env:
+          BASE: ${{ github.base_ref }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          if [ "$BASE" = "main" ] && [[ ",$LABELS," != *",release,"* ]]; then
+            echo "Targeting main requires the 'release' label"
+            echo "::error::Please change your target branch to the current working update branch (e.g. maizebus2.1). See https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/changing-the-base-branch-of-a-pull-request"
+            exit 1
+          fi

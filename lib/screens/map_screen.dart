@@ -326,7 +326,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // keep trying to reach server.
     while (startupData == null) {
       if (kDebugMode) {
-        debugPrint("retrying _getStartupData"); // LINTER_OVERRIDE
+        debugPrint("retrying _getStartupData");
       }
       await Future.delayed(Duration(seconds: 2));
       startupData = await _getStartupData();
