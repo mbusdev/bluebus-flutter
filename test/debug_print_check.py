@@ -64,7 +64,7 @@ if debugprint_checks_pass:
     print(GREEN + "\n\nAll style checks passed!\n" + RESET)
     sys.exit(0)
 else:
-    print("\n\n::error::Extra debugPrint() statements found, please resolve these. (Click to see details)")
+    print("\n\n::error::Extra debugPrint() statements found, please resolve these. (See above for details)")
     print(RED + "\nSome style checks failed! See above for details" + RESET)
     print("Looks like there are extra debugPrint() statements left in your code.")
     print("Tips to fix this:")
