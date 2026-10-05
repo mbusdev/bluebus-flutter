@@ -65,13 +65,6 @@ jobs:
         run: python3 test/debug_print_check.py
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
-
-name: Verify target branch is not main
-on:
-  pull_request:
-    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
-
-jobs:
   check-target:
     runs-on: ubuntu-latest
     steps:
