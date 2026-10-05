@@ -1,4 +1,5 @@
 import subprocess
+import sys
 
 BLACK   = "\033[0;30m";
 RED     = "\033[0;31m";
@@ -61,8 +62,10 @@ for filename in dart_files:
 
 if debugprint_checks_pass:
     print(GREEN + "\n\nAll style checks passed!\n" + RESET)
+    sys.exit(0)
 else:
-    print(RED + "\n\nSome style checks failed! See above for details" + RESET)
+    print("\n\n::error::Extra debugPrint() statements found, please resolve these. (See above for details)")
+    print(RED + "\nSome style checks failed! See above for details" + RESET)
     print("Looks like there are extra debugPrint() statements left in your code.")
     print("Tips to fix this:")
     print("    1. Make sure you've removed unnecessary debugging logs")
@@ -70,3 +73,4 @@ else:
     print("    3. If you feel like a log message really needs to stay (e.g. for warnings),")
     print("       add the comment // LINTER_OVERRIDE on the same line")
     print("    4. Avoid using the print() statement--use another option instead")
+    sys.exit(1)
