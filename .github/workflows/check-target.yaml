@@ -3,8 +3,6 @@ name: Verify target branch is not main
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
-  push:
-    branches: []
 jobs:
   check_target:
     runs-on: ubuntu-latest
