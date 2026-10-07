@@ -25,7 +25,7 @@ all_accounted_for = True
 with open("tmp_changed_files.txt") as f:
     lines = f.read().split("\n")
     for line in lines:
-        if line.trim() == "":
+        if line.strip() == "":
             continue # Skip empty lines
         parts = line.split("/")
         filename = parts[len(parts) - 1]
