@@ -20,6 +20,7 @@ jobs:
   check-description:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - name: Pull request description mentions every changed file
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -27,5 +28,4 @@ jobs:
         run: |
           gh pr diff ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} --name-only > tmp_changed_files.txt
-        run: |
           python3 .github/workflows/pr_description_check.py
