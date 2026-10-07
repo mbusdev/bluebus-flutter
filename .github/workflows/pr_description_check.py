@@ -39,5 +39,5 @@ with open("tmp_changed_files.txt") as f:
 if all_accounted_for:
     exit(0)
 else:
-    print("::error::Please make sure all changed files are listed in your pull request description. See above for details")
+    print("::error::Please edit your pull request description to make sure it lists all changed files. See above for details")
     exit(1)
