@@ -1,5 +1,5 @@
 # .github/workflows/check-target.yaml
-name: All 
+name: PR Description Check 
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
