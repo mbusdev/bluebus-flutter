@@ -10,15 +10,7 @@ CYAN    = "\033[0;36m";
 WHITE   = "\033[0;37m";
 RESET   = "\033[0m";
 
-# print(os.environ["PR_BODY"])
-
-# Run gh pr diff 119 \
-# Description here
-# .github/workflows/check-target.yaml
-# .github/workflows/pr_description_check.py
-
 pr_body = os.environ["PR_BODY"]
-# pr_body = "Description here\nThis is some text, yay!\npr_description_check.py"
 
 all_accounted_for = True
 
