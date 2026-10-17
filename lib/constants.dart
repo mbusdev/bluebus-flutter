@@ -106,6 +106,16 @@ enum ColorType {
   sliderBackground,
   sliderButton,
 
+  roomSearchBg,
+  roomSearchText,
+
+  // temporary room search label cards, will maybe change
+  roomSearchBathroom,
+  roomSearchInfoDesk,
+  roomSearchDining,   // do we have dining?
+  roomSearchPrinting, // do we have printing data?
+  roomSearchStairs,
+
   // info card colors (in route selector, favorites sheet, etc.)
   infoCardColor,
   infoCardHighlighted,
@@ -149,6 +159,15 @@ const Map<ColorType, Color> lightColors = {
 
   ColorType.sliderButton: Colors.white,
   ColorType.sliderBackground: Color.fromARGB(255, 200, 228, 255),
+
+  ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
+  ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
+
+  ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
+  ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
+  ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
+  ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
+  ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
 
   ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),
@@ -194,6 +213,15 @@ const Map<ColorType, Color> darkColors = {
 
   ColorType.sliderButton: Color.fromARGB(255, 32, 33, 34),
   ColorType.sliderBackground: Color.fromARGB(255, 33, 71, 105),
+  
+  // dark mode colors may vary in the future!
+  ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
+  ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
+  ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
+  ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
+  ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
+  ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
+  ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
 
   ColorType.infoCardColor: Color.fromARGB(255, 47, 54, 60),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),

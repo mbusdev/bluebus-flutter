@@ -25,8 +25,9 @@ const FLOOR_SELECTED_HIGHLIGHT_MARGIN = 5.0;
 /// full [FloorplanOverlay] floor picker.
 class FloorplanEntryBar extends StatelessWidget {
   final VoidCallback onOpenFloorplan;
+  final VoidCallback onRoomSearch;
 
-  const FloorplanEntryBar({super.key, required this.onOpenFloorplan});
+  const FloorplanEntryBar({super.key, required this.onOpenFloorplan, required this.onRoomSearch});
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +87,7 @@ class FloorplanEntryBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(25),
               ),
               child: ElevatedButton.icon(
-                onPressed: onOpenFloorplan,
+                onPressed: onRoomSearch,
                 style: ElevatedButton.styleFrom(
                   alignment: Alignment.centerLeft,
                   backgroundColor:
@@ -438,7 +439,8 @@ class FloorOutlineClipper extends CustomClipper<Path> {
 
 class FloorplanOverlay extends StatefulWidget {
   // const FloorplanOverlauy
-  Function? onClosed;
+  final VoidCallback onClosed;
+  final VoidCallback onRoomSearch;
 
   /// The map layer this overlay drives. Picking a floor here is what swaps the
   /// geometry drawn on the map underneath.
@@ -446,7 +448,8 @@ class FloorplanOverlay extends StatefulWidget {
 
   FloorplanOverlay({
     required this.onClosed,
-    required this.floorplansLayer
+    required this.floorplansLayer,
+    required this.onRoomSearch
   });
 
   @override
@@ -832,8 +835,6 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                   // mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-
-
                     // Nothing to pick between until the floorplan has loaded.
                     if (floors.isNotEmpty)
                       FloorSelector(
@@ -854,47 +855,35 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                     // ),
                     SizedBox(width: 8,),
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white, // TODO: Make dynamic for light/dark mode
-                          borderRadius: BorderRadius.all(Radius.circular(30))
+                      child: FilledButton.icon(
+                        onPressed: widget.onRoomSearch,
+                        style: FilledButton.styleFrom(
+                          alignment: Alignment.centerLeft,
+                          backgroundColor:
+                              Colors.white, // TODO: Make dynamic for light/dark mode
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 13,
+                            vertical: 8,
+                          ),
                         ),
-                        child: Padding(
-                          padding: EdgeInsetsGeometry.only(left: 20, right: 20, top: 10, bottom: 10),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.search,
-                                color: Colors.black,
-                                size: 30,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                "Room #",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 18
-                                ),
-                                
-                              ),
-                            ],
-                          )
-                          
-                          
-                        )
-                      )
-                      
+                        icon: const Icon(
+                          Icons.search_sharp,
+                          color: Colors.black,
+                          size: 28,
+                        ),
+                        label: const Text(
+                          "Room #",
+                          style: TextStyle(color: Colors.black, fontSize: 18),
+                        ),
+                      ),
                     )
-
                   ],
                 )
               )
             ] 
           ),
         )
-        
       ],
     );
   }
-
 }
