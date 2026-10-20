@@ -47,6 +47,7 @@ class BaseRoutesLayer extends CompositeMapLayer {
 
   Set<String> favoriteStops = {};
   Set<String> selectedRoutes = {};
+  String? focusedRoute = null;
 
   BitmapDescriptor _stopIcon = BitmapDescriptor.defaultMarkerWithHue(
     BitmapDescriptor.hueAzure,
@@ -195,7 +196,8 @@ class BaseRoutesLayer extends CompositeMapLayer {
     for (final r in routes) { // used to be routesCache
       if (!selectedRoutes.contains(r.routeId)) continue; // Skip deselected routes
 
-
+      // If a route is focused, don't show stops for other routes
+      if (focusedRoute != null && r.routeId != focusedRoute) continue;
 
       // TODO: VVV Save these two variables in some data structure somewhere, or maybe alongside the Stop in the stopsToReload 
 
@@ -222,7 +224,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
   }
 
   Future<void> reloadPreprocessedMarkersSegment(int markersToReload) async {
-
     int stopIndex = stopsToReloadCursor + markersToReload;
 
     for (; stopsToReloadCursor < math.min(stopsToReload.length, stopIndex); stopsToReloadCursor++) {
@@ -241,7 +242,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
         position: entry.stop.location,
         flat: true,
         icon:
-            // TODO: Reimplement this isRide/isNotRide/isFavorite/etc logic
             (displayFancyIcons)
               ? (
                 await MapImageService.getFancyStopIcon(
@@ -259,9 +259,6 @@ class BaseRoutesLayer extends CompositeMapLayer {
                   entry.stop.isRide,
                   entry.stop.rotation
                 )
-                // favoriteStops.contains(entry.stop.id) // Used to be isFavorite
-                // ? (entry.stop.isRide ? _favRideStopIcon : _favStopIcon)
-                // : (entry.stop.isRide ? _rideStopIcon : _stopIcon)
             ),
         consumeTapEvents: true,
         onTap: () {
@@ -315,6 +312,12 @@ class BaseRoutesLayer extends CompositeMapLayer {
 
   }
 
+  void setFocusedRoute(String? routeId) {
+    focusedRoute = routeId;
+    reloadPolylines();
+    reloadAllMarkers();
+  }
+
   void reloadPolylines() {
     polylinesCache.clear();
 
@@ -334,8 +337,9 @@ class BaseRoutesLayer extends CompositeMapLayer {
           jointType: JointType.round,
           polylineId: PolylineId(routeKey),
           points: r.points,
-          color: routeColor,
-          width: 4,
+          color: (focusedRoute == null || focusedRoute == r.routeId) ? routeColor : Colors.grey,
+          width: (focusedRoute == r.routeId) ? 6 : 4,
+          zIndex: (focusedRoute == r.routeId) ? 999999 : 0 // Make sure focused routes are always on top
         );
       }
     }
