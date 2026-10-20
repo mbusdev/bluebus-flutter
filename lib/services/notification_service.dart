@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+const useFirebase = bool.fromEnvironment('USE_FIREBASE', defaultValue: kReleaseMode);
 class NotificationService {
   static final _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
   static bool _listeningForFcmUpdates = false;
@@ -22,10 +23,12 @@ class NotificationService {
   /// e.g. call it asap if notifications were previously used, otherwise wait for
   /// the user to trigger a feature that requires notifications
   static Future<void> initPlugin() async {
-    await Firebase.initializeApp(
-      name: "[DEFAULT]",
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (useFirebase) {
+      await Firebase.initializeApp(
+        name: "[DEFAULT]",
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
 
     // prepare local notifications
     const AndroidInitializationSettings androidSettings =
@@ -69,6 +72,8 @@ class NotificationService {
   // Currently this function must be called even if permission is already granted,
   // as it sets up some important listeners
   static Future<void> requestPermission() async {
+    if (!useFirebase) return; // If Firebase is disabled for development skip all this
+
     // todo: add back in if needed
     final notificationSettings = await FirebaseMessaging.instance
         .requestPermission();
