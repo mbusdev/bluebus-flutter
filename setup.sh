@@ -22,7 +22,6 @@ flutter doctor
 
 echo "Please paste in your Google Maps API key: "
 
-while read -r -t 0.01 -n 10000 _discard; do :; done # Eat all the old input entered before the following read command
 read gmaps_apikey
 
 touch ios/Flutter/gmap.xcconfig
