@@ -27,7 +27,6 @@ import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/navigation_overlay_widget.dart';
 import 'package:bluebus/widgets/reminder_widgets.dart';
-import 'package:bluebus/widgets/search_rooms.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/foundation.dart';
@@ -1089,6 +1088,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               // Location has no coordinates
             }
           },
+          isRoomSearch: false,
         );
       },
     );
@@ -1100,8 +1100,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return SearchRoomsSheet(
+        return SearchSheet(
           floors: floorplansLayer.floors,
+          isRoomSearch: true,
         );
       },
     );

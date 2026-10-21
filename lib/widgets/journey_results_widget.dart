@@ -269,6 +269,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                       );
                                     }
                                   },
+                                  isRoomSearch: false,
                                 );
                               },
                             );
@@ -328,6 +329,7 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
                                       );
                                     }
                                   },
+                                  isRoomSearch: false,
                                 );
                               },
                             );

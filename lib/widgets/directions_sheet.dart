@@ -166,6 +166,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                               print("Error: The selected location '${location.name}' has no coordinates.");
                                             }
                                           },
+                                          isRoomSearch: false,
                                         );
                                       },
                                     );
@@ -226,6 +227,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                               print("Error: The selected location '${location.name}' has no coordinates.");
                                             }
                                           },
+                                          isRoomSearch: false,
                                         );
                                       },
                                     );
