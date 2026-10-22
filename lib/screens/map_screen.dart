@@ -590,7 +590,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         lat: p.latitude,
         long: p.longitude,
         zoom: _currentCameraPos.value?.zoom,
-        bearing: _currentCameraPos.value?.bearing,
+        bearing: p.speed > 1 ? p.heading : _currentCameraPos.value?.bearing ,
       );
 
       // TODO: Update any navigation manager / UI that depends on live position here.
