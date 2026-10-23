@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:developer';
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/providers/bathroom_provider.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -305,9 +306,12 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> _loadAllData() async {
+    // load user settings into providers
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
+    BathroomProvider bathroomProvider = Provider.of<BathroomProvider>(context, listen: false);
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme();
+    await bathroomProvider.load();
 
     final prefs = await SharedPreferences.getInstance();
     globalFollowDistanceThresholdMeters =

@@ -1,4 +1,5 @@
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/providers/bathroom_provider.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
@@ -73,6 +74,7 @@ class _SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
     ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    BathroomProvider bathroomProvider = Provider.of<BathroomProvider>(context, listen: false);
 
     const double heightBetween = 20;
 
@@ -126,9 +128,7 @@ class _SettingsState extends State<Settings> {
                   ),
                   textAlign: TextAlign.left,
                 ),
-
                 const SizedBox(height: 15),
-
                 LayoutBuilder(
                   builder: (context, constraints) {
                     return MaizebusSlidingSegmentedControl(
@@ -145,6 +145,34 @@ class _SettingsState extends State<Settings> {
                           } else {
                             themeProvider.setTheme(ThemeStyle.system);
                           }
+                        });
+                      }
+                    );
+                  }
+                ),
+                
+                const SizedBox(height: 30),
+
+                const Text(
+                  'Bathroom Preference',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+                const SizedBox(height: 15),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return MaizebusSlidingSegmentedControl(
+                      labels: ["Women's", "Men's", "Inclusive"], 
+                      height: 40,
+                      width: constraints.maxWidth,
+                      selectedIndex: bathroomProvider.preference == BathroomPreference.notchosen ? 2 : bathroomProvider.preference.index - 1,
+                      onSelectionChanged: (int index) {
+                        setState(() {
+                          bathroomProvider.set(BathroomPreference.values[index + 1]);
                         });
                       }
                     );
@@ -249,9 +277,7 @@ class _SettingsState extends State<Settings> {
                   ),
                 ),
 
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
 
                 const Text(
                   'GPS Update Distance',

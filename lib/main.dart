@@ -8,6 +8,7 @@ import 'screens/onboarding_screen.dart';
 import 'services/bus_repository.dart';
 import 'providers/bus_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/bathroom_provider.dart';
 import 'package:flutter/services.dart';
 
 
@@ -34,6 +35,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => ThemeProvider()
+        ),
+        ChangeNotifierProvider(
+          create: (_) => BathroomProvider()
         )
       ],
       child: const MainApp(),

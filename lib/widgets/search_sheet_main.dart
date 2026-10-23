@@ -143,7 +143,9 @@ class RoomSearchBar extends HookWidget {
               return SizedBox(
                 height: 31,
                 child: FilledButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // clicked button, close modal and zoom out on the map to the correct spot
+                  },
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
