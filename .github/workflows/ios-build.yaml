@@ -1,0 +1,82 @@
+# Builds an unsigned .ipa on a macOS runner so it can be sideloaded from Windows
+# (e.g. with Sideloadly or AltStore, which sign it with your own Apple ID).
+#
+# Required secret:  GMAPS_API_KEY  - Google Maps key (restrict it to iOS bundle com.ishankumar.maizebus;
+#                                    it ends up inside the .ipa, and artifacts on public repos are downloadable)
+# Optional secrets: FIREBASE_OPTIONS_DART            - contents of lib/firebase_options.dart
+#                   GOOGLE_SERVICE_INFO_PLIST_BASE64 - base64 of ios/Runner/GoogleService-Info.plist
+#                   Firebase stays disabled unless both are set.
+name: iOS build (unsigned)
+on:
+  workflow_dispatch:
+  push:
+    branches: ['ios-build/**']
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.8'
+          cache: true
+      - name: Write Google Maps key
+        env:
+          GMAPS_API_KEY: ${{ secrets.GMAPS_API_KEY }}
+        run: |
+          if [ -z "$GMAPS_API_KEY" ]; then
+            echo "::error::Add a GMAPS_API_KEY repository secret (the app crashes at launch without a Maps key)"
+            exit 1
+          fi
+          echo "GMapApiKey=$GMAPS_API_KEY" > ios/Flutter/gmap.xcconfig
+      - name: Write Firebase config (real if secrets are set, dummy otherwise)
+        env:
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+        run: |
+          if [ -n "$FIREBASE_OPTIONS_DART" ] && [ -n "$GOOGLE_SERVICE_INFO_PLIST_BASE64" ]; then
+            printf '%s' "$FIREBASE_OPTIONS_DART" > lib/firebase_options.dart
+            echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+            echo "USE_FIREBASE=true" >> "$GITHUB_ENV"
+          else
+            cat > lib/firebase_options.dart << 'EOF'
+          import 'package:firebase_core/firebase_core.dart';
+          class DefaultFirebaseOptions {
+            static FirebaseOptions get currentPlatform => const FirebaseOptions(
+              apiKey: 'fake-key-for-ci',
+              appId: 'fake-app-id',
+              messagingSenderId: 'fake-sender-id',
+              projectId: 'fake-project-id',
+            );
+          }
+          EOF
+            # The Xcode project references this file, so it must exist even when Firebase is off.
+            cat > ios/Runner/GoogleService-Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>BUNDLE_ID</key>
+            <string>com.ishankumar.maizebus</string>
+            <key>PROJECT_ID</key>
+            <string>fake-project-id</string>
+          </dict>
+          </plist>
+          EOF
+            echo "USE_FIREBASE=false" >> "$GITHUB_ENV"
+          fi
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Build unsigned app
+        run: flutter build ios --release --no-codesign --no-pub --dart-define=USE_FIREBASE=$USE_FIREBASE
+      - name: Package .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr maizebus-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maizebus-unsigned-ipa-${{ github.run_number }}
+          path: maizebus-unsigned.ipa
+          retention-days: 7
