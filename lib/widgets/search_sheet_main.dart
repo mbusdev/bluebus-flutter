@@ -237,7 +237,7 @@ class LocationSearchBar extends HookWidget {
 
   // selectable cards
   static const List<Card> cards = [
-    Card(name: "Bathroom", color: ColorType.roomSearchBathroom, type: FloorplanTypes.inclusiveBathroom),
+    Card(name: "Bathroom", color: ColorType.roomSearchBathroom, type: FloorplanTypes.neutralBathroom),
     Card(name: "Info desk", color: ColorType.roomSearchInfoDesk, type: FloorplanTypes.information),
     Card(name: "Dining", color: ColorType.roomSearchDining, type: FloorplanTypes.food),
     Card(name: "Printing", color: ColorType.roomSearchPrinting, type: FloorplanTypes.printer),
@@ -247,7 +247,7 @@ class LocationSearchBar extends HookWidget {
   static const Map<String, String> poiNames = {
     FloorplanTypes.femaleBathroom: "Women's Bathroom",
     FloorplanTypes.maleBathroom: "Men's Bathroom",
-    FloorplanTypes.inclusiveBathroom: "Inclusive Bathroom",
+    FloorplanTypes.neutralBathroom: "Inclusive Bathroom",
     FloorplanTypes.information: "Info Desk",
     FloorplanTypes.food: "Dining",
     FloorplanTypes.printer: "Printer",
@@ -527,7 +527,7 @@ class LocationSearchBar extends HookWidget {
                         type = switch(bathroom.preference) {
                           BathroomPreference.womens => FloorplanTypes.femaleBathroom,
                           BathroomPreference.mens => FloorplanTypes.maleBathroom,
-                          _ => FloorplanTypes.inclusiveBathroom
+                          _ => FloorplanTypes.neutralBathroom
                         };
                       }
 

@@ -32,8 +32,7 @@ abstract final class FloorplanTypes {
   static const String vendingMachine = 'vending_machine';
   static const String femaleBathroom = 'restroom_female';
   static const String maleBathroom = 'restroom_male';
-  static const String inclusiveBathroom = 'restroom_neutral';
-  static const String neutralBathroom = 'neutral_bathroom';
+  static const String neutralBathroom = 'restroom_neutral';
 
   /// The two georeferencing markers a floor carries so we can line its plan
   /// pixels up with the real world. See [FloorplanProjection].
