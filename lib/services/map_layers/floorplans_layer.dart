@@ -28,6 +28,8 @@ class FloorplansLayer extends CompositeMapLayer {
   Function() onUpdate = () {};
 
   GeoreferencedFloorplan? _source;
+  FloorplanPoiIndex? _poiIndex;
+  Set<Marker>? _searchMarkers;
   int _floorIndex = 0;
 
   /// Starts out matching the map's initial camera, since [onCameraMove] only
@@ -103,11 +105,60 @@ class FloorplansLayer extends CompositeMapLayer {
   Future<void> _load() async {
     try {
       _source = await FloorplanService.loadDuderstadt();
+      _poiIndex = FloorplanPoiIndex(_source!);
     } catch (err) {
       debugPrint('FloorplansLayer: failed to load floorplan ($err)');
       return;
     }
     await _rebuild();
+  }
+
+  // creates markers for the nearest 
+  Future<int> showNearbyPois(String type, LatLng origin, void Function(LocatedFloorplanPoi) tapCallback) async {
+    await load();
+    final index = _poiIndex;
+    if (index == null) throw StateError('Floorplan data is unavailable'); // add proper handling!!
+
+    final matches = index.nearest(type, origin); // get nearest 5 floorplan POIs
+    final icon = await FloorplanMarkerService.icon(type) ?? BitmapDescriptor.defaultMarker;
+    final highlighted = await FloorplanMarkerService.highlightedIcon(type) ?? BitmapDescriptor.defaultMarker;
+
+    // generate markers based on the matches found
+    _searchMarkers = {};
+    for (final match in matches) {
+      final id = MarkerId('poi_search_${match.floor.id}_${match.poi.id}');
+      _searchMarkers!.add(
+        Marker(
+          markerId: id,
+          position: match.position,
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          zIndexInt: FLOORPLAN_Z_MARKERS + 1,
+          onTap: () {
+            // replace this marker with
+            _searchMarkers = _searchMarkers?.map((marker) {
+              return marker.markerId == id
+                  ? marker.copyWith(iconParam: highlighted)
+                  : marker.copyWith(iconParam: icon);
+            }).toSet();
+        
+            _applyDetailLevel();
+            onUpdate();
+            tapCallback(match);
+          }
+        )
+      );
+    }
+    
+    _applyDetailLevel();
+    onUpdate();
+    return matches.length;
+  }
+
+  void clearPoiSearch() {
+    _searchMarkers = null;
+    _applyDetailLevel();
+    onUpdate();
   }
 
   /// Switches which floor is drawn. Safe to call before [load] finishes.
@@ -390,5 +441,6 @@ class FloorplansLayer extends CompositeMapLayer {
         polylines = _wallPolylines;
         markers = _poiMarkers;
     }
+    if (_searchMarkers != null) markers = _searchMarkers!;
   }
 }

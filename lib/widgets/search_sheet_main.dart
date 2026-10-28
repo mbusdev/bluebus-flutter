@@ -531,12 +531,7 @@ class LocationSearchBar extends HookWidget {
                         };
                       }
 
-                      // call the function provided by the parent caller sheet,
-                      // to zoom out and show overlay
-                      final name = poiNames[type];
-                      if (name != null) {
-                        onPOISelected!(name);
-                      }
+                      onPOISelected!(type);
                     },
                     style: FilledButton.styleFrom(
                       shape: RoundedRectangleBorder(

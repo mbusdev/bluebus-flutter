@@ -3,15 +3,18 @@ import 'dart:ui' as ui;
 
 import 'package:bluebus/services/floorplan_style.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../constants.dart';
 
 /// Builds and caches the bitmaps used by the floorplan layer's markers: POI
 /// icons loaded from assets, and room labels rasterized from text.
 ///
-/// Both caches are static and keyed by content, so the same label or icon is
+/// The caches are static and keyed by content, so the same label or icon is
 /// only ever built once no matter how many floors or buildings ask for it.
 class FloorplanMarkerService {
   static final Map<String, BitmapDescriptor> _iconCache = {};
+  static final Map<String, BitmapDescriptor> _highlightedIconCache = {};
   static final Map<String, BitmapDescriptor> _labelCache = {};
 
   /// The icon for a POI type, or null if that type doesn't have one.
@@ -34,6 +37,103 @@ class FloorplanMarkerService {
     } catch (err) {
       debugPrint('FloorplanMarkerService: could not load $assetPath ($err)');
       return null;
+    }
+  }
+
+  /// Draws a 40% larger POI icon centered on a yellow circle.
+  /// Returns null if the asset is missing or cannot be decoded.
+  static Future<BitmapDescriptor?> highlightedIcon(String poiType) async {
+    // Reuse the bitmap so repeated taps do not redraw the same icon.
+    final cached = _highlightedIconCache[poiType];
+    if (cached != null) return cached;
+
+    final assetPath = FLOORPLAN_POI_ICONS[poiType];
+    if (assetPath == null) return null;
+
+    // These sizes control how large the marker appears on the map.
+    const double iconSize = FLOORPLAN_ICON_SIZE;
+    const double backgroundPadding = 3;
+    const double markerSize = iconSize + backgroundPadding * 2;
+
+    // Render extra pixels for sharp edges, then tell Maps their pixel ratio.
+    // Increasing this value improves resolution, not the displayed size.
+    const double pixelRatio = 3;
+    ui.Codec? assetDecoder;
+    ui.Image? originalIcon;
+    ui.Picture? recordedDrawing;
+    ui.Image? markerImage;
+
+    try {
+      // Decode the asset into an image that Canvas can draw.
+      final assetData = await rootBundle.load(assetPath);
+      assetDecoder = await ui.instantiateImageCodec(
+        assetData.buffer.asUint8List(
+          assetData.offsetInBytes,
+          assetData.lengthInBytes,
+        ),
+      );
+      originalIcon = (await assetDecoder.getNextFrame()).image;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder)..scale(pixelRatio);
+
+      // Draw the circle first so it sits behind the icon.
+      canvas.drawCircle(
+        const Offset(markerSize / 2, markerSize / 2),
+        markerSize / 2,
+        Paint()..color = maizeBusYellow,
+      );
+
+      // Copy the entire asset into the larger, centered icon area.
+      final sourceBounds = Rect.fromLTWH(
+        0,
+        0,
+        originalIcon.width.toDouble(),
+        originalIcon.height.toDouble(),
+      );
+      const iconBounds = Rect.fromLTWH(
+        backgroundPadding,
+        backgroundPadding,
+        iconSize,
+        iconSize,
+      );
+      canvas.drawImageRect(
+        originalIcon,
+        sourceBounds,
+        iconBounds,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+
+      // Turn the drawing into PNG bytes that Google Maps can use as an icon.
+      recordedDrawing = recorder.endRecording();
+      final bitmapSize = (markerSize * pixelRatio).ceil();
+      markerImage = await recordedDrawing.toImage(bitmapSize, bitmapSize);
+      final pngData = await markerImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      if (pngData == null) return null;
+
+      final descriptor = BitmapDescriptor.bytes(
+        pngData.buffer.asUint8List(
+          pngData.offsetInBytes,
+          pngData.lengthInBytes,
+        ),
+        imagePixelRatio: pixelRatio,
+      );
+      _highlightedIconCache[poiType] = descriptor;
+      return descriptor;
+    } catch (err) {
+      debugPrint(
+        'FloorplanMarkerService: could not highlight $assetPath ($err)',
+      );
+      return null;
+    } finally {
+      // Release temporary graphics resources, including when generation fails.
+      // The cached descriptor retains the PNG bytes it needs.
+      markerImage?.dispose();
+      recordedDrawing?.dispose();
+      originalIcon?.dispose();
+      assetDecoder?.dispose();
     }
   }
 

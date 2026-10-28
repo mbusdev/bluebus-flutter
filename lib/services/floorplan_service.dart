@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:bluebus/models/floorplan.dart';
+import 'package:bluebus/utils/floorplan_projection.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -20,6 +22,71 @@ class GeoreferencedFloorplan {
     required this.waypoint1,
     required this.waypoint2,
   });
+}
+
+/// A searchable POI with its floor context and precomputed map position.
+class LocatedFloorplanPoi {
+  final String building;
+  final FloorplanFloor floor;
+  final FloorplanPoi poi;
+  final LatLng position;
+
+  const LocatedFloorplanPoi(this.building, this.floor, this.poi, this.position);
+}
+
+class FloorplanPoiIndex {
+  final List<LocatedFloorplanPoi> pois;
+
+  FloorplanPoiIndex(GeoreferencedFloorplan source)
+    : pois = [
+        for (final floor in source.floorplan.floors)
+          ..._projectFloor(source, floor),
+      ];
+
+  static Iterable<LocatedFloorplanPoi> _projectFloor(
+    GeoreferencedFloorplan source,
+    FloorplanFloor floor,
+  ) sync* {
+    final projection = FloorplanProjection.forFloor(
+      floor,
+      waypoint1: source.waypoint1,
+      waypoint2: source.waypoint2,
+    );
+    if (projection == null) return;
+    for (final poi in floor.pois) {
+      if (poi.type == FloorplanTypes.waypoint1 ||
+          poi.type == FloorplanTypes.waypoint2) {
+        continue;
+      }
+      yield LocatedFloorplanPoi(
+        source.floorplan.building,
+        floor,
+        poi,
+        projection.toLatLng(poi.position),
+      );
+    }
+  }
+
+  List<LocatedFloorplanPoi> nearest(
+    String type,
+    LatLng origin, {
+    int limit = 5,
+  }) {
+    final matches = [
+      for (final entry in pois)
+        if (entry.poi.type == type)
+          (
+            entry: entry,
+            distance: Geolocator.distanceBetween(
+              origin.latitude,
+              origin.longitude,
+              entry.position.latitude,
+              entry.position.longitude,
+            ),
+          ),
+    ]..sort((a, b) => a.distance.compareTo(b.distance));
+    return matches.take(limit).map((match) => match.entry).toList();
+  }
 }
 
 /// Loads floorplans.

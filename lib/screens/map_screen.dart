@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:developer';
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/models/floorplan.dart';
 import 'package:bluebus/providers/bathroom_provider.dart';
+import 'package:bluebus/services/floorplan_service.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -181,6 +183,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // GoogleMaps styles
   String _darkMapStyle = "{}";
   String _lightMapStyle = "{}";
+
+  final _selectedPoi = ValueNotifier<LocatedFloorplanPoi?>(null);
 
   Future _loadMapStyles() async {
     _darkMapStyle = await rootBundle.loadString('assets/maps_dark_style.json');
@@ -682,6 +686,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
 
     _mapController?.dispose();
+    _selectedPoi.dispose();
     super.dispose();
   }
 
@@ -1281,23 +1286,53 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // });
   }
 
-  void _showPOISelection(String name) {
-    // Show red pin at the location
-    // _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
+  Future<void> _showPOISelection(String type) async {
+    _bottomSheetController?.close();
+    floorplansLayer.clearPoiSearch();
+    _selectedPoi.value = null;
 
-    _bottomSheetController = showBottomSheet(
-      context: context,
-      enableDrag: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return POISheet(
-          name: name
-        );
-      },
-    );
-    _bottomSheetController?.closed.then((_) {
-      hideJourney();
-    });
+    // get name of the type
+    final name = LocationSearchBar.poiNames[type] ?? type;
+    try {
+      
+      // get user position and center on the user's position
+      final position = await _getLastKnownLocation();
+      if (!mounted || position == null) return;
+      await _centerOnLocation(
+        false, lat: position.latitude, long: position.longitude, zoom: 18,
+      );
+      if (!mounted) return;
+
+      // show nearby POIs of the search
+      await floorplansLayer.showNearbyPois(
+        type, LatLng(position.latitude, position.longitude),
+        (poi) { // tap callback for each marker in the floorplan
+          _selectedPoi.value = poi;
+        }
+      );
+      
+      if (!mounted) return;
+      _bottomSheetController = showBottomSheet(
+        context: context,
+        enableDrag: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => POISheet(
+          name: name,
+          poiSelected: _selectedPoi,
+        ),
+      );
+
+      // close it when the bottom sheet is closed
+      _bottomSheetController!.closed.then((_) {
+        if (!mounted) return;
+        floorplansLayer.clearPoiSearch();
+      });
+    } catch (_) {
+      floorplansLayer.clearPoiSearch();
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('Could not search nearby places. Please try again.')),
+      // );
+    }
   }
 
   _showJourneySheetOnReopen() {
