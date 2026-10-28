@@ -27,6 +27,7 @@ import 'package:bluebus/widgets/floorplan_overlay_widget.dart';
 import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/navigation_overlay_widget.dart';
+import 'package:bluebus/widgets/poi_sheet.dart';
 import 'package:bluebus/widgets/reminder_widgets.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
@@ -1059,7 +1060,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return SearchSheet(
+        return SearchSheet( 
+          isRoomSearch: false,
+          floors: floorplansLayer.floors,
           onSearch: (Location location, bool isBusStop, String stopID) {
             final searchCoordinates = location.latlng;
 
@@ -1092,7 +1095,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               // Location has no coordinates
             }
           },
-          isRoomSearch: false,
+          onPOISelected: (String name) {
+            _showPOISelection(name);
+          }
         );
       },
     );
@@ -1105,8 +1110,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return SearchSheet(
-          floors: floorplansLayer.floors,
           isRoomSearch: true,
+          floors: floorplansLayer.floors,
+          onSearch: (Location location, bool isBusStop, String stopID) {
+            // room search result functionality
+          },
+          onPOISelected: (String name) {
+            _showPOISelection(name);
+          }
         );
       },
     );
@@ -1268,6 +1279,25 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // _bottomSheetController?.closed.then((_) {
     //   hideJourney();
     // });
+  }
+
+  void _showPOISelection(String name) {
+    // Show red pin at the location
+    // _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
+
+    _bottomSheetController = showBottomSheet(
+      context: context,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return POISheet(
+          name: name
+        );
+      },
+    );
+    _bottomSheetController?.closed.then((_) {
+      hideJourney();
+    });
   }
 
   _showJourneySheetOnReopen() {

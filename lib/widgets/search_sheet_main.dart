@@ -1,21 +1,24 @@
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/providers/bathroom_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import '../constants.dart';
 import 'package:bluebus/models/floorplan.dart';
+import 'package:bluebus/widgets/dialog.dart';
 // import 'package:http/http.dart' as http;
 
 class Card {
   final String name;
   final ColorType color;
-  final List<String> types;
-  const Card({required this.name, required this.color, required this.types});
+  final String type;
+  const Card({required this.name, required this.color, required this.type});
 }
 
-class RoomSearchBar extends HookWidget {
+/* class RoomSearchBar extends HookWidget {
   final void Function(FloorplanFloor, FloorplanPoi) onLocationSelected;
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -132,45 +135,6 @@ class RoomSearchBar extends HookWidget {
 
         const SizedBox(height: 20),
 
-        // Cards
-        SizedBox(
-          height: 31,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: cards.length,
-            itemBuilder: (BuildContext context, int index) {
-              return SizedBox(
-                height: 31,
-                child: FilledButton(
-                  onPressed: () {
-                    // clicked button, close modal and zoom out on the map to the correct spot
-                  },
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        100.0,
-                      ), // Adjust the pixels for rounding
-                    ),
-                    backgroundColor: getColor(context, cards[index].color),
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  child: Text(
-                    cards[index].name,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ),
-              );
-            },
-            // This builds the gap between each item
-            separatorBuilder: (context, index) {
-              return const SizedBox(
-                width: 5,
-              ); // Adjust height for vertical lists, width for horizontal
-            },
-          ),
-        ),
-
         const SizedBox(height: 20),
 
         Padding(
@@ -251,21 +215,44 @@ class RoomSearchBar extends HookWidget {
       ],
     );
   }
-}
+} */
 
 class LocationSearchBar extends HookWidget {
   final void Function(Location, bool, String) onLocationSelected;
+  final void Function(String)? onPOISelected;
   final TextEditingController controller;
   final FocusNode focusNode;
   final InputDecoration decoration;
+  final List<FloorplanFloor>? floors;
 
   const LocationSearchBar({
     super.key,
     required this.onLocationSelected,
+    required this.onPOISelected,
     required this.controller,
     required this.focusNode,
     required this.decoration,
+    required this.floors
   });
+
+  // selectable cards
+  static const List<Card> cards = [
+    Card(name: "Bathroom", color: ColorType.roomSearchBathroom, type: FloorplanTypes.inclusiveBathroom),
+    Card(name: "Info desk", color: ColorType.roomSearchInfoDesk, type: FloorplanTypes.information),
+    Card(name: "Dining", color: ColorType.roomSearchDining, type: FloorplanTypes.food),
+    Card(name: "Printing", color: ColorType.roomSearchPrinting, type: FloorplanTypes.printer),
+    Card(name: "Stairs", color: ColorType.roomSearchStairs, type: FloorplanTypes.stairway),
+  ];
+
+  static const Map<String, String> poiNames = {
+    FloorplanTypes.femaleBathroom: "Women's Bathroom",
+    FloorplanTypes.maleBathroom: "Men's Bathroom",
+    FloorplanTypes.inclusiveBathroom: "Inclusive Bathroom",
+    FloorplanTypes.information: "Info Desk",
+    FloorplanTypes.food: "Dining",
+    FloorplanTypes.printer: "Printer",
+    FloorplanTypes.stairway: "Stairs",
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -451,136 +438,233 @@ class LocationSearchBar extends HookWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 50,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(56),
-            ),
-            child: TextField(
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.go,
-              style:  TextStyle(
-                color: getColor(context, ColorType.opposite).withAlpha(204),
-                fontSize: 22
+        Padding(
+          padding: const EdgeInsetsGeometry.symmetric(horizontal: 16),
+          child: SizedBox(
+            height: 50,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(56),
               ),
-              autofocus: true,
-              controller: controller,
-              focusNode: focusNode,
-              decoration: decoration,
-              onChanged: (val) {
-                searchQuery.value = val;
-                showSuggestions.value = true;
-              },
-              onSubmitted: (val) async {
-                final idx = await ngramIndex;
-                final matches = ngramSearch(val, idx);
+              child: TextField(
+                textAlignVertical: TextAlignVertical.center,
+                textInputAction: TextInputAction.go,
+                style:  TextStyle(
+                  color: getColor(context, ColorType.opposite).withAlpha(204),
+                  fontSize: 22
+                ),
+                autofocus: true,
+                controller: controller,
+                focusNode: focusNode,
+                decoration: decoration,
+                onChanged: (val) {
+                  searchQuery.value = val;
+                  showSuggestions.value = true;
+                },
+                onSubmitted: (val) async {
+                  final idx = await ngramIndex;
+                  final matches = ngramSearch(val, idx);
 
-                if (matches.isNotEmpty) {
-                  final selected = matches.first;
-                  controller.text = selected.name;
-                  onLocationSelected(
-                    selected,
-                    selected.isBusStop,
-                    selected.stopId ?? "",
-                  );
-                  showSuggestions.value = false;
-                }
-              },
+                  if (matches.isNotEmpty) {
+                    final selected = matches.first;
+                    controller.text = selected.name;
+                    onLocationSelected(
+                      selected,
+                      selected.isBusStop,
+                      selected.stopId ?? "",
+                    );
+                    showSuggestions.value = false;
+                  }
+                },
+              ),
             ),
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
+        
+        // Cards
+        if (onPOISelected != null)
+          SizedBox(
+            height: 31,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: cards.length,
+              itemBuilder: (BuildContext context, int index) {
+                return SizedBox(
+                  height: 31,
+                  child: FilledButton(
+                    onPressed: () async {
+                      // poi button pressed
+                      String type = cards[index].type;
 
-        FutureBuilder<List<Location>>(
-          future: results,
-          builder: (context, snapshot) {
-            if (!showSuggestions.value || searchQuery.value.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 50),
-                child: Center(
-                  child: SizedBox(
-                    width: 30,
-                    height: 30,
-                    child: CircularProgressIndicator(
-                      color: getColor(context, ColorType.opposite),
-                      strokeWidth: 4,
+                      // if bathrooom selected
+                      if (cards[index].color == ColorType.roomSearchBathroom) {
+                        BathroomProvider bathroom = Provider.of<BathroomProvider>(context, listen: false);
+                        
+                        // show dialog if not chosen yet
+                        if (bathroom.preference == BathroomPreference.notchosen) {
+                          String? result = await showDialogOptions(
+                            contextIn: context,
+                            title: "Bathroom Preference",
+                            content: "Which bathroom do you prefer? You can change this later.",
+                            options: ["Women's", "Men's", "Inclusive"]
+                          );
+
+                          if (result == null) return;
+                          if (!context.mounted) return;
+
+                          // set bathroom save data to the user results button
+                          bathroom.set(switch (result) {
+                            "Women's" => BathroomPreference.womens,
+                            "Men's" => BathroomPreference.mens,
+                            _ => BathroomPreference.inclusive,
+                          });
+                        }
+
+                        // set type chosen based on the preference
+                        type = switch(bathroom.preference) {
+                          BathroomPreference.womens => FloorplanTypes.femaleBathroom,
+                          BathroomPreference.mens => FloorplanTypes.maleBathroom,
+                          _ => FloorplanTypes.inclusiveBathroom
+                        };
+                      }
+
+                      // call the function provided by the parent caller sheet,
+                      // to zoom out and show overlay
+                      final name = poiNames[type];
+                      if (name != null) {
+                        onPOISelected!(name);
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          100.0,
+                        ), // Adjust the pixels for rounding
+                      ),
+                      backgroundColor: getColor(context, cards[index].color),
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                    ),
+                    child: Text(
+                      cards[index].name,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),
-                ),
-              );
-            } else if (snapshot.hasData) {
-              final locations = snapshot.data!;
-              return ListView.separated(
-                itemCount: locations.length,
-                physics: NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemBuilder: (context, index) {
-                  final loc = locations[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.only(left: 2, right: 2),
-                    title: Text(
-                      loc.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                );
+              },
+              // This builds the gap between each item
+              separatorBuilder: (context, index) {
+                return const SizedBox(
+                  width: 5,
+                ); // Adjust height for vertical lists, width for horizontal
+              },
+            ),
+          ),
+
+        if (onPOISelected != null)
+          const SizedBox(height: 20),
+
+        Padding(
+          padding: const EdgeInsetsGeometry.symmetric(horizontal: 16),
+          child: FutureBuilder<List<Location>>(
+            future: results,
+            builder: (context, snapshot) {
+              if (!showSuggestions.value || searchQuery.value.isEmpty) {
+                return Text(
+                  "Recent Searches",
+                  style: TextStyle(
+                    color: getColor(context, ColorType.roomSearchText),
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              }
+              
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 50),
+                  child: Center(
+                    child: SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: CircularProgressIndicator(
+                        color: getColor(context, ColorType.opposite),
+                        strokeWidth: 4,
+                      ),
                     ),
-                    subtitle: (loc.abbrev != "")
-                        ? (loc.isBusStop)
-                              ? Row(
-                                  children: [
-                                    Text("Stop ID: "),
-                                    Text(
-                                      loc.abbrev,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                  ),
+                );
+              } else if (snapshot.hasData) {
+                final locations = snapshot.data!;
+                return ListView.separated(
+                  itemCount: locations.length,
+                  physics: NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemBuilder: (context, index) {
+                    final loc = locations[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.only(left: 2, right: 2),
+                      title: Text(
+                        loc.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: (loc.abbrev != "")
+                          ? (loc.isBusStop)
+                                ? Row(
+                                    children: [
+                                      Text("Stop ID: "),
+                                      Text(
+                                        loc.abbrev,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                )
-                              : Row(
-                                  children: [
-                                    Text("Code: "),
-                                    Text(
-                                      loc.abbrev,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    ],
+                                  )
+                                : Row(
+                                    children: [
+                                      Text("Code: "),
+                                      Text(
+                                        loc.abbrev,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                )
-                        : (loc.isBusStop)
-                        ? Text("Bus Stop")
-                        : Text("University Building"),
-                    leading: loc.isBusStop
-                        ? Icon(
-                            Icons.hail,
-                            size: 40,
-                            color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
-                          )
-                        : Icon(
-                            Icons.business_rounded,
-                            size: 40,
-                            color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
-                          ),
-                    onTap: () {
-                      controller.text = loc.name;
-                      onLocationSelected(loc, loc.isBusStop, loc.stopId ?? "");
-                      showSuggestions.value = false;
-                    },
-                  );
-                },
-                separatorBuilder: (BuildContext context, int index) {
-                  return Divider(height: 0);
-                },
-              );
-            } else {
-              return const Text('No results');
-            }
-          },
+                                    ],
+                                  )
+                          : (loc.isBusStop)
+                          ? Text("Bus Stop")
+                          : Text("University Building"),
+                      leading: loc.isBusStop
+                          ? Icon(
+                              Icons.hail,
+                              size: 40,
+                              color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
+                            )
+                          : Icon(
+                              Icons.business_rounded,
+                              size: 40,
+                              color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
+                            ),
+                      onTap: () {
+                        controller.text = loc.name;
+                        onLocationSelected(loc, loc.isBusStop, loc.stopId ?? "");
+                        showSuggestions.value = false;
+                      },
+                    );
+                  },
+                  separatorBuilder: (BuildContext context, int index) {
+                    return Divider(height: 0);
+                  },
+                );
+              } else {
+                return const Text('No results');
+              }
+            },
+          ),
         ),
       ],
     );
@@ -589,11 +673,12 @@ class LocationSearchBar extends HookWidget {
 
 // Selecting routes
 class SearchSheet extends StatefulWidget {
-  final void Function(Location, bool, String)? onSearch;
-  final List<FloorplanFloor>? floors;
-  final bool isRoomSearch;
+  final bool isRoomSearch; // changes hint text displayed: "where to?" vs "Room #"
+  final void Function(Location, bool, String) onSearch;
+  final void Function(String)? onPOISelected;
+  final List<FloorplanFloor>? floors; // if null, room search is disabled
 
-  const SearchSheet({super.key, this.onSearch, this.floors, required this.isRoomSearch});
+  const SearchSheet({super.key, required this.isRoomSearch, this.floors, required this.onSearch, this.onPOISelected});
 
   @override
   State<SearchSheet> createState() => _SearchSheetState();
@@ -644,89 +729,51 @@ class _SearchSheetState extends State<SearchSheet> {
             ),
           ),
 
-          (!widget.isRoomSearch ? (
-              Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16, top: 10),
-                child: LocationSearchBar(
-                  onLocationSelected: (location, isBusStop, stopID) {
-                    Navigator.pop(context);
-                    widget.onSearch!(location, isBusStop, stopID);
-                  },
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  decoration: InputDecoration(
-                    fillColor: getColor(context, ColorType.inputBackground),
-                    filled: true,
-                    hintText: 'where to?',
-                    hintStyle: TextStyle(
-                      color: getColor(context, ColorType.inputText).withAlpha(204),
-                      fontSize: 22,
-                    ),
-                    isCollapsed: true,
-                    prefixIcon: Padding(
-                      padding: EdgeInsetsGeometry.only(left: 15),
-                      child: Icon(
-                        Icons.search,
-                        size: 35,
-                        color: getColor(context, ColorType.inputText),
-                      ),
-                    ),
-                    
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(56.0)),
-                      borderSide: BorderSide(color: Colors.transparent, width: 0),
-                    ),
+          const SizedBox(height: 10),
 
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(56.0)),
-                      borderSide: BorderSide(color: Colors.transparent, width: 0),
-                    ),
-                  ),
+          LocationSearchBar(
+            onLocationSelected: (location, isBusStop, stopID) {
+              Navigator.pop(context);
+              widget.onSearch(location, isBusStop, stopID);
+            },
+            onPOISelected: widget.onPOISelected == null ? null : (name) {
+              Navigator.pop(context);
+              widget.onPOISelected!(name);
+            },
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            decoration: InputDecoration(
+              fillColor: getColor(context, ColorType.inputBackground),
+              filled: true,
+              hintText: widget.isRoomSearch ? "Room #" : "where to?",
+              hintStyle: TextStyle(
+                color: getColor(context, ColorType.inputText).withAlpha(204),
+                fontSize: 22,
+              ),
+              isCollapsed: true,
+              prefixIcon: Padding(
+                padding: EdgeInsetsGeometry.only(left: 15),
+                child: Icon(
+                  Icons.search,
+                  size: 35,
+                  color: getColor(context, ColorType.inputText),
                 ),
-              )
+              ),
+              
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(56.0)),
+                borderSide: BorderSide(color: Colors.transparent, width: 0),
+              ),
 
-            ) : (
-
-              RoomSearchBar(
-                onLocationSelected: (floor, poi) {
-                  Navigator.pop(context, (floor: floor, poi: poi));
-                },
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                decoration: InputDecoration(
-                  fillColor: getColor(context, ColorType.roomSearchBg),
-                  filled: true,
-                  hintText: 'Room #',
-                  hintStyle: TextStyle(
-                    color: getColor(context, ColorType.roomSearchText),
-                    fontSize: 22,
-                  ),
-                  isCollapsed: true,
-                  prefixIcon: Padding(
-                    padding: EdgeInsetsGeometry.only(left: 15),
-                    child: Icon(
-                      Icons.search,
-                      size: 35,
-                      color: getColor(context, ColorType.roomSearchText),
-                    ),
-                  ),
-
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(56.0)),
-                    borderSide: BorderSide(color: Colors.transparent, width: 0),
-                  ),
-
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(56.0)),
-                    borderSide: BorderSide(color: Colors.transparent, width: 0),
-                  ),
-                ),
-                floors: widget.floors!,
-              )
-            )
-          )
-        ],
-      ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(56.0)),
+                borderSide: BorderSide(color: Colors.transparent, width: 0),
+              ),
+            ),
+            floors: widget.floors
+          ),
+        ]
+      )
     );
   }
 }
