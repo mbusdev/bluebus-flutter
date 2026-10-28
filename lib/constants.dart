@@ -75,6 +75,8 @@ String getPrettyRouteName(String code) {
 }
 
 final Uri contactURL = Uri.parse('https://www.maizebus.com/#/contact/');
+final Uri DPSSNumber = Uri.parse('tel:+17347631131');
+final Uri afterHoursTransitURL = Uri.parse('https://ltp.umich.edu/campus-transit/after-hours/');
 
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
@@ -88,6 +90,7 @@ enum ColorType {
   opposite,
   background,
   backgroundGradientStart,
+  link,
 
   mapButtonPrimary,
   mapButtonSecondary,
@@ -144,6 +147,7 @@ const Map<ColorType, Color> lightColors = {
     255,
     255,
   ), // same as background but transparent
+  ColorType.link: Color.fromARGB(255, 45, 151, 243),
 
   ColorType.mapButtonPrimary: Color.fromARGB(255, 11, 83, 148),
   ColorType.mapButtonSecondary: Color.fromARGB(190, 255, 255, 255),
@@ -157,7 +161,7 @@ const Map<ColorType, Color> lightColors = {
   ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
 
   ColorType.sliderButton: Colors.white,
-  ColorType.sliderBackground: Color.fromARGB(255, 200, 228, 255),
+  ColorType.sliderBackground: Color.fromARGB(255, 223, 237, 252),
 
   ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
   ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
@@ -198,6 +202,7 @@ const Map<ColorType, Color> darkColors = {
     33,
     34,
   ), // same as background but transparent
+  ColorType.link: Color.fromARGB(255, 200, 228, 255),
 
   ColorType.mapButtonPrimary: Color.fromARGB(255, 255, 255, 255),
   ColorType.mapButtonSecondary: Color.fromARGB(187, 104, 104, 134),
