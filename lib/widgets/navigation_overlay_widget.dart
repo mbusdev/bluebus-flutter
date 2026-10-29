@@ -1,4 +1,5 @@
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:bluebus/constants.dart';
@@ -34,6 +35,37 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   bool planJourneyInProgress = false;
   TimelineInfo timelineInfo = TimelineInfo();
 
+  // Fraction of the screen the sheet occupies with nothing but the progress bar
+  // in it. TODO: Compute this from the progress bar instead of hardcoding it.
+  static const double _sheetCollapsed = 0.14;
+  static const double _sheetExpanded = 0.85;
+
+  // The bus we're asking the user about, or null when no prompt is showing.
+  Bus? _missedBus;
+  DateTime? _missedBusRaisedAt;
+  Timer? _missedBusTicker;
+
+  // Ours (not the sheet's) so we can watch the drag progress from out here.
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
+
+  // The prompt is pinned below the scrollable, so the collapsed sheet has to
+  // grow by however tall the prompt turns out to be.
+  final GlobalKey _promptKey = GlobalKey();
+  double _promptHeight = 0.0;
+
+  double get _collapsedSize =>
+      _sheetCollapsed + (_promptHeight / MediaQuery.sizeOf(context).height);
+
+  /// 0 while the sheet is collapsed, 1 once it's fully expanded.
+  double _sheetProgress() {
+    if (!_sheetController.isAttached) return 0.0;
+    final double minSize = _collapsedSize;
+    return ((_sheetController.size - minSize) /
+            max(_sheetExpanded - minSize, 0.0001))
+        .clamp(0.0, 1.0);
+  }
+
   void updateTimeline() { // Call this after all the stages are loaded (or stages change)
     timelineInfo = widget.navigationManager.getTimeline();
   }
@@ -46,9 +78,11 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   }
 
   @override
-  void dispose() { 
-    // sets to null 
+  void dispose() {
+    // sets to null
     widget.navigationManager.unregisterOverlay(this);
+    _missedBusTicker?.cancel();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -106,44 +140,169 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   }
 
   // Special missedBusButton widget to trigger a reroute later...
-  // Notes: Can choose custom text
-  Widget missedBusButton(VoidCallback onTap, Text text) {
-    return SizedBox(
-      width: 100.0,
-      height: 50.0,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        ),
-        child: text, // using passed in text parameter 
+  // Notes: Can choose custom text, and an optional leading icon.
+  // No fixed width--wrap it in an Expanded/SizedBox to size it.
+  Widget missedBusButton(VoidCallback onTap, Text text, {IconData? icon}) {
+    final ButtonStyle style = ElevatedButton.styleFrom(
+      backgroundColor: Colors.black12,
+      foregroundColor: const Color.fromARGB(255, 40, 40, 40),
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: getColor(context, ColorType.navigationStepsGray)),
       ),
+    );
+
+    return SizedBox(
+      height: 50.0,
+      child: icon == null
+          ? ElevatedButton(onPressed: onTap, style: style, child: text)
+          : ElevatedButton.icon(
+              onPressed: onTap,
+              style: style,
+              icon: Icon(icon, size: 18),
+              label: text,
+            ),
     ); // big beautiful pill (bbp)
   }
 
-  // The code below should diplay the "which bus are you on" popup from UI Team 
-  // Should currently show (#4) (Version of the design..)
+  // Raises the "you might have missed your bus" prompt for [bus], which is the
+  // bus that just departed. It's pinned to the bottom of the sheet rather than
+  // shown as a dialog, so the map stays visible and undimmed behind it.
   @override
   void displayOopsDialog(Bus bus) {
-    showUndismissableMaizebusDialog(
-      contextIn: context,
-      title: Text("Which bus are you on?"),
-      // Builder so the buttons below get a context underneath the dialog route and can pop it
-      content: Builder(
-        builder: (dialogContext) => Row(
+    setState(() {
+      _missedBus = bus;
+      _missedBusRaisedAt = DateTime.now();
+    });
+    // Keeps the "left N minutes ago" line honest while the prompt is up.
+    _missedBusTicker?.cancel();
+    _missedBusTicker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void clearMissedBusPrompt() {
+    _missedBusTicker?.cancel();
+    _missedBusTicker = null;
+    if (!mounted) return;
+    setState(() {
+      _missedBus = null;
+      _missedBusRaisedAt = null;
+    });
+  }
+
+  // The prompt's height decides how far the collapsed sheet has to grow, and we
+  // only know it once it's laid out. Only setState on an actual change, or this
+  // rebuilds forever.
+  void _measurePrompt() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final double height = _promptKey.currentContext?.size?.height ?? 0.0;
+      if ((height - _promptHeight).abs() < 0.5) return;
+      setState(() {
+        _promptHeight = height;
+      });
+    });
+  }
+
+  Widget missedBusPromptFooter() {
+    final Bus? bus = _missedBus;
+    if (bus == null) {
+      if (_promptHeight != 0.0) _measurePrompt(); // shrink the sheet back
+      return const SizedBox.shrink();
+    }
+
+    _measurePrompt();
+
+    // TODO: This is "how long since we raised the prompt", not the bus's real
+    // departure time--that should ride along from the NavOnBus stage's trip
+    // data once a stage actually emits StageReroute(RerouteReason.wrongBus).
+    final int minutesAgo =
+        DateTime.now().difference(_missedBusRaisedAt ?? DateTime.now()).inMinutes;
+
+    return Container(
+      key: _promptKey,
+      decoration: BoxDecoration(
+        color: getColor(context, ColorType.infoCardColor),
+        border: Border(
+          top: BorderSide(color: getColor(context, ColorType.navigationStepsGray)),
+        ),
+      ),
+      child: AnimatedBuilder(
+        // Only the padding follows the drag: while the sheet floats, the home
+        // indicator is below it, but an expanded sheet is flush with the screen
+        // and the buttons would land underneath it.
+        animation: _sheetController,
+        builder: (context, child) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            15,
+            15,
+            15,
+            12 + MediaQuery.viewPaddingOf(context).bottom * _sheetProgress(),
+          ),
+          child: child,
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
-          spacing: 1.0,
-          children: [ // All of this data is currently placeholder
-            missedBusButton(() {
-              debugPrint("Oops dialog: user missed the bus");
-              Navigator.pop(dialogContext);
-            }, Text("I missed the bus"))
+          children: [
+            Row(
+              children: [
+                RouteIcon.small(bus.routeId),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "${getPrettyRouteName(bus.routeId)} left $minutesAgo minute${minutesAgo == 1 ? "" : "s"} ago",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: getColor(context, ColorType.opposite),
+                        ),
+                      ),
+                      Text(
+                        "Not on this bus?",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: getColor(context, ColorType.opposite), // temporary placeholder, resolving some oddities
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: missedBusButton(
+                    () {
+                      debugPrint("Missed bus prompt: user asked to be rerouted");
+                      // TODO: Actually trigger the reroute, and show the
+                      // "What bus are you on?" bus picker.
+                      clearMissedBusPrompt();
+                    },
+                    const Text("Reroute me"),
+                    icon: Icons.refresh,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: missedBusButton(
+                    clearMissedBusPrompt,
+                    const Text("Dismiss"),
+                    icon: Icons.close,
+                  ),
+                ),
+              ],
+            ),
           ],
-        )
-      )
+        ),
+      ),
     );
   }
 
@@ -405,8 +564,9 @@ class _NavigationOverlayState extends State<NavigationOverlay>
         
         
         FloatingDraggableSheet(
-          collapsedSize: 0.14, // TODO: Compute the height of the progress bar dynamically instead of using 14% of screen height as a hardcoded number
-          expandedSize: 0.85,
+          controller: _sheetController,
+          collapsedSize: _collapsedSize, // Grows to make room for the missed bus prompt
+          expandedSize: _sheetExpanded,
           screenCornerRadius: globalScreenBottomRadius,
           color: getColor(context, ColorType.infoCardColor),
           boxShadow: [
@@ -417,7 +577,13 @@ class _NavigationOverlayState extends State<NavigationOverlay>
             ),
           ],
           builder: (context, scrollController) {
-            return ListView(
+            // The missed bus prompt sits outside the scrollable so that it
+            // stays pinned to the bottom of the sheet however far it's dragged
+            // up, with the steps scrolling underneath it.
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView(
                 controller: scrollController,
                 padding: EdgeInsets.all(15),
                 children: [
@@ -757,9 +923,13 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                       // return Text(stage.getTitle());
                   }).toList(),
                   )
-                    
+
               // )
                 ]
+                  ),
+                ),
+                missedBusPromptFooter(),
+              ],
             );
           }
         ),
