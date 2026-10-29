@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants.dart';
 import '../services/location_search.dart';
 import '../services/floorplan_service.dart';
@@ -13,11 +14,123 @@ import 'package:bluebus/models/floorplan.dart';
 import 'package:bluebus/widgets/dialog.dart';
 // import 'package:http/http.dart' as http;
 
+Future<void> saveRecentSearch(Location loc) async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString('recentSearches');
+
+  final recent = saved == null
+      ? <Map<String, dynamic>>[]
+      : (jsonDecode(saved) as List)
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+
+  // remove loc if it is already in recents, and insert it in the start
+  recent.removeWhere((item) => item['name'] == loc.name);
+  recent.insert(0, loc.toJson());
+
+  // save the top recent searches
+  await prefs.setString(
+    'recentSearches',
+    jsonEncode(recent.take(STORED_RECENT_SEARCHES).toList()),
+  );
+}
+
+Future<List<Location>> getRecentSearches() async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString('recentSearches');
+  if (saved == null) return [];
+
+  final List<dynamic> entries;
+  try {
+    final decoded = jsonDecode(saved);
+    if (decoded is! List) return [];
+    entries = decoded;
+  } on FormatException {
+    return [];
+  }
+
+  final recent = <Location>[];
+  for (final entry in entries) {
+    if (entry is! Map<String, dynamic>) continue;
+    try {
+      // Each saved entry contains everything needed to recreate its location.
+      switch (entry['kind']) {
+        case 'room':
+          recent.add(RoomLocation.fromJson(entry));
+        case 'building': case 'stop':
+          recent.add(Location.fromJson(entry));
+      }
+    } on FormatException {
+      continue;
+    } on TypeError {
+      continue;
+    }
+    if (recent.length == STORED_RECENT_SEARCHES) break;
+  }
+  return recent;
+}
+
 class Card {
   final String name;
   final ColorType color;
   final String type;
   const Card({required this.name, required this.color, required this.type});
+}
+
+// reusable widget that for search result tiles
+class LocationTile extends StatelessWidget {
+  final Location location;
+  final VoidCallback onTap;
+
+  const LocationTile({
+    super.key,
+    required this.location,
+    required this.onTap,
+  });
+
+  static getResultsListView(List<Location> locs) {
+
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = location;
+
+    final Widget subtitle;
+    if (loc is RoomLocation) {
+      subtitle = Text("${loc.room.building} - ${loc.room.floor.name}");
+    } else if (loc.abbrev.isNotEmpty) {
+      subtitle = Text.rich(
+        TextSpan(
+          text: loc.isBusStop ? "Stop ID: " : "Code: ",
+          children: [
+            TextSpan(
+              text: loc.abbrev,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      );
+    } else {
+      subtitle = Text(loc.isBusStop ? "Bus Stop" : "University Building");
+    }
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 2),
+      title: Text(
+        loc is RoomLocation ? "Room ${loc.name}" : loc.name,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+      subtitle: subtitle,
+      leading: Icon(
+        loc.isBusStop ? Icons.hail : Icons.business_rounded, // add more icons when we have more floorplan data
+        size: 40,
+        color: getColor(context, ColorType.opposite),
+      ),
+      onTap: onTap,
+    );
+  }
 }
 
 class LocationSearchBar extends HookWidget {
@@ -128,6 +241,10 @@ class LocationSearchBar extends HookWidget {
       final idx = await ngramIndex;
       return searchLocations(query, idx, roomPois);
     }, [query, ngramIndex, roomPois]);
+
+    // recent search results
+    final recentSearchesFuture = useMemoized(() => getRecentSearches(), []);
+    final recentSearches = useFuture(recentSearchesFuture);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,13 +379,48 @@ class LocationSearchBar extends HookWidget {
             future: results,
             builder: (context, snapshot) {
               if (!showSuggestions.value || searchQuery.value.isEmpty) {
-                return Text(
-                  "Recent Searches",
-                  style: TextStyle(
-                    color: getColor(context, ColorType.roomSearchText),
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                if (recentSearches.data?.isEmpty ?? true) {
+                  return SizedBox.shrink();
+                }
+
+                final recents = recentSearches.data!;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 5,
+                  children: [
+                    Text(
+                      "Recent Searches",
+                      style: TextStyle(
+                        color: getColor(context, ColorType.roomSearchText),
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    // this is duplicated code from normal search results, below
+                    // could put this in a function or widget or something?
+                    ListView.separated(
+                      itemCount: recents.length,
+                      physics: NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemBuilder: (context, index) {
+                        final loc = recents[index];
+                        return LocationTile(
+                          location: loc,
+                          onTap: () {
+                            controller.text = loc.name;
+                            onLocationSelected(loc, loc.isBusStop, loc.stopId ?? "");
+                            showSuggestions.value = false;
+                            saveRecentSearch(loc);
+                          }
+                        );
+                      },
+                      separatorBuilder: (BuildContext context, int index) {
+                        return Divider(height: 20);
+                      },
+                    ),
+                  ],
                 );
               }
               
@@ -294,62 +446,18 @@ class LocationSearchBar extends HookWidget {
                   shrinkWrap: true,
                   itemBuilder: (context, index) {
                     final loc = locations[index];
-                    return ListTile(
-                      contentPadding: EdgeInsets.only(left: 2, right: 2),
-                      title: Text(
-                        loc.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: loc is RoomLocation
-                          ? Text("${loc.room.building}, ${loc.room.floor.name}")
-                          : (loc.abbrev != "")
-                          ? (loc.isBusStop)
-                                ? Row(
-                                    children: [
-                                      Text("Stop ID: "),
-                                      Text(
-                                        loc.abbrev,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    children: [
-                                      Text("Code: "),
-                                      Text(
-                                        loc.abbrev,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                          : (loc.isBusStop)
-                          ? Text("Bus Stop")
-                          : Text("University Building"),
-                      leading: loc.isBusStop
-                          ? Icon(
-                              Icons.hail,
-                              size: 40,
-                              color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
-                            )
-                          : Icon(
-                              Icons.business_rounded,
-                              size: 40,
-                              color: isDarkMode(context) ? Color.fromARGB(150, 255, 255, 255) : Color.fromARGB(150, 0, 0, 0),
-                            ),
+                    return LocationTile(
+                      location: loc,
                       onTap: () {
                         controller.text = loc.name;
                         onLocationSelected(loc, loc.isBusStop, loc.stopId ?? "");
                         showSuggestions.value = false;
-                      },
+                        saveRecentSearch(loc);
+                      }
                     );
                   },
                   separatorBuilder: (BuildContext context, int index) {
-                    return Divider(height: 0);
+                    return Divider(height: 20);
                   },
                 );
               } else {

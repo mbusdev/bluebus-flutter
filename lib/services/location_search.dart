@@ -1,12 +1,45 @@
 import '../constants.dart';
 import '../models/floorplan.dart';
 import 'floorplan_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class RoomLocation extends Location {
   final LocatedFloorplanPoi room;
 
   RoomLocation(this.room)
     : super(room.poi.name ?? '', '', const [], false, latlng: room.position);
+
+  static RoomLocation fromJson(Map<String, dynamic> json) {
+    // Recreate only the labels, IDs, and map position needed by the UI.
+    // Floor geometry is not needed to display or select a recent search.
+    return RoomLocation(LocatedFloorplanPoi(
+      json['building'] as String,
+      FloorplanFloor.fromJson({
+        'id': json['floorId'],
+        'name': json['floorName'],
+      }),
+      FloorplanPoi.fromJson({
+        'id': json['poiId'],
+        'name': json['name'],
+        'type': FloorplanTypes.room,
+      }),
+      LatLng((json['lat'] as num).toDouble(), (json['lon'] as num).toDouble()),
+    ));
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      "kind": room.poi.type,
+      "building": room.building,
+      "floorId": room.floor.id,
+      "floorName": room.floor.name,
+      "poiId": room.poi.id,
+      "name": room.poi.name,
+      "lat": room.position.latitude,
+      "lon": room.position.longitude,
+    };
+  }
 }
 
 // Searches the whole user query in the building/stop search,

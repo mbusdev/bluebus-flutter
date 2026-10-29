@@ -78,6 +78,8 @@ final Uri contactURL = Uri.parse('https://www.maizebus.com/#/contact/');
 final Uri DPSSNumber = Uri.parse('tel:+17347631131');
 final Uri afterHoursTransitURL = Uri.parse('https://ltp.umich.edu/campus-transit/after-hours/');
 
+final int STORED_RECENT_SEARCHES = 6; // how many recent searches to store
+
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
 const Color maizeBusYellow = Color.fromARGB(255, 255, 203, 45);
@@ -420,7 +422,7 @@ ThemeData lightMode = ThemeData(
 
   dividerTheme: DividerThemeData(
     thickness: 2,
-    color: lightColors[ColorType.dim],
+    color: lightColors[ColorType.sliderBackground],
   ),
 
   // set default text color
@@ -447,7 +449,7 @@ ThemeData darkMode = ThemeData(
 
   dividerTheme: DividerThemeData(
     thickness: 2,
-    color: darkColors[ColorType.dim],
+    color: darkColors[ColorType.sliderBackground],
   ),
 
   // set default text color
@@ -475,6 +477,35 @@ class Location {
     this.stopId,
     this.latlng,
   }) : aliases = aliases;
+
+  static Location fromJson(Map<String, dynamic> json) {
+    // Accept the old " null" placeholders as well as real JSON nulls.
+    final stopId = json['stopId'] as String?;
+    final lat = json['lat'];
+    final lon = json['lon'];
+    return Location(
+      json['name'] as String,
+      json['abbrev'] as String? ?? '',
+      List<String>.from(json['aliases'] as List? ?? const []),
+      json['kind'] == 'stop',
+      stopId: stopId?.trim() == 'null' ? null : stopId,
+      latlng: lat is num && lon is num
+          ? LatLng(lat.toDouble(), lon.toDouble())
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "kind": isBusStop ? "stop" : "building",
+      "name": name,
+      "abbrev": abbrev,
+      "aliases": aliases,
+      "stopId": stopId,
+      "lat": latlng?.latitude,
+      "lon": latlng?.longitude,
+    };
+  }
 }
 
 // location with arrival time attached

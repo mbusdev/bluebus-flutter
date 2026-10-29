@@ -1126,7 +1126,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _removeSearchLocationMarker();
 
     // set floor to room's floor and center on room
-    final floorIndex = floorplansLayer.floors.indexOf(room.floor);
+    final floorIndex = floorplansLayer.floorplan?.building == room.building
+        ? floorplansLayer.floors.indexWhere((floor) => floor.id == room.floor.id)
+        : -1;
     if (floorIndex >= 0) await floorplansLayer.setFloorIndex(floorIndex); 
     await _centerOnLocation(
       false,
