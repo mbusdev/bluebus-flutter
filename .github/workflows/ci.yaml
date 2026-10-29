@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.8'
+          channel: stable
       - run: echo "GOOGLE_MAPS_API_KEY=fake-key-for-ci-build-only" >> android/local.properties
       - name: Write dummy firebase_options.dart for CI build
         run: |
@@ -54,6 +54,15 @@ jobs:
           EOF
       - name: Install Flutter dependencies
         run: flutter pub get
+      - name: Generate Client
+        run: |
+          rm -rf lib/backend
+          dart run build_runner clean
+          dart run swagger_parser
+          dart run build_runner build
+      - name: Analyze
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Build app
         run: flutter build apk --debug --no-pub
         env:
