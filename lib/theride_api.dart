@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/utils/geometry.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -15,7 +16,14 @@ class RideAPI {
   static Future<List<BusRouteLine>> fetchRoutes(Function(String route, String error) onError) async {
     final response = await http.get(Uri.parse('$baseUrl/getAllRideRoutes'));
     if (response.statusCode != 200) throw Exception('Failed to load routes');
-    final data = jsonDecode(response.body);
+
+    BusRepository.writeToCache('theride-routes-cache-v${await AppInfo.version()}', response.body);
+    
+    return processRoutesJson(response.body, onError);
+  }
+
+  static Future<List<BusRouteLine>> processRoutesJson(String jsonBody, Function(String route, String error) onError) async {
+    final data = jsonDecode(jsonBody);
     final routes = <BusRouteLine>[];
     final routeJson = data['routes'] as Map<String, dynamic>;
 
@@ -39,7 +47,10 @@ class RideAPI {
               ),
             );
             if (point['typ'] == 'S') {
-              final stopRotation = routeStopRotation(pointList, i);
+              List<LatLng> latLngPoints = pointList.map((dynamic stop_json) {
+                return LatLng(stop_json["lat"], stop_json["lon"]);
+              }).toList();
+              final stopRotation = routeStopRotation(latLngPoints, i);
               stops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
 
             }
@@ -60,37 +71,37 @@ class RideAPI {
           );
 
           // Handle detour points if present
-          if (subroute.containsKey('dtrpt')) {
-            final detourPoints = <LatLng>[];
-            final detourStops = <(int, BusStop)>[];
+          // if (subroute.containsKey('dtrpt')) {
+          //   final detourPoints = <LatLng>[];
+          //   final detourStops = <(int, BusStop)>[];
 
-            // Cast to list to be able to be able to get different elements
-            final detourPointList = subroute['dtrpt'] as List; 
+          //   // Cast to list to be able to be able to get different elements
+          //   final detourPointList = subroute['dtrpt'] as List; 
 
-            for (int i = 0; i < detourPointList.length; i++) {
-              final point = detourPointList[i];
-              detourPoints.add(
-                LatLng(
-                  point['lat']?.toDouble() ?? 0,
-                  point['lon']?.toDouble() ?? 0,
-                ),
-              );
-              if (point['typ'] == 'S') {
-                final stopRotation = routeStopRotation(detourPointList, i);
-                detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
-              }
-            }
+          //   for (int i = 0; i < detourPointList.length; i++) {
+          //     final point = detourPointList[i];
+          //     detourPoints.add(
+          //       LatLng(
+          //         point['lat']?.toDouble() ?? 0,
+          //         point['lon']?.toDouble() ?? 0,
+          //       ),
+          //     );
+          //     if (point['typ'] == 'S') {
+          //       final stopRotation = routeStopRotation(detourPointList, i);
+          //       detourStops.add((i, BusStop.fromJson(point, routeId, stopRotation, true)));
+          //     }
+          //   }
 
-            routes.add(
-              BusRouteLine(
-                routeId: routeId,
-                points: detourPoints,
-                stops: detourStops,
-                color: routeColor,
-                imageUrl: routeImageUrl,
-              ),
-            );
-          }
+          //   routes.add(
+          //     BusRouteLine(
+          //       routeId: routeId,
+          //       points: detourPoints,
+          //       stops: detourStops,
+          //       color: routeColor,
+          //       imageUrl: routeImageUrl,
+          //     ),
+          //   );
+          // }
         } catch (e) {
           onError(routeId, e.toString());
         }

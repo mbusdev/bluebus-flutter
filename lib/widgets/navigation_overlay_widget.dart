@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:math';
 
@@ -14,24 +13,18 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class NavigationOverlay extends StatefulWidget {
-
   final NavigationManager navigationManager;
 
-  const NavigationOverlay({
-    super.key,
-    required this.navigationManager
-  });
+  const NavigationOverlay({super.key, required this.navigationManager});
 
   // TODO: add an "update callback register" command so that our NavigationManager can reach into the NavigationOverlayWidget and the map and tell them to update.
 
   @override
   State<StatefulWidget> createState() => _NavigationOverlayState();
-
 }
 
-class _NavigationOverlayState extends State<NavigationOverlay> 
-  implements NavigationOverlayHost {
-
+class _NavigationOverlayState extends State<NavigationOverlay>
+    implements NavigationOverlayHost {
   bool planJourneyInProgress = false;
   TimelineInfo timelineInfo = TimelineInfo();
 
@@ -66,7 +59,8 @@ class _NavigationOverlayState extends State<NavigationOverlay>
         .clamp(0.0, 1.0);
   }
 
-  void updateTimeline() { // Call this after all the stages are loaded (or stages change)
+  void updateTimeline() {
+    // Call this after all the stages are loaded (or stages change)
     timelineInfo = widget.navigationManager.getTimeline();
   }
 
@@ -74,7 +68,9 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   void initState() {
     super.initState();
     updateTimeline();
-    widget.navigationManager.registerOverlay(this); // does not set to null, see the navigation manager
+    widget.navigationManager.registerOverlay(
+      this,
+    ); // does not set to null, see the navigation manager
   }
 
   @override
@@ -87,19 +83,16 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   }
 
   @override
-  void onNavigationUpdated() { 
+  void onNavigationUpdated() {
     setState(() {
       // called from the nav manager, updates stuff
       updateTimeline();
     });
   }
 
-  // the regular busOptions button 
-  // NOTE: Currently not in use to match UI refactor but will leave it here for someone to use maybe 
-  Widget busOptionButton(
-    Bus bus, 
-    VoidCallback onTap
-  ) {
+  // the regular busOptions button
+  // NOTE: Currently not in use to match UI refactor but will leave it here for someone to use maybe
+  Widget busOptionButton(Bus bus, VoidCallback onTap) {
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(24),
@@ -118,19 +111,38 @@ class _NavigationOverlayState extends State<NavigationOverlay>
               CircleAvatar(
                 radius: 14,
                 backgroundColor: bus.routeColor,
-                child: Text(bus.routeId, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: Text(
+                  bus.routeId,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   bus.id,
-                  style: const TextStyle(decoration: TextDecoration.underline, fontSize: 14),
+                  style: const TextStyle(
+                    decoration: TextDecoration.underline,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFFFC94A), borderRadius: BorderRadius.circular(10)),
-                child: Text("1", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)), // NOTE: Mock using number 1, need to double check with Bus class
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFC94A),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  "1",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ), // NOTE: Mock using number 1, need to double check with Bus class
               ),
             ],
           ),
@@ -150,7 +162,9 @@ class _NavigationOverlayState extends State<NavigationOverlay>
       padding: const EdgeInsets.symmetric(vertical: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: getColor(context, ColorType.navigationStepsGray)),
+        side: BorderSide(
+          color: getColor(context, ColorType.navigationStepsGray),
+        ),
       ),
     );
 
@@ -219,15 +233,18 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     // TODO: This is "how long since we raised the prompt", not the bus's real
     // departure time--that should ride along from the NavOnBus stage's trip
     // data once a stage actually emits StageReroute(RerouteReason.wrongBus).
-    final int minutesAgo =
-        DateTime.now().difference(_missedBusRaisedAt ?? DateTime.now()).inMinutes;
+    final int minutesAgo = DateTime.now()
+        .difference(_missedBusRaisedAt ?? DateTime.now())
+        .inMinutes;
 
     return Container(
       key: _promptKey,
       decoration: BoxDecoration(
         color: getColor(context, ColorType.infoCardColor),
         border: Border(
-          top: BorderSide(color: getColor(context, ColorType.navigationStepsGray)),
+          top: BorderSide(
+            color: getColor(context, ColorType.navigationStepsGray),
+          ),
         ),
       ),
       child: AnimatedBuilder(
@@ -267,7 +284,10 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                         "Not on this bus?",
                         style: TextStyle(
                           fontSize: 14,
-                          color: getColor(context, ColorType.opposite), // temporary placeholder, resolving some oddities
+                          color: getColor(
+                            context,
+                            ColorType.opposite,
+                          ), // temporary placeholder, resolving some oddities
                         ),
                       ),
                     ],
@@ -281,7 +301,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 Expanded(
                   child: missedBusButton(
                     () {
-                      debugPrint("Missed bus prompt: user asked to be rerouted");
+                      // debugPrint("Missed bus prompt: user asked to be rerouted");
                       // TODO: Actually trigger the reroute, and show the
                       // "What bus are you on?" bus picker.
                       clearMissedBusPrompt();
@@ -311,7 +331,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     // switch (widget.navigationManager.getCurrentStage()) {
     //   case NavOnBus():
     //     // Do stuff
-      
+
     //   case NavWalking():
     //     // TODO: Handle this case.
     //     throw UnimplementedError();
@@ -320,7 +340,8 @@ class _NavigationOverlayState extends State<NavigationOverlay>
       children: [
         Padding(
           padding: EdgeInsetsGeometry.only(left: 10, right: 10, top: 70),
-          child: Column( // Core column for vertical layout
+          child: Column(
+            // Core column for vertical layout
             children: [
               // MaterialButton(
               //   color: Colors.blue.shade900,
@@ -356,39 +377,37 @@ class _NavigationOverlayState extends State<NavigationOverlay>
               //     }
               //   }
               // ),
-
-
-              Row( // Top header row
+              Row(
+                // Top header row
                 children: [
                   Expanded(
-                  child:
-                    Container(
+                    child: Container(
                       margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
                       decoration: BoxDecoration(
                         // color: getColor(context, ColorType.mapButtonPrimary),
-                        color: Color.fromARGB(255, 187, 187, 187),
+                        color: getColor(context, ColorType.navigationTopCardBG),
                         boxShadow: [
                           BoxShadow(
-                            color: getColor(
-                              context,
-                              ColorType.mapButtonShadow,
-                            ),
+                            color: getColor(context, ColorType.mapButtonShadow),
                             blurRadius: 10,
                             offset: Offset(0, 6),
                           ),
                         ],
-                        borderRadius:
-                            BorderRadius.circular(25),
+                        borderRadius: BorderRadius.circular(25),
                       ),
                       child: Column(
                         children: [
-                          Container( // The big white card at the top
-                          
+                          Container(
+                            // The big white card at the top
+
                             // margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
                             padding: EdgeInsets.all(20),
-                            
+
                             decoration: BoxDecoration(
-                              color: getColor(context, ColorType.mapButtonPrimary),
+                              color: getColor(
+                                context,
+                                ColorType.navigationTopCardBG,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: getColor(
@@ -399,173 +418,137 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                                   offset: Offset(0, 6),
                                 ),
                               ],
-                              borderRadius:
-                                  BorderRadius.circular(25),
+                              borderRadius: BorderRadius.circular(25),
                             ),
-                            child: Row(children: [
-                              Icon(
-                                Icons.pool,
-                                color: getColor(context, ColorType.mapButtonIcon),
-                                size: 30,
-                              ),
-                              // Expanded(
-                                
-                                // child: 
-                              Padding(
-                                padding: EdgeInsets.only(left: 10),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: getColor(context, ColorType.mapButtonIcon)),
-                                      widget.navigationManager.getCurrentStage().getTitle()
-                                    ),
-                                    // Text(
-                                    //   style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                                    //   widget.navigationManager.getCurrentStage().getSubtitle()
-                                    // ),
-                                  ]
-                                )
-                              ),
-
-                              // )
-                            ]
-                          )
-                        ),
-                          Container( // The smaller bottom protrusion from the big white card
-                            
-                            padding: EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20),
-                            
-                            
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.pool,
-                                  size: 20,
-                                  color: getColor(context, ColorType.mapButtonIcon)
+                                Icon(Icons.pool, color: Colors.white, size: 30),
+                                // Expanded(
+
+                                // child:
+                                Padding(
+                                  padding: EdgeInsets.only(left: 10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                        widget.navigationManager
+                                            .getCurrentStage()
+                                            .getTitle(),
+                                      ),
+                                      // Text(
+                                      //   style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
+                                      //   widget.navigationManager.getCurrentStage().getSubtitle()
+                                      // ),
+                                    ],
+                                  ),
                                 ),
-                                SizedBox.square(dimension: 10,),
-                                Text(
-                                  "Then turn left",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: getColor(context, ColorType.mapButtonIcon)
-                                  )
-                                )
+
+                                // )
                               ],
-                            )
-                          )
-                      ]
-                      )
-                    )
-                    
-                  ),
-                  SizedBox.square(dimension: 10.0,),
-                  Container( 
-                
-                    margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                    padding: EdgeInsets.all(16),
-                    
-                    decoration: BoxDecoration(
-                      color: getColor(context, ColorType.mapButtonPrimary),
-                      boxShadow: [
-                        BoxShadow(
-                          color: getColor(
-                            context,
-                            ColorType.mapButtonShadow,
+                            ),
                           ),
-                          blurRadius: 10,
-                          offset: Offset(0, 6),
-                        ),
-                      ],
-                      borderRadius:
-                          BorderRadius.circular(25),
+                          // Container(
+                          //   // The smaller bottom protrusion from the big white card
+                          //   padding: EdgeInsets.only(
+                          //     top: 10,
+                          //     bottom: 10,
+                          //     left: 20,
+                          //     right: 20,
+                          //   ),
+
+                          //   child: Row(
+                          //     children: [
+                          //       Icon(Icons.pool, size: 20, color: Colors.white),
+                          //       SizedBox.square(dimension: 10),
+                          //       Text(
+                          //         "Then do something",
+                          //         style: TextStyle(
+                          //           fontWeight: FontWeight.bold,
+                          //           fontSize: 18,
+                          //           color: Colors.white,
+                          //         ),
+                          //       ),
+                          //     ],
+                          //   ),
+                          // ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      children: [
-                        RouteIcon.small("BB"),
-                        Text(
-                          "3 min",
-                          style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                          ),
-                        Text(
-                          "arrival",
-                          style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                        )
-                        // Padding(
-                        //   padding: EdgeInsetsGeometry.only(left: 8),
-                        //   child: Text(
-                        //     style: TextStyle(fontSize: 16, color: getColor(context, ColorType.mapButtonIcon)),
-                        //     "Bus arriving in 218 mins"
-                        //   ),
-                        // ),
-                        // MaterialButton(
-                        //   minWidth: 50,
-                        //   onPressed: () {
-                        //     setState(() {
-                        //       widget.navigationManager.previousStage();
-                        //       updateTimeline();
-                        //     });
-                        //   },
-                        //   child: Icon(Icons.arrow_back, color: Colors.white),
-                        // ),
-                        // MaterialButton(
-                        //   minWidth: 50,
-                        //   onPressed: () {
-                        //     setState(() {
-                        //       widget.navigationManager.nextStage();
-                        //       updateTimeline();
-                        //     });
-                        //   },
-                        //   child: Icon(Icons.arrow_forward, color: Colors.white)
-                        // )
-                        
-                        
-                        
-                      ],
-                    )
                   ),
                 ],
               ),
-            
-              MaterialButton(
-                color: Colors.red.shade900,
-                child: Text("Show Oops dialog"),
-                onPressed: () => widget.navigationManager.showOopsDialog(),
+
+              Container(
+                margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                padding: EdgeInsets.all(4),
+
+                decoration: BoxDecoration(
+                  color: getColor(context, ColorType.navigationTopCardBG),
+                  boxShadow: [
+                    BoxShadow(
+                      color: getColor(context, ColorType.mapButtonShadow),
+                      blurRadius: 10,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Row(
+                  children: [
+                    RouteIcon(rtid: "BB", width: 35, height: 35, fontSize: 20),
+                    SizedBox.square(dimension: 10),
+                    Text(
+                      "You bus is arriving in mere moments",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+
+              // MaterialButton(
+              //   color: Colors.red.shade900,
+              //   child: Text("Show Oops dialog"),
+              //   onPressed: () => widget.navigationManager.showOopsDialog(),
+              // ),
               // Expanded(child: SizedBox.expand()),
               // SizedBox.expand(),
               // const Spacer(),
 
               // VVVVVV This is the bottom bar--temporarily commenting it out to repurpose it as a DraggableScrollableSheet
 
-              
-                    
-                    
-                  // )
+              // )
 
-                    // Padding(
-                    //   padding: EdgeInsetsGeometry.only(left: 8),
-                    //   child: Text(
-                    //     // style: TextStyle(fontSize: 16, color: getColor(context, ColorType.primary)),
-                    //     "I'm told your bus is coming"
-                    //   ),
-                    // )
-                    
-                //   ],
-                // )
+              // Padding(
+              //   padding: EdgeInsetsGeometry.only(left: 8),
+              //   child: Text(
+              //     // style: TextStyle(fontSize: 16, color: getColor(context, ColorType.primary)),
+              //     "I'm told your bus is coming"
+              //   ),
+              // )
+
+              //   ],
+              // )
               // ),
-            ]
+            ],
           ),
         ),
 
         // TODO: Add a scrim that fades in when you drag up on the progress bar so that the background is darkened behind the DraggableScrollableSheet
-        
-        
         FloatingDraggableSheet(
           controller: _sheetController,
-          collapsedSize: _collapsedSize, // Grows to make room for the missed bus prompt
+          collapsedSize:
+              _collapsedSize, // Grows to make room for the missed bus prompt
           expandedSize: _sheetExpanded,
           screenCornerRadius: globalScreenBottomRadius,
           color: getColor(context, ColorType.infoCardColor),
@@ -584,364 +567,531 @@ class _NavigationOverlayState extends State<NavigationOverlay>
               children: [
                 Expanded(
                   child: ListView(
-                controller: scrollController,
-                padding: EdgeInsets.all(15),
-                children: [
-                  // Container(
-                
-                  // margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                  // padding: EdgeInsets.all(8),
-                  
-                  // decoration: BoxDecoration(
-                  //   color: getColor(context, ColorType.infoCardColor),
-                  //   boxShadow: [
-                  //     BoxShadow(
-                  //       color: getColor(
-                  //         context,
-                  //         ColorType.mapButtonShadow,
-                  //       ),
-                  //       blurRadius: 10,
-                  //       offset: Offset(0, 6),
-                  //     ),
-                  //   ],
-                  //   borderRadius:
-                  //       BorderRadius.circular(25),
-                  // ),
-                  // child: 
-
-                  // TODO: Figure out why the map panning is so laggy if there's a DraggableScrollableSheet on top
-
-                  // NEXT STEPS TODO: get the steps showing inside the DraggableScrollableSheet and fix the lagging!
-
-                  Row( // Drag handle
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    controller: scrollController,
+                    padding: EdgeInsets.all(15),
                     children: [
-                      SizedBox(
-                        width: 60,
-                        height: 5,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade400, // TODO: Make this a real color in constants.dart
-                            borderRadius: BorderRadius.circular(1000)
+                      // Container(
+
+                      // margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                      // padding: EdgeInsets.all(8),
+
+                      // decoration: BoxDecoration(
+                      //   color: getColor(context, ColorType.infoCardColor),
+                      //   boxShadow: [
+                      //     BoxShadow(
+                      //       color: getColor(
+                      //         context,
+                      //         ColorType.mapButtonShadow,
+                      //       ),
+                      //       blurRadius: 10,
+                      //       offset: Offset(0, 6),
+                      //     ),
+                      //   ],
+                      //   borderRadius:
+                      //       BorderRadius.circular(25),
+                      // ),
+                      // child:
+
+                      // TODO: Figure out why the map panning is so laggy if there's a DraggableScrollableSheet on top
+
+                      // NEXT STEPS TODO: get the steps showing inside the DraggableScrollableSheet and fix the lagging!
+                      Row(
+                        // Drag handle
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 60,
+                            height: 5,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: getColor(
+                                  context,
+                                  ColorType.navigationCardProgressBG,
+                                ), // TODO: Make this a real color in constants.dart
+                                borderRadius: BorderRadius.circular(1000),
+                              ),
+                            ),
                           ),
-                        )
-                      )
-                    ],
-                  ),
+                        ],
+                      ),
 
-                  Column(
-                    children: [
-                      // ClipRRect(
-                      //   borderRadius: BorderRadius.circular(12),
+                      Column(
+                        children: [
+                          // ClipRRect(
+                          //   borderRadius: BorderRadius.circular(12),
 
-                        // child: 
-                        LayoutBuilder(
-                          builder: (context, constraints) {
+                          // child:
+                          Padding(
+                            padding: EdgeInsets.only(left: 10, right: 10),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                const double dotSize = 30.0;
+                                const double barHeight = 15.0;
+                                const double topPadding = dotSize;
+                                const double bottomPadding =
+                                    10.0; // Space between the bar and the ETA text below it
+                                final double progressWidth =
+                                    constraints.maxWidth *
+                                    this.timelineInfo.activePositionPercentage;
+                                final double dotLeft =
+                                    progressWidth - (dotSize / 2);
+                                // Centers the dot on the bar independently of the paddings above/below it
+                                const double dotTop =
+                                    topPadding +
+                                    (barHeight / 2) -
+                                    (dotSize / 2);
 
-                            const double dotSize = 30.0;
-                            const double barHeight = 15.0;
-                            const double topPadding = dotSize;
-                            const double bottomPadding = 10.0; // Space between the bar and the ETA text below it
-                            final double progressWidth = constraints.maxWidth * this.timelineInfo.activePositionPercentage;
-                            final double dotLeft = progressWidth - (dotSize / 2);
-                            // Centers the dot on the bar independently of the paddings above/below it
-                            const double dotTop = topPadding + (barHeight / 2) - (dotSize / 2);
-
-
-                            return Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Padding(
-                                  padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Stack(
-                                      children: [
-                                        Row(
-                                  
-                                    children: this.timelineInfo.timelineSteps.map((item) {
-                                        return Flexible(
-                                          flex: item.estimated_time.floor(), // Proportionally sizes to each item's time
-                                          child: Container(
-                                            height: barHeight,
-                                            decoration: BoxDecoration(color: item.color),
-                                          )
-                                        );
-                                        // return Container(
-                                        //   width: MediaQuery.of(context).size.width * item.percentage,
-                                        //   height: 10,
-                                        //   decoration: BoxDecoration(color: item.color),
-                                        // );
-                                      }).toList(),
-                                      // Container(
-                                      //   width: MediaQuery.of(context).size.width * 0.3,
-                                      //   height: 10,
-                                      //   decoration: BoxDecoration(color: Colors.green),
-                                      // ),
-                                      // Container(
-                                      //   width: MediaQuery.of(context).size.width * 0.3,
-                                      //   height: 10,
-                                      //   decoration: BoxDecoration(color: Colors.red),
-                                      // ),
-                                      // Container(
-                                      //   width: MediaQuery.of(context).size.width * 0.3,
-                                      //   height: 10,
-                                      //   decoration: BoxDecoration(color: Colors.green),
-                                      // ),
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        top: topPadding,
+                                        bottom: bottomPadding,
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Stack(
+                                          children: [
+                                            Row(
+                                              children: this
+                                                  .timelineInfo
+                                                  .timelineSteps
+                                                  .map((item) {
+                                                    return Flexible(
+                                                      flex: item.estimated_time
+                                                          .floor(), // Proportionally sizes to each item's time
+                                                      child: Container(
+                                                        height: barHeight,
+                                                        decoration:
+                                                            BoxDecoration(
+                                                              color: item.color,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  })
+                                                  .toList(),
+                                            ),
+                                            Positioned(
+                                              // Progress fill covering everything before the dot
+                                              left: 0,
+                                              top: 0,
+                                              bottom: 0,
+                                              width: progressWidth,
+                                              child: DecoratedBox(
+                                                decoration: BoxDecoration(
+                                                  color: maizeBusBlue,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                        Positioned( // Progress fill covering everything before the dot
-                                          left: 0,
-                                          top: 0,
-                                          bottom: 0,
-                                          width: progressWidth,
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(color: maizeBusBlue),
+
+                                    // Container(
+                                    //     width: dotSize,
+                                    //     height: dotSize,
+                                    //     decoration: const BoxDecoration(
+                                    //       color: Colors.red,
+                                    //       shape: BoxShape.circle
+                                    //     ),
+                                    //   ),
+                                    Positioned(
+                                      // TODO: Make this thing animate smoooooothly!
+                                      left: dotLeft,
+                                      top: dotTop,
+                                      child: Container(
+                                        width: dotSize,
+                                        height: dotSize,
+                                        decoration: BoxDecoration(
+                                          color: getColor(
+                                            context,
+                                            ColorType.infoCardColor,
+                                          ),
+                                          border: Border.all(
+                                            color: getColor(
+                                              context,
+                                              ColorType
+                                                  .navigationCardProgressFG,
+                                            ),
+                                            width: 5,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: 10,
+                              right: 10,
+                              bottom: 5,
+                            ),
+                            child: Text(
+                              "eta 5:67 ● 21 min",
+                              style: TextStyle(
+                                color: getColor(
+                                  context,
+                                  ColorType.navigationCardFG,
+                                ),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                        // )
+                      ),
+
+                      SizedBox.square(dimension: 20.0),
+
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: widget.navigationManager.stageList.asMap().entries.map((
+                          entry,
+                        ) {
+                          int index = entry.key;
+                          NavigationStage stage = entry.value;
+
+                          bool shouldRoundTopCorners =
+                              (index == 0) || stage.hasRoundedCorners();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Stack(
+                                children: [
+                                  Row(
+                                    children: [
+                                      // ======== THIS IS THE TITLE LINE FOR EACH NAVIGATION STAGE ========
+                                      Padding(
+                                        padding: EdgeInsets.only(left: 10),
+                                      ),
+
+                                      Container(
+                                        // Gray background behind colorful line segment
+                                        width: 30,
+                                        height: 50,
+                                        decoration: (index != 0)
+                                            ? BoxDecoration(
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.navigationStepsGray,
+                                                ),
+                                                borderRadius: BorderRadius.only(
+                                                  bottomLeft:
+                                                      (index ==
+                                                          widget
+                                                                  .navigationManager
+                                                                  .stageList
+                                                                  .length -
+                                                              1)
+                                                      ? Radius.circular(20)
+                                                      : Radius.circular(0),
+                                                  bottomRight:
+                                                      (index ==
+                                                          widget
+                                                                  .navigationManager
+                                                                  .stageList
+                                                                  .length -
+                                                              1)
+                                                      ? Radius.circular(20)
+                                                      : Radius.circular(0),
+                                                ),
+                                              )
+                                            : null,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: stage.getColor(),
+                                            borderRadius: BorderRadius.only(
+                                              topLeft: (shouldRoundTopCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                              topRight: (shouldRoundTopCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                              // bottomLeft: Radius.circular(20),
+                                              // bottomRight: Radius.circular(20)
+                                              bottomLeft:
+                                                  (index ==
+                                                      widget
+                                                              .navigationManager
+                                                              .stageList
+                                                              .length -
+                                                          1)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                              bottomRight:
+                                                  (index ==
+                                                      widget
+                                                              .navigationManager
+                                                              .stageList
+                                                              .length -
+                                                          1)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                            ),
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              
-
-                              // Container(
-                              //     width: dotSize, 
-                              //     height: dotSize, 
-                              //     decoration: const BoxDecoration(
-                              //       color: Colors.red, 
-                              //       shape: BoxShape.circle
-                              //     ),
-                              //   ),
-                            
-                              Positioned( // TODO: Make this thing animate smoooooothly!
-                                left: dotLeft,
-                                top: dotTop,
-                                child: Container(
-                                  width: dotSize, 
-                                  height: dotSize, 
-                                  decoration: BoxDecoration(
-                                    color: Colors.white, 
-                                    border: Border.all(
-                                      color: maizeBusBlue,
-                                      width: 5
-                                    ),
-                                    shape: BoxShape.circle
-                                  ),
-                                ),
-                              )
-                              ],
-                            );
-                        }
-                      ),
-                      Padding(
-                        padding: EdgeInsets.only(left: 10, right: 10, bottom: 5),
-                        child: Text(
-                          "eta 3:21 ● 21 min",
-                          style: TextStyle(
-                            color: maizeBusBlue,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18
-                          ),
-                        )
-                      )
-                    ]
-                  // )
-                  ),
-
-                  SizedBox.square(dimension: 20.0,),
-          
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: widget.navigationManager.stageList.asMap().entries.map((entry) {
-
-                      int index = entry.key;
-                      NavigationStage stage = entry.value;
-
-                      bool shouldRoundTopCorners = (index == 0) || stage.hasRoundedCorners();
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          
-                          Row(
-                              children: [
-                                Padding(padding: EdgeInsets.only(left: 10)),
-                                Container( // Gray background behind colorful line segment
-                                  width: 30,
-                                  height: 50,
-                                  decoration: (index != 0) ? BoxDecoration(
-                                    color: getColor(context, ColorType.navigationStepsGray)
-                                  ) : null,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: stage.getColor(),
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: shouldRoundTopCorners ? Radius.circular(20) : Radius.circular(0),
-                                        topRight: shouldRoundTopCorners ? Radius.circular(20) : Radius.circular(0),
-                                      )
-                                    ),
-                                  ),
-                                ),
-                                
-                                Padding(padding: EdgeInsets.only(left: 15)),
-                                Text(
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.bold
-                                  ),
-                                  stage.getTitle()
-                                ),
-                                // Spacer(),
-                                Container(width: 40),
-                                // Text(stage.g())
-                              ]
-                            ),
-
-                          ...stage.getSteps().asMap().entries.map((entry) {
-                            int sub_index = entry.key;
-                            NavigationStageStep step = entry.value;
-  // NEXT STEPS TODO: get live location showing on the step list
-
-                            bool shouldRoundBottomCorners = false;
-
-                            if (index == widget.navigationManager.stageList.length - 1 && sub_index == stage.getSteps().length - 1) {
-                              shouldRoundBottomCorners = true;
-                            }
-                            
-                            if (stage.hasRoundedCorners() && sub_index == stage.getSteps().length - 1) {
-                              shouldRoundBottomCorners = true;
-                            }
-
-                            return Stack(
-                              
-                              children: [
-                                Positioned(
-                                  left: 10,
-                                  top: 0,
-                                  bottom: 0,
-                                  width: 30,
-                                  child: Container( // Gray background behind colorful line segment
-                                    width: 30,
-                                    // height: 40,
-                                    decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
-                                      // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
-                                      color: getColor(context, ColorType.navigationStepsGray)
-                                    ) : null,
-                                    child: Container( // Colorful line segment
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: step.getColor(),
-                                        borderRadius: BorderRadius.only(
-                                          bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
-                                          bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
-                                        )
                                       ),
-                                      
-                                      child: Container( // Inside dot or dash
-                                        width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
-                                        height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
-                                        // color: Colors.white,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.all(Radius.circular(100))
+
+                                      Padding(
+                                        padding: EdgeInsets.only(left: 15),
+                                      ),
+                                      Text(
+                                        style: TextStyle(
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        // color: Colors.white
-                                      )
-                                    ),
-                                  ),
-                                ),
-                                
-                                Padding(
-                                  padding: EdgeInsetsGeometry.only(top: 10, bottom: 10, left: 55),
-                                  child: Row(
-                                    children: [
-                                      // Padding(padding: EdgeInsets.only(left: 20)),
-                                      
-                                      // Padding(padding: EdgeInsets.only(left: 20)),
-                                      Expanded(
-                                        child: Text(step.getTitle() + step.getTitle()),
+                                        stage.getFixedTitle(),
                                       ),
-                                      
-                                      // // Spacer(),
-                                      // Container(width: 40),
-                                      Text(step.getTime())
-                                    ]
-                                  )
-                                )
-                                
-                              ],
-                            );
+                                      // Spacer(),
+                                      Container(width: 40),
+                                      // Text(stage.g())
+                                    ],
+                                  ),
 
-                            // return Row(
-                            //   children: [
-                            //     Padding(padding: EdgeInsets.only(left: 20)),
-                            //     Container( // Gray background behind colorful line segment
-                            //       width: 30,
-                            //       height: 40,
-                            //       decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
-                            //         // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
-                            //         color: getColor(context, ColorType.navigationStepsGray)
-                            //       ) : null,
-                            //       child: Container( // Colorful line segment
-                            //         alignment: Alignment.center,
-                            //         decoration: BoxDecoration(
-                            //           color: step.getColor(),
-                            //           borderRadius: BorderRadius.only(
-                            //             bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
-                            //             bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
-                            //           )
-                            //         ),
-                                    
-                            //         child: Container( // Inside dot or dash
-                            //           width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
-                            //           height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
-                            //           // color: Colors.white,
-                            //           decoration: BoxDecoration(
-                            //             color: Colors.white,
-                            //             borderRadius: BorderRadius.all(Radius.circular(100))
-                            //           ),
-                            //           // color: Colors.white
-                            //         )
-                            //       ),
-                            //     ),
-                            //     Padding(padding: EdgeInsets.only(left: 20)),
-                            //     Expanded(
-                            //       child: Text(step.getTitle() + step.getTitle()),
-                            //     ),
-                                
-                            //     // // Spacer(),
-                            //     // Container(width: 40),
-                            //     Text(step.getTime())
-                            //   ]
-                            // );
+                                  stage is NavOnBus
+                                      ? Padding(
+                                          padding: EdgeInsets.only(left: 1),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(9999),
+                                              border: Border.all(
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.infoCardColor,
+                                                ),
+                                                width: 4,
+                                              ),
+                                              // boxShadow: [
+                                              //   BoxShadow(
+                                              //     blurRadius: 3,
+                                              //     spreadRadius: 0,
+                                              //     color: Color(0x88000000)
+                                              //   )
+                                              // ]
+                                            ),
+                                            child: RouteIcon(
+                                              rtid: stage.state.rt,
+                                              width: 40,
+                                              height: 40,
+                                              fontSize: 20,
+                                            ),
+                                          ),
+                                        )
+                                      // Text(stage.state.rt)
+                                      : SizedBox.shrink(),
 
+                                  // Text("HIIIII"),
+                                ],
+                              ),
 
+                              ...stage.getSteps().asMap().entries.map((entry) {
+                                int sub_index = entry.key;
+                                NavigationStageStep step = entry.value;
+                                // NEXT STEPS TODO: get live location showing on the step list
 
-                          }).toList()
-                        ],
-                      );
-                      // return Text(stage.getTitle());
-                  }).toList(),
-                  )
+                                bool shouldRoundBottomCorners = false;
 
-              // )
-                ]
+                                if (index ==
+                                        widget
+                                                .navigationManager
+                                                .stageList
+                                                .length -
+                                            1 &&
+                                    sub_index == stage.getSteps().length - 1) {
+                                  shouldRoundBottomCorners = true;
+                                }
+
+                                if (stage.hasRoundedCorners() &&
+                                    sub_index == stage.getSteps().length - 1) {
+                                  shouldRoundBottomCorners = true;
+                                }
+
+                                return Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 10,
+                                      top: 0,
+                                      bottom: 0,
+                                      width: 30,
+                                      child: Container(
+                                        // Gray background behind colorful line segment
+                                        width: 30,
+                                        // height: 40,
+                                        decoration:
+                                            (index !=
+                                                widget
+                                                        .navigationManager
+                                                        .stageList
+                                                        .length -
+                                                    1)
+                                            ? BoxDecoration(
+                                                // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.navigationStepsGray,
+                                                ),
+                                              )
+                                            : null,
+                                        child: Container(
+                                          // Colorful line segment
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: step.getColor(),
+                                            borderRadius: BorderRadius.only(
+                                              bottomLeft:
+                                                  (shouldRoundBottomCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.zero,
+                                              bottomRight:
+                                                  (shouldRoundBottomCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.zero,
+                                            ),
+                                          ),
+
+                                          child: Container(
+                                            // Inside dot or dash
+                                            width:
+                                                step.lineType == LineType.Dotted
+                                                ? ((sub_index ==
+                                                          stage
+                                                                  .getSteps()
+                                                                  .length -
+                                                              1)
+                                                      ? 20
+                                                      : 10)
+                                                : 4,
+                                            height:
+                                                step.lineType == LineType.Dotted
+                                                ? ((sub_index ==
+                                                          stage
+                                                                  .getSteps()
+                                                                  .length -
+                                                              1)
+                                                      ? 20
+                                                      : 10)
+                                                : 16,
+                                            // color: Colors.white,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.all(
+                                                Radius.circular(100),
+                                              ),
+                                            ),
+                                            // color: Colors.white
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    Padding(
+                                      padding: EdgeInsetsGeometry.only(
+                                        top: 10,
+                                        bottom: 10,
+                                        left: 55,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Padding(padding: EdgeInsets.only(left: 20)),
+
+                                          // Padding(padding: EdgeInsets.only(left: 20)),
+                                          Expanded(
+                                            child: Text(step.getTitle()),
+                                          ),
+
+                                          // // Spacer(),
+                                          // Container(width: 40),
+                                          Text(step.getTime()),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+
+                                // return Row(
+                                //   children: [
+                                //     Padding(padding: EdgeInsets.only(left: 20)),
+                                //     Container( // Gray background behind colorful line segment
+                                //       width: 30,
+                                //       height: 40,
+                                //       decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
+                                //         // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
+                                //         color: getColor(context, ColorType.navigationStepsGray)
+                                //       ) : null,
+                                //       child: Container( // Colorful line segment
+                                //         alignment: Alignment.center,
+                                //         decoration: BoxDecoration(
+                                //           color: step.getColor(),
+                                //           borderRadius: BorderRadius.only(
+                                //             bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
+                                //             bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
+                                //           )
+                                //         ),
+
+                                //         child: Container( // Inside dot or dash
+                                //           width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
+                                //           height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
+                                //           // color: Colors.white,
+                                //           decoration: BoxDecoration(
+                                //             color: Colors.white,
+                                //             borderRadius: BorderRadius.all(Radius.circular(100))
+                                //           ),
+                                //           // color: Colors.white
+                                //         )
+                                //       ),
+                                //     ),
+                                //     Padding(padding: EdgeInsets.only(left: 20)),
+                                //     Expanded(
+                                //       child: Text(step.getTitle() + step.getTitle()),
+                                //     ),
+
+                                //     // // Spacer(),
+                                //     // Container(width: 40),
+                                //     Text(step.getTime())
+                                //   ]
+                                // );
+                              }).toList(),
+                            ],
+                          );
+                          // return Text(stage.getTitle());
+                        }).toList(),
+                      ),
+
+                      Padding(
+                        padding: EdgeInsets.only(top: 15, left: 10, right: 10),
+                        child: missedBusButton(
+                          // Routes through the map screen's PopScope, so this does exactly
+                          // what the Android system back button does (closes this overlay)
+                          () => Navigator.maybePop(context),
+                          const Text("Exit navigation"),
+                        ),
+                      ),
+
+                      // )
+                    ],
                   ),
                 ),
                 missedBusPromptFooter(),
               ],
             );
-          }
+          },
         ),
-      ]
+      ],
     );
   }
-
 }
 
 // QUESTION: Should navigation_manager
 
-
-
-// FUTURE TODO: Add "Connection lost"/"GPS not very accurate" banners to alert the user of those things 
+// FUTURE TODO: Add "Connection lost"/"GPS not very accurate" banners to alert the user of those things
 // Some sort of live rotating compass that points to the end of the segment (i.e. if you're walking it replaces the icon and rotates)

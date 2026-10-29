@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'models/banner_message.dart';
 
 // UPDATE WHEN RELAUNCH
 final String currentVersion = '2.0.2';
@@ -105,6 +106,16 @@ enum ColorType {
   sliderBackground,
   sliderButton,
 
+  roomSearchBg,
+  roomSearchText,
+
+  // temporary room search label cards, will maybe change
+  roomSearchBathroom,
+  roomSearchInfoDesk,
+  roomSearchDining,   // do we have dining?
+  roomSearchPrinting, // do we have printing data?
+  roomSearchStairs,
+
   // info card colors (in route selector, favorites sheet, etc.)
   infoCardColor,
   infoCardHighlighted,
@@ -116,7 +127,11 @@ enum ColorType {
   secondaryButtonText,
 
   mapWalkingLine, // Color for the walking line on the map
-  navigationStepsGray
+  navigationStepsGray,
+  navigationCardFG,
+  navigationCardProgressFG,
+  navigationCardProgressBG,
+  navigationTopCardBG
 }
 
 const Map<ColorType, Color> lightColors = {
@@ -145,6 +160,15 @@ const Map<ColorType, Color> lightColors = {
   ColorType.sliderButton: Colors.white,
   ColorType.sliderBackground: Color.fromARGB(255, 200, 228, 255),
 
+  ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
+  ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
+
+  ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
+  ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
+  ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
+  ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
+  ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
+
   ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),
 
@@ -157,7 +181,11 @@ const Map<ColorType, Color> lightColors = {
   ColorType.secondaryButtonText: maizeBusBlue,
 
   ColorType.mapWalkingLine: Color.fromARGB(255, 7, 55, 97),
-  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237)
+  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237),
+  ColorType.navigationCardFG: maizeBusBlue,
+  ColorType.navigationCardProgressFG: maizeBusBlue,
+  ColorType.navigationCardProgressBG: Color(0xFFDBE4ED),
+  ColorType.navigationTopCardBG: Color(0xFF0B5394),
 };
 
 const Map<ColorType, Color> darkColors = {
@@ -185,6 +213,15 @@ const Map<ColorType, Color> darkColors = {
 
   ColorType.sliderButton: Color.fromARGB(255, 32, 33, 34),
   ColorType.sliderBackground: Color.fromARGB(255, 33, 71, 105),
+  
+  // dark mode colors may vary in the future!
+  ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
+  ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
+  ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
+  ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
+  ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
+  ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
+  ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
 
   ColorType.infoCardColor: Color.fromARGB(255, 47, 54, 60),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 33, 71, 105),
@@ -198,7 +235,11 @@ const Map<ColorType, Color> darkColors = {
   ColorType.secondaryButtonText: Color.fromARGB(255, 49, 129, 199),
 
   ColorType.mapWalkingLine: Color.fromARGB(255, 178, 219, 255),
-  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237)
+  ColorType.navigationStepsGray: Color.fromARGB(255, 219, 228, 237),
+  ColorType.navigationCardFG: Colors.white,
+  ColorType.navigationCardProgressFG: Color(0xFF3181C7),
+  ColorType.navigationCardProgressBG: Color(0xFFDBE4ED),
+  ColorType.navigationTopCardBG: Color(0xFF0B5394),
 };
 
 // returns true if the current theme is dark mode
@@ -451,12 +492,14 @@ class StartupDataHolder {
   String updateMessage;
   String persistantMessageTitle;
   String persistantMessage;
+  BannerMessage? bannerMessage;
   StartupDataHolder(
     this.version,
     this.updateTitle,
     this.updateMessage,
     this.persistantMessageTitle,
     this.persistantMessage,
+    this.bannerMessage,
   );
 }
 

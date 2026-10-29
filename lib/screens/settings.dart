@@ -1,4 +1,5 @@
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/screens/sign_in_page.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
@@ -342,6 +343,60 @@ class _SettingsState extends State<Settings> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                const Text(
+                  'Floor Plans Access',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+
+                const Text(
+                  'Verify you are student/faculty to use floor plans',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.w400,
+                    fontSize: 16,
+                  ),
+                ),
+
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (context) =>
+                            SignInPage(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        getColor(context, ColorType.importantButtonBackground),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Sign In with U-M ID',
+                    style: TextStyle(
+                      color: getColor(context, ColorType.importantButtonText),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
 

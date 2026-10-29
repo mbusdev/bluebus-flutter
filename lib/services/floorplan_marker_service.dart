@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -32,7 +33,7 @@ class FloorplanMarkerService {
       _iconCache[poiType] = descriptor;
       return descriptor;
     } catch (err) {
-      debugPrint('FloorplanMarkerService: could not load $assetPath ($err)');
+      stderr.writeln('FloorplanMarkerService: could not load $assetPath ($err)');
       return null;
     }
   }

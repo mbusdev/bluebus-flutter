@@ -1,16 +1,19 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, SocketException, stderr;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:developer';
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/services/map_layers/search_result_layer.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
-import 'package:bluebus/screens/new_features_screen.dart';
+import 'package:bluebus/screens/banner_screen.dart';
 import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/services/map_layers/banner_layer.dart';
 import 'package:bluebus/services/map_layers/base_routes_layer.dart';
 import 'package:bluebus/services/map_layers/demo_buildings_layer.dart'; // DEMO BUILDINGS
+import 'package:bluebus/services/floorplan_style.dart';
 import 'package:bluebus/services/map_layers/floorplans_layer.dart';
 import 'package:bluebus/services/map_layers/journey_layer.dart';
 import 'package:bluebus/services/map_layers/live_buses_layer.dart';
@@ -26,6 +29,7 @@ import 'package:bluebus/widgets/journey_results_widget.dart';
 import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/navigation_overlay_widget.dart';
 import 'package:bluebus/widgets/reminder_widgets.dart';
+import 'package:bluebus/widgets/search_rooms.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/foundation.dart';
@@ -42,6 +46,7 @@ import 'package:vector_math/vector_math_64.dart' as vec_math;
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
+import '../models/banner_message.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 //import '../models/bus_stop.dart';
@@ -53,8 +58,8 @@ import '../constants.dart';
 import './settings.dart';
 import 'package:screen_corner_radius/screen_corner_radius.dart';
 
-final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
-final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
+// DateTime bannerShowTime = DateTime.parse("2026-03-16 00:00:00Z");
+// DateTime bannerHideTime = DateTime.parse("2026-03-24 00:00:00Z");
 
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
@@ -78,6 +83,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
+
+  // Set once startup data comes back. Null until then (and if the
+  // backend sends no banner), so always null-check before using in build().
+  BannerMessage? _bannerMessage;
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -133,6 +142,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   bool _journeyOverlayActive = false;
   bool _navigationOverlayEnabled = false;
   bool _floorplanOverlayEnabled = false;
+
+  /// True once the camera is zoomed in over a building we have floorplan
+  /// data for. Doesn't open the full floor picker by itself -- it just
+  /// reveals the compact "open floorplan" entry control; the picker itself
+  /// only opens once the user taps that button.
+  bool _nearFloorplanBuilding = false;
+
+  /// Whether the floorplan entry control should take over the bottom controls
+  /// slot. It replaces the bus browsing controls, which aren't much use once
+  /// you're inside a building -- but an active journey owns that same slot for
+  /// its own controls, so the swap is suppressed until the journey ends.
+  /// Otherwise the two would render on top of each other, and the "Steps"
+  /// button would be unreachable without zooming back out.
+  bool get _floorplanControlsTakeOver =>
+      _nearFloorplanBuilding && !_journeyOverlayActive;
   // maximum allowed distance (meters) from a stop to a candidate polyline point
   // static const double _maxMatchDistanceMeters = 150.0;
   // route ids that are part of the active journey
@@ -159,6 +183,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final NavigationLayer navigationLayer = NavigationLayer();
   final FloorplansLayer floorplansLayer = FloorplansLayer();
   final DemoBuildingsLayer demoBuildingsLayer = DemoBuildingsLayer(); // DEMO BUILDINGS
+  final SearchResultLayer searchResultLayer = SearchResultLayer();
+  final BannerLayer bannerLayer = BannerLayer();
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -176,10 +202,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     super.initState();
     _setupConnectivityMonitoring();
 
-    // debugPrint("MAP SCREEN INITSTATE===================");
     navigationManager.init();
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
+    bannerLayer.init((banner) {
+      try {
+        Haptics.vibrate(HapticsType.light);
+      } catch (e) {}
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => BannerScreen(url: banner.url)),
+      );
+    });
     floorplansLayer.load();
     journeyLayer.init(
       _showBusSheet,
@@ -218,10 +251,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         };
         _busProviderRef?.addListener(_busProviderListener!);
       } catch (e, stackTrace) {
-        debugPrint(
+        stderr.writeln(
           'Error obtaining BusProvider or registering route listener in MapScreen.initState: $e',
         );
-        debugPrint(stackTrace.toString());
+        stderr.writeln(stackTrace.toString());
       }
     });
   }
@@ -230,7 +263,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     try {
       Haptics.vibrate(HapticsType.light);
     } catch (e) {
-      debugPrint("Haptics error: $e");
+      stderr.writeln("Haptics error: $e");
     }
 
     _showStopSheet(
@@ -242,6 +275,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void onBusClicked(Bus b) {
+    centerOnBus(b);
     _showBusSheet(b.id);
   }
 
@@ -288,72 +322,56 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
-  Future<void> _loadAllData() async {
-    ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
-    theme.onSystemThemeUpdate(context);
-    await theme.loadTheme();
-
-    final prefs = await SharedPreferences.getInstance();
-    globalFollowDistanceThresholdMeters =
-        prefs.getDouble('follow_distance_threshold_meters') ??
-        globalFollowDistanceThresholdMeters;
-    globalGpsUpdateDistanceFilterMeters =
-        prefs.getInt('gps_update_distance_filter_meters') ??
-        globalGpsUpdateDistanceFilterMeters;
-
-    screenRadius = await ScreenCornerRadius.get(); // load screen radius
-    screenRadiusLoaded = true;
-    globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
-
-    //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always) {
-      // permission = await Geolocator.requestPermission();
-      Position? pos = await Geolocator.getLastKnownPosition();
-      if (pos != null) {
-        startLatLng = LatLng(pos.latitude, pos.longitude);
-        _currentCameraPos.value = CameraPosition(
-          target: startLatLng,
-          zoom: 15.0,
-          bearing: 0.0,
-        );
-      }
-    }
-
-    canVibrate = await Haptics.canVibrate();
-    final busProvider = Provider.of<BusProvider>(context, listen: false);
-
-    _loadingMessageNotifier.value = Loadpoint('Contacting server...', 1);
+  void downloadStartupData() async { // TODO: Test to make sure this works with startup data
     StartupDataHolder? startupData = await _getStartupData();
-
-    // keep trying to reach server. Can't start without this
+    // keep trying to reach server.
     while (startupData == null) {
       if (kDebugMode) {
-        debugPrint("retrying _getStartupData");
+        debugPrint("retrying _getStartupData"); // LINTER_OVERRIDE
       }
       await Future.delayed(Duration(seconds: 2));
       startupData = await _getStartupData();
     }
 
-    // moving this here fixes loading bug
-    await RouteColorService.initialize();
+    final banner = startupData.bannerMessage;
+    // a banner with no title has nothing to say, whatever its source claimed
+    if (banner != null && banner.shortTitle == '') {
+      banner.isActive = false;
+    }
+    // startup data arrives after the first build, so setState to show the banner
+    if (mounted) {
+      setState(() {
+        _bannerMessage = banner;
+      });
+    }
+    bannerLayer.setBanner(banner);
 
-    if (!isCurrentVersionEqualOrHigher(startupData.version)) {
+    if (!isCurrentVersionEqualOrHigher(startupData!.version)) {
       showUndismissableMaizebusDialog(
         contextIn: context,
-        title: Text(startupData.updateTitle),
-        content: Text(startupData.updateMessage),
+        title: Text(startupData!.updateTitle),
+        content: Text(startupData!.updateMessage),
       );
     }
 
-    if (startupData.persistantMessageTitle != '') {
+    if (startupData!.persistantMessageTitle != '') {
       showMaizebusOKDialog(
         contextIn: context,
-        title: startupData.persistantMessageTitle,
-        content: startupData.persistantMessage,
+        title: startupData!.persistantMessageTitle,
+        content: startupData!.persistantMessage,
       );
     }
+  }
+
+  Future<void> _loadAllData() async {
+    ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
+    theme.onSystemThemeUpdate(context);
+    await theme.loadTheme(); // loadTheme() happens in the Future.wait below
+
+    
+
+    // canVibrate = await Haptics.canVibrate();
+    final busProvider = Provider.of<BusProvider>(context, listen: false);
 
     void onBusError(String route, String error) => showMaizebusOKDialog(
       contextIn: context,
@@ -362,13 +380,90 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       content: error,
     );
 
+
+    int startTime = DateTime.now().millisecondsSinceEpoch;
+
+    downloadStartupData(); // Download it but don't wait around for it to finish
+
+    _loadingMessageNotifier.value = Loadpoint('Loading data...', 1);
     // loading all this data in parallel
-    await Future.wait([
-      // _loadCustomMarkers(),
-      busProvider.loadRoutes(onBusError),
-      _loadSelectedRoutes(),
-      _loadFavoriteStops(),
-    ]);
+    
+    bool shouldRetryInit = true;
+
+    while (shouldRetryInit) {
+      try {
+        await Future.wait([
+          // (() async {
+          //    // Load startup data asynchronously with the routes
+          // })(),
+          (() async {
+            //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
+            LocationPermission permission = await Geolocator.checkPermission();
+            if (permission == LocationPermission.whileInUse ||
+                permission == LocationPermission.always) {
+              // permission = await Geolocator.requestPermission();
+              Position? pos = await Geolocator.getLastKnownPosition();
+              if (pos != null) {
+                startLatLng = LatLng(pos.latitude, pos.longitude);
+                _currentCameraPos.value = CameraPosition(
+                  target: startLatLng,
+                  zoom: 15.0,
+                  bearing: 0.0,
+                );
+              }
+            }
+          })(),
+          (() async {
+            canVibrate = await Haptics.canVibrate();
+          })(),
+          (() async {
+            final prefs = await SharedPreferences.getInstance();
+            globalFollowDistanceThresholdMeters =
+                prefs.getDouble('follow_distance_threshold_meters') ??
+                globalFollowDistanceThresholdMeters;
+            globalGpsUpdateDistanceFilterMeters =
+                prefs.getInt('gps_update_distance_filter_meters') ??
+                globalGpsUpdateDistanceFilterMeters;
+          })(),
+          (() async {
+            screenRadius = await ScreenCornerRadius.get(); // load screen radius
+            screenRadiusLoaded = true;
+            globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
+          })(),
+          
+          busProvider.loadRoutesWithCache(onBusError),
+          _loadSelectedRoutes(),
+          _loadFavoriteStops(),
+        ]);
+        shouldRetryInit = false;
+      } catch (err) {
+        stderr.writeln("$err");
+        if (err is SocketException) {
+          // We'll get a SocketException if the app can't download data from the network and there's no cache available
+          _loadingMessageNotifier.value = Loadpoint('Waiting for network...', 1);
+        } else {
+          _loadingMessageNotifier.value = Loadpoint('An error occured, retrying...', 1);
+        }
+        await Future.delayed(const Duration(seconds: 2));
+      }
+      
+    }
+
+    // moving this here fixes loading bug
+    await RouteColorService.initialize();
+
+    
+
+    _loadingMessageNotifier.value = Loadpoint('Loading routes and stops...', 1);
+
+    // loading all this data in parallel
+    // (this was moved north)
+    // await Future.wait([
+    //   // _loadCustomMarkers(),
+    //   busProvider.loadRoutes(onBusError),
+    //   _loadSelectedRoutes(),
+    //   _loadFavoriteStops(),
+    // ]);
 
     // actions that depend on the data loaded earlier
     _loadingMessageNotifier.value = Loadpoint('Loading bus images...', 2);
@@ -377,7 +472,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _updateAvailableRoutes(busProvider.routes);
     _cacheRouteOverlays(busProvider.routes);
 
-    debugPrint("******* Caching routes");
     baseRoutesLayer.cacheRoutes(busProvider.routes);
 
     // update the map with previously selected routes.
@@ -608,22 +702,30 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final data = json.decode(response.body);
         final message = data['why_update_message'];
         final p_message = data['persistant_message'];
+
+        BannerMessage banner_message = (data['banner_message'] != null)
+          ? BannerMessage.fromJson(data['banner_message'])
+          : BannerMessage.none;
+
+        // banner_message = BannerMessage.hardcoded;
+
         return StartupDataHolder(
           data['min_supported_version'],
           message['title'],
           message['subtitle'],
           p_message['title'],
           p_message['subtitle'],
+          banner_message,
         );
       } else if (kDebugMode) {
-        debugPrint(
+        stderr.writeln(
           "Got non-OK response for startup data: ${response.statusCode}",
         );
-        debugPrint(response.body);
+        stderr.writeln(response.body);
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint("Couldn't load startup data: ${e.toString()}");
+        stderr.writeln("Couldn't load startup data: ${e.toString()}");
       }
       return null;
     }
@@ -653,7 +755,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       try {
         _busProviderRef!.removeListener(_busProviderListener!);
       } catch (e, stackTrace) {
-        debugPrint(
+        stderr.writeln(
           'Error removing _busProviderListener in MapScreen.dispose: $e',
         );
         debugPrintStack(stackTrace: stackTrace);
@@ -696,6 +798,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final newRouteIds = routes.map((r) => r.routeId).toSet();
 
     journeyLayer.setRoutesCache(routes);
+    liveBusesLayer.setRoutesCache(routes);
 
     _routePolylines.removeWhere((key, _) {
       for (final id in newRouteIds) {
@@ -963,19 +1066,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   // Show a red pin marker at search location
   void _showSearchLocationMarker(double lat, double lon) {
-    _searchLocationMarker = Marker(
-      markerId: const MarkerId('search_location'),
-      position: LatLng(lat, lon),
-      icon:  MapImageService.getNavigationBusStop() ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure,),
-      consumeTapEvents: false,
-    );
-    setState(() {});
+    searchResultLayer.isVisible = true;
+    searchResultLayer.setPosition(LatLng(lat, lon));
+
   }
 
   // Remove the search location marker
   void _removeSearchLocationMarker() {
-    _searchLocationMarker = null;
-    setState(() {});
+    searchResultLayer.isVisible = false;
+    searchResultLayer.reload();
   }
 
   // Save selected routes to persistent storage
@@ -1071,7 +1170,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             } else {
               // Location has no coordinates
             }
-          },
+          }
+        );
+      },
+    );
+    
+  }
+
+  void _showSearchRoomsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return SearchRoomsSheet(
+          floors: floorplansLayer.floors,
         );
       },
     );
@@ -1107,6 +1220,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       },
     );
     _bottomSheetController?.closed.then((_) {
+      _removeSearchLocationMarker();
       hideJourney();
     });
   }
@@ -1299,6 +1413,35 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // log("noted nonprogrammatic camera move");
       _userHasInteractedWithMap.value = true;
     }
+
+    _updateFloorplanOverlayForCamera(position);
+  }
+
+  /// Shows/hides the compact "open floorplan" entry control based on whether
+  /// the camera is zoomed in over a building we have real floorplan data
+  /// for. (The DEMO BUILDINGS footprints from [demoBuildingsLayer] are
+  /// intentionally not considered here -- they have no floors to show.)
+  /// Only reveals the entry control -- the full floor picker only opens once
+  /// the user taps it. If the user zooms/pans away from the building while
+  /// the picker is open, it closes automatically along with the entry
+  /// control.
+  void _updateFloorplanOverlayForCamera(CameraPosition position) {
+    final LatLngBounds? bounds = floorplansLayer.footprintBounds;
+    final bool overBuilding =
+        bounds != null && bounds.contains(position.target);
+    final bool zoomedInEnough = position.zoom >= FLOORPLAN_DETAIL_ZOOM;
+    final bool nearBuilding = overBuilding && zoomedInEnough;
+
+    final bool nextOverlayEnabled = nearBuilding && _floorplanOverlayEnabled;
+    if (nearBuilding == _nearFloorplanBuilding &&
+        nextOverlayEnabled == _floorplanOverlayEnabled) {
+      return;
+    }
+
+    setState(() {
+      _nearFloorplanBuilding = nearBuilding;
+      _floorplanOverlayEnabled = nextOverlayEnabled;
+    });
   }
 
   void _onCameraIdle() async {
@@ -1307,16 +1450,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _showBusSheet(String busID) {
-    showModalBottomSheet(
+    // TODO: Allow the user to drag the top half of the map
+    // TODO: Fix the back button (maybe bring back the sheet stack? That might be messy now that our bus sheet is different)--it should take the user back to the previous camera position/zoom on the map
+    // 
+
+    // showModalBottomSheet(
+    _bottomSheetController = showBottomSheet(
       context: context,
-      isScrollControlled: true,
-      isDismissible: true,
+      // isScrollControlled: true,
+      // isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         child: DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          maxChildSize: 0.85,
           snap: true,
+          snapSizes: [0.5, 0.9],
+          initialChildSize: 0.5,
+          // initialChildSize: 0.85,
+          // maxChildSize: 0.85,
+          // snap: true,
 
           builder: (BuildContext context, ScrollController scrollController) {
             return BusSheet(
@@ -1391,6 +1542,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           showBusSheet: (busId) {
             // When someone clicks "See all stops for this bus" this callback runs
             Navigator.pop(context); // Close the current modal
+            centerOnBusID(busProvider, busId);
+
             _showBusSheet(busId);
           },
           busProvider: busProvider,
@@ -1472,6 +1625,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
 
     return null;
+  }
+
+  Future<void> centerOnBusID(BusProvider busProvider, String busId) async {
+    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    final state = liveBusesLayer.busAnimationCache[busId];
+    LatLng? pos = state?.lastInterpolatedPosition ??
+        state?.bus.position ??
+        busProvider.buses.where((b) => b.id == busId).firstOrNull?.position;
+
+    if (pos != null) {
+      pos = LatLng(pos.latitude + latitude_adjust, pos.longitude);
+      await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
+    }
+  }
+  Future<void> centerOnBus(Bus b) async {
+    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    LatLng pos = LatLng(b.position.latitude + latitude_adjust, b.position.longitude);
+    await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
   }
 
   Future<void> _centerOnLocation(
@@ -1585,8 +1756,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return AnimatedSwitcher(
           duration: Duration(milliseconds: 200),
 
-          child: (snapshot.connectionState == ConnectionState.done)
-              ? PopScope(
+          // child: (snapshot.connectionState == ConnectionState.done)
+              // ? 
+          child: Stack(
+            children: [
+              
+
+
+            
+              PopScope(
                   //for switch animation
                   key: ValueKey(1),
 
@@ -1623,6 +1801,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             liveBusesLayer,
                             journeyLayer,
                             navigationLayer,
+                            searchResultLayer,
+                            bannerLayer,
                           ],
                           onMapCreated: _onMapCreated,
                           onCameraMove: _onCameraMove,
@@ -1742,20 +1922,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                               mainAxisAlignment:
                                                   MainAxisAlignment.end,
                                               children: [
-                                                (NEW_BUTTON_SHOW_TIME.isBefore(
-                                                          DateTime.now(),
-                                                        ) &&
-                                                        NEW_BUTTON_HIDE_TIME
-                                                            .isAfter(
-                                                              DateTime.now(),
-                                                            ))
+                                                ((_bannerMessage?.isActive ?? false) && (
+                                                  (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
+                                                  (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
+                                                 ))
                                                     ? CustomPaint(
                                                         foregroundPainter:
                                                             ProgressCirclePainter(
                                                               startTime:
-                                                                  NEW_BUTTON_SHOW_TIME,
+                                                                  _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               endTime:
-                                                                  NEW_BUTTON_HIDE_TIME,
+                                                                  _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
                                                               currentTime:
                                                                   DateTime.now(),
                                                             ),
@@ -1793,14 +1970,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                       (
                                                                         context,
                                                                       ) =>
-                                                                          NewFeaturesScreen(),
+                                                                          BannerScreen(url: _bannerMessage?.url ?? ""),
                                                                 ),
                                                               );
                                                             },
                                                             heroTag: 'new_fab',
                                                             elevation: 0,
                                                             child: Text(
-                                                              "New!",
+                                                              _bannerMessage?.shortTitle ?? "New!",
                                                               style: TextStyle(
                                                                 color: getColor(
                                                                   context,
@@ -2069,8 +2246,28 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             ),
 
                             // if showing journey, show close and reopen button
-                            (_journeyOverlayActive)
-                                ? Row(
+                            // -- swaps with the floorplan entry controls
+                            // below via a Stack so both occupy the same
+                            // screen position.
+                            Stack(
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                IgnorePointer(
+                                  ignoring: _floorplanControlsTakeOver,
+                                  child: AnimatedSlide(
+                                    duration: const Duration(
+                                      milliseconds: 300,
+                                    ),
+                                    curve: Curves.easeInOut,
+                                    // Slide the whole row out below the
+                                    // screen while the floorplan entry
+                                    // controls slide up into place at the
+                                    // same time.
+                                    offset: _floorplanControlsTakeOver
+                                        ? const Offset(0, 2)
+                                        : Offset.zero,
+                                    child: (_journeyOverlayActive)
+                                      ? Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       DecoratedBox(
@@ -2334,33 +2531,71 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         ),
                                       ),
 
-                                      FilledButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            _floorplanOverlayEnabled = true;
-                                          });
-                                        },
-                                        child: Text("Floorplan"),
-                                      ),
-                                    ],
+                                      ],
                                   ),
+                                  ),
+                                ),
+
+                                // Compact "open floorplan" entry control:
+                                // just the floor button + search bar, shown
+                                // once zoomed in near a building with
+                                // floorplan data. Tapping the floor button
+                                // opens the full floor picker.
+                                IgnorePointer(
+                                  ignoring:
+                                      !_floorplanControlsTakeOver ||
+                                      _floorplanOverlayEnabled,
+                                  child: AnimatedSlide(
+                                    duration: const Duration(
+                                      milliseconds: 300,
+                                    ),
+                                    curve: Curves.easeInOut,
+                                    offset:
+                                        (_floorplanControlsTakeOver &&
+                                            !_floorplanOverlayEnabled)
+                                        ? Offset.zero
+                                        : const Offset(0, 2),
+                                    child: FloorplanEntryBar(
+                                      onOpenFloorplan: () {
+                                        setState(() {
+                                          _floorplanOverlayEnabled = true;
+                                        });
+                                      },
+                                      onRoomSearch: _showSearchRoomsSheet,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
-                      _floorplanOverlayEnabled
-                          ? Positioned.fill(
-                              child: RepaintBoundary(
-                                child: FloorplanOverlay(
-                                  floorplansLayer: floorplansLayer,
-                                  onClosed: () {
-                                    setState(() {
-                                      _floorplanOverlayEnabled = false;
-                                    });
-                                  },
-                                ),
+                      // Kept mounted at all times (rather than toggled with
+                      // a ternary) so it can slide up into place instead of
+                      // just popping in -- see _updateFloorplanOverlayForCamera.
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          ignoring: !_floorplanOverlayEnabled,
+                          child: AnimatedSlide(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            offset: _floorplanOverlayEnabled
+                                ? Offset.zero
+                                : const Offset(0, 1),
+                            child: RepaintBoundary(
+                              child: FloorplanOverlay(
+                                floorplansLayer: floorplansLayer,
+                                onClosed: () {
+                                  setState(() {
+                                    _floorplanOverlayEnabled = false;
+                                  });
+                                },
+                                onRoomSearch: _showSearchRoomsSheet,
                               ),
-                            )
-                          : SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ),
                       _navigationOverlayEnabled
                           ? Positioned.fill(
                               child: RepaintBoundary(
@@ -2373,19 +2608,36 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     ],
                   ),
                 )
-              : Container(
-                  //for switch animation
-                  key: ValueKey(0),
+                , (snapshot.connectionState != ConnectionState.done) ? Container(
+                //for switch animation
+                key: ValueKey(0),
+                
 
-                  color: getColor(context, ColorType.background),
+                color: getColor(context, ColorType.background),
 
-                  child: ValueListenableBuilder<Loadpoint>(
-                    valueListenable: _loadingMessageNotifier,
-                    builder: (context, loadpoint, child) {
-                      return LoadingScreen(loadpoint: loadpoint);
-                    },
-                  ),
+                child: ValueListenableBuilder<Loadpoint>(
+                  valueListenable: _loadingMessageNotifier,
+                  builder: (context, loadpoint, child) {
+                    return LoadingScreen(loadpoint: loadpoint);
+                  },
                 ),
+              ) : SizedBox.shrink(),
+                
+                ],
+          )
+              // : Container(
+              //     //for switch animation
+              //     key: ValueKey(0),
+
+              //     color: getColor(context, ColorType.background),
+
+              //     child: ValueListenableBuilder<Loadpoint>(
+              //       valueListenable: _loadingMessageNotifier,
+              //       builder: (context, loadpoint, child) {
+              //         return LoadingScreen(loadpoint: loadpoint);
+              //       },
+              //     ),
+              //   ),
         );
       },
     );

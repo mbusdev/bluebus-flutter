@@ -17,6 +17,104 @@ const FLOOR_SELECTOR_WIDTH = 50.0;
 const FLOOR_SELECTOR_ITEM_HEIGHT = 60.0;
 const FLOOR_SELECTOR_BORDER_RADIUS = 25.0;
 const FLOOR_SELECTED_HIGHLIGHT_MARGIN = 5.0;
+
+/// Compact control shown once the user is zoomed in close enough to a
+/// building with floorplan data, but hasn't opened the full floor picker
+/// yet -- just a floor button and a room-search bar, sitting where the
+/// normal map's bottom controls usually are. Tapping either one opens the
+/// full [FloorplanOverlay] floor picker.
+class FloorplanEntryBar extends StatelessWidget {
+  final VoidCallback onOpenFloorplan;
+  final VoidCallback onRoomSearch;
+
+  const FloorplanEntryBar({super.key, required this.onOpenFloorplan, required this.onRoomSearch});
+
+  @override
+  Widget build(BuildContext context) {
+    // Mirrors the box model of the normal bus/favorites/search row exactly
+    // (bare Row, 45x45 circular button, 45-tall search button, no extra
+    // wrapping padding) so the two swap in at the same screen position
+    // instead of one sitting higher/lower than the other.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        SizedBox(
+          width: 45,
+          height: 45,
+          child: FittedBox(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: getColor(context, ColorType.mapButtonShadow),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: FloatingActionButton(
+                onPressed: onOpenFloorplan,
+                heroTag: 'floorplan_entry_fab',
+                backgroundColor:
+                    Colors.white, // TODO: Make dynamic for light/dark mode
+                elevation: 0, // handle shadow ourselves
+                child: Image.asset(
+                  'assets/floor-plan-symbol.png',
+                  width: 44,
+                  height: 44,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // search
+        Expanded(
+          child: SizedBox(
+            height: 45,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: getColor(context, ColorType.mapButtonShadow),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: ElevatedButton.icon(
+                onPressed: onRoomSearch,
+                style: ElevatedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  backgroundColor:
+                      Colors.white, // TODO: Make dynamic for light/dark mode
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 8,
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.search_sharp,
+                  color: Colors.black,
+                  size: 28,
+                ),
+                label: const Text(
+                  "Room #",
+                  style: TextStyle(color: Colors.black, fontSize: 18),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class FloorSelector extends StatefulWidget {
   /// Short labels for the floors, in the order they're drawn -- top to bottom.
   final List<String> floors;
@@ -81,7 +179,6 @@ class _FloorSelectorState extends State<FloorSelector> {
       ),
       child: GestureDetector(
         onVerticalDragUpdate: (details) {
-          // debugPrint("y delta: ${details.localPosition.dy}");
           setState(() {
             yDragDistance += details.delta.dy;
             double yPosition = selectedIndex * FLOOR_SELECTOR_ITEM_HEIGHT + yDragDistance;
@@ -91,7 +188,6 @@ class _FloorSelectorState extends State<FloorSelector> {
             }
 
             if (yPosition > FLOOR_SELECTOR_ITEM_HEIGHT * (floors.length - 1)) {
-              // yDragDistance = FLOOR_SELECTOR_ITEM_HEIGHT * (floors.length - 1);
               yDragDistance = (floors.length - 1 - selectedIndex) * FLOOR_SELECTOR_ITEM_HEIGHT;
               // Highest allowed value for yDragDistance
             }
@@ -109,7 +205,6 @@ class _FloorSelectorState extends State<FloorSelector> {
         },
         onVerticalDragEnd: (details) {
           double roughIndex = selectedIndex + (yDragDistance / FLOOR_SELECTOR_ITEM_HEIGHT);
-          debugPrint("Rough new index: $roughIndex");
           snapToIndex(roughIndex.round());
         },
         child: Stack(
@@ -231,7 +326,6 @@ class FloorplanPreviewPainter extends CustomPainter {
       floor.outline.map((Offset o) {
         double newX = (o.dx + offsetX) * scaleFactor;
         double newY = (o.dy + offsetY) * scaleFactor;
-        // debugPrint("New X and Y: $newX, $newY");
         return Offset(newX, newY);
       }).toList(), true);
 
@@ -266,7 +360,6 @@ class FloorplanPreviewPainter extends CustomPainter {
         room.polygon.map((Offset o) {
           double newX = (o.dx + offsetX) * scaleFactor;
           double newY = (o.dy + offsetY) * scaleFactor;
-          // debugPrint("New X and Y: $newX, $newY");
           return Offset(newX, newY);
         }).toList(), true);
 
@@ -287,7 +380,6 @@ class FloorplanPreviewPainter extends CustomPainter {
       outline.map((Offset o) {
         double newX = (o.dx + offsetX) * scaleFactor;
         double newY = (o.dy + offsetY) * scaleFactor;
-        // debugPrint("New X and Y: $newX, $newY");
         return Offset(newX, newY);
       }).toList(), true);
   }
@@ -303,13 +395,6 @@ class FloorplanPreviewPainter extends CustomPainter {
       ..color = Colors.white
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
-
-    // debugPrint("Canvas dimensions are ${size.width} x ${size.height}");
-    // debugPrint("Floor outline is ${floor.outline}");
-
-    // canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), strokePaint);
-
-    // debugPrint("Scale factor: $scaleFactor, offset X: $offsetX, Offset Y: $offsetY");
 
     Path path = floorOutlineToPath(floor.outline, scaleFactor, offsetX, offsetY);
 
@@ -354,7 +439,8 @@ class FloorOutlineClipper extends CustomClipper<Path> {
 
 class FloorplanOverlay extends StatefulWidget {
   // const FloorplanOverlauy
-  Function? onClosed;
+  final VoidCallback onClosed;
+  final VoidCallback onRoomSearch;
 
   /// The map layer this overlay drives. Picking a floor here is what swaps the
   /// geometry drawn on the map underneath.
@@ -362,7 +448,8 @@ class FloorplanOverlay extends StatefulWidget {
 
   FloorplanOverlay({
     required this.onClosed,
-    required this.floorplansLayer
+    required this.floorplansLayer,
+    required this.onRoomSearch
   });
 
   @override
@@ -413,8 +500,6 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
 
     offsetX = -1 * minX;
     offsetY = -1 * minY;
-
-    debugPrint("Context width: ${MediaQuery.sizeOf(context).width}, maxX - offsetX: ${maxX - offsetX}");
 
     return MediaQuery.sizeOf(context).width / (maxX + offsetX);
 
@@ -580,6 +665,7 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
   }
 
   String get floorName {
+    if (selectedIndex < 0 || selectedIndex >= floors.length) return "";
     return floors[selectedIndex].name;
   }
 
@@ -693,8 +779,11 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton.filled(
-                      icon: Icon(Icons.arrow_back),
-                      iconSize: 30,
+                      icon: Image.asset(
+                        'assets/back-button-symbol.png',
+                        width: 20,
+                        height: 20,
+                      ),
                       onPressed: () { 
                         widget.onClosed?.call();
                       },
@@ -746,8 +835,6 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                   // mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-
-
                     // Nothing to pick between until the floorplan has loaded.
                     if (floors.isNotEmpty)
                       FloorSelector(
@@ -768,47 +855,35 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                     // ),
                     SizedBox(width: 8,),
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white, // TODO: Make dynamic for light/dark mode
-                          borderRadius: BorderRadius.all(Radius.circular(30))
+                      child: FilledButton.icon(
+                        onPressed: widget.onRoomSearch,
+                        style: FilledButton.styleFrom(
+                          alignment: Alignment.centerLeft,
+                          backgroundColor:
+                              Colors.white, // TODO: Make dynamic for light/dark mode
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 13,
+                            vertical: 8,
+                          ),
                         ),
-                        child: Padding(
-                          padding: EdgeInsetsGeometry.only(left: 20, right: 20, top: 10, bottom: 10),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.search,
-                                color: Colors.black,
-                                size: 30,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                "Room #",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 18
-                                ),
-                                
-                              ),
-                            ],
-                          )
-                          
-                          
-                        )
-                      )
-                      
+                        icon: const Icon(
+                          Icons.search_sharp,
+                          color: Colors.black,
+                          size: 28,
+                        ),
+                        label: const Text(
+                          "Room #",
+                          style: TextStyle(color: Colors.black, fontSize: 18),
+                        ),
+                      ),
                     )
-
                   ],
                 )
               )
             ] 
           ),
         )
-        
       ],
     );
   }
-
 }

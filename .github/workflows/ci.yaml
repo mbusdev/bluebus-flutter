@@ -1,6 +1,7 @@
 name: CI
 on:
   pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
     branches: [navigation-hub, maizebus2, maizebus-2.1, maizebus3, main]
   push:
     branches: []
@@ -55,5 +56,13 @@ jobs:
         run: flutter pub get
       - name: Build app
         run: flutter build apk --debug --no-pub
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+  style_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run style checks
+        run: python3 test/debug_print_check.py
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false

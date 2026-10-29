@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 import 'dart:math';
 import 'dart:math' as math;
+import 'package:bluebus/services/map_image_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
@@ -17,6 +19,7 @@ import 'package:bluebus/widgets/route_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:bluebus/services/map_image_service.dart';
 
 enum LineType { Dotted, Dashed }
 
@@ -64,6 +67,12 @@ sealed class NavigationStage {
 
   String getSubtitle() {
     return "Swim for 200 meters"; // Subtitle displayed on the big bar at the top
+  }
+
+  // Summary text shown in the steps list. Unlike getTitle(), this describes the
+  // whole stage rather than the next thing to do, so override it if the two differ.
+  String getFixedTitle() {
+    return getTitle();
   }
 
   double length =
@@ -220,7 +229,7 @@ class NavOnBusState {
 
 class NavOnBus extends NavigationStage {
   late NavOnBusState state;
-  late BitmapDescriptor stopBitmap;
+  late BitmapDescriptor stopBitmap = BitmapDescriptor.defaultMarker;
   LatLng? lastPosition;
 
   NavOnBus();
@@ -285,7 +294,9 @@ class NavOnBus extends NavigationStage {
     // pictureInfo.
     // svg.clipBehavior
     // stopBitmap = BitmapDescriptor.bytes();
+
     stopBitmap = BitmapDescriptor.defaultMarker;
+    // stopBitmap = MapImageService.get
   }
 
   @override
@@ -301,8 +312,9 @@ class NavOnBus extends NavigationStage {
     return "(${state.rt}) Ride $stopsRemaining more stops";
   }
 
+  @override
   String getFixedTitle() {
-    return "Board ${state.rt}";
+    return "Board ${RouteColorService.getRouteName(state.rt)}";
   }
 
   @override
@@ -395,6 +407,11 @@ class NavOnBus extends NavigationStage {
   }
 
   @override
+  bool hasRoundedCorners() {
+    return true;
+  }
+
+  @override
   List<Marker> getMarkers() {
     return state.stops
         .map(
@@ -404,7 +421,14 @@ class NavOnBus extends NavigationStage {
               flat: true,
               position: stop.location,
               zIndex: 2000,
-              icon: stopBitmap,
+              icon: stop.id == state.departureStop
+                  ? MapImageService.getOnBusStop() ?? stopBitmap
+                  : stop.id == state.arrivalStop
+                      ? MapImageService.getOffBusStop() ?? stopBitmap
+                      : MapImageService.navigationIntermediateStopIcon,
+              // icon: ,
+              anchor: const Offset(0.5, 0.5)
+              // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
             ),
           },
         )
@@ -419,6 +443,8 @@ class NavOnBus extends NavigationStage {
         color: RouteColorService.getRouteColor(state.rt),
         points: state.points,
         zIndex: 1999,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
       ),
     ];
   }
@@ -626,9 +652,9 @@ class Walking extends NavigationStage {
 
   // Get summary text that shows up in steps view
   // such as "Walk 67 ft"
-  // @override
+  @override
   String getFixedTitle() {
-    return "Walk ${getDistanceLeftFeet().round()} ft";
+    return "Walk ${(length / 60).ceil()} min";
   }
 
   @override
@@ -705,6 +731,10 @@ class DemoStage extends NavigationStage {
 
   String getSubtitle() {
     return "Look, here's a subtitle too #$favoriteNumber";
+  }
+
+  String getFixedTitle() {
+    return "Demo fixed title!";
   }
 
   double length = 15.0; // In minutes
@@ -995,7 +1025,7 @@ class NavigationManager {
   void rebuildMarkersAndPolylines() {
     // Call this whenever markers or polylines change
     if (this.mapLayer == null) {
-      debugPrint(
+      stderr.writeln(
         "Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!",
       );
       return;

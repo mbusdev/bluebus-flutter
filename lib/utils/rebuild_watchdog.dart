@@ -24,7 +24,7 @@ class RebuildWatchdog {
     if (_lastBuild != null && now.difference(_lastBuild!) < threshold) {
       _rapidCount++;
       if (_rapidCount == consecutiveTrigger) {
-        debugPrint(
+        debugPrint( // LINTER_OVERRIDE
           '\x1B[33m⚠️ [$label] build() fired $consecutiveTrigger+ times <${threshold.inMilliseconds}ms apart — '
           'likely rebuilding every frame (causes low performance/stutter). Check for setState() in a high-frequency callback '
           '(onCameraMove, animation listener, build loop, etc).\x1B[0m',
