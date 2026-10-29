@@ -96,7 +96,7 @@ sealed class NavigationStage {
     return false;
   }
 
-  void receiveLocationUpdate(LatLng newLocation) {
+  void receiveLocationUpdate(Position p) {
     // Do whatever you need to with the current location.
     // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
     //    emit(StageComplete()) // If the user has reached the end!
@@ -222,7 +222,8 @@ class NavOnBus extends NavigationStage {
   }
 
   @override
-  void receiveLocationUpdate(LatLng newLocation) {
+  void receiveLocationUpdate(Position p) {
+    final newLocation = LatLng(p.latitude, p.longitude);
     _lastPosition = newLocation;
     final (i, j, dist) = _snapToPath(newLocation, _state.pathSegments);
     // TODO: exact value needs adjusting
@@ -314,6 +315,10 @@ class NavOnBus extends NavigationStage {
               sts[stepIdx].arrivalTime);
     }
     return progress / length;
+  }
+
+  String get rt {
+    return _state.rt;
   }
 
   /// the index of the last step reached/passed
@@ -584,7 +589,8 @@ class Walking extends NavigationStage {
 
   //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
   @override
-  bool receiveLocationUpdate(LatLng newLocation) {
+  bool receiveLocationUpdate(Position p) {
+    final newLocation = LatLng(p.latitude, p.longitude);
     currWalkingPos = newLocation;
 
     // check if it has not reached new waypoint
@@ -830,7 +836,7 @@ class DemoStage extends NavigationStage {
     // Do cool stuff to set up your Stage with an e.g. walking or bus leg
   }
 
-  void receiveLocationUpdate(LatLng p) {
+  void receiveLocationUpdate(Position p) {
     // Do whatever you need to with the current location.
     // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
     //    _eventController.add(StageComplete()) // If the user has reached the end!
