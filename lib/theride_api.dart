@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/backend/export.dart' as backend;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
 import 'models/bus.dart';
@@ -20,7 +22,10 @@ class RideAPI {
       BusRepository.writeToCache('theride-routes-cache-v${await AppInfo.version()}', jsonEncode(routes));
       
       return processRoutesJson(routesJson, onError);
-    } on DioException catch (_) {
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        stderr.writeln(e.message);
+      }
       onError('', 'Failed to load routes');
       throw Exception('Failed to load routes');
     }
@@ -75,6 +80,9 @@ class RideAPI {
 
       return buses;
     } catch (e){
+      if (kDebugMode) {
+        stderr.writeln(e.toString());
+      }
 
       // on error return a blank list
       return [];
