@@ -1847,188 +1847,288 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     ),
                                   )
                                 // not showing journey, show usual header
-                                : DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: isDarkMode(context)
-                                              ? Colors.black.withAlpha(50)
-                                              : Colors.white.withAlpha(100),
-                                          spreadRadius: 50,
-                                          blurRadius: 50,
+                                : Stack(
+                                  alignment: Alignment.bottomCenter,
+                                  children: [
+                                    IgnorePointer(
+                                      ignoring: _floorplanControlsTakeOver,
+                                      child: AnimatedSlide(
+                                        duration: const Duration(
+                                          milliseconds: 300,
                                         ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          // group maize and bus together on the left
+                                        curve: Curves.easeInOut,
+                                        // Slide the whole row out below the
+                                        // screen while the floorplan entry
+                                        // controls slide up into place at the
+                                        // same time.
+                                        offset: _floorplanControlsTakeOver
+                                            ? const Offset(0, -2)
+                                            : Offset.zero,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: isDarkMode(context)
+                                                    ? Colors.black.withAlpha(50)
+                                                    : Colors.white.withAlpha(100),
+                                                spreadRadius: 50,
+                                                blurRadius: 50,
+                                              ),
+                                            ],
+                                          ),
                                           child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
                                             children: [
-                                              Text(
-                                                'maize',
-                                                style: TextStyle(
-                                                  color: maizeBusYellow,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 30,
+                                              Container(
+                                                // group maize and bus together on the left
+                                                child: Row(
+                                                  children: [
+                                                    Text(
+                                                      'maize',
+                                                      style: TextStyle(
+                                                        color: maizeBusYellow,
+                                                        fontWeight: FontWeight.w800,
+                                                        fontSize: 30,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      'bus',
+                                                      style: TextStyle(
+                                                        color: isDarkMode(context)
+                                                            ? maizeBusBlueDarkMode
+                                                            : maizeBusBlue,
+                                                        fontWeight: FontWeight.w800,
+                                                        fontSize: 30,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                              Text(
-                                                'bus',
-                                                style: TextStyle(
-                                                  color: isDarkMode(context)
-                                                      ? maizeBusBlueDarkMode
-                                                      : maizeBusBlue,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 30,
+
+                                              SizedBox(
+                                                // width: 45,
+                                                width: 105,
+                                                height: 45,
+                                                child: FittedBox(
+                                                  alignment: Alignment.centerRight,
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.end,
+                                                    children: [
+                                                      (NEW_BUTTON_SHOW_TIME.isBefore(
+                                                                DateTime.now(),
+                                                              ) &&
+                                                              NEW_BUTTON_HIDE_TIME
+                                                                  .isAfter(
+                                                                    DateTime.now(),
+                                                                  ))
+                                                          ? CustomPaint(
+                                                              foregroundPainter:
+                                                                  ProgressCirclePainter(
+                                                                    startTime:
+                                                                        NEW_BUTTON_SHOW_TIME,
+                                                                    endTime:
+                                                                        NEW_BUTTON_HIDE_TIME,
+                                                                    currentTime:
+                                                                        DateTime.now(),
+                                                                  ),
+                                                              child: DecoratedBox(
+                                                                decoration: BoxDecoration(
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: getColor(
+                                                                        context,
+                                                                        ColorType
+                                                                            .mapButtonShadow,
+                                                                      ),
+                                                                      blurRadius: 10,
+                                                                      offset: Offset(
+                                                                        0,
+                                                                        6,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        25,
+                                                                      ),
+                                                                ),
+                                                                child: FloatingActionButton(
+                                                                  onPressed: () async {
+                                                                    // switch to settings menu
+                                                                    // with the MaterialPagesRoute animation
+                                                                    Navigator.push(
+                                                                      context,
+                                                                      MaterialPageRoute<
+                                                                        void
+                                                                      >(
+                                                                        builder:
+                                                                            (
+                                                                              context,
+                                                                            ) =>
+                                                                                NewFeaturesScreen(),
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                  heroTag: 'new_fab',
+                                                                  elevation: 0,
+                                                                  child: Text(
+                                                                    "New!",
+                                                                    style: TextStyle(
+                                                                      color: getColor(
+                                                                        context,
+                                                                        ColorType
+                                                                            .mapButtonIcon,
+                                                                      ),
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      fontSize: 18.0,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            )
+                                                          : SizedBox.shrink(),
+
+                                                      SizedBox(width: 15),
+
+                                                      DecoratedBox(
+                                                        decoration: BoxDecoration(
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: getColor(
+                                                                context,
+                                                                ColorType
+                                                                    .mapButtonShadow,
+                                                              ),
+                                                              blurRadius: 10,
+                                                              offset: Offset(0, 6),
+                                                            ),
+                                                          ],
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                25,
+                                                              ),
+                                                        ),
+                                                        child: FloatingActionButton(
+                                                          onPressed: () async {
+                                                            // switch to settings menu
+                                                            // with the MaterialPagesRoute animation
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute<void>(
+                                                                builder: (context) =>
+                                                                    Settings(),
+                                                              ),
+                                                            );
+                                                          },
+                                                          heroTag: 'settings_fab',
+                                                          elevation: 0,
+                                                          child: Icon(
+                                                            Icons.menu,
+                                                            color: getColor(
+                                                              context,
+                                                              ColorType.mapButtonIcon,
+                                                            ),
+                                                            size: 28,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
+                                      ),
+                                    ),
 
-                                        SizedBox(
-                                          // width: 45,
-                                          width: 105,
-                                          height: 45,
-                                          child: FittedBox(
-                                            alignment: Alignment.centerRight,
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.end,
-                                              children: [
-                                                (NEW_BUTTON_SHOW_TIME.isBefore(
-                                                          DateTime.now(),
-                                                        ) &&
-                                                        NEW_BUTTON_HIDE_TIME
-                                                            .isAfter(
-                                                              DateTime.now(),
-                                                            ))
-                                                    ? CustomPaint(
-                                                        foregroundPainter:
-                                                            ProgressCirclePainter(
-                                                              startTime:
-                                                                  NEW_BUTTON_SHOW_TIME,
-                                                              endTime:
-                                                                  NEW_BUTTON_HIDE_TIME,
-                                                              currentTime:
-                                                                  DateTime.now(),
-                                                            ),
-                                                        child: DecoratedBox(
-                                                          decoration: BoxDecoration(
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonShadow,
-                                                                ),
-                                                                blurRadius: 10,
-                                                                offset: Offset(
-                                                                  0,
-                                                                  6,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  25,
-                                                                ),
-                                                          ),
-                                                          child: FloatingActionButton(
-                                                            onPressed: () async {
-                                                              // switch to settings menu
-                                                              // with the MaterialPagesRoute animation
-                                                              Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute<
-                                                                  void
-                                                                >(
-                                                                  builder:
-                                                                      (
-                                                                        context,
-                                                                      ) =>
-                                                                          NewFeaturesScreen(),
-                                                                ),
-                                                              );
-                                                            },
-                                                            heroTag: 'new_fab',
-                                                            elevation: 0,
-                                                            child: Text(
-                                                              "New!",
-                                                              style: TextStyle(
-                                                                color: getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonIcon,
-                                                                ),
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize: 18.0,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      )
-                                                    : SizedBox.shrink(),
-
-                                                SizedBox(width: 15),
-
-                                                DecoratedBox(
+                                    // upper floorplan overlay UI
+                                    IgnorePointer(
+                                      ignoring:
+                                          !_floorplanControlsTakeOver ||
+                                          _floorplanOverlayEnabled,
+                                      child: AnimatedSlide(
+                                        duration: const Duration(
+                                          milliseconds: 300,
+                                        ),
+                                        curve: Curves.easeInOut,
+                                        offset:
+                                            (_floorplanControlsTakeOver &&
+                                                !_floorplanOverlayEnabled)
+                                            ? Offset.zero
+                                            : const Offset(0, -2),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          spacing: 14,
+                                          children: [
+                                            // arrow back button at top of floorplan overlay
+                                            SizedBox(
+                                              width: 45,
+                                              height: 45,
+                                              child: FittedBox(
+                                                child: DecoratedBox(
                                                   decoration: BoxDecoration(
                                                     boxShadow: [
                                                       BoxShadow(
-                                                        color: getColor(
-                                                          context,
-                                                          ColorType
-                                                              .mapButtonShadow,
-                                                        ),
+                                                        color: getColor(context, ColorType.mapButtonShadow),
                                                         blurRadius: 10,
-                                                        offset: Offset(0, 6),
+                                                        offset: const Offset(0, 6),
                                                       ),
                                                     ],
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          25,
-                                                        ),
+                                                    borderRadius: BorderRadius.circular(25),
                                                   ),
                                                   child: FloatingActionButton(
-                                                    onPressed: () async {
-                                                      // switch to settings menu
-                                                      // with the MaterialPagesRoute animation
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute<void>(
-                                                          builder: (context) =>
-                                                              Settings(),
-                                                        ),
-                                                      );
-                                                    },
-                                                    heroTag: 'settings_fab',
-                                                    elevation: 0,
-                                                    child: Icon(
-                                                      Icons.menu,
-                                                      color: getColor(
-                                                        context,
-                                                        ColorType.mapButtonIcon,
+                                                    onPressed: () =>
+                                                      _mapController?.animateCamera(
+                                                        CameraUpdate.zoomTo(16),
                                                       ),
-                                                      size: 28,
+                                                    heroTag: 'floorplan_exit_fab',
+                                                    backgroundColor: Colors.white, // TODO: Make dynamic for light/dark mode
+                                                    elevation: 0, // handle shadow ourselves
+                                                    child: Icon(
+                                                      Icons.arrow_back_ios_new,
+                                                    )
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            Expanded(
+                                              child: SizedBox(
+                                                height: 31,
+                                                // width: double.infinity,
+                                                child: DecoratedBox(
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(56),
+                                                    color: getColor(context, ColorType.mapButtonSecondary)
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      "${floorplansLayer.floorplan?.building} - ${floorplansLayer.activeFloor?.name}",
+                                                      style: TextStyle(
+                                                        color: getColor(context, ColorType.mapButtonPrimary),
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 15,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
-
+                                  ],
+                                ),
+                            
+                            
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 250),
                               switchInCurve: Curves.easeOut,

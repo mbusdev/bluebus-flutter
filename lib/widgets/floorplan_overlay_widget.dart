@@ -833,13 +833,15 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                 style: TextStyle(
                   fontFamily: "Urbanist",
                   fontSize: 40,
-                  height: 1
+                  height: 1,
+                  color: Colors.white
                 )
               ),
               Text(
                 floorName,
                 style: TextStyle(
-                  fontSize: 20
+                  fontSize: 20,
+                  color: Colors.white
                 ),
               ),
               
