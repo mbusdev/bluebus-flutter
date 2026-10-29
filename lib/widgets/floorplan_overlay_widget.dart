@@ -179,7 +179,6 @@ class _FloorSelectorState extends State<FloorSelector> {
       ),
       child: GestureDetector(
         onVerticalDragUpdate: (details) {
-          // debugPrint("y delta: ${details.localPosition.dy}");
           setState(() {
             yDragDistance += details.delta.dy;
             double yPosition = selectedIndex * FLOOR_SELECTOR_ITEM_HEIGHT + yDragDistance;
@@ -189,7 +188,6 @@ class _FloorSelectorState extends State<FloorSelector> {
             }
 
             if (yPosition > FLOOR_SELECTOR_ITEM_HEIGHT * (floors.length - 1)) {
-              // yDragDistance = FLOOR_SELECTOR_ITEM_HEIGHT * (floors.length - 1);
               yDragDistance = (floors.length - 1 - selectedIndex) * FLOOR_SELECTOR_ITEM_HEIGHT;
               // Highest allowed value for yDragDistance
             }
@@ -207,7 +205,6 @@ class _FloorSelectorState extends State<FloorSelector> {
         },
         onVerticalDragEnd: (details) {
           double roughIndex = selectedIndex + (yDragDistance / FLOOR_SELECTOR_ITEM_HEIGHT);
-          debugPrint("Rough new index: $roughIndex");
           snapToIndex(roughIndex.round());
         },
         child: Stack(
@@ -329,7 +326,6 @@ class FloorplanPreviewPainter extends CustomPainter {
       floor.outline.map((Offset o) {
         double newX = (o.dx + offsetX) * scaleFactor;
         double newY = (o.dy + offsetY) * scaleFactor;
-        // debugPrint("New X and Y: $newX, $newY");
         return Offset(newX, newY);
       }).toList(), true);
 
@@ -364,7 +360,6 @@ class FloorplanPreviewPainter extends CustomPainter {
         room.polygon.map((Offset o) {
           double newX = (o.dx + offsetX) * scaleFactor;
           double newY = (o.dy + offsetY) * scaleFactor;
-          // debugPrint("New X and Y: $newX, $newY");
           return Offset(newX, newY);
         }).toList(), true);
 
@@ -385,7 +380,6 @@ class FloorplanPreviewPainter extends CustomPainter {
       outline.map((Offset o) {
         double newX = (o.dx + offsetX) * scaleFactor;
         double newY = (o.dy + offsetY) * scaleFactor;
-        // debugPrint("New X and Y: $newX, $newY");
         return Offset(newX, newY);
       }).toList(), true);
   }
@@ -401,13 +395,6 @@ class FloorplanPreviewPainter extends CustomPainter {
       ..color = Colors.white
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
-
-    // debugPrint("Canvas dimensions are ${size.width} x ${size.height}");
-    // debugPrint("Floor outline is ${floor.outline}");
-
-    // canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), strokePaint);
-
-    // debugPrint("Scale factor: $scaleFactor, offset X: $offsetX, Offset Y: $offsetY");
 
     Path path = floorOutlineToPath(floor.outline, scaleFactor, offsetX, offsetY);
 
@@ -513,8 +500,6 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
 
     offsetX = -1 * minX;
     offsetY = -1 * minY;
-
-    debugPrint("Context width: ${MediaQuery.sizeOf(context).width}, maxX - offsetX: ${maxX - offsetX}");
 
     return MediaQuery.sizeOf(context).width / (maxX + offsetX);
 

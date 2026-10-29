@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 
@@ -436,11 +437,9 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
     var result;
 
     try {
-      debugPrint("Loading data......");
       result = await fetchNextBusStops(widget.vehicleId!);
-      debugPrint("    Got result! $result");
     } catch (e) {
-      debugPrint("Error getting stops: $e");
+      stderr.writeln("Error getting stops: $e");
       return;
     }
 
@@ -487,9 +486,6 @@ class _UpcomingStopsWidgetState extends State<UpcomingStopsWidget> {
         }
 
         if (filter_check_passed) {
-          debugPrint(
-            "    ${result[i].name} found after both conditions met, adding...",
-          );
           results_filtered.add(result[i]);
         }
       }

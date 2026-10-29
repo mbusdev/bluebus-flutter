@@ -1,4 +1,4 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, SocketException, stderr;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
@@ -8,11 +8,13 @@ import 'package:bluebus/models/floorplan.dart';
 import 'package:bluebus/providers/bathroom_provider.dart';
 import 'package:bluebus/services/floorplan_service.dart';
 import 'package:bluebus/services/location_search.dart';
+import 'package:bluebus/services/map_layers/search_result_layer.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
-import 'package:bluebus/screens/new_features_screen.dart';
+import 'package:bluebus/screens/banner_screen.dart';
 import 'package:bluebus/services/map_image_service.dart';
+import 'package:bluebus/services/map_layers/banner_layer.dart';
 import 'package:bluebus/services/map_layers/base_routes_layer.dart';
 import 'package:bluebus/services/map_layers/demo_buildings_layer.dart'; // DEMO BUILDINGS
 import 'package:bluebus/services/floorplan_style.dart';
@@ -32,6 +34,7 @@ import 'package:bluebus/widgets/loading_screen.dart';
 import 'package:bluebus/widgets/navigation_overlay_widget.dart';
 import 'package:bluebus/widgets/poi_sheet.dart';
 import 'package:bluebus/widgets/reminder_widgets.dart';
+import 'package:bluebus/widgets/search_rooms.dart';
 import 'package:bluebus/widgets/search_sheet_main.dart';
 import 'package:bluebus/widgets/stop_sheet.dart';
 import 'package:flutter/foundation.dart';
@@ -48,6 +51,7 @@ import 'package:vector_math/vector_math_64.dart' as vec_math;
 import '../widgets/map_widget.dart';
 import '../widgets/route_selector_modal.dart';
 import '../widgets/favorites_sheet.dart';
+import '../models/banner_message.dart';
 import '../models/bus.dart';
 import '../models/bus_route_line.dart';
 //import '../models/bus_stop.dart';
@@ -59,8 +63,8 @@ import '../constants.dart';
 import './settings.dart';
 import 'package:screen_corner_radius/screen_corner_radius.dart';
 
-final NEW_BUTTON_SHOW_TIME = DateTime.parse("2026-03-16 00:00:00Z");
-final NEW_BUTTON_HIDE_TIME = DateTime.parse("2026-03-24 00:00:00Z");
+// DateTime bannerShowTime = DateTime.parse("2026-03-16 00:00:00Z");
+// DateTime bannerHideTime = DateTime.parse("2026-03-24 00:00:00Z");
 
 class MaizeBusCore extends StatefulWidget {
   const MaizeBusCore({super.key});
@@ -84,6 +88,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
+
+  // Set once startup data comes back. Null until then (and if the
+  // backend sends no banner), so always null-check before using in build().
+  BannerMessage? _bannerMessage;
 
   Future<void>? _dataLoadingFuture;
   final _loadingMessageNotifier = ValueNotifier<Loadpoint>(
@@ -180,6 +188,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final NavigationLayer navigationLayer = NavigationLayer();
   final FloorplansLayer floorplansLayer = FloorplansLayer();
   final DemoBuildingsLayer demoBuildingsLayer = DemoBuildingsLayer(); // DEMO BUILDINGS
+  final SearchResultLayer searchResultLayer = SearchResultLayer();
+  final BannerLayer bannerLayer = BannerLayer();
 
   // GoogleMaps styles
   String _darkMapStyle = "{}";
@@ -199,10 +209,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     super.initState();
     _setupConnectivityMonitoring();
 
-    // debugPrint("MAP SCREEN INITSTATE===================");
     navigationManager.init();
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
+    bannerLayer.init((banner) {
+      try {
+        Haptics.vibrate(HapticsType.light);
+      } catch (e) {}
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => BannerScreen(url: banner.url)),
+      );
+    });
     floorplansLayer.load();
     journeyLayer.init(
       _showBusSheet,
@@ -241,10 +258,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         };
         _busProviderRef?.addListener(_busProviderListener!);
       } catch (e, stackTrace) {
-        debugPrint(
+        stderr.writeln(
           'Error obtaining BusProvider or registering route listener in MapScreen.initState: $e',
         );
-        debugPrint(stackTrace.toString());
+        stderr.writeln(stackTrace.toString());
       }
     });
   }
@@ -253,7 +270,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     try {
       Haptics.vibrate(HapticsType.light);
     } catch (e) {
-      debugPrint("Haptics error: $e");
+      stderr.writeln("Haptics error: $e");
     }
 
     _showStopSheet(
@@ -265,6 +282,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void onBusClicked(Bus b) {
+    centerOnBus(b);
     _showBusSheet(b.id);
   }
 
@@ -311,6 +329,47 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
+  void downloadStartupData() async { // TODO: Test to make sure this works with startup data
+    StartupDataHolder? startupData = await _getStartupData();
+    // keep trying to reach server.
+    while (startupData == null) {
+      if (kDebugMode) {
+        debugPrint("retrying _getStartupData"); // LINTER_OVERRIDE
+      }
+      await Future.delayed(Duration(seconds: 2));
+      startupData = await _getStartupData();
+    }
+
+    final banner = startupData.bannerMessage;
+    // a banner with no title has nothing to say, whatever its source claimed
+    if (banner != null && banner.shortTitle == '') {
+      banner.isActive = false;
+    }
+    // startup data arrives after the first build, so setState to show the banner
+    if (mounted) {
+      setState(() {
+        _bannerMessage = banner;
+      });
+    }
+    bannerLayer.setBanner(banner);
+
+    if (!isCurrentVersionEqualOrHigher(startupData!.version)) {
+      showUndismissableMaizebusDialog(
+        contextIn: context,
+        title: Text(startupData!.updateTitle),
+        content: Text(startupData!.updateMessage),
+      );
+    }
+
+    if (startupData!.persistantMessageTitle != '') {
+      showMaizebusOKDialog(
+        contextIn: context,
+        title: startupData!.persistantMessageTitle,
+        content: startupData!.persistantMessage,
+      );
+    }
+  }
+
   Future<void> _loadAllData() async {
     // load user settings into providers
     ThemeProvider theme = Provider.of<ThemeProvider>(context, listen: false);
@@ -319,67 +378,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     await theme.loadTheme();
     await bathroomProvider.load();
 
-    final prefs = await SharedPreferences.getInstance();
-    globalFollowDistanceThresholdMeters =
-        prefs.getDouble('follow_distance_threshold_meters') ??
-        globalFollowDistanceThresholdMeters;
-    globalGpsUpdateDistanceFilterMeters =
-        prefs.getInt('gps_update_distance_filter_meters') ??
-        globalGpsUpdateDistanceFilterMeters;
+    
 
-    screenRadius = await ScreenCornerRadius.get(); // load screen radius
-    screenRadiusLoaded = true;
-    globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
-
-    //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always) {
-      // permission = await Geolocator.requestPermission();
-      Position? pos = await Geolocator.getLastKnownPosition();
-      if (pos != null) {
-        startLatLng = LatLng(pos.latitude, pos.longitude);
-        _currentCameraPos.value = CameraPosition(
-          target: startLatLng,
-          zoom: 15.0,
-          bearing: 0.0,
-        );
-      }
-    }
-
-    canVibrate = await Haptics.canVibrate();
+    // canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
-
-    _loadingMessageNotifier.value = Loadpoint('Contacting server...', 1);
-    StartupDataHolder? startupData = await _getStartupData();
-
-    // keep trying to reach server. Can't start without this
-    while (startupData == null) {
-      if (kDebugMode) {
-        debugPrint("retrying _getStartupData");
-      }
-      await Future.delayed(Duration(seconds: 2));
-      startupData = await _getStartupData();
-    }
-
-    // moving this here fixes loading bug
-    await RouteColorService.initialize();
-
-    if (!isCurrentVersionEqualOrHigher(startupData.version)) {
-      showUndismissableMaizebusDialog(
-        contextIn: context,
-        title: Text(startupData.updateTitle),
-        content: Text(startupData.updateMessage),
-      );
-    }
-
-    if (startupData.persistantMessageTitle != '') {
-      showMaizebusOKDialog(
-        contextIn: context,
-        title: startupData.persistantMessageTitle,
-        content: startupData.persistantMessage,
-      );
-    }
 
     void onBusError(String route, String error) => showMaizebusOKDialog(
       contextIn: context,
@@ -388,13 +390,90 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       content: error,
     );
 
+
+    int startTime = DateTime.now().millisecondsSinceEpoch;
+
+    downloadStartupData(); // Download it but don't wait around for it to finish
+
+    _loadingMessageNotifier.value = Loadpoint('Loading data...', 1);
     // loading all this data in parallel
-    await Future.wait([
-      // _loadCustomMarkers(),
-      busProvider.loadRoutes(onBusError),
-      _loadSelectedRoutes(),
-      _loadFavoriteStops(),
-    ]);
+    
+    bool shouldRetryInit = true;
+
+    while (shouldRetryInit) {
+      try {
+        await Future.wait([
+          // (() async {
+          //    // Load startup data asynchronously with the routes
+          // })(),
+          (() async {
+            //Trying to find the location of the user to set initial position. If not found, defaults to _defaultCenter
+            LocationPermission permission = await Geolocator.checkPermission();
+            if (permission == LocationPermission.whileInUse ||
+                permission == LocationPermission.always) {
+              // permission = await Geolocator.requestPermission();
+              Position? pos = await Geolocator.getLastKnownPosition();
+              if (pos != null) {
+                startLatLng = LatLng(pos.latitude, pos.longitude);
+                _currentCameraPos.value = CameraPosition(
+                  target: startLatLng,
+                  zoom: 15.0,
+                  bearing: 0.0,
+                );
+              }
+            }
+          })(),
+          (() async {
+            canVibrate = await Haptics.canVibrate();
+          })(),
+          (() async {
+            final prefs = await SharedPreferences.getInstance();
+            globalFollowDistanceThresholdMeters =
+                prefs.getDouble('follow_distance_threshold_meters') ??
+                globalFollowDistanceThresholdMeters;
+            globalGpsUpdateDistanceFilterMeters =
+                prefs.getInt('gps_update_distance_filter_meters') ??
+                globalGpsUpdateDistanceFilterMeters;
+          })(),
+          (() async {
+            screenRadius = await ScreenCornerRadius.get(); // load screen radius
+            screenRadiusLoaded = true;
+            globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
+          })(),
+          
+          busProvider.loadRoutesWithCache(onBusError),
+          _loadSelectedRoutes(),
+          _loadFavoriteStops(),
+        ]);
+        shouldRetryInit = false;
+      } catch (err) {
+        stderr.writeln("$err");
+        if (err is SocketException) {
+          // We'll get a SocketException if the app can't download data from the network and there's no cache available
+          _loadingMessageNotifier.value = Loadpoint('Waiting for network...', 1);
+        } else {
+          _loadingMessageNotifier.value = Loadpoint('An error occured, retrying...', 1);
+        }
+        await Future.delayed(const Duration(seconds: 2));
+      }
+      
+    }
+
+    // moving this here fixes loading bug
+    await RouteColorService.initialize();
+
+    
+
+    _loadingMessageNotifier.value = Loadpoint('Loading routes and stops...', 1);
+
+    // loading all this data in parallel
+    // (this was moved north)
+    // await Future.wait([
+    //   // _loadCustomMarkers(),
+    //   busProvider.loadRoutes(onBusError),
+    //   _loadSelectedRoutes(),
+    //   _loadFavoriteStops(),
+    // ]);
 
     // actions that depend on the data loaded earlier
     _loadingMessageNotifier.value = Loadpoint('Loading bus images...', 2);
@@ -403,7 +482,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _updateAvailableRoutes(busProvider.routes);
     _cacheRouteOverlays(busProvider.routes);
 
-    debugPrint("******* Caching routes");
     baseRoutesLayer.cacheRoutes(busProvider.routes);
 
     // update the map with previously selected routes.
@@ -634,22 +712,30 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final data = json.decode(response.body);
         final message = data['why_update_message'];
         final p_message = data['persistant_message'];
+
+        BannerMessage banner_message = (data['banner_message'] != null)
+          ? BannerMessage.fromJson(data['banner_message'])
+          : BannerMessage.none;
+
+        // banner_message = BannerMessage.hardcoded;
+
         return StartupDataHolder(
           data['min_supported_version'],
           message['title'],
           message['subtitle'],
           p_message['title'],
           p_message['subtitle'],
+          banner_message,
         );
       } else if (kDebugMode) {
-        debugPrint(
+        stderr.writeln(
           "Got non-OK response for startup data: ${response.statusCode}",
         );
-        debugPrint(response.body);
+        stderr.writeln(response.body);
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint("Couldn't load startup data: ${e.toString()}");
+        stderr.writeln("Couldn't load startup data: ${e.toString()}");
       }
       return null;
     }
@@ -679,7 +765,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       try {
         _busProviderRef!.removeListener(_busProviderListener!);
       } catch (e, stackTrace) {
-        debugPrint(
+        stderr.writeln(
           'Error removing _busProviderListener in MapScreen.dispose: $e',
         );
         debugPrintStack(stackTrace: stackTrace);
@@ -723,6 +809,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final newRouteIds = routes.map((r) => r.routeId).toSet();
 
     journeyLayer.setRoutesCache(routes);
+    liveBusesLayer.setRoutesCache(routes);
 
     _routePolylines.removeWhere((key, _) {
       for (final id in newRouteIds) {
@@ -989,22 +1076,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Show a red pin marker at search location
-  void _showSearchLocationMarker(double lat, double lon, bool showGetOnIcon) {
-    final icon = (showGetOnIcon ? MapImageService.getOnBusStop() : null) ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure,);
-
-    _searchLocationMarker = Marker(
-      markerId: const MarkerId('search_location'),
-      position: LatLng(lat, lon),
-      icon: icon,
-      consumeTapEvents: false,
-    );
-    setState(() {});
+  void _showSearchLocationMarker(double lat, double lon) {
+    searchResultLayer.isVisible = true;
+    searchResultLayer.setPosition(LatLng(lat, lon));
   }
 
   // Remove the search location marker
   void _removeSearchLocationMarker() {
-    _searchLocationMarker = null;
-    setState(() {});
+    searchResultLayer.isVisible = false;
+    searchResultLayer.reload();
   }
 
   // Save selected routes to persistent storage
@@ -1183,6 +1263,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       },
     );
     _bottomSheetController?.closed.then((_) {
+      _removeSearchLocationMarker();
       hideJourney();
     });
   }
@@ -1465,16 +1546,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   void _showBusSheet(String busID) {
-    showModalBottomSheet(
+    // TODO: Allow the user to drag the top half of the map
+    // TODO: Fix the back button (maybe bring back the sheet stack? That might be messy now that our bus sheet is different)--it should take the user back to the previous camera position/zoom on the map
+    // 
+
+    // showModalBottomSheet(
+    _bottomSheetController = showBottomSheet(
       context: context,
-      isScrollControlled: true,
-      isDismissible: true,
+      // isScrollControlled: true,
+      // isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         child: DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          maxChildSize: 0.85,
           snap: true,
+          snapSizes: [0.5, 0.9],
+          initialChildSize: 0.5,
+          // initialChildSize: 0.85,
+          // maxChildSize: 0.85,
+          // snap: true,
 
           builder: (BuildContext context, ScrollController scrollController) {
             return BusSheet(
@@ -1549,6 +1638,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           showBusSheet: (busId) {
             // When someone clicks "See all stops for this bus" this callback runs
             Navigator.pop(context); // Close the current modal
+            centerOnBusID(busProvider, busId);
+
             _showBusSheet(busId);
           },
           busProvider: busProvider,
@@ -1630,6 +1721,24 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
 
     return null;
+  }
+
+  Future<void> centerOnBusID(BusProvider busProvider, String busId) async {
+    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    final state = liveBusesLayer.busAnimationCache[busId];
+    LatLng? pos = state?.lastInterpolatedPosition ??
+        state?.bus.position ??
+        busProvider.buses.where((b) => b.id == busId).firstOrNull?.position;
+
+    if (pos != null) {
+      pos = LatLng(pos.latitude + latitude_adjust, pos.longitude);
+      await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
+    }
+  }
+  Future<void> centerOnBus(Bus b) async {
+    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    LatLng pos = LatLng(b.position.latitude + latitude_adjust, b.position.longitude);
+    await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
   }
 
   Future<void> _centerOnLocation(
@@ -1743,8 +1852,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return AnimatedSwitcher(
           duration: Duration(milliseconds: 200),
 
-          child: (snapshot.connectionState == ConnectionState.done)
-              ? PopScope(
+          // child: (snapshot.connectionState == ConnectionState.done)
+              // ? 
+          child: Stack(
+            children: [
+              
+
+
+            
+              PopScope(
                   //for switch animation
                   key: ValueKey(1),
 
@@ -1789,6 +1905,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             liveBusesLayer,
                             journeyLayer,
                             navigationLayer,
+                            searchResultLayer,
+                            bannerLayer,
                           ],
                           searchResultsMarker: _searchLocationMarker,
                           onMapCreated: _onMapCreated,
@@ -1916,53 +2034,38 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                 ),
                                               ),
 
-                                              SizedBox(
-                                                // width: 45,
-                                                width: 105,
-                                                height: 45,
-                                                child: FittedBox(
-                                                  alignment: Alignment.centerRight,
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment.end,
-                                                    children: [
-                                                      (NEW_BUTTON_SHOW_TIME.isBefore(
-                                                                DateTime.now(),
-                                                              ) &&
-                                                              NEW_BUTTON_HIDE_TIME
-                                                                  .isAfter(
-                                                                    DateTime.now(),
-                                                                  ))
-                                                          ? CustomPaint(
-                                                              foregroundPainter:
-                                                                  ProgressCirclePainter(
-                                                                    startTime:
-                                                                        NEW_BUTTON_SHOW_TIME,
-                                                                    endTime:
-                                                                        NEW_BUTTON_HIDE_TIME,
-                                                                    currentTime:
-                                                                        DateTime.now(),
-                                                                  ),
-                                                              child: DecoratedBox(
-                                                                decoration: BoxDecoration(
-                                                                  boxShadow: [
-                                                                    BoxShadow(
-                                                                      color: getColor(
-                                                                        context,
-                                                                        ColorType
-                                                                            .mapButtonShadow,
-                                                                      ),
-                                                                      blurRadius: 10,
-                                                                      offset: Offset(
-                                                                        0,
-                                                                        6,
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
-                                                                        25,
-                                                                      ),
+                                        SizedBox(
+                                          // width: 45,
+                                          width: 105,
+                                          height: 45,
+                                          child: FittedBox(
+                                            alignment: Alignment.centerRight,
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.end,
+                                              children: [
+                                                ((_bannerMessage?.isActive ?? false) && (
+                                                  (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
+                                                  (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
+                                                 ))
+                                                    ? CustomPaint(
+                                                        foregroundPainter:
+                                                            ProgressCirclePainter(
+                                                              startTime:
+                                                                  _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
+                                                              endTime:
+                                                                  _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
+                                                              currentTime:
+                                                                  DateTime.now(),
+                                                            ),
+                                                        child: DecoratedBox(
+                                                          decoration: BoxDecoration(
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: getColor(
+                                                                  context,
+                                                                  ColorType
+                                                                      .mapButtonShadow,
                                                                 ),
                                                                 child: FloatingActionButton(
                                                                   onPressed: () async {
@@ -2010,27 +2113,31 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                             BoxShadow(
                                                               color: getColor(
                                                                 context,
-                                                                ColorType
-                                                                    .mapButtonShadow,
-                                                              ),
-                                                              blurRadius: 10,
-                                                              offset: Offset(0, 6),
-                                                            ),
-                                                          ],
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                25,
-                                                              ),
-                                                        ),
-                                                        child: FloatingActionButton(
-                                                          onPressed: () async {
-                                                            // switch to settings menu
-                                                            // with the MaterialPagesRoute animation
-                                                            Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute<void>(
-                                                                builder: (context) =>
-                                                                    Settings(),
+                                                                MaterialPageRoute<
+                                                                  void
+                                                                >(
+                                                                  builder:
+                                                                      (
+                                                                        context,
+                                                                      ) =>
+                                                                          BannerScreen(url: _bannerMessage?.url ?? ""),
+                                                                ),
+                                                              );
+                                                            },
+                                                            heroTag: 'new_fab',
+                                                            elevation: 0,
+                                                            child: Text(
+                                                              _bannerMessage?.shortTitle ?? "New!",
+                                                              style: TextStyle(
+                                                                color: getColor(
+                                                                  context,
+                                                                  ColorType
+                                                                      .mapButtonIcon,
+                                                                ),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 18.0,
                                                               ),
                                                             );
                                                           },
@@ -2698,19 +2805,36 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     ],
                   ),
                 )
-              : Container(
-                  //for switch animation
-                  key: ValueKey(0),
+                , (snapshot.connectionState != ConnectionState.done) ? Container(
+                //for switch animation
+                key: ValueKey(0),
+                
 
-                  color: getColor(context, ColorType.background),
+                color: getColor(context, ColorType.background),
 
-                  child: ValueListenableBuilder<Loadpoint>(
-                    valueListenable: _loadingMessageNotifier,
-                    builder: (context, loadpoint, child) {
-                      return LoadingScreen(loadpoint: loadpoint);
-                    },
-                  ),
+                child: ValueListenableBuilder<Loadpoint>(
+                  valueListenable: _loadingMessageNotifier,
+                  builder: (context, loadpoint, child) {
+                    return LoadingScreen(loadpoint: loadpoint);
+                  },
                 ),
+              ) : SizedBox.shrink(),
+                
+                ],
+          )
+              // : Container(
+              //     //for switch animation
+              //     key: ValueKey(0),
+
+              //     color: getColor(context, ColorType.background),
+
+              //     child: ValueListenableBuilder<Loadpoint>(
+              //       valueListenable: _loadingMessageNotifier,
+              //       builder: (context, loadpoint, child) {
+              //         return LoadingScreen(loadpoint: loadpoint);
+              //       },
+              //     ),
+              //   ),
         );
       },
     );

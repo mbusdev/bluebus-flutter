@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'models/banner_message.dart';
 
 // UPDATE WHEN RELAUNCH
 final String currentVersion = '2.0.2';
@@ -176,6 +177,15 @@ const Map<ColorType, Color> lightColors = {
   ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
   ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
 
+  ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
+  ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
+
+  ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
+  ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
+  ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
+  ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
+  ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
+
   ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),
 
@@ -228,7 +238,6 @@ const Map<ColorType, Color> darkColors = {
   ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
   ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
   ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
-  ColorType.roomSearchVending: Color.fromARGB(255, 235, 121, 121),
   ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
   ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
 
@@ -530,12 +539,14 @@ class StartupDataHolder {
   String updateMessage;
   String persistantMessageTitle;
   String persistantMessage;
+  BannerMessage? bannerMessage;
   StartupDataHolder(
     this.version,
     this.updateTitle,
     this.updateMessage,
     this.persistantMessageTitle,
     this.persistantMessage,
+    this.bannerMessage,
   );
 }
 

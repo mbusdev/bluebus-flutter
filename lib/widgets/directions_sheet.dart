@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -164,7 +166,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                               Navigator.pop(context);
                                               widget.onChangeSelection(location, true);
                                             } else {
-                                              print("Error: The selected location '${location.name}' has no coordinates.");
+                                              stderr.writeln("Error: The selected location '${location.name}' has no coordinates.");
                                             }
                                           },
                                         );
@@ -225,7 +227,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                               Navigator.pop(context);
                                               widget.onChangeSelection(location, false);
                                             } else {
-                                              print("Error: The selected location '${location.name}' has no coordinates.");
+                                              stderr.writeln("Error: The selected location '${location.name}' has no coordinates.");
                                             }
                                           },
                                         );

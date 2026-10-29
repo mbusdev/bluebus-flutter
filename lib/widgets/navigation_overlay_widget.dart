@@ -159,7 +159,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 routeColor: Color.fromARGB(255, 9, 9, 239),
               ),
               () {
-                debugPrint("Oops dialog: picked bus 1234 (NES)");
+                // debugPrint("Oops dialog: picked bus 1234 (NES)");
                 Navigator.pop(dialogContext);
               },
             ),
@@ -173,12 +173,12 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 routeColor: Color.fromARGB(255, 9, 9, 239),
               ),
               () {
-                debugPrint("Oops dialog: picked bus 5678 (BB)");
+                // debugPrint("Oops dialog: picked bus 5678 (BB)");
                 Navigator.pop(dialogContext);
               },
             ),
             missedBusButton(() {
-              debugPrint("Oops dialog: user missed the bus");
+              // debugPrint("Oops dialog: user missed the bus");
               Navigator.pop(dialogContext);
             }, Text("I missed the bus")),
           ],

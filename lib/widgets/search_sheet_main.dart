@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/providers/bathroom_provider.dart';
 import 'package:flutter/material.dart';
@@ -220,7 +222,7 @@ class LocationSearchBar extends HookWidget {
 
         return allLocs;
       } catch (e) {
-        print('Failed to fetch locations: $e');
+        stderr.writeln('Failed to fetch locations: $e');
         refreshKey.value++;
         return globalStopLocs;
       }

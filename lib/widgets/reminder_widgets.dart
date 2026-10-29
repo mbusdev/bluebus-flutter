@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
@@ -113,7 +115,7 @@ class _ReminderWidgetsState extends State<ReminderWidgets> {
             snapshot.connectionState == ConnectionState.done) {
           // error state
           if (kDebugMode) {
-            print(snapshot.error.toString());
+            stderr.writeln(snapshot.error.toString());
           }
           children.add(
             ReminderWidgetCard(

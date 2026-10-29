@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------------------
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:bluebus/services/floorplan_style.dart';
 import 'package:bluebus/widgets/composite_map_widget.dart';
@@ -68,7 +69,7 @@ class DemoBuildingsLayer extends CompositeMapLayer {
     try {
       raw = await rootBundle.loadString(_asset);
     } catch (err) {
-      debugPrint('DemoBuildingsLayer: failed to load $_asset ($err)');
+      stderr.writeln('DemoBuildingsLayer: failed to load $_asset ($err)');
       return;
     }
 
@@ -120,7 +121,7 @@ class DemoBuildingsLayer extends CompositeMapLayer {
 
       final List<LatLng> outline = _parseWktPolygon(fields[0]);
       if (outline.length < 3) {
-        debugPrint('DemoBuildingsLayer: skipping unparseable row $i');
+        stderr.writeln('DemoBuildingsLayer: skipping unparseable row $i');
         continue;
       }
 

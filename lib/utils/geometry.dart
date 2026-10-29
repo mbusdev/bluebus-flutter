@@ -21,14 +21,14 @@ double pointRotation(double lat1, double lon1, double lat2, double lon2) {
   return angle;
 }
 
-double routeStopRotation(List<dynamic> points, int stopIndex) {
+double routeStopRotation(List<LatLng> points, int stopIndex) {
   final currentStop = points[stopIndex];
 
-  (double, double) averageLocation(List<dynamic> stops) {
-    final locations = stops.isEmpty ? [currentStop] : stops;
+  (double, double) averageLocation(List<dynamic> points) {
+    final locations = points.isEmpty ? [currentStop] : points;
     // find sum of lat/lng and divide by the amount to get average
-    final latitude =  locations.fold<double>(0, (sum, stop) => sum + (stop['lat']?.toDouble() ?? 0)) / locations.length;
-    final longitude = locations.fold<double>(0, (sum, stop) => sum + (stop['lon']?.toDouble() ?? 0)) / locations.length;
+    final latitude =  locations.fold<double>(0, (sum, stop) => sum + (stop.latitude?.toDouble() ?? 0)) / locations.length;
+    final longitude = locations.fold<double>(0, (sum, stop) => sum + (stop.longitude?.toDouble() ?? 0)) / locations.length;
     return (latitude, longitude);
   }
 

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 import 'dart:math';
 import 'dart:math' as math;
+import 'package:bluebus/services/map_image_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
@@ -227,8 +229,7 @@ class NavOnBusState {
 
 class NavOnBus extends NavigationStage {
   late NavOnBusState state;
-  late BitmapDescriptor stopBitmap;
-
+  late BitmapDescriptor stopBitmap = BitmapDescriptor.defaultMarker;
   LatLng? lastPosition;
 
   NavOnBus();
@@ -295,6 +296,7 @@ class NavOnBus extends NavigationStage {
     // stopBitmap = BitmapDescriptor.bytes();
 
     stopBitmap = BitmapDescriptor.defaultMarker;
+    // stopBitmap = MapImageService.get
   }
 
   @override
@@ -423,7 +425,10 @@ class NavOnBus extends NavigationStage {
                   ? MapImageService.getOnBusStop() ?? stopBitmap
                   : stop.id == state.arrivalStop
                       ? MapImageService.getOffBusStop() ?? stopBitmap
-                      : stopBitmap,
+                      : MapImageService.navigationIntermediateStopIcon,
+              // icon: ,
+              anchor: const Offset(0.5, 0.5)
+              // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
             ),
           },
         )
@@ -438,6 +443,8 @@ class NavOnBus extends NavigationStage {
         color: RouteColorService.getRouteColor(state.rt),
         points: state.points,
         zIndex: 1999,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
       ),
     ];
   }
@@ -1046,7 +1053,7 @@ class NavigationManager {
   void rebuildMarkersAndPolylines() {
     // Call this whenever markers or polylines change
     if (this.mapLayer == null) {
-      debugPrint(
+      stderr.writeln(
         "Warning: Tried to rebuild markers and polylines but no map layer was registered with NavigationManager!",
       );
       return;

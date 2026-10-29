@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/services/map_image_service.dart';
@@ -17,7 +19,7 @@ class NavigationLayer extends CompositeMapLayer {
   @override
   Function() onUpdate = () {};
   Function(BusStop) onStopClicked = (BusStop s) {
-    debugPrint("Warning! onStopClicked called but no callback was registered");
+    stderr.writeln("Warning! onStopClicked called but no callback was registered");
   };
 
   void init(

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bluebus/firebase_options.dart';
 import 'package:bluebus/services/incoming_bus_reminder_service.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -6,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+const useFirebase = bool.fromEnvironment('USE_FIREBASE', defaultValue: kReleaseMode);
 class NotificationService {
   static final _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
   static bool _listeningForFcmUpdates = false;
@@ -20,10 +23,12 @@ class NotificationService {
   /// e.g. call it asap if notifications were previously used, otherwise wait for
   /// the user to trigger a feature that requires notifications
   static Future<void> initPlugin() async {
-    await Firebase.initializeApp(
-      name: "[DEFAULT]",
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (useFirebase) {
+      await Firebase.initializeApp(
+        name: "[DEFAULT]",
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
 
     // prepare local notifications
     const AndroidInitializationSettings androidSettings =
@@ -46,7 +51,7 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: null,
     );
     if ((initialized == null || !initialized) && kDebugMode) {
-      debugPrint("Failed to initialize notifications!");
+      stderr.writeln("Failed to initialize notifications!");
     }
 
     // Push Notifications
@@ -67,6 +72,8 @@ class NotificationService {
   // Currently this function must be called even if permission is already granted,
   // as it sets up some important listeners
   static Future<void> requestPermission() async {
+    if (!useFirebase) return; // If Firebase is disabled for development skip all this
+
     // todo: add back in if needed
     final notificationSettings = await FirebaseMessaging.instance
         .requestPermission();
@@ -80,17 +87,17 @@ class NotificationService {
         .getAPNSToken(); // ensure it exists for iOS to work
     _registrationToken = await FirebaseMessaging.instance.getToken();
     if (kDebugMode) {
-      debugPrint("apns token:");
-      debugPrint(apnsToken);
-      debugPrint(_registrationToken);
+      // debugPrint("apns token:");
+      // debugPrint(apnsToken);
+      // debugPrint(_registrationToken);
     }
 
     if (!_listeningForForegroundMessages) {
       _listeningForForegroundMessages = true;
-      print("Now listening for onMessage");
+      // print("Now listening for onMessage");
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print("MESSAGE!");
-        debugPrint("Got a message: $message");
+        // print("MESSAGE!");
+        // debugPrint("Got a message: $message");
         if (message.notification != null) {
           NotificationService.sendLocalNotification(
             message.notification?.title,
@@ -113,7 +120,7 @@ class NotificationService {
           })
           .onError((err) {
             if (kDebugMode) {
-              debugPrint("fcm token refresh error: $err");
+              stderr.writeln("fcm token refresh error: $err");
             }
           });
     }
