@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 import 'dart:math' as math;
+import 'package:bluebus/services/map_image_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
@@ -365,16 +366,20 @@ class NavOnBus extends NavigationStage {
   List<Marker> getMarkers() {
     return _state.stopCoords.indexed
         .map(
-          (e) =>
-            AdvancedMarker(
-              markerId: MarkerId("navonbus_marker_${_state.rt}_${_state.stopTimes[e.$1].stop}"),
-              flat: true,
-              position: e.$2.location,
-              zIndex: 2000,
-              // TODO: fix icons (again?)
-              icon: _state.stopBitmap,
-              anchor: const Offset(0.5, 0.5)
-            ),
+          (e) => AdvancedMarker(
+            markerId: MarkerId("navonbus_marker_${_state.rt}_${e.hashCode}"),
+            flat: true,
+            position: e.$2.location,
+            zIndex: 2000,
+            icon:
+                (e.$1 == 0
+                    ? MapImageService.getOnBusStop()
+                    : e.$1 == _state.stopCoords.length - 1
+                    ? MapImageService.getOffBusStop()
+                    : null) ??
+                MapImageService.navigationIntermediateStopIcon,
+            anchor: const Offset(0.5, 0.5),
+          ),
         )
         .toList();
   }
@@ -382,14 +387,15 @@ class NavOnBus extends NavigationStage {
   @override
   List<Polyline> getPolylines() {
     // TODO: segment connection polylines
-    var i = 0;
     return _state.pathSegments
         .map(
           (seg) => Polyline(
             polylineId: PolylineId("navonbus_polyline_${seg.hashCode}"),
-            color: HSVColor.fromAHSV(1.0, (i++).toDouble() / 5.0 * 360.0, 1.0, 1.0).toColor(),//RouteColorService.getRouteColor(seg.rt ?? _state.rt).withRed((i++ / 255.0 * 40.0).toInt()),
+            color: RouteColorService.getRouteColor(rt),
             points: seg.path,
             zIndex: 1999,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
           ),
         )
         .toList();
