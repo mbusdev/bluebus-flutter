@@ -473,7 +473,7 @@ class LocationSearchBar extends HookWidget {
 
 // Selecting routes
 class SearchSheet extends StatefulWidget {
-  final bool isRoomSearch; // changes hint text displayed: "where to?" vs "Room #"
+  final bool isRoomSearch; // changes hint text displayed: "where to?" vs "room #"
   final void Function(Location, bool, String) onSearch;
   final void Function(String)? onPOISelected;
   final List<LocatedFloorplanPoi> roomPois; // Empty when room data is unavailable.
@@ -543,11 +543,11 @@ class _SearchSheetState extends State<SearchSheet> {
             controller: _searchController,
             focusNode: _searchFocusNode,
             decoration: InputDecoration(
-              fillColor: getColor(context, ColorType.inputBackground),
+              fillColor: getColor(context, ColorType.roomSearchBg),
               filled: true,
-              hintText: widget.isRoomSearch ? "Room #" : "where to?",
+              hintText: widget.isRoomSearch ? "room #" : "where to?",
               hintStyle: TextStyle(
-                color: getColor(context, ColorType.inputText).withAlpha(204),
+                color: getColor(context, ColorType.roomSearchText),
                 fontSize: 22,
               ),
               isCollapsed: true,
@@ -556,7 +556,7 @@ class _SearchSheetState extends State<SearchSheet> {
                 child: Icon(
                   Icons.search,
                   size: 35,
-                  color: getColor(context, ColorType.inputText),
+                  color: getColor(context, ColorType.roomSearchText),
                 ),
               ),
               
