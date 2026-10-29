@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/services/bus_repository.dart';
 import 'package:bluebus/backend/export.dart' as backend;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'constants.dart';
 import 'models/bus.dart';
@@ -19,7 +21,10 @@ class BlueBusApi {
       final routesJson = jsonEncode(routes);
       BusRepository.writeToCache('bluebus-routes-cache-v${await AppInfo.version()}', routesJson);
         return processRoutesJson(routesJson, onError);
-    } on DioException catch (_) {
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        stderr.writeln(e.message);
+      }
       onError('', 'Failed to load routes');
       throw Exception('Failed to load routes');
     }
@@ -76,6 +81,9 @@ class BlueBusApi {
 
       return buses;
     } catch (e) {
+      if (kDebugMode) {
+        stderr.writeln(e.toString());
+      }
       // on error return a blank list
       return [];
     }
