@@ -1,4 +1,7 @@
+import 'package:bluebus/models/lat_lng.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import 'package:bluebus/backend/export.dart' as backend;
 
 class Journey {
   final List<Leg> legs;
@@ -7,83 +10,94 @@ class Journey {
 
   Journey({required this.legs, required this.departureTime, required this.arrivalTime});
 
-  factory Journey.fromJson(Map<String, dynamic> json) {
+  factory Journey.fromBackend(backend.ProcessedJourney journey) {
     return Journey(
-      legs: (json['legs'] as List).map((e) => Leg.fromJson(e)).toList(),
-      departureTime: (json['departureTime'] as num?)?.toInt() ?? 0,
-      arrivalTime: (json['arrivalTime'] as num?)?.toInt() ?? 0,
+      legs: journey.legs.map(Leg.fromBackend).toList(),
+      departureTime: journey.departureTime.toInt(),
+      arrivalTime: journey.arrivalTime.toInt(),
     );
   }
 }
 
-enum LegMode { walk, bus }
-
-// I really want to turn this into a sum type... (sealed class + two subclasses)
-class Leg {
+sealed class Leg {
   final String origin;
   final String destination;
+  final String originID;
+  final String destinationID;
   final double duration;
   final int startTime;
   final int endTime;
-  final List<StopTime>? stopTimes;
-  final Trip? trip;
-  final String? rt;
-  final String originID;
-  final String destinationID;
-  final List<LatLng>? pathCoords;
-  final Map<int, Turn>? directions;
-  final LegMode mode;
 
   Leg({
     required this.origin,
     required this.destination,
+    required this.originID,
+    required this.destinationID,
     required this.duration,
     required this.startTime,
     required this.endTime,
-    this.stopTimes,
-    this.trip,
-    this.rt,
-    required this.originID,
-    required this.destinationID,
-    this.pathCoords,
-    this.directions,
-    required this.mode
   });
-
-  factory Leg.fromJson(Map<String, dynamic> json) {
-    return Leg(
-      origin: json['origin'] ?? '',
-      destination: json['destination'] ?? '',
-      duration: (json['duration'] as num).toDouble(),
-      startTime: json['startTime'] ?? 0,
-      endTime: json['endTime'] ?? 0,
-      stopTimes: json['stopTimes'] != null
-          ? (json['stopTimes'] as List).map((e) => StopTime.fromJson(e)).toList()
-          : null,
-      trip: json['trip'] != null ? Trip.fromJson(json['trip']) : null,
-      rt: json['rt'],
-      originID: json['origin_id'] ?? '',
-      destinationID: json['destination_id'] ?? '',
-      pathCoords: json['path_coords'] != null? 
-          // adding full walking path from json
-          (json['path_coords'] as List).map((e) {
-              return LatLng(
-                (e['lat'] as num).toDouble(),
-                (e['lon'] as num).toDouble(),
-              );
-            }).toList()
-          : null,
-      directions: json['directions'] != null ?
-        <int, Turn>{
-          for (var x in json['directions'] as List)
-            (x['path_index'] as num).toInt():
-              (degree: (x['turn']['degrees'] as num).toDouble(),
-              landmark: x['turn']['landmark'] as String)
-        }
-        : null,
-      mode: (json['mode'] == "bus" ? LegMode.bus : LegMode.walk)
-    );
+  
+  factory Leg.fromBackend(backend.FormattedLeg leg) {
+    switch (leg) {
+      case backend.FormattedLegFormattedLegWalk():
+        return WalkingLeg.fromBackend(leg);
+      case backend.FormattedLegFormattedLegBus():
+        return BusLeg.fromBackend(leg);
+    }
   }
+}
+
+class BusLeg extends Leg {
+  final String destinationName;
+  final List<({ String? rt, List<LatLng> path })> busPathSegments;
+  final List<({ String? rt, LatLng location })> stopCoords;
+  final String mode;
+  final List<StopTime> stopTimes;
+  final Trip trip;
+  final String rt;
+  final String? vid;
+
+  BusLeg.fromBackend(backend.FormattedLegFormattedLegBus leg)
+    : destinationName = leg.destinationName,
+      busPathSegments = leg.busPathSegments
+          .map((e) => (rt: e.rt, path: e.path.map(latLngFromBackend).toList()))
+          .toList(),
+      stopCoords = leg.stopCoords
+          .map((e) => (rt: e.rt, location: latLngFromBackend(e.location)))
+          .toList(),
+      mode = leg.mode,
+      stopTimes = leg.stopTimes.map((e) => StopTime.fromBackend(e)).toList(),
+      trip = Trip.fromBackend(leg.trip),
+      rt = leg.rt,
+      vid = leg.vid,
+      super(
+        origin: leg.origin,
+        destination: leg.destination,
+        originID: leg.originId,
+        destinationID: leg.destinationId,
+        duration: leg.duration.toDouble(),
+        startTime: leg.startTime.toInt(),
+        endTime: leg.endTime.toInt(),
+      );
+}
+
+class WalkingLeg extends Leg {
+  final List<LatLng> pathCoords;
+  // TODO: re-add turn by turn directions
+
+  WalkingLeg.fromBackend(backend.FormattedLegFormattedLegWalk leg)
+    : pathCoords = leg.pathCoords.map(latLngFromBackend).toList(),
+      super(
+        origin: leg.origin,
+        destination: leg.destination,
+        originID: leg.originId,
+        destinationID: leg.destinationId,
+        duration: leg.duration.toDouble(),
+        startTime: leg.startTime.toInt(),
+        endTime: leg.endTime.toInt(),
+      );
+    
 }
 
 typedef Turn = ({double degree, String landmark});
@@ -103,29 +117,29 @@ class StopTime {
     required this.dropOff,
   });
 
-  factory StopTime.fromJson(Map<String, dynamic> json) {
+  factory StopTime.fromBackend(backend.StopTime st) {
     return StopTime(
-      stop: json['stop'] ?? '',
-      arrivalTime: json['arrivalTime'] ?? 0,
-      departureTime: json['departureTime'] ?? 0,
-      pickUp: json['pickUp'] ?? false,
-      dropOff: json['dropOff'] ?? false,
+      stop: st.stop,
+      arrivalTime: st.arrivalTime.toInt(),
+      departureTime: st.departureTime.toInt(),
+      pickUp: st.pickUp,
+      dropOff: st.dropOff,
     );
   }
 }
 
 class Trip {
   final String tripId;
-  final String vid;
+  final String? vid;
   final List<StopTime> stopTimes;
 
   Trip({required this.tripId, required this.vid, required this.stopTimes});
 
-  factory Trip.fromJson(Map<String, dynamic> json) {
+  factory Trip.fromBackend(backend.Trip trip) {
     return Trip(
-      tripId: json['tripId'] ?? '',
-      vid: json['vid'] ?? '',
-      stopTimes: (json['stopTimes'] as List).map((e) => StopTime.fromJson(e)).toList(),
+      tripId: trip.tripId,
+      vid: trip.vid,
+      stopTimes: trip.stopTimes.map((st) => StopTime.fromBackend(st)).toList(),
     );
   }
 }

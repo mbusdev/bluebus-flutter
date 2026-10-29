@@ -121,8 +121,8 @@ class _JourneyResultsWidgetState extends State<JourneyResultsWidget> {
       final totalDuration = journey.arrivalTime - getSecondsAfterMidnightUtc();
 
       Set<String> busIDs = {};
-      for (Leg l in journey.legs) {
-        if (l.rt != null) busIDs.add(l.rt!);
+      for (BusLeg l in journey.legs.whereType<BusLeg>()) {
+        busIDs.add(l.rt);
       }
 
       return GestureDetector(
@@ -419,11 +419,13 @@ class _JourneyBodyState extends State<JourneyBody> {
     String desID,
     int legID,
   ) {
+    final leg = widget.journey.legs[legID];
+    if (leg is! BusLeg) return (false, []);
+
     bool foundStart = false;
     List<(String,int)> stopIDs = [];
 
-    // todo: add check for .trip being null
-    for (StopTime st in widget.journey.legs[legID].trip!.stopTimes) {
+    for (StopTime st in leg.trip.stopTimes) {
       if (st.stop == orgID) {
         foundStart = true;
       }
@@ -442,11 +444,11 @@ class _JourneyBodyState extends State<JourneyBody> {
   }
 
   List<ArrivalTimeLocation> intermediaryLocations(String orgId, String desId, int legId) {
-    (bool, List<(String, int)>) intermediary_stop_data = intermediaryBusStops(orgId, desId, legId);
+    final (_, intermediaryStopData)= intermediaryBusStops(orgId, desId, legId);
 
     List<ArrivalTimeLocation> outputLocations = [];
 
-    for ((String,int) stopId in intermediary_stop_data.$2) {
+    for ((String,int) stopId in intermediaryStopData) {
       Location? loc = getLocationFromID(stopId.$1);
       if (loc != null) outputLocations.add(ArrivalTimeLocation(formatSecondsToTime(stopId.$2), loc));
     }
@@ -459,8 +461,10 @@ class _JourneyBodyState extends State<JourneyBody> {
     String orgID,
     int legID,
   ) {
-    // TODO: add check for .trip being null
-    for (StopTime st in widget.journey.legs[legID].trip!.stopTimes) {
+    final leg = widget.journey.legs[legID];
+    if (leg is! BusLeg) return null;
+
+    for (StopTime st in leg.trip.stopTimes) {
       if (st.stop == orgID) {
         return convertSecondsToFormattedTime(st.arrivalTime);
       }
@@ -478,7 +482,7 @@ class _JourneyBodyState extends State<JourneyBody> {
           int index = widget.journey.legs.indexOf(leg);
 
           // walk or bus?
-          if (leg.rt == null) {
+          if (leg is! BusLeg) {
             // walk
             return Padding(
               padding: const EdgeInsets.only(bottom: 20),
@@ -539,13 +543,13 @@ class _JourneyBodyState extends State<JourneyBody> {
                   Row(
                     children: [
                       // icon
-                      RouteIcon.medium(leg.rt!),
+                      RouteIcon.medium(leg.rt),
 
                       SizedBox(width: 10),
 
                       Expanded(
                         child: Text(
-                          "Take ${getPrettyRouteName(leg.rt!)}",
+                          "Take ${getPrettyRouteName(leg.rt)}",
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -565,9 +569,9 @@ class _JourneyBodyState extends State<JourneyBody> {
                   ),
 
                   UpcomingStopsWidget(
-                      color: RouteColorService.getRouteColor(leg.rt!),
-                      routeId: leg.rt!,
-                      vehicleId: leg.trip!.vid,
+                      color: RouteColorService.getRouteColor(leg.rt),
+                      routeId: leg.rt,
+                      vehicleId: leg.trip.vid,
                       stopsToDisplayOverride: intermediaryLocations(leg.originID, leg.destinationID, index),
                       isExpanded: true,
                       showSeeMoreButton: false,
