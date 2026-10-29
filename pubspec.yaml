@@ -45,7 +45,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   build_runner: ^2.15.0
-  carapacik_lints: ^3.12.0
+  carapacik_lints: ^3.11.0
   json_serializable: ^6.14.0
   retrofit_generator: ^10.2.7
   swagger_parser:
