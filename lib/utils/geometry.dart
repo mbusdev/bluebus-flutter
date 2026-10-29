@@ -22,6 +22,11 @@ double pointRotation(double lat1, double lon1, double lat2, double lon2) {
 }
 
 double routeStopRotation(List<LatLng> points, int stopIndex) {
+  if (points.length <= 6) {
+    // If the route is super short, return 0 to avoid errors
+    return 0;
+  }
+
   final currentStop = points[stopIndex];
 
   (double, double) averageLocation(List<dynamic> points) {

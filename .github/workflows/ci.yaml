@@ -58,6 +58,8 @@ jobs:
         run: flutter build apk --debug --no-pub
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
+      - name: Run flutter tests
+        run: echo "To run these tests locally on your machine, run 'flutter test' in a terminal" && flutter test
   style_check:
     runs-on: ubuntu-latest
     steps:
