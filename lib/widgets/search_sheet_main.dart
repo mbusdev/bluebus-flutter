@@ -242,6 +242,7 @@ class LocationSearchBar extends HookWidget {
     Card(name: "Dining", color: ColorType.roomSearchDining, type: FloorplanTypes.food),
     Card(name: "Printing", color: ColorType.roomSearchPrinting, type: FloorplanTypes.printer),
     Card(name: "Stairs", color: ColorType.roomSearchStairs, type: FloorplanTypes.stairway),
+    Card(name: "Vending", color: ColorType.roomSearchVending, type: FloorplanTypes.vendingMachine),
   ];
 
   static const Map<String, String> poiNames = {
@@ -250,6 +251,7 @@ class LocationSearchBar extends HookWidget {
     FloorplanTypes.neutralBathroom: "Inclusive Bathroom",
     FloorplanTypes.information: "Info Desk",
     FloorplanTypes.food: "Dining",
+    FloorplanTypes.vendingMachine: "Vending Machine",
     FloorplanTypes.printer: "Printer",
     FloorplanTypes.stairway: "Stairs",
   };
