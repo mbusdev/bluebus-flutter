@@ -49,5 +49,8 @@ class SearchResultLayer extends CompositeMapLayer {
     onUpdate();
   }
 
+  void clearMarkers() {
+    markers.clear();
+  }
 }
 // NEXT STEPS TODO: Finish getting the BusSheet to be a non-modal sheet, and auto-follow the bus as it moves! Also save the location from before the BusSheet was opened so it can be navigated back to?

@@ -221,9 +221,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
 
     navigationManager.setMapLayer(navigationLayer);
-    navigationLayer.init();
+    navigationLayer.init(
+      _showBusSheet,
+      _activeJourneyBusIds,
+      _activeJourneyRoutes,
+      context,
+    );
     navigationLayer.isVisible =
-        false; // Hide the navigation layer until we're ready to show it
+        true; // Hide the navigation layer until we're ready to show it
 
     hideJourney(); // Hide the journey layer until we're ready to use it
 
@@ -797,6 +802,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final newRouteIds = routes.map((r) => r.routeId).toSet();
 
     journeyLayer.setRoutesCache(routes);
+    navigationLayer.setRoutesCache(routes);
     liveBusesLayer.setRoutesCache(routes);
 
     _routePolylines.removeWhere((key, _) {
@@ -1073,6 +1079,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // Remove the search location marker
   void _removeSearchLocationMarker() {
     searchResultLayer.isVisible = false;
+    searchResultLayer.clearMarkers();
     searchResultLayer.reload();
   }
 
@@ -1289,6 +1296,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   journey,
                   getColor(context, ColorType.opposite),
                 );
+                navigationLayer.placeMarkers(
+                  journey,
+                );
 
                 // TODO: Figure out how to change the visibility of the layers
 
@@ -1378,12 +1388,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void showJourney() {
     journeyLayer.isVisible = true;
+    navigationLayer.isVisible = true;
     baseRoutesLayer.isVisible = false;
     liveBusesLayer.isVisible = false;
   }
 
   void hideJourney() {
     journeyLayer.isVisible = false;
+    navigationLayer.isVisible = false;
     baseRoutesLayer.isVisible = true;
     liveBusesLayer.isVisible = true;
   }
