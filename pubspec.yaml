@@ -96,7 +96,7 @@ flutter_launcher_icons:
   min_sdk_android: 21 # android min sdk min:16, default 21
 
 swagger_parser:
-  schema_url: https://docs.mb.thething.fyi/refs/heads/plan-journey-field-removal/openapi/spec.json
+  schema_url: https://docs.mb.thething.fyi/refs/heads/develop/1/openapi/spec.json
   output_directory: lib/backend/
   name: backend
   language: dart
