@@ -418,7 +418,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     await busProvider.loadBuses();
 
     _loadingMessageNotifier.value = Loadpoint('Loading bus stops...', 4);
-    _loadStopsForLaunch();
+    await _loadStopsForLaunch();
 
     _loadingMessageNotifier.value = Loadpoint('Starting app...', 5);
     busProvider.startBusUpdates();
