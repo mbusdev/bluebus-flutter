@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import 'dart:io';
 
 class LocationSearchBar extends HookWidget {
   final void Function(Location, bool, String) onLocationSelected;
