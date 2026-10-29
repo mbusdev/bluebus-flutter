@@ -54,6 +54,9 @@ class FloorplansLayer extends CompositeMapLayer {
 
   Floorplan? get floorplan => _source?.floorplan;
 
+  /// Searchable rooms retain their building, floor, and projected coordinates.
+  List<LocatedFloorplanPoi> get searchablePois => _poiIndex?.pois ?? const [];
+
   /// Rough lat/lng bounding box of the loaded building's footprint, used to
   /// tell whether the camera is currently over it. Null until the footprint
   /// has been projected, i.e. until [load] has run and the active floor has

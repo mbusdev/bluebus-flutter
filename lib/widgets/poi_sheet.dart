@@ -8,11 +8,13 @@ import 'package:flutter/material.dart';
 class POISheet extends StatefulWidget {
   final String name;
   final ValueListenable<LocatedFloorplanPoi?> poiSelected;
+  final bool showBottomRoomNumber;
 
   const POISheet({
     Key? key,
     required this.name,
-    required this.poiSelected
+    required this.poiSelected,
+    required this.showBottomRoomNumber,
   }) : super(key: key);
   
   @override
@@ -80,15 +82,19 @@ class _POISheetState extends State<POISheet> {
                                 Text.rich(
                                   TextSpan(
                                     children: [
-                                      TextSpan(
-                                        text: poi.poi.name,
-                                        style: TextStyle(
-                                          fontSize: 18, 
-                                          fontWeight: FontWeight.bold,
-                                          color: getColor(context, ColorType.opposite)
+                                      if (widget.showBottomRoomNumber)
+                                        TextSpan(
+                                          text: poi.poi.name,
+                                          style: TextStyle(
+                                            fontSize: 18, 
+                                            fontWeight: FontWeight.bold,
+                                            color: getColor(context, ColorType.opposite)
+                                          ),
                                         ),
-                                      ),
-                                      TextSpan(text: " on ", style: TextStyle(fontSize: 18, color: getColor(context, ColorType.opposite))),
+
+                                      if (widget.showBottomRoomNumber)
+                                        TextSpan(text: " on ", style: TextStyle(fontSize: 18, color: getColor(context, ColorType.opposite))),
+
                                       TextSpan(
                                         text: poi.floor.name,
                                         style: TextStyle(

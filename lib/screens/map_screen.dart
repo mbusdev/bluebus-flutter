@@ -7,6 +7,7 @@ import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/floorplan.dart';
 import 'package:bluebus/providers/bathroom_provider.dart';
 import 'package:bluebus/services/floorplan_service.dart';
+import 'package:bluebus/services/location_search.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/models/bus_stop.dart';
 import 'package:bluebus/providers/theme_provider.dart';
@@ -988,11 +989,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Show a red pin marker at search location
-  void _showSearchLocationMarker(double lat, double lon) {
+  void _showSearchLocationMarker(double lat, double lon, bool showGetOnIcon) {
+    final icon = (showGetOnIcon ? MapImageService.getOnBusStop() : null) ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure,);
+
     _searchLocationMarker = Marker(
       markerId: const MarkerId('search_location'),
       position: LatLng(lat, lon),
-      icon:  MapImageService.getOnBusStop() ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure,),
+      icon: icon,
       consumeTapEvents: false,
     );
     setState(() {});
@@ -1059,16 +1062,23 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
   }
 
-  void _showSearchSheet() {
+  Future<void> _showSearchSheet({isRoomSearch = false}) async {
+    // Opening search early should still include the bundled rooms.
+    await floorplansLayer.load();
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return SearchSheet( 
-          isRoomSearch: false,
-          floors: floorplansLayer.floors,
+          isRoomSearch: isRoomSearch,
+          roomPois: floorplansLayer.searchablePois,
           onSearch: (Location location, bool isBusStop, String stopID) {
+            if (location is RoomLocation) {
+              _showRoomSearchResult(location);
+              return;
+            }
             final searchCoordinates = location.latlng;
 
             // Clear any existing search location marker first
@@ -1108,29 +1118,42 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     );
   }
 
-  void _showSearchRoomsSheet() {
-    showModalBottomSheet(
+  // Shows POI sheet centered on a specific room
+  Future<void> _showRoomSearchResult(RoomLocation location) async {
+    final room = location.room;
+    _bottomSheetController?.close();
+    floorplansLayer.clearPoiSearch();
+    _removeSearchLocationMarker();
+
+    // set floor to room's floor and center on room
+    final floorIndex = floorplansLayer.floors.indexOf(room.floor);
+    if (floorIndex >= 0) await floorplansLayer.setFloorIndex(floorIndex); 
+    await _centerOnLocation(
+      false,
+      lat: room.position.latitude,
+      long: room.position.longitude,
+      zoom: 20,
+    );
+
+    // show red marker at the room
+    _showSearchLocationMarker(room.position.latitude, room.position.longitude, false);
+    _selectedPoi.value = room;
+
+    if (!mounted) return;
+    _bottomSheetController = showBottomSheet(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return SearchSheet(
-          isRoomSearch: true,
-          floors: floorplansLayer.floors,
-          onSearch: (Location location, bool isBusStop, String stopID) {
-            // room search result functionality
-          },
-          onPOISelected: (String name) {
-            _showPOISelection(name);
-          }
-        );
-      },
+      builder: (_) => POISheet(
+        name: 'Room ${location.name}',
+        poiSelected: _selectedPoi,
+        showBottomRoomNumber: true,
+      ),
     );
   }
 
   void _showBuildingSheet(Location place) {
     // Show red pin at the location
-    _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude);
+    _showSearchLocationMarker(place.latlng!.latitude, place.latlng!.longitude, false);
 
     _bottomSheetController = showBottomSheet(
       context: context,
@@ -1199,6 +1222,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     _showSearchLocationMarker(
                       location.latlng!.latitude,
                       location.latlng!.longitude,
+                      true
                     );
                   }
 
@@ -1218,6 +1242,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                     _showSearchLocationMarker(
                       location.latlng!.latitude,
                       location.latlng!.longitude,
+                      true
                     );
                   }
 
@@ -1286,6 +1311,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // });
   }
 
+  // does a search for the closest POIs and shows them on the screen with POISheet
   Future<void> _showPOISelection(String type) async {
     _bottomSheetController?.close();
     floorplansLayer.clearPoiSearch();
@@ -1319,6 +1345,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         builder: (_) => POISheet(
           name: name,
           poiSelected: _selectedPoi,
+          showBottomRoomNumber: false,
         ),
       );
 
@@ -1753,6 +1780,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             journeyLayer,
                             navigationLayer,
                           ],
+                          searchResultsMarker: _searchLocationMarker,
                           onMapCreated: _onMapCreated,
                           onCameraMove: _onCameraMove,
                           onCameraIdle: _onCameraIdle,
@@ -2513,7 +2541,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           _floorplanOverlayEnabled = true;
                                         });
                                       },
-                                      onRoomSearch: _showSearchRoomsSheet,
+                                      onRoomSearch: () => _showSearchSheet(isRoomSearch: true),
                                     ),
                                   ),
                                 ),
@@ -2542,7 +2570,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     _floorplanOverlayEnabled = false;
                                   });
                                 },
-                                onRoomSearch: _showSearchRoomsSheet,
+                                onRoomSearch: () => _showSearchSheet(isRoomSearch: true),
                               ),
                             ),
                           ),

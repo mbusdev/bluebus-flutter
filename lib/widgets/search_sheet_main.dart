@@ -7,6 +7,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../constants.dart';
+import '../services/location_search.dart';
+import '../services/floorplan_service.dart';
 import 'package:bluebus/models/floorplan.dart';
 import 'package:bluebus/widgets/dialog.dart';
 // import 'package:http/http.dart' as http;
@@ -18,212 +20,13 @@ class Card {
   const Card({required this.name, required this.color, required this.type});
 }
 
-/* class RoomSearchBar extends HookWidget {
-  final void Function(FloorplanFloor, FloorplanPoi) onLocationSelected;
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final InputDecoration decoration;
-  final List<FloorplanFloor> floors;
-
-  // selectable cards
-  static const List<Card> cards = [
-    Card(name: "Bathroom", color: ColorType.roomSearchBathroom, types: [FloorplanTypes.femaleBathroom, FloorplanTypes.maleBathroom]),
-    Card(name: "Info desk", color: ColorType.roomSearchInfoDesk, types: [FloorplanTypes.information]),
-    Card(name: "Dining", color: ColorType.roomSearchDining, types: [FloorplanTypes.food]),
-    Card(name: "Printing", color: ColorType.roomSearchPrinting, types: []),
-    Card(name: "Stairs", color: ColorType.roomSearchStairs, types: [FloorplanTypes.stairway]),
-  ];
-
-  const RoomSearchBar({
-    super.key,
-    required this.onLocationSelected,
-    required this.controller,
-    required this.focusNode,
-    required this.decoration,
-    required this.floors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final showSuggestions = useState(false);
-    useEffect(() {
-      void listener() {
-        if (!focusNode.hasFocus) {
-          showSuggestions.value = false;
-        }
-      }
-
-      focusNode.addListener(listener);
-      return () => focusNode.removeListener(listener);
-    }, [focusNode]);
-
-    final searchQuery = useState('');
-
-    // simple search for now
-    // TODO: needs to be sorted by order of closest distance still
-    // and also account for different buildings, which it does not do
-    List<({FloorplanFloor floor, FloorplanPoi poi})> search(String query) {
-      final normalizedQuery = query.trim().toLowerCase();
-      if (normalizedQuery.isEmpty) return [];
-
-      // TODO: see if the search query falls into any of the FloorplanTypes strings,
-      // then look for those that are nearby
-      // ngram search?
-
-
-
-
-      final matches = <({FloorplanFloor floor, FloorplanPoi poi})>[];
-      for (final floor in floors) {
-        for (final poi in floor.pois) {
-          if (poi.type == FloorplanTypes.waypoint1 ||
-              poi.type == FloorplanTypes.waypoint2) {
-            continue;
-          }
-          if ((poi.name ?? '').toLowerCase().contains(normalizedQuery)) {
-            matches.add((floor: floor, poi: poi));
-          }
-        }
-      }
-      return matches;
-    }
-
-    // Memoize search results.
-    final results = useMemoized(() async {
-      return search(searchQuery.value);
-    }, [searchQuery.value, floors]);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsetsGeometry.symmetric(horizontal: 16),
-          child: SizedBox(
-            height: 50,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(56),
-              ),
-              child: TextField(
-                textAlignVertical: TextAlignVertical.center,
-                textInputAction: TextInputAction.go,
-                style: TextStyle(
-                  color: getColor(context, ColorType.opposite).withAlpha(204),
-                  fontSize: 22,
-                ),
-                autofocus: true,
-                controller: controller,
-                focusNode: focusNode,
-                decoration: decoration,
-                onChanged: (val) {
-                  searchQuery.value = val;
-                  showSuggestions.value = true;
-                },
-                onSubmitted: (val) {
-                  final matches = search(val);
-                  if (matches.isNotEmpty) {
-                    final selected = matches.first;
-                    controller.text = selected.poi.name ?? selected.poi.type;
-                    onLocationSelected(selected.floor, selected.poi);
-                    showSuggestions.value = false;
-                  }
-                },
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        const SizedBox(height: 20),
-
-        Padding(
-          padding: const EdgeInsetsGeometry.symmetric(horizontal: 16),
-          child: FutureBuilder<List<({FloorplanFloor floor, FloorplanPoi poi})>>(
-            future: results,
-            builder: (context, snapshot) {
-              if (!showSuggestions.value || searchQuery.value.isEmpty) {
-                return Text(
-                  "Recent Searches",
-                  style: TextStyle(
-                    color: getColor(context, ColorType.roomSearchText),
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              }
-
-              // Loading circle
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 50),
-                  child: Center(
-                    child: SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: CircularProgressIndicator(
-                        color: getColor(context, ColorType.opposite),
-                        strokeWidth: 4,
-                      ),
-                    ),
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData) {
-                return const SizedBox.shrink();
-              }
-
-              // Has data, return matching POIs.
-              final matches = snapshot.data!;
-              return ListView.separated(
-                itemCount: matches.length,
-                physics: NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemBuilder: (context, index) {
-                  final result = matches[index];
-                  final poi = result.poi;
-                  return ListTile(
-                    contentPadding: EdgeInsets.only(left: 2, right: 2),
-                    title: Text(
-                      poi.name ?? poi.type,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      "Duderstadt Building ${result.floor.name}"
-                    ),
-                    leading: Icon(
-                      Icons.business_rounded,
-                      size: 40,
-                      color: getColor(context, ColorType.opposite)
-                    ),
-                    onTap: () {
-                      controller.text = poi.name ?? poi.type;
-                      onLocationSelected(result.floor, poi);
-                      showSuggestions.value = false;
-                    },
-                  );
-                },
-                separatorBuilder: (BuildContext context, int index) {
-                  return Divider(height: 15);
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-} */
-
 class LocationSearchBar extends HookWidget {
   final void Function(Location, bool, String) onLocationSelected;
   final void Function(String)? onPOISelected;
   final TextEditingController controller;
   final FocusNode focusNode;
   final InputDecoration decoration;
-  final List<FloorplanFloor>? floors;
+  final List<LocatedFloorplanPoi> roomPois;
 
   const LocationSearchBar({
     super.key,
@@ -232,7 +35,7 @@ class LocationSearchBar extends HookWidget {
     required this.controller,
     required this.focusNode,
     required this.decoration,
-    required this.floors
+    this.roomPois = const [],
   });
 
   // selectable cards
@@ -245,6 +48,7 @@ class LocationSearchBar extends HookWidget {
     Card(name: "Vending", color: ColorType.roomSearchVending, type: FloorplanTypes.vendingMachine),
   ];
 
+  // display names for POIs for the POI popup sheet after selecting a card
   static const Map<String, String> poiNames = {
     FloorplanTypes.femaleBathroom: "Women's Bathroom",
     FloorplanTypes.maleBathroom: "Men's Bathroom",
@@ -313,81 +117,17 @@ class LocationSearchBar extends HookWidget {
       }
     }, [refreshKey.value]);
 
-    Map<String, Set<Location>> buildNgramIndex(
-      List<Location> locations, {
-      List<int> ngramSizes = const [2, 3, 4],
-    }) {
-      final Map<String, Set<Location>> index = {};
-      for (final loc in locations) {
-        final name = loc.name.toLowerCase();
-        final alias = loc.aliases.map((a) => a.toLowerCase()).join(' ');
-        final seen = <String>{};
-
-        for (final n in ngramSizes) {
-          for (int i = 0; i <= name.length - n; i++) {
-            final ngram = name.substring(i, i + n);
-            if (seen.add(ngram)) index.putIfAbsent(ngram, () => {}).add(loc);
-          }
-          for (int i = 0; i <= alias.length - n; i++) {
-            final ngram = alias.substring(i, i + n);
-            if (seen.add(ngram)) index.putIfAbsent(ngram, () => {}).add(loc);
-          }
-        }
-      }
-      return index;
-    }
-
-    List<Location> ngramSearch(String query, Map<String, Set<Location>> index) {
-      query = query.toLowerCase().trim();
-      if (query.length < 2) return [];
-
-      final sizes = query.length == 2
-          ? [2]
-          : query.length == 3
-          ? [2, 3]
-          : [2, 3, 4];
-      final seen = <String>{};
-      final score = <Location, int>{};
-
-      for (final n in sizes) {
-        for (int i = 0; i <= query.length - n; i++) {
-          final ngram = query.substring(i, i + n);
-          if (seen.add(ngram)) {
-            final matches = index[ngram];
-            if (matches != null) {
-              for (final loc in matches) {
-                score[loc] = (score[loc] ?? 0) + 1;
-              }
-            }
-          }
-        }
-      }
-
-      final total = seen.length;
-      final minScore = (0.2 + 0.08 * (query.length - 2)).clamp(0.2, 0.8);
-
-      final filtered = score.entries
-          .map((e) => MapEntry(e.key, e.value / total))
-          .where((e) => e.value >= minScore)
-          .toList();
-      filtered.sort((a, b) => b.value.compareTo(a.value));
-      return filtered
-          .take(score.length.clamp(0, 10).toInt())
-          .map((e) => e.key)
-          .toList();
-    }
-
     // buildings and stops ngram index
     final ngramIndex = useMemoized(() async {
       final locs = await locations;
       return buildNgramIndex(locs);
-    }, []);
+    }, [locations]);
 
-    // search results memoized
+    final query = searchQuery.value;
     final results = useMemoized(() async {
       final idx = await ngramIndex;
-      return ngramSearch(searchQuery.value, idx);
-    }, [searchQuery.value]);
+      return searchLocations(query, idx, roomPois);
+    }, [query, ngramIndex, roomPois]);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,7 +157,8 @@ class LocationSearchBar extends HookWidget {
                 },
                 onSubmitted: (val) async {
                   final idx = await ngramIndex;
-                  final matches = ngramSearch(val, idx);
+                  final matches = searchLocations(val, idx, roomPois);
+                  if (!context.mounted) return;
 
                   if (matches.isNotEmpty) {
                     final selected = matches.first;
@@ -560,7 +301,9 @@ class LocationSearchBar extends HookWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      subtitle: (loc.abbrev != "")
+                      subtitle: loc is RoomLocation
+                          ? Text("${loc.room.building}, ${loc.room.floor.name}")
+                          : (loc.abbrev != "")
                           ? (loc.isBusStop)
                                 ? Row(
                                     children: [
@@ -625,9 +368,9 @@ class SearchSheet extends StatefulWidget {
   final bool isRoomSearch; // changes hint text displayed: "where to?" vs "Room #"
   final void Function(Location, bool, String) onSearch;
   final void Function(String)? onPOISelected;
-  final List<FloorplanFloor>? floors; // if null, room search is disabled
+  final List<LocatedFloorplanPoi> roomPois; // Empty when room data is unavailable.
 
-  const SearchSheet({super.key, required this.isRoomSearch, this.floors, required this.onSearch, this.onPOISelected});
+  const SearchSheet({super.key, required this.isRoomSearch, required this.onSearch, this.onPOISelected, this.roomPois = const []});
 
   @override
   State<SearchSheet> createState() => _SearchSheetState();
@@ -719,7 +462,7 @@ class _SearchSheetState extends State<SearchSheet> {
                 borderSide: BorderSide(color: Colors.transparent, width: 0),
               ),
             ),
-            floors: widget.floors
+            roomPois: widget.roomPois,
           ),
         ]
       )

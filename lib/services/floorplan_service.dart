@@ -34,30 +34,37 @@ class LocatedFloorplanPoi {
   const LocatedFloorplanPoi(this.building, this.floor, this.poi, this.position);
 }
 
+// A search index of floorplan POIs with real-world lat/lng coordinates
 class FloorplanPoiIndex {
   final List<LocatedFloorplanPoi> pois;
 
   FloorplanPoiIndex(GeoreferencedFloorplan source)
     : pois = [
+        // Spread each floor's projected POIs into one searchable list.
         for (final floor in source.floorplan.floors)
           ..._projectFloor(source, floor),
       ];
 
+  // converts a floor's POIs from floorplan pixel coords to real-world lat/lng coords
   static Iterable<LocatedFloorplanPoi> _projectFloor(
     GeoreferencedFloorplan source,
     FloorplanFloor floor,
   ) sync* {
+    // Use the floor's reference markers to convert plan pixels to lat/lng.
     final projection = FloorplanProjection.forFloor(
       floor,
       waypoint1: source.waypoint1,
       waypoint2: source.waypoint2,
     );
+    // Skip floors that cannot be positioned on the map.
     if (projection == null) return;
     for (final poi in floor.pois) {
+      // Waypoints position the floorplan; they are not searchable destinations.
       if (poi.type == FloorplanTypes.waypoint1 ||
           poi.type == FloorplanTypes.waypoint2) {
         continue;
       }
+      // Keep building and floor context alongside the POI's map position.
       yield LocatedFloorplanPoi(
         source.floorplan.building,
         floor,
@@ -67,11 +74,14 @@ class FloorplanPoiIndex {
     }
   }
 
+  // Returns up to [limit] POIs of [type], ordered by geographic distance from the [origin] parameter
+  // (this does not account for walking routes or travel between floors right now)
   List<LocatedFloorplanPoi> nearest(
     String type,
     LatLng origin, {
     int limit = 5,
   }) {
+    // Filter by type and pair each matching POI with its distance in meters.
     final matches = [
       for (final entry in pois)
         if (entry.poi.type == type)
@@ -84,7 +94,8 @@ class FloorplanPoiIndex {
               entry.position.longitude,
             ),
           ),
-    ]..sort((a, b) => a.distance.compareTo(b.distance));
+    ]..sort((a, b) => a.distance.compareTo(b.distance)); // Nearest first.
+    // Drop the temporary distances and return only the requested POI entries.
     return matches.take(limit).map((match) => match.entry).toList();
   }
 }
