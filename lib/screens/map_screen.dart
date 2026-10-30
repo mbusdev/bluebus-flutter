@@ -1766,6 +1766,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                       _bottomSheetController = null;
                       _removeSearchLocationMarker();
                     }
+                    
+                    // exits floorplan view when the android back button is triggered by zooming out,
+                    // just like clicking the actual back button displayed
+                    if (_floorplanControlsTakeOver) {
+                      _mapController?.animateCamera(
+                        CameraUpdate.zoomTo(16),
+                      );
+                    }
 
                     setState(() {}); // Make sure the widgets reload
                   },
@@ -2084,7 +2092,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                     borderRadius: BorderRadius.circular(25),
                                                   ),
                                                   child: FloatingActionButton(
-                                                    onPressed: () =>
+                                                    onPressed: () => // zoom out on map, to exit overlay
                                                       _mapController?.animateCamera(
                                                         CameraUpdate.zoomTo(16),
                                                       ),
