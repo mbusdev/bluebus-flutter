@@ -124,9 +124,6 @@ class FloorplanMarkerService {
       _highlightedIconCache[poiType] = descriptor;
       return descriptor;
     } catch (err) {
-      debugPrint(
-        'FloorplanMarkerService: could not highlight $assetPath ($err)',
-      );
       return null;
     } finally {
       // Release temporary graphics resources, including when generation fails.
