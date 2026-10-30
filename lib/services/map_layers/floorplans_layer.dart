@@ -119,7 +119,8 @@ class FloorplansLayer extends CompositeMapLayer {
   }
 
   // creates markers for the nearest 
-  Future<int> showNearbyPois(String type, LatLng origin, void Function(LocatedFloorplanPoi) tapCallback) async {
+  // returns average position of the POIs, to center on them
+  Future<LatLng> showNearbyPois(String type, LatLng origin, void Function(LocatedFloorplanPoi) tapCallback) async {
     await load();
     final index = _poiIndex;
     if (index == null) throw StateError('Floorplan data is unavailable'); // add proper handling!!
@@ -157,7 +158,17 @@ class FloorplansLayer extends CompositeMapLayer {
     
     _applyDetailLevel();
     onUpdate();
-    return matches.length;
+
+
+    // Return the average latitude and longitude of the matched POIs.
+    if (matches.isEmpty) return origin;
+    double latitude = 0;
+    double longitude = 0;
+    for (final match in matches) {
+      latitude += match.position.latitude;
+      longitude += match.position.longitude;
+    }
+    return LatLng(latitude / matches.length, longitude / matches.length);
   }
 
   void clearPoiSearch() {

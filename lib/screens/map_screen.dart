@@ -1404,20 +1404,22 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     final name = LocationSearchBar.poiNames[type] ?? type;
     try {
       
-      // get user position and center on the user's position
+      // get user position
       final position = await _getLastKnownLocation();
-      if (!mounted || position == null) return;
-      await _centerOnLocation(
-        false, lat: position.latitude, long: position.longitude, zoom: 18,
-      );
-      if (!mounted) return;
+      if (position == null) return;
 
       // show nearby POIs of the search
-      await floorplansLayer.showNearbyPois(
+      final center = await floorplansLayer.showNearbyPois(
         type, LatLng(position.latitude, position.longitude),
         (poi) { // tap callback for each marker in the floorplan
           _selectedPoi.value = poi;
         }
+      );
+      
+      // center on the center of the POIs chosen
+      if (!mounted) return;
+      await _centerOnLocation(
+        false, lat: center.latitude, long: center.longitude, zoom: 18,
       );
       
       if (!mounted) return;
