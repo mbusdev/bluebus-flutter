@@ -88,10 +88,6 @@ class LocationTile extends StatelessWidget {
     required this.onTap,
   });
 
-  static getResultsListView(List<Location> locs) {
-
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = location;
