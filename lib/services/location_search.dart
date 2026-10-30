@@ -52,22 +52,40 @@ List<Location> searchLocations(
   List<LocatedFloorplanPoi> rooms,
 ) {
   // Normalize once before building and room searches.
-  final words = query.trim().toLowerCase().split(RegExp(r'\s+'));
+  query = query.trim().toLowerCase();
+  final words = query.split(RegExp(r'\s+'));
   var locations = _ngramSearch(words.join(' '), index); // original building search
   final roomRanks = <LocatedFloorplanPoi, int>{};
 
+  // creates a list of searches to be done
+  // joined means whether it was created from spaces or from below, without spaces
+  final searches = [
+    for (final edge in {words.length - 1, 0})
+      ( number: words[edge], building: ([...words]..removeAt(edge)).join(' '), joined: false, ),
+  ];
+
+  // matches to "dude1120", "1120dude", or "dude1120E"
+  // then adds them to the searches to process
+  final leading = RegExp(r'^([0-9]+)([a-z].*)$').firstMatch(query);
+  final trailing = RegExp(r'^(.*[a-z])([0-9]+[a-z]*)$').firstMatch(query);
+  if (leading != null) {
+    searches.add((number: leading[1]!, building: leading[2]!, joined: true));
+  }
+  if (trailing != null) {
+    searches.add((number: trailing[2]!, building: trailing[1]!, joined: true));
+  }
+
   // Both ends can be numeric ("building 12 210" or "210 building 12").
   // Keep each interpretation, and deduplicate rooms before displaying them.
-  for (final edge in {words.length - 1, 0}) {
+  for (final search in searches) {
     // find edge words that contain more digits than letters, ignore those that are mostly letters
-    final number = words[edge];
+    final number = search.number;
     final digits = RegExp(r'[0-9]').allMatches(number).length;
     final letters = RegExp(r'[a-z]').allMatches(number).length;
     if (digits <= letters) continue; 
 
     // perform an ngram building search of the query with the potential room number removed
-    final buildingWords = [...words]..removeAt(edge); // make a copy and remove the room number word
-    final buildingQuery = buildingWords.join(' ');
+    final buildingQuery = search.building;
     final buildingsAndStops = _ngramSearch(
       buildingQuery, index,
     ); // ignore bus stops
@@ -95,6 +113,9 @@ List<Location> searchLocations(
         // after all the rooms that match within a building in the search results
         return position < 0 ? 10 : position; 
       });
+      // Joined interpretations need a matching building, so "1120A" stays useful
+      // as a room identifier rather than matching rooms in unrelated buildings.
+      if (search.joined && rank == 10) continue;
       
       // set new search results building list, if whole-query results is empty and room results is not empty
       if (locations.isEmpty && rooms.isNotEmpty && buildingsAndStops.isNotEmpty) {
