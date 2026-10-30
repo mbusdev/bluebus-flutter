@@ -9,12 +9,14 @@ class POISheet extends StatefulWidget {
   final String name;
   final ValueListenable<LocatedFloorplanPoi?> poiSelected;
   final bool showBottomRoomNumber;
+  final bool hasResults;
 
   const POISheet({
     Key? key,
     required this.name,
     required this.poiSelected,
     required this.showBottomRoomNumber,
+    required this.hasResults
   }) : super(key: key);
   
   @override
@@ -63,7 +65,19 @@ class _POISheetState extends State<POISheet> {
                   valueListenable: widget.poiSelected,
                   builder: (context, poi, child) {
                     // user has not selected a POI yet, then show nothing
-                    if (poi == null) return SizedBox(width: double.infinity, height: 75,);
+                    if (poi == null) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(width: double.infinity, height: 10,),
+                          Text(
+                            widget.hasResults ? "Tap on an icon to see more info." : "No results were found near you.", 
+                            style: TextStyle(fontSize: 16, color: getColor(context, ColorType.opposite))
+                          ),
+                          SizedBox(width: double.infinity, height: 40,)
+                        ]
+                      );
+                    }
                     
                     return Column(
 

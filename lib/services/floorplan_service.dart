@@ -80,6 +80,7 @@ class FloorplanPoiIndex {
     String type,
     LatLng origin, {
     int limit = 5,
+    double maxDistance = 600, // max meters that a marker can be away from the origin
   }) {
     // Filter by type and pair each matching POI with its distance in meters.
     final matches = [
@@ -95,8 +96,12 @@ class FloorplanPoiIndex {
             ),
           ),
     ]..sort((a, b) => a.distance.compareTo(b.distance)); // Nearest first.
-    // Drop the temporary distances and return only the requested POI entries.
-    return matches.take(limit).map((match) => match.entry).toList();
+    // Only return POIs within maxDistance meters of the origin.
+    return matches
+        .where((match) => match.distance <= maxDistance)
+        .take(limit)
+        .map((match) => match.entry)
+        .toList();
   }
 }
 

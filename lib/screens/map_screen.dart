@@ -1229,6 +1229,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         name: 'Room ${location.name}',
         poiSelected: _selectedPoi,
         showBottomRoomNumber: true,
+        hasResults: true,
       ),
     );
   }
@@ -1409,14 +1410,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (position == null) return;
 
       // show nearby POIs of the search
+      // gets center of the markers, which returns the user position if no markers were found within 600m
       final center = await floorplansLayer.showNearbyPois(
         type, LatLng(position.latitude, position.longitude),
         (poi) { // tap callback for each marker in the floorplan
           _selectedPoi.value = poi;
         }
       );
-      
-      // center on the center of the POIs chosen
+
       if (!mounted) return;
       await _centerOnLocation(
         false, lat: center.latitude, long: center.longitude, zoom: 18,
@@ -1431,6 +1432,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           name: name,
           poiSelected: _selectedPoi,
           showBottomRoomNumber: false,
+          hasResults: center.latitude != position.latitude || center.longitude != position.longitude
+            // if the results were different from the user's position, then it found some markers
         ),
       );
 

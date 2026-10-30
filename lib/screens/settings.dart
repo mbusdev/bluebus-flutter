@@ -175,10 +175,6 @@ class _SettingsState extends State<Settings> {
 
                 const SizedBox(height: 10),
 
-                // Text(
-                //   "DPSS: ",
-                //   style: getTextStyle(TextType.normal, getColor(context, ColorType.opposite))
-                // )
                 Text.rich(
                   TextSpan(
                     children: [
