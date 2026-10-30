@@ -122,7 +122,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // In memory cache of favorited stop ids for quick lookup and immediate UI updates
   final Set<String> _favoriteStops = <String>{};
 
-  Marker? _searchLocationMarker;
   final Set<String> _selectedRoutes = <String>{};
   List<Map<String, String>> _availableRoutes = [];
   Map<String, bool> _stopIsRide = {};
@@ -1076,9 +1075,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Show a red pin marker at search location
-  void _showSearchLocationMarker(double lat, double lon) {
+  void _showSearchLocationMarker(double lat, double lon, bool showGetOnIcon) {
+    final icon = (showGetOnIcon ? MapImageService.getOnBusStop() : null)
+        ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
     searchResultLayer.isVisible = true;
-    searchResultLayer.setPosition(LatLng(lat, lon));
+    searchResultLayer.setPosition(LatLng(lat, lon), icon: icon);
   }
 
   // Remove the search location marker
@@ -1908,7 +1909,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                             searchResultLayer,
                             bannerLayer,
                           ],
-                          searchResultsMarker: _searchLocationMarker,
                           onMapCreated: _onMapCreated,
                           onCameraMove: _onCameraMove,
                           onCameraIdle: _onCameraIdle,
@@ -1983,10 +1983,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                           milliseconds: 300,
                                         ),
                                         curve: Curves.easeInOut,
-                                        // Slide the whole row out below the
-                                        // screen while the floorplan entry
-                                        // controls slide up into place at the
-                                        // same time.
+                                        // Slide the normal header upward while the
+                                        // floorplan header takes its place.
                                         offset: _floorplanControlsTakeOver
                                             ? const Offset(0, -2)
                                             : Offset.zero,
@@ -2034,38 +2032,50 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                 ),
                                               ),
 
-                                        SizedBox(
-                                          // width: 45,
-                                          width: 105,
-                                          height: 45,
-                                          child: FittedBox(
-                                            alignment: Alignment.centerRight,
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.end,
-                                              children: [
-                                                ((_bannerMessage?.isActive ?? false) && (
-                                                  (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
-                                                  (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
-                                                 ))
-                                                    ? CustomPaint(
-                                                        foregroundPainter:
-                                                            ProgressCirclePainter(
-                                                              startTime:
-                                                                  _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
-                                                              endTime:
-                                                                  _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
-                                                              currentTime:
-                                                                  DateTime.now(),
-                                                            ),
-                                                        child: DecoratedBox(
-                                                          decoration: BoxDecoration(
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonShadow,
+                                              SizedBox(
+                                                // width: 45,
+                                                width: 105,
+                                                height: 45,
+                                                child: FittedBox(
+                                                  alignment: Alignment.centerRight,
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.end,
+                                                    children: [
+                                                      ((_bannerMessage?.isActive ?? false) && (
+                                                        (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
+                                                        (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
+                                                       ))
+                                                          ? CustomPaint(
+                                                              foregroundPainter:
+                                                                  ProgressCirclePainter(
+                                                                    startTime:
+                                                                        _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
+                                                                    endTime:
+                                                                        _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
+                                                                    currentTime:
+                                                                        DateTime.now(),
+                                                                  ),
+                                                              child: DecoratedBox(
+                                                                decoration: BoxDecoration(
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: getColor(
+                                                                        context,
+                                                                        ColorType
+                                                                            .mapButtonShadow,
+                                                                      ),
+                                                                      blurRadius: 10,
+                                                                      offset: Offset(
+                                                                        0,
+                                                                        6,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        25,
+                                                                      ),
                                                                 ),
                                                                 child: FloatingActionButton(
                                                                   onPressed: () async {
@@ -2080,14 +2090,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                             (
                                                                               context,
                                                                             ) =>
-                                                                                NewFeaturesScreen(),
+                                                                                BannerScreen(url: _bannerMessage?.url ?? ""),
                                                                       ),
                                                                     );
                                                                   },
                                                                   heroTag: 'new_fab',
                                                                   elevation: 0,
                                                                   child: Text(
-                                                                    "New!",
+                                                                    _bannerMessage?.shortTitle ?? "New!",
                                                                     style: TextStyle(
                                                                       color: getColor(
                                                                         context,
@@ -2113,31 +2123,27 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                             BoxShadow(
                                                               color: getColor(
                                                                 context,
-                                                                MaterialPageRoute<
-                                                                  void
-                                                                >(
-                                                                  builder:
-                                                                      (
-                                                                        context,
-                                                                      ) =>
-                                                                          BannerScreen(url: _bannerMessage?.url ?? ""),
-                                                                ),
-                                                              );
-                                                            },
-                                                            heroTag: 'new_fab',
-                                                            elevation: 0,
-                                                            child: Text(
-                                                              _bannerMessage?.shortTitle ?? "New!",
-                                                              style: TextStyle(
-                                                                color: getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonIcon,
-                                                                ),
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize: 18.0,
+                                                                ColorType
+                                                                    .mapButtonShadow,
+                                                              ),
+                                                              blurRadius: 10,
+                                                              offset: Offset(0, 6),
+                                                            ),
+                                                          ],
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                25,
+                                                              ),
+                                                        ),
+                                                        child: FloatingActionButton(
+                                                          onPressed: () async {
+                                                            // switch to settings menu
+                                                            // with the MaterialPagesRoute animation
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute<void>(
+                                                                builder: (context) =>
+                                                                    Settings(),
                                                               ),
                                                             );
                                                           },
@@ -2163,7 +2169,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       ),
                                     ),
 
-                                    // upper floorplan overlay UI
+// upper floorplan overlay UI
                                     IgnorePointer(
                                       ignoring:
                                           !_floorplanControlsTakeOver ||

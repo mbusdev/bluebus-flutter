@@ -38,7 +38,6 @@ abstract class CompositeMapLayer {
 class CompositeMapWidget extends StatefulWidget {
   final LatLng initialCenter;
   final List<CompositeMapLayer> mapLayers;
-  final Marker? searchResultsMarker;
   final Function(GoogleMapController) onMapCreated;
   final ValueChanged<CameraPosition>? onCameraMove;
   final VoidCallback? onCameraIdle;
@@ -46,7 +45,6 @@ class CompositeMapWidget extends StatefulWidget {
   CompositeMapWidget({
     required this.initialCenter,
     required this.mapLayers,
-    required this.searchResultsMarker,
     required this.onMapCreated,
     this.onCameraMove,
     this.onCameraIdle,
@@ -193,9 +191,6 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
       if (!layer.isVisible) return {};
       return layer.markers;
     }).toSet(); //Flatten all the markers from each layer into one big layer
-    // Include the selected search result alongside the layer markers.
-    final searchMarker = widget.searchResultsMarker;
-    if (searchMarker != null) allMarkers.add(searchMarker);
     allPolylines = widget.mapLayers.expand<Polyline>((CompositeMapLayer layer) {
       if (!layer.isVisible) return {};
       return layer.polylines;
