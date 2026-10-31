@@ -1,0 +1,79 @@
+# Used by .github/workflows/ios-build-firebase.yaml. Setup: docs/ios-firebase-distribution.md
+#
+# Ruby code in this file runs from ios/fastlane; fastlane actions resolve paths from ios/.
+default_platform(:ios)
+
+APP_ID = "com.ishankumar.maizebus"
+TEAM_ID = "4LLPM7NY5C"
+
+platform :ios do
+  desc "Signed ad-hoc build of the checked-out code, uploaded to Firebase App Distribution"
+  lane :firebase_adhoc do
+    setup_ci # temporary keychain, so CI never touches a login keychain
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_P8_BASE64"],
+      is_key_content_base64: true
+    )
+
+    import_certificate(
+      certificate_path: ENV["DIST_CERT_PATH"],
+      certificate_password: ENV["IOS_DIST_CERT_PASSWORD"],
+      keychain_name: "fastlane_tmp_keychain",
+      keychain_password: ""
+    )
+
+    # Devices are registered by hand in the Apple Developer portal. force regenerates the
+    # ad-hoc profile so it includes every registered device, including newly added ones.
+    get_provisioning_profile(
+      adhoc: true,
+      force: true,
+      app_identifier: APP_ID,
+      api_key: api_key
+    )
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+
+    # The project uses automatic signing for local builds; switch Runner to manual here only
+    update_code_signing_settings(
+      path: "Runner.xcodeproj",
+      targets: ["Runner"],
+      build_configurations: ["Release"],
+      use_automatic_signing: false,
+      team_id: TEAM_ID,
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile_name
+    )
+
+    # Ad-hoc builds use production APNs; the checked-in entitlement says development
+    sh("/usr/libexec/PlistBuddy", "-c", "Set :aps-environment production",
+       File.expand_path("../Runner/Runner.entitlements"))
+
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "ad-hoc",
+      export_options: { provisioningProfiles: { APP_ID => profile_name } },
+      output_directory: "../build/ios/fastlane",
+      output_name: "maizebus.ipa"
+    )
+
+    release = firebase_app_distribution(
+      app: ENV["FIREBASE_IOS_APP_ID"],
+      service_credentials_file: ENV["FIREBASE_SERVICE_ACCOUNT_PATH"],
+      groups: ENV["FIREBASE_TESTER_GROUPS"],
+      release_notes: ENV["RELEASE_NOTES"]
+    )
+
+    # Plugin versions differ in how they key the returned release
+    testing_uri = release && (release[:testing_uri] || release[:testingUri] || release["testingUri"])
+    if ENV["GITHUB_OUTPUT"]
+      File.open(ENV["GITHUB_OUTPUT"], "a") do |f|
+        f.puts "testing_uri=#{testing_uri}"
+        f.puts "build_number=#{ENV["BUILD_NUMBER"]}"
+      end
+    end
+  end
+end

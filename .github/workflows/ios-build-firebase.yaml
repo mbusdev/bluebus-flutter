@@ -1,0 +1,177 @@
+# Comment `/build-ios` on a pull request to build that PR as a signed ad-hoc .ipa and
+# upload it to Firebase App Distribution. The bot replies on the PR with an install link.
+#
+# Setup (secrets, Apple and Firebase steps): docs/ios-firebase-distribution.md
+#
+# Notes:
+# - issue_comment workflows always run from the copy of this file on the default branch,
+#   so the command only works once this file is merged into main.
+# - Only users with write access to the repo can trigger it. The build runs the PR's code
+#   with signing secrets, so review fork PRs before commenting /build-ios on them.
+name: iOS build (/build-ios)
+on:
+  issue_comment:
+    types: [created]
+  # TEMP: lets the build be tested from this branch before the workflow is on main.
+  # Remove this trigger and the other TEMP blocks below before merging.
+  push:
+    branches: [ios-firebase-distribution]
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+jobs:
+  prepare:
+    # TEMP: the push check lets test pushes through
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/build-ios'))
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.pr.outputs.sha }}
+      branch: ${{ steps.pr.outputs.branch }}
+      label: ${{ steps.pr.outputs.label }}
+    steps:
+      - name: Check permission and read PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // TEMP: a test push has no PR, so build the pushed commit. Only users with
+            // write access can push, so no permission check is needed.
+            if (context.eventName === 'push') {
+              core.setOutput('sha', context.sha);
+              core.setOutput('branch', context.ref.replace('refs/heads/', ''));
+              core.setOutput('label', 'Push test');
+              return;
+            }
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const user = context.payload.comment.user.login;
+            const { data: perm } = await github.rest.repos.getCollaboratorPermissionLevel({ owner, repo, username: user });
+            // We use an ubuntu run to verify the build is valid before using the Mac machine.
+            // Check if the user has write access to the repo before letting them build.
+            if (!['admin', 'maintain', 'write'].includes(perm.permission)) {
+              await github.rest.issues.createComment({ owner, repo, issue_number,
+                body: `@${user} only collaborators with write access can run \`/build-ios\`.` });
+              core.setFailed(`${user} has ${perm.permission} permission`);
+              return;
+            }
+            // Creates a message saying the build is starting.
+            await github.rest.reactions.createForIssueComment({ owner, repo,
+              comment_id: context.payload.comment.id, content: 'rocket' });
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: issue_number });
+            // Pin the commit now so pushes made during the build don't change what gets built.
+            core.setOutput('sha', pr.head.sha);
+            core.setOutput('branch', pr.head.ref);
+            core.setOutput('label', `PR #${issue_number}`);
+
+  build:
+    needs: prepare
+    runs-on: macos-latest
+    timeout-minutes: 60
+    # You can only run one build at a time to avoid multiple identical builds
+    concurrency:
+      # TEMP: `|| github.ref` gives test pushes their own group
+      group: ios-build-${{ github.event.issue.number || github.ref }}
+      cancel-in-progress: true
+    outputs:
+      testing_uri: ${{ steps.distribute.outputs.testing_uri }}
+      build_number: ${{ steps.distribute.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.8'
+          cache: true
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ios
+      - name: Write Google Maps key
+        env:
+          GMAPS_API_KEY: ${{ secrets.GMAPS_API_KEY }}
+        run: |
+          if [ -z "$GMAPS_API_KEY" ]; then
+            echo "::error::Add a GMAPS_API_KEY repository secret (the app crashes at launch without a Maps key)"
+            exit 1
+          fi
+          echo "GMapApiKey=$GMAPS_API_KEY" > ios/Flutter/gmap.xcconfig
+      - name: Write Firebase config
+        env:
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+        run: |
+          if [ -z "$FIREBASE_OPTIONS_DART" ] || [ -z "$GOOGLE_SERVICE_INFO_PLIST_BASE64" ]; then
+            echo "::error::Add the FIREBASE_OPTIONS_DART and GOOGLE_SERVICE_INFO_PLIST_BASE64 secrets"
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_OPTIONS_DART" > lib/firebase_options.dart
+          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+      - name: Write signing files
+        env:
+          IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "$IOS_DIST_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-sa.json"
+      - name: Generate Flutter build config
+        run: |
+          flutter pub get
+          flutter build ios --release --config-only --no-pub --build-number=${{ github.run_number }}
+          cd ios && pod install
+      - name: Build, sign and upload to Firebase
+        id: distribute
+        working-directory: ios
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          DIST_CERT_PATH: ${{ runner.temp }}/dist.p12
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT_PATH: ${{ runner.temp }}/firebase-sa.json
+          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+          FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'testers' }}
+          RELEASE_NOTES: "${{ needs.prepare.outputs.label }} · ${{ needs.prepare.outputs.branch }} · ${{ needs.prepare.outputs.sha }}"
+        run: bundle exec fastlane ios firebase_adhoc
+      - name: Remove signing files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/firebase-sa.json"
+
+  report:
+    needs: [prepare, build]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          RESULT: ${{ needs.build.result }}
+          TESTING_URI: ${{ needs.build.outputs.testing_uri }}
+          BUILD_NUMBER: ${{ needs.build.outputs.build_number }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+        with:
+          script: |
+            const { RESULT, TESTING_URI, BUILD_NUMBER, SHA } = process.env;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const short = SHA.slice(0, 7);
+            let body;
+            if (RESULT === 'success') {
+              const install = TESTING_URI || 'check your Firebase App Distribution email or the App Distribution home-screen app';
+              body = `iOS build **${BUILD_NUMBER}** of \`${short}\` is ready.\n\n` +
+                `**Install:** ${install}\n\n` +
+                `Open the link on your iPhone. Your device must be registered (see docs/ios-firebase-distribution.md).`;
+            } else if (RESULT === 'cancelled') {
+              body = `iOS build of \`${short}\` was cancelled, probably by a newer \`/build-ios\`. [Run log](${runUrl})`;
+            } else {
+              body = `iOS build of \`${short}\` failed. [Run log](${runUrl})`;
+            }
+            // TEMP: a test push has no PR to comment on, so show the result on the run's summary page
+            if (context.eventName === 'push') {
+              await core.summary.addRaw(body).write();
+              return;
+            }
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
