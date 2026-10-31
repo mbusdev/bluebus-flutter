@@ -276,6 +276,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void onBusClicked(Bus b) {
     centerOnBus(b);
+    baseRoutesLayer.setFocusedRoute(b.routeId);
     _showBusSheet(b.id);
   }
 
@@ -1454,6 +1455,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     // TODO: Fix the back button (maybe bring back the sheet stack? That might be messy now that our bus sheet is different)--it should take the user back to the previous camera position/zoom on the map
     // 
 
+
+
     // showModalBottomSheet(
     _bottomSheetController = showBottomSheet(
       context: context,
@@ -1461,10 +1464,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       // isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
+        height: MediaQuery.sizeOf(context).height / 2,
+        
+        // decoration: BoxDecoration(
+        //   color: Colors.red
+        // ),
         child: DraggableScrollableSheet(
           snap: true,
-          snapSizes: [0.5, 0.9],
-          initialChildSize: 0.5,
+          snapSizes: [1.0],
+          initialChildSize: 1.0,
+          maxChildSize: 1.0,
+
           // initialChildSize: 0.85,
           // maxChildSize: 0.85,
           // snap: true,
@@ -1482,7 +1492,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                   showMaizebusOKDialog(
                     contextIn: context,
                     title: "Error",
-                    content: "Couldn't load stop.",
+                    content: "Couldn't load bus.",
                   );
                 }
               },
@@ -1491,6 +1501,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         ),
       ),
     );
+    _bottomSheetController?.closed.then((_) {
+      baseRoutesLayer.setFocusedRoute(null);
+    });
   }
 
   void _showFavoritesSheet() {
@@ -1543,6 +1556,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             // When someone clicks "See all stops for this bus" this callback runs
             Navigator.pop(context); // Close the current modal
             centerOnBusID(busProvider, busId);
+            Bus? bus = null;
+            try {
+              bus = busProvider.buses.where((b) => b.id == busId).toList()[0];
+            } catch (e) {}
+            baseRoutesLayer.setFocusedRoute(bus?.routeId);
 
             _showBusSheet(busId);
           },

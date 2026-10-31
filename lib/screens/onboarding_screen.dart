@@ -44,7 +44,11 @@ class _OnboardingDeciderState extends State<OnboardingDecider> {
     }
 
     if (_accepted) {
-      return const Scaffold(body: MaizeBusCore(), resizeToAvoidBottomInset: false);
+      return Scaffold(
+        body: const MaizeBusCore(),
+        resizeToAvoidBottomInset: false,
+        bottomSheetScrimBuilder: (context, animation) => const SizedBox.shrink(),
+      );
     }
 
     return const OnboardingScreen();
