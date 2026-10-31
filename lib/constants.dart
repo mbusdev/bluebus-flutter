@@ -76,6 +76,10 @@ String getPrettyRouteName(String code) {
 }
 
 final Uri contactURL = Uri.parse('https://www.maizebus.com/#/contact/');
+final Uri DPSSNumber = Uri.parse('tel:+17347631131');
+final Uri afterHoursTransitURL = Uri.parse('https://ltp.umich.edu/campus-transit/after-hours/');
+
+final int STORED_RECENT_SEARCHES = 6; // how many recent searches to store
 
 // COLORS
 const Color maizeBusDarkBlue = Color.fromARGB(255, 10, 0, 89);
@@ -89,6 +93,7 @@ enum ColorType {
   opposite,
   background,
   backgroundGradientStart,
+  link,
 
   mapButtonPrimary,
   mapButtonSecondary,
@@ -112,8 +117,9 @@ enum ColorType {
   // temporary room search label cards, will maybe change
   roomSearchBathroom,
   roomSearchInfoDesk,
-  roomSearchDining,   // do we have dining?
-  roomSearchPrinting, // do we have printing data?
+  roomSearchDining,
+  roomSearchVending,
+  roomSearchPrinting,
   roomSearchStairs,
 
   // info card colors (in route selector, favorites sheet, etc.)
@@ -145,6 +151,7 @@ const Map<ColorType, Color> lightColors = {
     255,
     255,
   ), // same as background but transparent
+  ColorType.link: Color.fromARGB(255, 45, 151, 243),
 
   ColorType.mapButtonPrimary: Color.fromARGB(255, 11, 83, 148),
   ColorType.mapButtonSecondary: Color.fromARGB(190, 255, 255, 255),
@@ -158,7 +165,7 @@ const Map<ColorType, Color> lightColors = {
   ColorType.shadow: Color.fromARGB(95, 187, 187, 187),
 
   ColorType.sliderButton: Colors.white,
-  ColorType.sliderBackground: Color.fromARGB(255, 200, 228, 255),
+  ColorType.sliderBackground: Color.fromARGB(255, 223, 237, 252),
 
   ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
   ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
@@ -166,9 +173,10 @@ const Map<ColorType, Color> lightColors = {
   ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
   ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
   ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
+  ColorType.roomSearchVending: Color.fromARGB(255, 235, 121, 121),
   ColorType.roomSearchPrinting: Color.fromARGB(255, 238, 141, 210),
   ColorType.roomSearchStairs: Color.fromARGB(255, 134, 195, 166),
-
+  
   ColorType.infoCardColor: Color.fromARGB(255, 255, 255, 255),
   ColorType.infoCardHighlighted: Color.fromARGB(255, 200, 228, 255),
 
@@ -199,6 +207,7 @@ const Map<ColorType, Color> darkColors = {
     33,
     34,
   ), // same as background but transparent
+  ColorType.link: Color.fromARGB(255, 200, 228, 255),
 
   ColorType.mapButtonPrimary: Color.fromARGB(255, 255, 255, 255),
   ColorType.mapButtonSecondary: Color.fromARGB(187, 104, 104, 134),
@@ -413,7 +422,7 @@ ThemeData lightMode = ThemeData(
 
   dividerTheme: DividerThemeData(
     thickness: 2,
-    color: lightColors[ColorType.dim],
+    color: lightColors[ColorType.sliderBackground],
   ),
 
   // set default text color
@@ -440,7 +449,7 @@ ThemeData darkMode = ThemeData(
 
   dividerTheme: DividerThemeData(
     thickness: 2,
-    color: darkColors[ColorType.dim],
+    color: darkColors[ColorType.sliderBackground],
   ),
 
   // set default text color
@@ -468,6 +477,35 @@ class Location {
     this.stopId,
     this.latlng,
   }) : aliases = aliases;
+
+  static Location fromJson(Map<String, dynamic> json) {
+    // Accept the old " null" placeholders as well as real JSON nulls.
+    final stopId = json['stopId'] as String?;
+    final lat = json['lat'];
+    final lon = json['lon'];
+    return Location(
+      json['name'] as String,
+      json['abbrev'] as String? ?? '',
+      List<String>.from(json['aliases'] as List? ?? const []),
+      json['kind'] == 'stop',
+      stopId: stopId?.trim() == 'null' ? null : stopId,
+      latlng: lat is num && lon is num
+          ? LatLng(lat.toDouble(), lon.toDouble())
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "kind": isBusStop ? "stop" : "building",
+      "name": name,
+      "abbrev": abbrev,
+      "aliases": aliases,
+      "stopId": stopId,
+      "lat": latlng?.latitude,
+      "lon": latlng?.longitude,
+    };
+  }
 }
 
 // location with arrival time attached

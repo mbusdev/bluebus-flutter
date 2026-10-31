@@ -102,9 +102,9 @@ class FloorplanEntryBar extends StatelessWidget {
                   color: Colors.black,
                   size: 28,
                 ),
-                label: const Text(
-                  "Room #",
-                  style: TextStyle(color: Colors.black, fontSize: 18),
+                label: Text(
+                  "room #",
+                  style: TextStyle(color: Colors.black.withAlpha(127), fontSize: 18),
                 ),
               ),
             ),
@@ -818,13 +818,15 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                 style: TextStyle(
                   fontFamily: "Urbanist",
                   fontSize: 40,
-                  height: 1
+                  height: 1,
+                  color: Colors.white
                 )
               ),
               Text(
                 floorName,
                 style: TextStyle(
-                  fontSize: 20
+                  fontSize: 20,
+                  color: Colors.white
                 ),
               ),
               
@@ -871,9 +873,9 @@ class _FloorplanOverlayState extends State<FloorplanOverlay> with TickerProvider
                           color: Colors.black,
                           size: 28,
                         ),
-                        label: const Text(
-                          "Room #",
-                          style: TextStyle(color: Colors.black, fontSize: 18),
+                        label: Text(
+                          "room #",
+                          style: TextStyle(color: Colors.black.withAlpha(127), fontSize: 18),
                         ),
                       ),
                     )
