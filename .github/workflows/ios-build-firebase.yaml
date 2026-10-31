@@ -49,15 +49,15 @@ jobs:
             const issue_number = context.issue.number;
             const user = context.payload.comment.user.login;
             const { data: perm } = await github.rest.repos.getCollaboratorPermissionLevel({ owner, repo, username: user });
-            // We use an ubuntu run to verify the build is valid before using the Mac machine.
-            // Check if the user has write access to the repo before letting them build.
-            if (!['admin', 'maintain', 'write'].includes(perm.permission)) {
+            // This runs on a cheap Ubuntu runner so the Mac only starts for allowed requests.
+            // Only users with write access can build (maintainers are reported as 'write').
+            if (!['admin', 'write'].includes(perm.permission)) {
               await github.rest.issues.createComment({ owner, repo, issue_number,
                 body: `@${user} only collaborators with write access can run \`/build-ios\`.` });
               core.setFailed(`${user} has ${perm.permission} permission`);
               return;
             }
-            // Creates a message saying the build is starting.
+            // React 🚀 to the comment to show the build is starting.
             await github.rest.reactions.createForIssueComment({ owner, repo,
               comment_id: context.payload.comment.id, content: 'rocket' });
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: issue_number });
@@ -70,7 +70,7 @@ jobs:
     needs: prepare
     runs-on: macos-latest
     timeout-minutes: 60
-    # You can only run one build at a time to avoid multiple identical builds
+    # One build per PR at a time: a newer /build-ios on the same PR cancels the running one
     concurrency:
       # TEMP: `|| github.ref` gives test pushes their own group
       group: ios-build-${{ github.event.issue.number || github.ref }}
@@ -96,7 +96,7 @@ jobs:
           GMAPS_API_KEY: ${{ secrets.GMAPS_API_KEY }}
         run: |
           if [ -z "$GMAPS_API_KEY" ]; then
-            echo "::error::Add a GMAPS_API_KEY repository secret (the app crashes at launch without a Maps key)"
+            echo "::error::Add a GMAPS_API_KEY repository secret (maps don't load without it)"
             exit 1
           fi
           echo "GMapApiKey=$GMAPS_API_KEY" > ios/Flutter/gmap.xcconfig
@@ -121,7 +121,9 @@ jobs:
       - name: Generate Flutter build config
         run: |
           flutter pub get
-          flutter build ios --release --config-only --no-pub --build-number=${{ github.run_number }}
+          # Only writes Flutter's Xcode config; fastlane does the signed build. --no-codesign
+          # stops Flutter looking for a development certificate the runner doesn't have.
+          flutter build ios --release --config-only --no-codesign --no-pub --build-number=${{ github.run_number }}
           cd ios && pod install
       - name: Build, sign and upload to Firebase
         id: distribute

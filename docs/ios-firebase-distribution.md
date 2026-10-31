@@ -67,6 +67,13 @@ the GitHub repo.
 GitHub runs comment-triggered workflows from the default branch only, so `/build-ios` starts
 working once these files are on `main`.
 
+### 5. Testing before the merge
+
+Until step 4, the workflow also runs on every push to the `ios-firebase-distribution` branch
+(the blocks marked `TEMP` in the workflow). A push builds that commit, uploads it to Firebase,
+and shows the result on the run's summary page in the Actions tab. Once a test build installs
+and works, remove the `TEMP` blocks, then merge.
+
 ## Adding a tester
 
 1. Add their email to the `testers` group in Firebase. They open the invite email on their

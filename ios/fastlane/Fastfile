@@ -67,8 +67,10 @@ platform :ios do
       release_notes: ENV["RELEASE_NOTES"]
     )
 
-    # Plugin versions differ in how they key the returned release
-    testing_uri = release && (release[:testing_uri] || release[:testingUri] || release["testingUri"])
+    # Plugin versions return the release as a Google API object or a hash, keyed differently.
+    # Read it defensively so a missing link never fails a build that already uploaded.
+    info = release.respond_to?(:to_h) ? release.to_h : {}
+    testing_uri = info[:testing_uri] || info[:testingUri] || info["testingUri"]
     if ENV["GITHUB_OUTPUT"]
       File.open(ENV["GITHUB_OUTPUT"], "a") do |f|
         f.puts "testing_uri=#{testing_uri}"
