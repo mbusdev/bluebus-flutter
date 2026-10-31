@@ -93,13 +93,13 @@ jobs:
           working-directory: ios
       - name: Write Google Maps key
         env:
-          GMAPS_API_KEY: ${{ secrets.GMAPS_API_KEY }}
+          GMAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
-          if [ -z "$GMAPS_API_KEY" ]; then
-            echo "::error::Add a GMAPS_API_KEY repository secret (maps don't load without it)"
+          if [ -z "$GOOGLE_MAPS_API_KEY" ]; then
+            echo "::error::Add a GOOGLE_MAPS_API_KEY repository secret (maps don't load without it)"
             exit 1
           fi
-          echo "GMapApiKey=$GMAPS_API_KEY" > ios/Flutter/gmap.xcconfig
+          echo "GMapApiKey=$GOOGLE_MAPS_API_KEY" > ios/Flutter/gmap.xcconfig
       - name: Write Firebase config
         env:
           FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
