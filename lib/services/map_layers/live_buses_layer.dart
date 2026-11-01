@@ -334,7 +334,7 @@ class LiveBusesLayer extends CompositeMapLayer {
               double dist = bus.position.haversineDistanceMetersTo(entry.$2.location);
               if (dist < 8) { // Closer than 8 meters
                 // debugPrint("line.points = ${line.points}, stopIndex: ${entry.$1}");
-                newHeading = routeStopRotation(line.points, entry.$1);
+                newHeading = entry.$2.rotation;
                 // debugPrint("Bus is at stop ${entry.$2.id}, so its new heading is $newHeading");
                 closestStopIndex = entry.$1;
               }

@@ -3,63 +3,6 @@ import 'dart:math';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-/// Function to calculate rotation angle between two geographical points
-/// (used for bus stop icon orientation)
-double pointRotation(double lat1, double lon1, double lat2, double lon2) {
-  double dLat = lat2 - lat1;
-  double dLon = lon2 - lon1;
-
-  // Scale longitude by cos(lat) to correct for east-west distance
-  double x = dLon * (cos(lat1 * degrees2Radians));
-  double y = dLat;
-
-  double angle = atan2(x, y) * radians2Degrees;
-
-  // Normalize to [0, 360)
-  if (angle < 0) angle += 360;
-
-  return angle;
-}
-
-double routeStopRotation(List<LatLng> points, int stopIndex) {
-  final currentStop = points[stopIndex];
-
-  (double, double) averageLocation(List<dynamic> points) {
-    final locations = points.isEmpty ? [currentStop] : points;
-    // find sum of lat/lng and divide by the amount to get average
-    final latitude =  locations.fold<double>(0, (sum, stop) => sum + (stop.latitude?.toDouble() ?? 0)) / locations.length;
-    final longitude = locations.fold<double>(0, (sum, stop) => sum + (stop.longitude?.toDouble() ?? 0)) / locations.length;
-    return (latitude, longitude);
-  }
-
-  // deal with edge cases at start/end of list by reading next four or previous four points
-  if (stopIndex >= points.length - 2) {
-    final prevTwo = averageLocation(points.getRange(stopIndex - 2, stopIndex).toList());
-    final prevFour = averageLocation(points.getRange(stopIndex - 4, stopIndex - 2).toList());
-    return pointRotation(prevTwo.$1, prevTwo.$2, prevFour.$1, prevFour.$2);
-  } else if (stopIndex <= 2) {
-    final nextTwo = averageLocation(points.getRange(stopIndex + 1, stopIndex + 3).toList());
-    final nextFour = averageLocation(points.getRange(stopIndex + 3, stopIndex + 5).toList());
-    return pointRotation(nextTwo.$1, nextTwo.$2, nextFour.$1, nextFour.$2);
-  }
-
-  final stopsRange = 2;
-
-  // get rotation from the average of the previous stopsRange stops to the average location of the next 3 stops
-  final previousStops = points
-      .take(stopIndex).toList()
-      .reversed
-      .take(stopsRange).toList();
-  final nextStops = points
-      .skip(stopIndex + 1)
-      .take(stopsRange).toList();
-
-  final previous = averageLocation(previousStops);
-  final next = averageLocation(nextStops);
-
-  return pointRotation(previous.$1, previous.$2, next.$1, next.$2);
-}
-
 extension LatLngListHelpers on List<LatLng> {
   double totalDistance() {
     double acc = 0.0;
