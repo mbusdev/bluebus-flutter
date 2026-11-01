@@ -28,6 +28,9 @@ You have two options for getting your API key: either use a Maps Demo Key or get
 
 # Manual Setup
 
+## Generate Backend Clients
+To reduce the amount of parsing boilplate when calling the backend, client code is generated based off of an OpenAPI spec. The version of the backend you're targetting is determined by the schema_url field in pubspec.yaml. If this changes (e.g. due to you changing your branch, or an update happening in the backend) you may need to regenerate the clients. To do so, run `./generate_clients.sh`.
+
 ## Google Maps Setup (iOS)
 
 1. **Create the API key config file:**

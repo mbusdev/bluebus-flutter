@@ -116,3 +116,5 @@ fi
 
 # dart pub global activate flutterfire_cli
 
+echo "Generating clients"
+bash ./generate_clients.sh
