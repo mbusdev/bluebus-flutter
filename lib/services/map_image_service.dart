@@ -588,7 +588,7 @@ class MapImageService {
           FANCY_STOP_ICON_YHEADROOM.toDouble() +
               (STOP_ICON_HEIGHT.toDouble() / 2),
         ),
-        degreesToRadians(rotation),
+        degreesToRadians(-rotation), // canvas +y is down while map +lat is up
       );
 
       // canvas.drawImage(_stopIconImage!, Offset(FANCY_STOP_ICON_XHEADROOM.toDouble(), FANCY_STOP_ICON_YHEADROOM.toDouble()), Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
@@ -698,7 +698,7 @@ class MapImageService {
           (STOP_ICON_WIDTH.toDouble() / 2) + 2, // + 2 to avoid clipping
           (STOP_ICON_HEIGHT.toDouble() / 2) + 2, // + 2 to avoid clipping
         ),
-        degreesToRadians(rotation),
+        degreesToRadians(-rotation), // canvas +y is down while map +lat is up
       );
 
       // canvas.drawImage(_stopIconImage!, Offset(FANCY_STOP_ICON_XHEADROOM.toDouble(), FANCY_STOP_ICON_YHEADROOM.toDouble()), Paint()); // 1 pixel to 1 canvas unit. I'm treating canvas units as pixels here
