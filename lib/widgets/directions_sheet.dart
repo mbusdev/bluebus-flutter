@@ -301,7 +301,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
               );
             } else if (journeyload.hasError) {
               if (kDebugMode) {
-                debugPrint(journeyload.error.toString());
+                stderr.writeln("Failed to load journey: ${journeyload.error}");
               }
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!context.mounted) return;
