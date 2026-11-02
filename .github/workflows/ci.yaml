@@ -59,11 +59,7 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
       - name: Generate Client
-        run: |
-          rm -rf lib/backend
-          dart run build_runner clean
-          dart run swagger_parser
-          dart run build_runner build
+        run: bash ./generate_clients.sh
       - name: Analyze
         run: |
           flutter analyze --no-fatal-infos --no-fatal-warnings
