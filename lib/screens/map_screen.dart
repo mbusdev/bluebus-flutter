@@ -81,7 +81,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   );
   bool _isProgrammaticCameraMove = true;
 
-  bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
 
   // Set once startup data comes back. Null until then (and if the
@@ -182,7 +181,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   final JourneyLayer journeyLayer = JourneyLayer();
   final NavigationLayer navigationLayer = NavigationLayer();
   final FloorplansLayer floorplansLayer = FloorplansLayer();
-  final DemoBuildingsLayer demoBuildingsLayer = DemoBuildingsLayer(); // DEMO BUILDINGS
+  final DemoBuildingsLayer demoBuildingsLayer =
+      DemoBuildingsLayer(); // DEMO BUILDINGS
   final SearchResultLayer searchResultLayer = SearchResultLayer();
   final BannerLayer bannerLayer = BannerLayer();
 
@@ -203,6 +203,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _setupConnectivityMonitoring();
 
     navigationManager.init();
+    navigationManager.cameraBehavior.addListener(_onCameraBehaviorChanged);
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
     bannerLayer.init((banner) {
@@ -322,7 +323,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
   }
 
-  void downloadStartupData() async { // TODO: Test to make sure this works with startup data
+  void downloadStartupData() async {
+    // TODO: Test to make sure this works with startup data
     StartupDataHolder? startupData = await _getStartupData();
     // keep trying to reach server.
     while (startupData == null) {
@@ -368,8 +370,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     theme.onSystemThemeUpdate(context);
     await theme.loadTheme(); // loadTheme() happens in the Future.wait below
 
-    
-
     // canVibrate = await Haptics.canVibrate();
     final busProvider = Provider.of<BusProvider>(context, listen: false);
 
@@ -380,14 +380,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       content: error,
     );
 
-
     int startTime = DateTime.now().millisecondsSinceEpoch;
 
     downloadStartupData(); // Download it but don't wait around for it to finish
 
     _loadingMessageNotifier.value = Loadpoint('Loading data...', 1);
     // loading all this data in parallel
-    
+
     bool shouldRetryInit = true;
 
     while (shouldRetryInit) {
@@ -430,7 +429,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             screenRadiusLoaded = true;
             globalScreenBottomRadius = screenRadius?.bottomLeft ?? 0;
           })(),
-          
+
           busProvider.loadRoutesWithCache(onBusError),
           _loadSelectedRoutes(),
           _loadFavoriteStops(),
@@ -440,19 +439,22 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         stderr.writeln("$err");
         if (err is SocketException) {
           // We'll get a SocketException if the app can't download data from the network and there's no cache available
-          _loadingMessageNotifier.value = Loadpoint('Waiting for network...', 1);
+          _loadingMessageNotifier.value = Loadpoint(
+            'Waiting for network...',
+            1,
+          );
         } else {
-          _loadingMessageNotifier.value = Loadpoint('An error occured, retrying...', 1);
+          _loadingMessageNotifier.value = Loadpoint(
+            'An error occured, retrying...',
+            1,
+          );
         }
         await Future.delayed(const Duration(seconds: 2));
       }
-      
     }
 
     // moving this here fixes loading bug
     await RouteColorService.initialize();
-
-    
 
     _loadingMessageNotifier.value = Loadpoint('Loading routes and stops...', 1);
 
@@ -538,8 +540,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           return;
       }
 
-      // If follow mode is disabled, don't recenter automatically.
-      if (!_followUser) return;
+      // Only recenter automatically when the current navigation stage asks for it.
+      final cam = navigationManager.cameraBehavior.value;
+      if (!cam.follow) return;
       if (_userHasInteractedWithMap.value) {
         // log("Ignoring location update: user has interacted with map");
         return;
@@ -590,7 +593,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         lat: p.latitude,
         long: p.longitude,
         zoom: _currentCameraPos.value?.zoom,
-        bearing: p.speed > 1 ? p.heading : _currentCameraPos.value?.bearing ,
+        bearing: cam.rotateWithHeading && p.speed > 1
+            ? p.heading
+            : _currentCameraPos.value?.bearing,
       );
 
       // TODO: Update any navigation manager / UI that depends on live position here.
@@ -600,14 +605,31 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Call to programmatically enable/disable follow mode. Wire this to your location FAB.
+  // Whether following actually happens is decided by navigationManager.cameraBehavior.
   void _setFollowMode(bool enabled) {
-    setState(() {
-      _followUser = enabled;
-      if (!enabled) return;
-      // When enabling follow mode, reset last-centered so next position recenters immediately.
-      _lastCenteredPos = null;
-      _userHasInteractedWithMap.value = false;
-    });
+    if (!enabled) return;
+    // When enabling follow mode, reset last-centered so next position recenters immediately.
+    _lastCenteredPos = null;
+    _userHasInteractedWithMap.value = false;
+  }
+
+  // Runs when the active navigation stage changes what the camera should do
+  void _onCameraBehaviorChanged() {
+    if (!mounted) return;
+    final cam = navigationManager.cameraBehavior.value;
+    if (cam.follow) {
+      // Start following right away instead of waiting for the next GPS update
+      _setFollowMode(true);
+      _centerOnLocation(
+        true,
+        zoom: _currentCameraPos.value?.zoom,
+        bearing: _currentCameraPos.value?.bearing,
+      );
+    } else if ((_currentCameraPos.value?.bearing ?? 0) != 0) {
+      // Undo the heading rotation once a following stage ends
+      _isProgrammaticCameraMove = true;
+      _setMapToNorth();
+    }
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -704,8 +726,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         final p_message = data['persistant_message'];
 
         BannerMessage banner_message = (data['banner_message'] != null)
-          ? BannerMessage.fromJson(data['banner_message'])
-          : BannerMessage.none;
+            ? BannerMessage.fromJson(data['banner_message'])
+            : BannerMessage.none;
 
         // banner_message = BannerMessage.hardcoded;
 
@@ -748,6 +770,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _loadingMessageNotifier.dispose();
     _currentCameraPos.dispose();
     _userHasInteractedWithMap.dispose();
+    navigationManager.cameraBehavior.removeListener(_onCameraBehaviorChanged);
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
@@ -775,6 +798,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     liveBusesLayer.isVisible = true;
 
     navigationLayer.reload();
+    navigationManager.cameraBehavior.value = CameraBehavior.free; // this line could get moved into navigation manager when the stop() function is finished.
   }
 
   // Compute a lightweight fingerprint of the routes list to detect changes
@@ -1068,7 +1092,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _showSearchLocationMarker(double lat, double lon) {
     searchResultLayer.isVisible = true;
     searchResultLayer.setPosition(LatLng(lat, lon));
-
   }
 
   // Remove the search location marker
@@ -1170,11 +1193,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             } else {
               // Location has no coordinates
             }
-          }
+          },
         );
       },
     );
-    
   }
 
   void _showSearchRoomsSheet() {
@@ -1183,9 +1205,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return SearchRoomsSheet(
-          floors: floorplansLayer.floors,
-        );
+        return SearchRoomsSheet(floors: floorplansLayer.floors);
       },
     );
   }
@@ -1452,7 +1472,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   void _showBusSheet(String busID) {
     // TODO: Allow the user to drag the top half of the map
     // TODO: Fix the back button (maybe bring back the sheet stack? That might be messy now that our bus sheet is different)--it should take the user back to the previous camera position/zoom on the map
-    // 
+    //
 
     // showModalBottomSheet(
     _bottomSheetController = showBottomSheet(
@@ -1628,9 +1648,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   Future<void> centerOnBusID(BusProvider busProvider, String busId) async {
-    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    const latitude_adjust =
+        -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
     final state = liveBusesLayer.busAnimationCache[busId];
-    LatLng? pos = state?.lastInterpolatedPosition ??
+    LatLng? pos =
+        state?.lastInterpolatedPosition ??
         state?.bus.position ??
         busProvider.buses.where((b) => b.id == busId).firstOrNull?.position;
 
@@ -1639,9 +1661,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
     }
   }
+
   Future<void> centerOnBus(Bus b) async {
-    const latitude_adjust = -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
-    LatLng pos = LatLng(b.position.latitude + latitude_adjust, b.position.longitude);
+    const latitude_adjust =
+        -0.002; // Latitude adjustment so the bus appears centered in the top half of the screen
+    LatLng pos = LatLng(
+      b.position.latitude + latitude_adjust,
+      b.position.longitude,
+    );
     await _centerOnLocation(false, lat: pos.latitude, long: pos.longitude);
   }
 
@@ -1668,7 +1695,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     if (userLocation) {
       Position? pos = await _getLastKnownLocation();
-      if (pos != null) position = pos;
+      if (pos != null) {
+        position = pos;
+        // Face the direction of travel right away instead of waiting for the next GPS update
+        if (navigationManager.cameraBehavior.value.rotateWithHeading &&
+            pos.speed > 1) {
+          bearing = pos.heading;
+        }
+      }
     }
 
     // Animate the map camera to the user's location
@@ -1757,247 +1791,665 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           duration: Duration(milliseconds: 200),
 
           // child: (snapshot.connectionState == ConnectionState.done)
-              // ? 
+          // ?
           child: Stack(
             children: [
-              
-
-
-            
               PopScope(
-                  //for switch animation
-                  key: ValueKey(1),
+                //for switch animation
+                key: ValueKey(1),
 
-                  // lets us prevent back button on map page
-                  canPop: false,
-                  onPopInvokedWithResult: (didPop, result) {
-                    hideJourney(); // Hide the journey if it's showing right now
+                // lets us prevent back button on map page
+                canPop: false,
+                onPopInvokedWithResult: (didPop, result) {
+                  hideJourney(); // Hide the journey if it's showing right now
 
-                    if (_navigationOverlayEnabled) {
-                      hideNavigation();
-                    }
+                  if (_navigationOverlayEnabled) {
+                    hideNavigation();
+                  }
 
-                    _floorplanOverlayEnabled = false;
+                  _floorplanOverlayEnabled = false;
 
-                    // If showing a persistent bottom sheet, close it.
-                    // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
-                    if (_bottomSheetController != null) {
-                      _bottomSheetController!.close();
-                      _bottomSheetController = null;
-                      _removeSearchLocationMarker();
-                    }
+                  // If showing a persistent bottom sheet, close it.
+                  // Fix android back button for buildings sheet and journey sheet (doesn't work without this)
+                  if (_bottomSheetController != null) {
+                    _bottomSheetController!.close();
+                    _bottomSheetController = null;
+                    _removeSearchLocationMarker();
+                  }
 
-                    setState(() {}); // Make sure the widgets reload
-                  },
-                  child: Stack(
-                    children: [
-                      RepaintBoundary(
-                        child: CompositeMapWidget(
-                          initialCenter: startLatLng,
-                          mapLayers: [
-                            demoBuildingsLayer, // DEMO BUILDINGS
-                            floorplansLayer,
-                            baseRoutesLayer,
-                            liveBusesLayer,
-                            journeyLayer,
-                            navigationLayer,
-                            searchResultLayer,
-                            bannerLayer,
-                          ],
-                          onMapCreated: _onMapCreated,
-                          onCameraMove: _onCameraMove,
-                          onCameraIdle: _onCameraIdle,
-                        ),
+                  setState(() {}); // Make sure the widgets reload
+                },
+                child: Stack(
+                  children: [
+                    RepaintBoundary(
+                      child: CompositeMapWidget(
+                        initialCenter: startLatLng,
+                        mapLayers: [
+                          demoBuildingsLayer, // DEMO BUILDINGS
+                          floorplansLayer,
+                          baseRoutesLayer,
+                          liveBusesLayer,
+                          journeyLayer,
+                          navigationLayer,
+                          searchResultLayer,
+                          bannerLayer,
+                        ],
+                        onMapCreated: _onMapCreated,
+                        onCameraMove: _onCameraMove,
+                        onCameraIdle: _onCameraIdle,
                       ),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          top: globalTopPadding,
-                          bottom: globalBottomPadding,
-                          left: globalLeftRightPadding,
-                          right: globalLeftRightPadding,
-                        ),
-                        child: Column(
-                          children: [
-                            // if showing journey, show header
-                            (_journeyOverlayActive)
-                                ? DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: getColor(
-                                        context,
-                                        ColorType.background,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: globalTopPadding,
+                        bottom: globalBottomPadding,
+                        left: globalLeftRightPadding,
+                        right: globalLeftRightPadding,
+                      ),
+                      child: Column(
+                        children: [
+                          // if showing journey, show header
+                          (_journeyOverlayActive)
+                              ? DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: getColor(
+                                      context,
+                                      ColorType.background,
+                                    ),
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(56),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: ui.Color.fromARGB(39, 0, 0, 0),
+                                        spreadRadius: 1,
+                                        blurRadius: 2,
+                                        offset: Offset(
+                                          0,
+                                          3,
+                                        ), // changes position of shadow
                                       ),
-                                      borderRadius: BorderRadius.all(
-                                        Radius.circular(56),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(width: 10),
+
+                                      Icon(Icons.route),
+
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 15,
+                                          vertical: 5,
+                                        ),
+                                        child: Text(
+                                          "Showing route on map",
+                                          style: TextStyle(
+                                            fontFamily: 'Urbanist',
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 18,
+                                          ),
+                                        ),
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: ui.Color.fromARGB(39, 0, 0, 0),
-                                          spreadRadius: 1,
-                                          blurRadius: 2,
-                                          offset: Offset(
-                                            0,
-                                            3,
-                                          ), // changes position of shadow
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(width: 10),
-
-                                        Icon(Icons.route),
-
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 15,
-                                            vertical: 5,
-                                          ),
-                                          child: Text(
-                                            "Showing route on map",
-                                            style: TextStyle(
-                                              fontFamily: 'Urbanist',
-                                              fontWeight: FontWeight.w400,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                // not showing journey, show usual header
-                                : DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: isDarkMode(context)
-                                              ? Colors.black.withAlpha(50)
-                                              : Colors.white.withAlpha(100),
-                                          spreadRadius: 50,
-                                          blurRadius: 50,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          // group maize and bus together on the left
-                                          child: Row(
-                                            children: [
-                                              Text(
-                                                'maize',
-                                                style: TextStyle(
-                                                  color: maizeBusYellow,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 30,
-                                                ),
+                                    ],
+                                  ),
+                                )
+                              // not showing journey, show usual header
+                              : DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isDarkMode(context)
+                                            ? Colors.black.withAlpha(50)
+                                            : Colors.white.withAlpha(100),
+                                        spreadRadius: 50,
+                                        blurRadius: 50,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        // group maize and bus together on the left
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              'maize',
+                                              style: TextStyle(
+                                                color: maizeBusYellow,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 30,
                                               ),
-                                              Text(
-                                                'bus',
-                                                style: TextStyle(
-                                                  color: isDarkMode(context)
-                                                      ? maizeBusBlueDarkMode
-                                                      : maizeBusBlue,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 30,
+                                            ),
+                                            Text(
+                                              'bus',
+                                              style: TextStyle(
+                                                color: isDarkMode(context)
+                                                    ? maizeBusBlueDarkMode
+                                                    : maizeBusBlue,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 30,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      SizedBox(
+                                        // width: 45,
+                                        width: 105,
+                                        height: 45,
+                                        child: FittedBox(
+                                          alignment: Alignment.centerRight,
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              ((_bannerMessage?.isActive ??
+                                                          false) &&
+                                                      ((_bannerMessage?.showTime
+                                                                  .isBefore(
+                                                                    DateTime.now(),
+                                                                  ) ??
+                                                              false) &&
+                                                          (_bannerMessage
+                                                                  ?.hideTime
+                                                                  .isAfter(
+                                                                    DateTime.now(),
+                                                                  ) ??
+                                                              false)))
+                                                  ? CustomPaint(
+                                                      foregroundPainter:
+                                                          ProgressCirclePainter(
+                                                            startTime:
+                                                                _bannerMessage
+                                                                    ?.showTime ??
+                                                                DateTime.utc(
+                                                                  1970,
+                                                                  0,
+                                                                  0,
+                                                                  0,
+                                                                  0,
+                                                                  0,
+                                                                ),
+                                                            endTime:
+                                                                _bannerMessage
+                                                                    ?.hideTime ??
+                                                                DateTime.utc(
+                                                                  1970,
+                                                                  0,
+                                                                  0,
+                                                                  0,
+                                                                  0,
+                                                                  0,
+                                                                ),
+                                                            currentTime:
+                                                                DateTime.now(),
+                                                          ),
+                                                      child: DecoratedBox(
+                                                        decoration: BoxDecoration(
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: getColor(
+                                                                context,
+                                                                ColorType
+                                                                    .mapButtonShadow,
+                                                              ),
+                                                              blurRadius: 10,
+                                                              offset: Offset(
+                                                                0,
+                                                                6,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                25,
+                                                              ),
+                                                        ),
+                                                        child: FloatingActionButton(
+                                                          onPressed: () async {
+                                                            // switch to settings menu
+                                                            // with the MaterialPagesRoute animation
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute<
+                                                                void
+                                                              >(
+                                                                builder: (context) =>
+                                                                    BannerScreen(
+                                                                      url:
+                                                                          _bannerMessage
+                                                                              ?.url ??
+                                                                          "",
+                                                                    ),
+                                                              ),
+                                                            );
+                                                          },
+                                                          heroTag: 'new_fab',
+                                                          elevation: 0,
+                                                          child: Text(
+                                                            _bannerMessage
+                                                                    ?.shortTitle ??
+                                                                "New!",
+                                                            style: TextStyle(
+                                                              color: getColor(
+                                                                context,
+                                                                ColorType
+                                                                    .mapButtonIcon,
+                                                              ),
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              fontSize: 18.0,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : SizedBox.shrink(),
+
+                                              SizedBox(width: 15),
+
+                                              DecoratedBox(
+                                                decoration: BoxDecoration(
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: getColor(
+                                                        context,
+                                                        ColorType
+                                                            .mapButtonShadow,
+                                                      ),
+                                                      blurRadius: 10,
+                                                      offset: Offset(0, 6),
+                                                    ),
+                                                  ],
+                                                  borderRadius:
+                                                      BorderRadius.circular(25),
+                                                ),
+                                                child: FloatingActionButton(
+                                                  onPressed: () async {
+                                                    // switch to settings menu
+                                                    // with the MaterialPagesRoute animation
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute<void>(
+                                                        builder: (context) =>
+                                                            Settings(),
+                                                      ),
+                                                    );
+                                                  },
+                                                  heroTag: 'settings_fab',
+                                                  elevation: 0,
+                                                  child: Icon(
+                                                    Icons.menu,
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType.mapButtonIcon,
+                                                    ),
+                                                    size: 28,
+                                                  ),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
 
-                                        SizedBox(
-                                          // width: 45,
-                                          width: 105,
-                                          height: 45,
-                                          child: FittedBox(
-                                            alignment: Alignment.centerRight,
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.end,
-                                              children: [
-                                                ((_bannerMessage?.isActive ?? false) && (
-                                                  (_bannerMessage?.showTime.isBefore(DateTime.now()) ?? false) &&
-                                                  (_bannerMessage?.hideTime.isAfter(DateTime.now()) ?? false)
-                                                 ))
-                                                    ? CustomPaint(
-                                                        foregroundPainter:
-                                                            ProgressCirclePainter(
-                                                              startTime:
-                                                                  _bannerMessage?.showTime ?? DateTime.utc(1970,0,0,0,0,0),
-                                                              endTime:
-                                                                  _bannerMessage?.hideTime ?? DateTime.utc(1970,0,0,0,0,0),
-                                                              currentTime:
-                                                                  DateTime.now(),
-                                                            ),
-                                                        child: DecoratedBox(
-                                                          decoration: BoxDecoration(
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonShadow,
-                                                                ),
-                                                                blurRadius: 10,
-                                                                offset: Offset(
-                                                                  0,
-                                                                  6,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  25,
-                                                                ),
-                                                          ),
-                                                          child: FloatingActionButton(
-                                                            onPressed: () async {
-                                                              // switch to settings menu
-                                                              // with the MaterialPagesRoute animation
-                                                              Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute<
-                                                                  void
-                                                                >(
-                                                                  builder:
-                                                                      (
-                                                                        context,
-                                                                      ) =>
-                                                                          BannerScreen(url: _bannerMessage?.url ?? ""),
-                                                                ),
-                                                              );
-                                                            },
-                                                            heroTag: 'new_fab',
-                                                            elevation: 0,
-                                                            child: Text(
-                                                              _bannerMessage?.shortTitle ?? "New!",
-                                                              style: TextStyle(
-                                                                color: getColor(
-                                                                  context,
-                                                                  ColorType
-                                                                      .mapButtonIcon,
-                                                                ),
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize: 18.0,
-                                                              ),
-                                                            ),
-                                                          ),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            child: _isOffline
+                                ? Padding(
+                                    key: const ValueKey('offline-banner'),
+                                    padding: EdgeInsets.only(
+                                      top: 15,
+                                      left: globalLeftRightPadding,
+                                      right: globalLeftRightPadding,
+                                      bottom: 10,
+                                    ),
+                                    child: _buildOfflineBanner(),
+                                  )
+                                : const SizedBox.shrink(
+                                    key: ValueKey('offline-banner-hidden'),
+                                  ),
+                          ),
+
+                          // reminder widget
+                          SizedBox(height: 30.0),
+                          _journeyOverlayActive || _isOffline
+                              ? SizedBox.shrink()
+                              : Expanded(
+                                  child: OverflowBox(
+                                    maxHeight: double.infinity,
+                                    alignment: Alignment.topRight,
+                                    child: ReminderWidgets(),
+                                  ),
+                                ),
+
+                          Spacer(),
+
+                          ValueListenableBuilder<CameraPosition?>(
+                            valueListenable: _currentCameraPos,
+                            builder: (context, cameraPosition, child) {
+                              return (!_journeyOverlayActive)
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 20,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          Column(
+                                            spacing: 10,
+                                            children: [
+                                              // face north button is only visible when not facing north
+                                              Visibility(
+                                                visible:
+                                                    _currentCameraPos.value !=
+                                                        null &&
+                                                    _currentCameraPos
+                                                            .value!
+                                                            .bearing !=
+                                                        0,
+                                                child: DecoratedBox(
+                                                  decoration: BoxDecoration(
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonShadow,
+                                                        ).withAlpha(50),
+                                                        blurRadius: 4,
+                                                        offset: Offset(0, 2),
+                                                      ),
+                                                    ],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          25,
                                                         ),
-                                                      )
-                                                    : SizedBox.shrink(),
+                                                  ),
+                                                  child: FloatingActionButton.small(
+                                                    onPressed: _setMapToNorth,
+                                                    heroTag: 'north_fab',
+                                                    backgroundColor: getColor(
+                                                      context,
+                                                      ColorType
+                                                          .mapButtonSecondary,
+                                                    ),
+                                                    elevation: 0,
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            56,
+                                                          ),
+                                                    ),
+                                                    child: Transform.rotate(
+                                                      angle:
+                                                          _currentCameraPos
+                                                                  .value !=
+                                                              null
+                                                          ? (-_currentCameraPos
+                                                                        .value!
+                                                                        .bearing -
+                                                                    45) *
+                                                                vec_math
+                                                                    .degrees2Radians
+                                                          : 0,
+                                                      child: FaIcon(
+                                                        FontAwesomeIcons
+                                                            .compass,
+                                                        color: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonPrimary,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
 
-                                                SizedBox(width: 15),
+                                              // location button
+                                              ValueListenableBuilder<bool>(
+                                                valueListenable:
+                                                    _userHasInteractedWithMap,
+                                                builder: (context, userMoved, child) {
+                                                  return AnimatedSwitcher(
+                                                    duration: const Duration(
+                                                      milliseconds: 250,
+                                                    ),
+                                                    child: userMoved
+                                                        ? DecoratedBox(
+                                                            decoration: BoxDecoration(
+                                                              boxShadow: [
+                                                                BoxShadow(
+                                                                  color: getColor(
+                                                                    context,
+                                                                    ColorType
+                                                                        .mapButtonShadow,
+                                                                  ).withAlpha(50),
+                                                                  blurRadius: 4,
+                                                                  offset:
+                                                                      Offset(
+                                                                        0,
+                                                                        2,
+                                                                      ),
+                                                                ),
+                                                              ],
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    25,
+                                                                  ),
+                                                            ),
+                                                            child: FloatingActionButton.small(
+                                                              onPressed: () {
+                                                                _setFollowMode(
+                                                                  true,
+                                                                );
+                                                                _centerOnLocation(
+                                                                  true,
+                                                                  // Keep the rotation while standing still if the stage rotates the camera
+                                                                  bearing:
+                                                                      navigationManager.cameraBehavior.value.rotateWithHeading
+                                                                      ? _currentCameraPos.value?.bearing
+                                                                      : null,
+                                                                );
+                                                              },
+                                                              heroTag:
+                                                                  'location_fab',
+                                                              backgroundColor:
+                                                                  getColor(
+                                                                    context,
+                                                                    ColorType
+                                                                        .mapButtonSecondary,
+                                                                  ),
+                                                              elevation: 0,
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      56,
+                                                                    ),
+                                                              ),
+                                                              child: Icon(
+                                                                Icons
+                                                                    .my_location,
+                                                                color: getColor(
+                                                                  context,
+                                                                  ColorType
+                                                                      .mapButtonPrimary,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          )
+                                                        : const SizedBox.shrink(),
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : SizedBox.shrink();
+                            },
+                          ),
 
-                                                DecoratedBox(
+                          // if showing journey, show close and reopen button
+                          // -- swaps with the floorplan entry controls
+                          // below via a Stack so both occupy the same
+                          // screen position.
+                          Stack(
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              IgnorePointer(
+                                ignoring: _floorplanControlsTakeOver,
+                                child: AnimatedSlide(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                  // Slide the whole row out below the
+                                  // screen while the floorplan entry
+                                  // controls slide up into place at the
+                                  // same time.
+                                  offset: _floorplanControlsTakeOver
+                                      ? const Offset(0, 2)
+                                      : Offset.zero,
+                                  child: (_journeyOverlayActive)
+                                      ? Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(56),
+                                              ),
+                                              child: ElevatedButton.icon(
+                                                onPressed:
+                                                    _showJourneySheetOnReopen,
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: getColor(
+                                                    context,
+                                                    ColorType
+                                                        .importantButtonBackground,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          56,
+                                                        ),
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 20,
+                                                        vertical: 8,
+                                                      ),
+                                                  elevation: 1,
+                                                ),
+                                                icon: Icon(
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType
+                                                        .importantButtonText,
+                                                  ),
+                                                  Icons.keyboard_arrow_up,
+                                                  size: 18,
+                                                ), // The icon on the left
+                                                label: Text(
+                                                  'Steps',
+                                                  style: TextStyle(
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType
+                                                          .importantButtonText,
+                                                    ),
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ), // The text on the right
+                                              ),
+                                            ),
+
+                                            SizedBox(width: 20),
+
+                                            DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(56),
+                                              ),
+                                              child: ElevatedButton.icon(
+                                                onPressed: () {
+                                                  hideJourney();
+                                                  // _clearJourneyOverlays
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: getColor(
+                                                    context,
+                                                    ColorType
+                                                        .secondaryButtonBackground,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          56,
+                                                        ),
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 20,
+                                                        vertical: 8,
+                                                      ),
+                                                  elevation: 1,
+                                                ),
+                                                icon: Icon(
+                                                  Icons.close,
+                                                  color: getColor(
+                                                    context,
+                                                    ColorType
+                                                        .secondaryButtonText,
+                                                  ),
+                                                  size: 18,
+                                                ), // The icon on the left
+                                                label: Text(
+                                                  'Close',
+                                                  style: TextStyle(
+                                                    color: getColor(
+                                                      context,
+                                                      ColorType
+                                                          .secondaryButtonText,
+                                                    ),
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ), // The text on the right
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      // else, main buttons row
+                                      : Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+
+                                          children: [
+                                            // routes
+                                            SizedBox(
+                                              width: 45,
+                                              height: 45,
+                                              child: FittedBox(
+                                                child: DecoratedBox(
                                                   decoration: BoxDecoration(
                                                     boxShadow: [
                                                       BoxShadow(
@@ -2017,20 +2469,21 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                   ),
                                                   child: FloatingActionButton(
                                                     onPressed: () async {
-                                                      // switch to settings menu
-                                                      // with the MaterialPagesRoute animation
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute<void>(
-                                                          builder: (context) =>
-                                                              Settings(),
-                                                        ),
+                                                      if (canVibrate &&
+                                                          Platform.isIOS) {
+                                                        await Haptics.vibrate(
+                                                          HapticsType.light,
+                                                        );
+                                                      }
+                                                      _showBusRoutesModal(
+                                                        _busProviderRef!.routes,
                                                       );
                                                     },
-                                                    heroTag: 'settings_fab',
-                                                    elevation: 0,
+                                                    heroTag: 'routes_fab',
+                                                    elevation:
+                                                        0, // handle shadow ourselves
                                                     child: Icon(
-                                                      Icons.menu,
+                                                      Icons.directions_bus,
                                                       color: getColor(
                                                         context,
                                                         ColorType.mapButtonIcon,
@@ -2039,605 +2492,231 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                     ),
                                                   ),
                                                 ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
 
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 250),
-                              switchInCurve: Curves.easeOut,
-                              switchOutCurve: Curves.easeIn,
-                              child: _isOffline
-                                  ? Padding(
-                                      key: const ValueKey('offline-banner'),
-                                      padding: EdgeInsets.only(
-                                        top: 15,
-                                        left: globalLeftRightPadding,
-                                        right: globalLeftRightPadding,
-                                        bottom: 10,
-                                      ),
-                                      child: _buildOfflineBanner(),
-                                    )
-                                  : const SizedBox.shrink(
-                                      key: ValueKey('offline-banner-hidden'),
-                                    ),
-                            ),
+                                            SizedBox(width: 12),
 
-                            // reminder widget
-                            SizedBox(height: 30.0),
-                            _journeyOverlayActive || _isOffline
-                                ? SizedBox.shrink()
-                                : Expanded(
-                                    child: OverflowBox(
-                                      maxHeight: double.infinity,
-                                      alignment: Alignment.topRight,
-                                      child: ReminderWidgets(),
-                                    ),
-                                  ),
-
-                            Spacer(),
-
-                            ValueListenableBuilder<CameraPosition?>(
-                              valueListenable: _currentCameraPos,
-                              builder: (context, cameraPosition, child) {
-                                return (!_journeyOverlayActive)
-                                    ? Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 20,
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
-                                          children: [
-                                            Column(
-                                              spacing: 10,
-                                              children: [
-                                                // face north button is only visible when not facing north
-                                                Visibility(
-                                                  visible:
-                                                      _currentCameraPos.value !=
-                                                          null &&
-                                                      _currentCameraPos
-                                                              .value!
-                                                              .bearing !=
-                                                          0,
-                                                  child: DecoratedBox(
-                                                    decoration: BoxDecoration(
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: getColor(
-                                                            context,
-                                                            ColorType
-                                                                .mapButtonShadow,
-                                                          ).withAlpha(50),
-                                                          blurRadius: 4,
-                                                          offset: Offset(0, 2),
+                                            // favorites
+                                            SizedBox(
+                                              width: 45,
+                                              height: 45,
+                                              child: FittedBox(
+                                                child: DecoratedBox(
+                                                  decoration: BoxDecoration(
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonShadow,
                                                         ),
-                                                      ],
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            25,
+                                                        blurRadius: 10,
+                                                        offset: Offset(0, 6),
+                                                      ),
+                                                    ],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          25,
+                                                        ),
+                                                  ),
+                                                  child: FloatingActionButton(
+                                                    onPressed: () async {
+                                                      if (canVibrate &&
+                                                          Platform.isIOS) {
+                                                        await Haptics.vibrate(
+                                                          HapticsType.light,
+                                                        );
+                                                      }
+                                                      _showFavoritesSheet();
+                                                    },
+                                                    heroTag: 'favorites_fab',
+                                                    elevation: 0,
+                                                    child: Icon(
+                                                      Icons.favorite,
+                                                      color: getColor(
+                                                        context,
+                                                        ColorType.mapButtonIcon,
+                                                      ),
+                                                      size: 28,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            SizedBox(width: 12),
+
+                                            // search
+                                            Expanded(
+                                              // stretch width
+                                              child: SizedBox(
+                                                height: 45,
+                                                child: DecoratedBox(
+                                                  decoration: BoxDecoration(
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonShadow,
+                                                        ),
+                                                        blurRadius: 10,
+                                                        offset: Offset(0, 6),
+                                                      ),
+                                                    ],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          25,
+                                                        ),
+                                                  ),
+                                                  child: ElevatedButton.icon(
+                                                    onPressed: () async {
+                                                      if (canVibrate &&
+                                                          Platform.isIOS) {
+                                                        await Haptics.vibrate(
+                                                          HapticsType.light,
+                                                        );
+                                                      }
+                                                      _showSearchSheet();
+                                                    },
+                                                    style: ElevatedButton.styleFrom(
+                                                      alignment:
+                                                          Alignment.centerLeft,
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 13,
+                                                            vertical: 8,
                                                           ),
                                                     ),
-                                                    child: FloatingActionButton.small(
-                                                      onPressed: _setMapToNorth,
-                                                      heroTag: 'north_fab',
-                                                      backgroundColor: getColor(
+                                                    icon: Icon(
+                                                      Icons.search_sharp,
+                                                      color: getColor(
                                                         context,
-                                                        ColorType
-                                                            .mapButtonSecondary,
+                                                        ColorType.mapButtonIcon,
                                                       ),
-                                                      elevation: 0,
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              56,
-                                                            ),
-                                                      ),
-                                                      child: Transform.rotate(
-                                                        angle:
-                                                            _currentCameraPos
-                                                                    .value !=
-                                                                null
-                                                            ? (-_currentCameraPos
-                                                                          .value!
-                                                                          .bearing -
-                                                                      45) *
-                                                                  vec_math
-                                                                      .degrees2Radians
-                                                            : 0,
-                                                        child: FaIcon(
-                                                          FontAwesomeIcons
-                                                              .compass,
-                                                          color: getColor(
-                                                            context,
-                                                            ColorType
-                                                                .mapButtonPrimary,
-                                                          ),
-                                                        ),
+                                                      size: 28,
+                                                    ),
+                                                    label: Text(
+                                                      "where to?",
+                                                      style: TextStyle(
+                                                        color: getColor(
+                                                          context,
+                                                          ColorType
+                                                              .mapButtonIcon,
+                                                        ).withAlpha(214),
+                                                        fontSize: 18,
                                                       ),
                                                     ),
                                                   ),
                                                 ),
-
-                                                // location button
-                                                ValueListenableBuilder<bool>(
-                                                  valueListenable:
-                                                      _userHasInteractedWithMap,
-                                                  builder: (context, userMoved, child) {
-                                                    return AnimatedSwitcher(
-                                                      duration: const Duration(
-                                                        milliseconds: 250,
-                                                      ),
-                                                      child: userMoved
-                                                          ? DecoratedBox(
-                                                              decoration: BoxDecoration(
-                                                                boxShadow: [
-                                                                  BoxShadow(
-                                                                    color: getColor(
-                                                                      context,
-                                                                      ColorType
-                                                                          .mapButtonShadow,
-                                                                    ).withAlpha(50),
-                                                                    blurRadius:
-                                                                        4,
-                                                                    offset:
-                                                                        Offset(
-                                                                          0,
-                                                                          2,
-                                                                        ),
-                                                                  ),
-                                                                ],
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                      25,
-                                                                    ),
-                                                              ),
-                                                              child: FloatingActionButton.small(
-                                                                onPressed: () {
-                                                                  _setFollowMode(
-                                                                    true,
-                                                                  );
-                                                                  _centerOnLocation(
-                                                                    true,
-                                                                  );
-                                                                },
-                                                                heroTag:
-                                                                    'location_fab',
-                                                                backgroundColor:
-                                                                    getColor(
-                                                                      context,
-                                                                      ColorType
-                                                                          .mapButtonSecondary,
-                                                                    ),
-                                                                elevation: 0,
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
-                                                                        56,
-                                                                      ),
-                                                                ),
-                                                                child: Icon(
-                                                                  Icons
-                                                                      .my_location,
-                                                                  color: getColor(
-                                                                    context,
-                                                                    ColorType
-                                                                        .mapButtonPrimary,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            )
-                                                          : const SizedBox.shrink(),
-                                                    );
-                                                  },
-                                                ),
-                                              ],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                      )
-                                    : SizedBox.shrink();
-                              },
-                            ),
-
-                            // if showing journey, show close and reopen button
-                            // -- swaps with the floorplan entry controls
-                            // below via a Stack so both occupy the same
-                            // screen position.
-                            Stack(
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                IgnorePointer(
-                                  ignoring: _floorplanControlsTakeOver,
-                                  child: AnimatedSlide(
-                                    duration: const Duration(
-                                      milliseconds: 300,
-                                    ),
-                                    curve: Curves.easeInOut,
-                                    // Slide the whole row out below the
-                                    // screen while the floorplan entry
-                                    // controls slide up into place at the
-                                    // same time.
-                                    offset: _floorplanControlsTakeOver
-                                        ? const Offset(0, 2)
-                                        : Offset.zero,
-                                    child: (_journeyOverlayActive)
-                                      ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            56,
-                                          ),
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          onPressed: _showJourneySheetOnReopen,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: getColor(
-                                              context,
-                                              ColorType
-                                                  .importantButtonBackground,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(56),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                              vertical: 8,
-                                            ),
-                                            elevation: 1,
-                                          ),
-                                          icon: Icon(
-                                            color: getColor(
-                                              context,
-                                              ColorType.importantButtonText,
-                                            ),
-                                            Icons.keyboard_arrow_up,
-                                            size: 18,
-                                          ), // The icon on the left
-                                          label: Text(
-                                            'Steps',
-                                            style: TextStyle(
-                                              color: getColor(
-                                                context,
-                                                ColorType.importantButtonText,
-                                              ),
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ), // The text on the right
-                                        ),
-                                      ),
-
-                                      SizedBox(width: 20),
-
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            56,
-                                          ),
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          onPressed: () {
-                                            hideJourney();
-                                            // _clearJourneyOverlays
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: getColor(
-                                              context,
-                                              ColorType
-                                                  .secondaryButtonBackground,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(56),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                              vertical: 8,
-                                            ),
-                                            elevation: 1,
-                                          ),
-                                          icon: Icon(
-                                            Icons.close,
-                                            color: getColor(
-                                              context,
-                                              ColorType.secondaryButtonText,
-                                            ),
-                                            size: 18,
-                                          ), // The icon on the left
-                                          label: Text(
-                                            'Close',
-                                            style: TextStyle(
-                                              color: getColor(
-                                                context,
-                                                ColorType.secondaryButtonText,
-                                              ),
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ), // The text on the right
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                // else, main buttons row
-                                : Row(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-
-                                    children: [
-                                      // routes
-                                      SizedBox(
-                                        width: 45,
-                                        height: 45,
-                                        child: FittedBox(
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: getColor(
-                                                    context,
-                                                    ColorType.mapButtonShadow,
-                                                  ),
-                                                  blurRadius: 10,
-                                                  offset: Offset(0, 6),
-                                                ),
-                                              ],
-                                              borderRadius:
-                                                  BorderRadius.circular(25),
-                                            ),
-                                            child: FloatingActionButton(
-                                              onPressed: () async {
-                                                if (canVibrate &&
-                                                    Platform.isIOS) {
-                                                  await Haptics.vibrate(
-                                                    HapticsType.light,
-                                                  );
-                                                }
-                                                _showBusRoutesModal(
-                                                  _busProviderRef!.routes,
-                                                );
-                                              },
-                                              heroTag: 'routes_fab',
-                                              elevation:
-                                                  0, // handle shadow ourselves
-                                              child: Icon(
-                                                Icons.directions_bus,
-                                                color: getColor(
-                                                  context,
-                                                  ColorType.mapButtonIcon,
-                                                ),
-                                                size: 28,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      SizedBox(width: 12),
-
-                                      // favorites
-                                      SizedBox(
-                                        width: 45,
-                                        height: 45,
-                                        child: FittedBox(
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: getColor(
-                                                    context,
-                                                    ColorType.mapButtonShadow,
-                                                  ),
-                                                  blurRadius: 10,
-                                                  offset: Offset(0, 6),
-                                                ),
-                                              ],
-                                              borderRadius:
-                                                  BorderRadius.circular(25),
-                                            ),
-                                            child: FloatingActionButton(
-                                              onPressed: () async {
-                                                if (canVibrate &&
-                                                    Platform.isIOS) {
-                                                  await Haptics.vibrate(
-                                                    HapticsType.light,
-                                                  );
-                                                }
-                                                _showFavoritesSheet();
-                                              },
-                                              heroTag: 'favorites_fab',
-                                              elevation: 0,
-                                              child: Icon(
-                                                Icons.favorite,
-                                                color: getColor(
-                                                  context,
-                                                  ColorType.mapButtonIcon,
-                                                ),
-                                                size: 28,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      SizedBox(width: 12),
-
-                                      // search
-                                      Expanded(
-                                        // stretch width
-                                        child: SizedBox(
-                                          height: 45,
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: getColor(
-                                                    context,
-                                                    ColorType.mapButtonShadow,
-                                                  ),
-                                                  blurRadius: 10,
-                                                  offset: Offset(0, 6),
-                                                ),
-                                              ],
-                                              borderRadius:
-                                                  BorderRadius.circular(25),
-                                            ),
-                                            child: ElevatedButton.icon(
-                                              onPressed: () async {
-                                                if (canVibrate &&
-                                                    Platform.isIOS) {
-                                                  await Haptics.vibrate(
-                                                    HapticsType.light,
-                                                  );
-                                                }
-                                                _showSearchSheet();
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                alignment: Alignment.centerLeft,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 13,
-                                                      vertical: 8,
-                                                    ),
-                                              ),
-                                              icon: Icon(
-                                                Icons.search_sharp,
-                                                color: getColor(
-                                                  context,
-                                                  ColorType.mapButtonIcon,
-                                                ),
-                                                size: 28,
-                                              ),
-                                              label: Text(
-                                                "where to?",
-                                                style: TextStyle(
-                                                  color: getColor(
-                                                    context,
-                                                    ColorType.mapButtonIcon,
-                                                  ).withAlpha(214),
-                                                  fontSize: 18,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      ],
-                                  ),
-                                  ),
                                 ),
-
-                                // Compact "open floorplan" entry control:
-                                // just the floor button + search bar, shown
-                                // once zoomed in near a building with
-                                // floorplan data. Tapping the floor button
-                                // opens the full floor picker.
-                                IgnorePointer(
-                                  ignoring:
-                                      !_floorplanControlsTakeOver ||
-                                      _floorplanOverlayEnabled,
-                                  child: AnimatedSlide(
-                                    duration: const Duration(
-                                      milliseconds: 300,
-                                    ),
-                                    curve: Curves.easeInOut,
-                                    offset:
-                                        (_floorplanControlsTakeOver &&
-                                            !_floorplanOverlayEnabled)
-                                        ? Offset.zero
-                                        : const Offset(0, 2),
-                                    child: FloorplanEntryBar(
-                                      onOpenFloorplan: () {
-                                        setState(() {
-                                          _floorplanOverlayEnabled = true;
-                                        });
-                                      },
-                                      onRoomSearch: _showSearchRoomsSheet,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Kept mounted at all times (rather than toggled with
-                      // a ternary) so it can slide up into place instead of
-                      // just popping in -- see _updateFloorplanOverlayForCamera.
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          ignoring: !_floorplanOverlayEnabled,
-                          child: AnimatedSlide(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            offset: _floorplanOverlayEnabled
-                                ? Offset.zero
-                                : const Offset(0, 1),
-                            child: RepaintBoundary(
-                              child: FloorplanOverlay(
-                                floorplansLayer: floorplansLayer,
-                                onClosed: () {
-                                  setState(() {
-                                    _floorplanOverlayEnabled = false;
-                                  });
-                                },
-                                onRoomSearch: _showSearchRoomsSheet,
                               ),
+
+                              // Compact "open floorplan" entry control:
+                              // just the floor button + search bar, shown
+                              // once zoomed in near a building with
+                              // floorplan data. Tapping the floor button
+                              // opens the full floor picker.
+                              IgnorePointer(
+                                ignoring:
+                                    !_floorplanControlsTakeOver ||
+                                    _floorplanOverlayEnabled,
+                                child: AnimatedSlide(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                  offset:
+                                      (_floorplanControlsTakeOver &&
+                                          !_floorplanOverlayEnabled)
+                                      ? Offset.zero
+                                      : const Offset(0, 2),
+                                  child: FloorplanEntryBar(
+                                    onOpenFloorplan: () {
+                                      setState(() {
+                                        _floorplanOverlayEnabled = true;
+                                      });
+                                    },
+                                    onRoomSearch: _showSearchRoomsSheet,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Kept mounted at all times (rather than toggled with
+                    // a ternary) so it can slide up into place instead of
+                    // just popping in -- see _updateFloorplanOverlayForCamera.
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        ignoring: !_floorplanOverlayEnabled,
+                        child: AnimatedSlide(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          offset: _floorplanOverlayEnabled
+                              ? Offset.zero
+                              : const Offset(0, 1),
+                          child: RepaintBoundary(
+                            child: FloorplanOverlay(
+                              floorplansLayer: floorplansLayer,
+                              onClosed: () {
+                                setState(() {
+                                  _floorplanOverlayEnabled = false;
+                                });
+                              },
+                              onRoomSearch: _showSearchRoomsSheet,
                             ),
                           ),
                         ),
                       ),
-                      _navigationOverlayEnabled
-                          ? Positioned.fill(
-                              child: RepaintBoundary(
-                                child: NavigationOverlay(
-                                  navigationManager: navigationManager,
-                                ),
+                    ),
+                    _navigationOverlayEnabled
+                        ? Positioned.fill(
+                            child: RepaintBoundary(
+                              child: NavigationOverlay(
+                                navigationManager: navigationManager,
                               ),
-                            )
-                          : SizedBox.shrink(),
-                    ],
-                  ),
-                )
-                , (snapshot.connectionState != ConnectionState.done) ? Container(
-                //for switch animation
-                key: ValueKey(0),
-                
-
-                color: getColor(context, ColorType.background),
-
-                child: ValueListenableBuilder<Loadpoint>(
-                  valueListenable: _loadingMessageNotifier,
-                  builder: (context, loadpoint, child) {
-                    return LoadingScreen(loadpoint: loadpoint);
-                  },
+                            ),
+                          )
+                        : SizedBox.shrink(),
+                  ],
                 ),
-              ) : SizedBox.shrink(),
-                
-                ],
-          )
-              // : Container(
-              //     //for switch animation
-              //     key: ValueKey(0),
+              ),
+              (snapshot.connectionState != ConnectionState.done)
+                  ? Container(
+                      //for switch animation
+                      key: ValueKey(0),
 
-              //     color: getColor(context, ColorType.background),
+                      color: getColor(context, ColorType.background),
 
-              //     child: ValueListenableBuilder<Loadpoint>(
-              //       valueListenable: _loadingMessageNotifier,
-              //       builder: (context, loadpoint, child) {
-              //         return LoadingScreen(loadpoint: loadpoint);
-              //       },
-              //     ),
-              //   ),
+                      child: ValueListenableBuilder<Loadpoint>(
+                        valueListenable: _loadingMessageNotifier,
+                        builder: (context, loadpoint, child) {
+                          return LoadingScreen(loadpoint: loadpoint);
+                        },
+                      ),
+                    )
+                  : SizedBox.shrink(),
+            ],
+          ),
+          // : Container(
+          //     //for switch animation
+          //     key: ValueKey(0),
+
+          //     color: getColor(context, ColorType.background),
+
+          //     child: ValueListenableBuilder<Loadpoint>(
+          //       valueListenable: _loadingMessageNotifier,
+          //       builder: (context, loadpoint, child) {
+          //         return LoadingScreen(loadpoint: loadpoint);
+          //       },
+          //     ),
+          //   ),
         );
       },
     );
