@@ -123,7 +123,7 @@ class _POISheetState extends State<POISheet> {
                               ],
                             ),
 
-                            ElevatedButton(
+                            /* ElevatedButton(
                               onPressed: () {},
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: getColor(context, ColorType.importantButtonBackground),
@@ -139,7 +139,7 @@ class _POISheetState extends State<POISheet> {
                                   fontSize: 16
                                 ),
                               ),
-                            ),
+                            ), */
                             
                           ],
                         ),

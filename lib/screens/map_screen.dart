@@ -1990,7 +1990,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         // Slide the normal header upward while the
                                         // floorplan header takes its place.
                                         offset: _floorplanControlsTakeOver
-                                            ? const Offset(0, -2)
+                                            ? Offset(0, -(1 + globalTopPadding / 45))
                                             : Offset.zero,
                                         child: DecoratedBox(
                                           decoration: BoxDecoration(
@@ -2187,7 +2187,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                             (_floorplanControlsTakeOver &&
                                                 !_floorplanOverlayEnabled)
                                             ? Offset.zero
-                                            : const Offset(0, -2),
+                                            : Offset(0, -(1 + globalTopPadding / 45)), // padding divided by child height
                                         child: Row(
                                           crossAxisAlignment: CrossAxisAlignment.center,
                                           spacing: 14,

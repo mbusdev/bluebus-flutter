@@ -259,7 +259,7 @@ class LocationSearchBar extends HookWidget {
                 textAlignVertical: TextAlignVertical.center,
                 textInputAction: TextInputAction.go,
                 style:  TextStyle(
-                  color: getColor(context, ColorType.opposite).withAlpha(204),
+                  color: Colors.black.withAlpha(204),
                   fontSize: 22
                 ),
                 autofocus: true,
