@@ -204,6 +204,7 @@ class CompositeMapWidgetState extends State<CompositeMapWidget>
       children: [
         RepaintBoundary(
           child: GoogleMap(
+            buildingsEnabled: false,
             compassEnabled: false,
             myLocationEnabled: true,
             mapToolbarEnabled: false,

@@ -37,6 +37,7 @@ class MapWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(child: GoogleMap(
+      buildingsEnabled: false,
       compassEnabled: false,
       onMapCreated: onMapCreated,
       onCameraIdle: onCameraIdle,
@@ -232,6 +233,7 @@ class _AndroidMapState extends State<AndroidMap>
   Widget build(BuildContext context) {
     
     return RepaintBoundary(child: GoogleMap(
+      buildingsEnabled: false,
       compassEnabled: false,
       myLocationEnabled: true,
       mapToolbarEnabled: false,
