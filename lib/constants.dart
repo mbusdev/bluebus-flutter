@@ -224,8 +224,9 @@ const Map<ColorType, Color> darkColors = {
   ColorType.sliderBackground: Color.fromARGB(255, 33, 71, 105),
   
   // dark mode colors may vary in the future!
-  ColorType.roomSearchBg: Color.fromARGB(255, 223, 237, 252),
-  ColorType.roomSearchText: Color.fromARGB(255, 107, 137, 163),
+  ColorType.roomSearchBg: Color.fromARGB(255, 47, 54, 60),
+  ColorType.roomSearchText: Color.fromARGB(255, 120, 140, 157),
+
   ColorType.roomSearchBathroom: Color.fromARGB(255, 151, 132, 193),
   ColorType.roomSearchInfoDesk: Color.fromARGB(255, 121, 176, 235),
   ColorType.roomSearchDining: Color.fromARGB(255, 235, 162, 121),
