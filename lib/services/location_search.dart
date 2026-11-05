@@ -2,6 +2,7 @@ import '../constants.dart';
 import '../models/floorplan.dart';
 import 'floorplan_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart'; // NEW
 
 class RoomLocation extends Location {
   final LocatedFloorplanPoi room;
@@ -46,15 +47,17 @@ class RoomLocation extends Location {
 // then also checks words at either end (split by spaces) for room numbers,
 // ranking room numbers of current building query above others.
 // The return list has a RoomLocation instead of a Location for room results 
+// If center is given, building/stop results are the closest of the best text matches.
 List<Location> searchLocations(
   String query,
   Map<String, Set<Location>> index,
-  List<LocatedFloorplanPoi> rooms,
-) {
+  List<LocatedFloorplanPoi> rooms, {
+  LatLng? center, // NEW
+}) {
   // Normalize once before building and room searches.
   query = query.trim().toLowerCase();
   final words = query.split(RegExp(r'\s+'));
-  var locations = _ngramSearch(words.join(' '), index); // original building search
+  var locations = _ngramSearch(words.join(' '), index, center: center); // CHANGED: original building search
   final roomRanks = <LocatedFloorplanPoi, int>{};
 
   // creates a list of searches to be done
@@ -87,7 +90,7 @@ List<Location> searchLocations(
     // perform an ngram building search of the query with the potential room number removed
     final buildingQuery = search.building;
     final buildingsAndStops = _ngramSearch(
-      buildingQuery, index,
+      buildingQuery, index, center: center, // CHANGED
     ); // ignore bus stops
     final buildings = buildingsAndStops.where((location) => !location.isBusStop).toList();
 
@@ -104,6 +107,7 @@ List<Location> searchLocations(
       // creating a map from room buildings to actual buildings' ranks
       final rank = buildingRanks.putIfAbsent(room.building, () {
         // finds the building that the room belongs to
+        // (no center here: we want the best text match, not the nearest)
         final candidates = _ngramSearch(
           room.building.trim().toLowerCase(), index,
         ).where((location) => !location.isBusStop);
@@ -134,7 +138,13 @@ List<Location> searchLocations(
   final order = {for (var i = 0; i < matches.length; i++) matches[i]: i};
   matches.sort((a, b) {
     final rank = roomRanks[a]!.compareTo(roomRanks[b]!);
-    return rank != 0 ? rank : order[a]!.compareTo(order[b]!);
+    if (rank != 0) return rank;
+    // NEW: among equally ranked rooms, nearest to the map center first
+    if (center != null) {
+      final d = _distance(center, a.position).compareTo(_distance(center, b.position));
+      if (d != 0) return d;
+    }
+    return order[a]!.compareTo(order[b]!);
   });
   return [...matches.take(10).map(RoomLocation.new), ...locations];
 }
@@ -164,8 +174,33 @@ Map<String, Set<Location>> buildNgramIndex(
   return index;
 }
 
+// NEW: how many of the best text matches are considered when sorting by distance
+const _distancePoolSize = 30;
+
+// NEW
+double _distance(LatLng a, LatLng b) =>
+    Geolocator.distanceBetween(a.latitude, a.longitude, b.latitude, b.longitude);
+
+// NEW: Sorts by distance to center. Locations without coordinates go last,
+// and ties keep their original (text-score) order.
+List<Location> _sortByDistance(List<Location> locs, LatLng center) {
+  final keyed = [
+    for (var i = 0; i < locs.length; i++)
+      (i, locs[i].latlng == null ? double.infinity : _distance(center, locs[i].latlng!)),
+  ];
+  keyed.sort((a, b) {
+    final c = a.$2.compareTo(b.$2);
+    return c != 0 ? c : a.$1.compareTo(b.$1);
+  });
+  return [for (final k in keyed) locs[k.$1]];
+}
+
 // Callers supply a trimmed, lowercase query.
-List<Location> _ngramSearch(String query, Map<String, Set<Location>> index) {
+List<Location> _ngramSearch(
+  String query,
+  Map<String, Set<Location>> index, {
+  LatLng? center, // NEW
+}) {
   if (query.length < 2) return [];
 
   final sizes = query.length == 2
@@ -198,8 +233,15 @@ List<Location> _ngramSearch(String query, Map<String, Set<Location>> index) {
       .where((e) => e.value >= minScore)
       .toList();
   filtered.sort((a, b) => b.value.compareTo(a.value));
-  return filtered
-      .take(score.length.clamp(0, 10).toInt())
-      .map((e) => e.key)
-      .toList();
+
+  // CHANGED: without a center, behave exactly as before
+  if (center == null) {
+    return filtered
+        .take(score.length.clamp(0, 10).toInt())
+        .map((e) => e.key)
+        .toList();
+  }
+  // Take a wider pool of good text matches, then keep the 10 closest.
+  final pool = filtered.take(_distancePoolSize).map((e) => e.key).toList();
+  return _sortByDistance(pool, center).take(10).toList();
 }

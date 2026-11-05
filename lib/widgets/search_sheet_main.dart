@@ -138,6 +138,7 @@ class LocationSearchBar extends HookWidget {
   final FocusNode focusNode;
   final InputDecoration decoration;
   final List<LocatedFloorplanPoi> roomPois;
+  final LatLng? mapCenter; // NEW
 
   const LocationSearchBar({
     super.key,
@@ -147,6 +148,7 @@ class LocationSearchBar extends HookWidget {
     required this.focusNode,
     required this.decoration,
     this.roomPois = const [],
+    this.mapCenter, // NEW
   });
 
   // selectable cards
@@ -237,8 +239,8 @@ class LocationSearchBar extends HookWidget {
     final query = searchQuery.value;
     final results = useMemoized(() async {
       final idx = await ngramIndex;
-      return searchLocations(query, idx, roomPois);
-    }, [query, ngramIndex, roomPois]);
+      return searchLocations(query, idx, roomPois, center: mapCenter); // CHANGED
+    }, [query, ngramIndex, roomPois, mapCenter]); // CHANGED
 
     // recent search results
     final recentSearchesFuture = useMemoized(() => getRecentSearches(), []);
@@ -272,7 +274,7 @@ class LocationSearchBar extends HookWidget {
                 },
                 onSubmitted: (val) async {
                   final idx = await ngramIndex;
-                  final matches = searchLocations(val, idx, roomPois);
+                  final matches = searchLocations(val, idx, roomPois, center: mapCenter); // CHANGED
                   if (!context.mounted) return;
 
                   if (matches.isNotEmpty) {
@@ -475,8 +477,9 @@ class SearchSheet extends StatefulWidget {
   final void Function(Location, bool, String) onSearch;
   final void Function(String)? onPOISelected;
   final List<LocatedFloorplanPoi> roomPois; // Empty when room data is unavailable.
+  final LatLng? mapCenter; // NEW
 
-  const SearchSheet({super.key, required this.isRoomSearch, required this.onSearch, this.onPOISelected, this.roomPois = const []});
+  const SearchSheet({super.key, required this.isRoomSearch, required this.onSearch, this.onPOISelected, this.roomPois = const [], this.mapCenter}); // CHANGED
 
   @override
   State<SearchSheet> createState() => _SearchSheetState();
@@ -569,6 +572,7 @@ class _SearchSheetState extends State<SearchSheet> {
               ),
             ),
             roomPois: widget.roomPois,
+            mapCenter: widget.mapCenter, // NEW
           ),
         ]
       )

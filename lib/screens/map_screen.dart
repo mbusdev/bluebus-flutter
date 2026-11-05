@@ -1154,6 +1154,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         return SearchSheet( 
           isRoomSearch: isRoomSearch,
           roomPois: floorplansLayer.searchablePois,
+          mapCenter: _currentCameraPos.value?.target ?? startLatLng,
           onSearch: (Location location, bool isBusStop, String stopID) {
             if (location is RoomLocation) {
               _showRoomSearchResult(location);
