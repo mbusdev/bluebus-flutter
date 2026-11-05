@@ -9,12 +9,57 @@ import 'package:bluebus/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
 
   @override
   State<Settings> createState() => _SettingsState();
+}
+
+class SocialIconButton extends StatelessWidget {
+  final FaIconData icon;
+  final String url;
+  final Color tint;
+  final double size;
+
+  const SocialIconButton({
+    super.key,
+    required this.icon,
+    required this.url,
+    this.tint = maizeBusBlue,
+    this.size = 44,
+  });
+
+  Future<void> _open() async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not open $url');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: tint.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: tint.withValues(alpha: 0.25)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _open,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Center(
+            child: FaIcon(icon, size: size * 0.4, color: const Color(0xFF374151)),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SettingsState extends State<Settings> {
@@ -448,22 +493,23 @@ class _SettingsState extends State<Settings> {
                 ),
 
                 const SizedBox(height: 15),
-                personShowcase(context, "Ishan Kumar", "Executive Director", "assets/portraits/ishan.jpg", cropHeightOffset: -0.1),
+                personShowcase(context, "Ishan Kumar", "Executive Director", "assets/portraits/ishan.jpg", cropHeightOffset: -0.1, 
+                linkedInUrl: "https://www.linkedin.com/in/ishan-kumar-umich/"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Andrew Yu", "Developer Operations Lead", "assets/portraits/andrew.jpg", cropHeightOffset: -0.2),
+                personShowcase(context, "Andrew Yu", "Developer Operations Lead", "assets/portraits/andrew.jpg", cropHeightOffset: -0.2, linkedInUrl: "https://www.linkedin.com/in/ryan-lu-91505232a/"),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Kate Anderson", "User Interface Lead", "assets/portraits/kate.jpg", cropHeightOffset: -0.1),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Harvey Kyllonen", "Frontend Lead", "assets/portraits/harvey.jpg"),
+                personShowcase(context, "Harvey Kyllonen", "Frontend Lead", "assets/portraits/harvey.jpg", githubUrl: "https://github.com/kurz3m3"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Isaac Wheeler", "Developer - Flow and UI", "assets/portraits/issac.jpg", cropHeightOffset: -0.2),
+                personShowcase(context, "Isaac Wheeler", "Developer - Flow and UI", "assets/portraits/issac.jpg", cropHeightOffset: -0.2, githubUrl: "https://github.com/iswheeler" ),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Matthew Jia", "Developer - Dark Mode and UI", "assets/portraits/matthew.jpg"),
+                personShowcase(context, "Matthew Jia", "Developer - Dark Mode and UI", "assets/portraits/matthew.jpg", instagramUrl: "https://www.instagram.com/matthewzjia"),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Edward Zhang", "Developer - Notifications", "assets/portraits/edward.jpg", cropHeightOffset: -0.2),
@@ -495,7 +541,9 @@ class _SettingsState extends State<Settings> {
 }
 
 
-Widget personShowcase(BuildContext context, String name, String role, String filePath, {double cropHeightOffset = 0.0}) {
+
+
+Widget personShowcase(BuildContext context, String name, String role, String filePath, {double cropHeightOffset = 0.0, String? githubUrl, String? linkedInUrl, String? instagramUrl}) {
   double circleSize = 55.0;
   double lineHeight = 1.2;
   
@@ -547,6 +595,39 @@ Widget personShowcase(BuildContext context, String name, String role, String fil
           ],
         ),
       ),
+      if(githubUrl != null)
+      Padding(
+        padding: const EdgeInsets.only(
+          left: 15,
+        ),
+      child: 
+        SocialIconButton(
+        icon: FontAwesomeIcons.github,
+        url: githubUrl,
+        size:36,
+      )),
+      if(linkedInUrl != null)
+      Padding(
+        padding: const EdgeInsets.only(
+          left: 15,
+        ),
+      child: 
+        SocialIconButton(
+        icon: FontAwesomeIcons.linkedin,
+        url: linkedInUrl,
+        size:36,
+      )),
+      if(instagramUrl != null)
+      Padding(
+        padding: const EdgeInsets.only(
+          left: 15,
+        ),
+      child: 
+        SocialIconButton(
+        icon: FontAwesomeIcons.instagram,
+        url: instagramUrl,
+        size:36,
+      )),
     ],
   );
 }
