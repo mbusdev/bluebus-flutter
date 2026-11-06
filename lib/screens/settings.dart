@@ -1,7 +1,9 @@
 import 'package:bluebus/globals.dart';
+import 'package:bluebus/providers/bathroom_provider.dart';
 import 'package:bluebus/screens/sign_in_page.dart';
 import 'package:bluebus/widgets/custom_sliding_segmented_control.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:bluebus/constants.dart';
@@ -74,6 +76,7 @@ class _SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
     ThemeProvider themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    BathroomProvider bathroomProvider = Provider.of<BathroomProvider>(context, listen: false);
 
     const double heightBetween = 20;
 
@@ -99,15 +102,17 @@ class _SettingsState extends State<Settings> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // title 
-                    Text(
-                      'Settings',
-                      style: TextStyle(
+                    Text.rich(TextSpan(
+                      style: const TextStyle(
                         fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.bold,
                         fontSize: 30,
                       ),
-                    ),
-        
+                      children: [
+                        const TextSpan(text: 'maize', style: TextStyle(color: maizeBusYellow, fontWeight: FontWeight.w800)),
+                        TextSpan(text: 'bus', style: TextStyle(color: isDarkMode(context) ? maizeBusBlueDarkMode : maizeBusBlue,fontWeight: FontWeight.w800)),
+                      ]
+                    )),
                     // close button
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -117,19 +122,118 @@ class _SettingsState extends State<Settings> {
                 ),
         
                 const SizedBox(height: 20),
-        
+
+                // sign in banner
+                Container(
+                  width: double.infinity, // Forces full width
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: getColor(context, ColorType.sliderBackground),
+                    borderRadius: BorderRadius.circular(10), // Uniform radius
+                  ),
+                  child: Column(
+                    spacing: 10,
+                    children: [
+                      Row(
+                        spacing: 10,
+                        children: [
+                          Icon(Icons.account_circle_outlined,),
+                          const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              fontFamily: 'Urbanist',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
+                        ],
+                      ),
+
+                      Text(
+                        "Sign in to your UM account to access Blueprints",
+                        style: getTextStyle(TextType.normal, getColor(context, ColorType.opposite))
+                      )
+                    ],
+                  )
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                // help section
                 const Text(
-                  'Theme',
+                  'Help',
                   style: TextStyle(
                     fontFamily: 'Urbanist',
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontSize: 24,
                   ),
                   textAlign: TextAlign.left,
                 ),
 
-                const SizedBox(height: 15),
+                const SizedBox(height: 10),
 
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: "DPSS: ", style: TextStyle(fontSize: 16, color: getColor(context, ColorType.opposite))),
+                      TextSpan(
+                        text: "(734) 763-1131",
+                        style: TextStyle(
+                          color: getColor(context, ColorType.link),
+                          fontSize: 16,
+                          decoration: TextDecoration.underline
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () { launchUrl(DPSSNumber); }
+                      ),
+                    ]
+                  )
+                ),  
+
+                Row(
+                  spacing: 4,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "After-hours transport options",
+                            style: TextStyle(
+                              color: getColor(context, ColorType.link),
+                              fontSize: 16,
+                              decoration: TextDecoration.underline
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () { launchUrl(afterHoursTransitURL); }
+                          ),
+                        ]
+                      )
+                    ),
+
+                    Icon(
+                      Icons.arrow_outward,
+                      color: getColor(context, ColorType.link)
+                    )
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 20),
+        
+                const Text(
+                  'Theme',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+                const SizedBox(height: 15),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     return MaizebusSlidingSegmentedControl(
@@ -151,6 +255,34 @@ class _SettingsState extends State<Settings> {
                     );
                   }
                 ),
+                
+                const SizedBox(height: 30),
+
+                const Text(
+                  'Bathroom Preference',
+                  style: TextStyle(
+                    fontFamily: 'Urbanist',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+                const SizedBox(height: 15),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return MaizebusSlidingSegmentedControl(
+                      labels: ["Women's", "Men's", "Inclusive"], 
+                      height: 40,
+                      width: constraints.maxWidth,
+                      selectedIndex: bathroomProvider.preference == BathroomPreference.notchosen ? 2 : bathroomProvider.preference.index - 1,
+                      onSelectionChanged: (int index) {
+                        setState(() {
+                          bathroomProvider.set(BathroomPreference.values[index + 1]);
+                        });
+                      }
+                    );
+                  }
+                ),
         
                 const SizedBox(height: 20),
                 const Divider(),
@@ -160,7 +292,7 @@ class _SettingsState extends State<Settings> {
                   'Map Follow Distance',
                   style: TextStyle(
                     fontFamily: 'Urbanist',
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontSize: 24,
                   ),
                   textAlign: TextAlign.left,
@@ -228,7 +360,7 @@ class _SettingsState extends State<Settings> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              getColor(context, ColorType.importantButtonBackground),
+                              getColor(context, ColorType.sliderBackground),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
@@ -241,8 +373,7 @@ class _SettingsState extends State<Settings> {
                         child: Text(
                           'Apply',
                           style: TextStyle(
-                            color: getColor(context, ColorType.importantButtonText),
-                            fontWeight: FontWeight.w600,
+                            color: getColor(context, ColorType.opposite),
                           ),
                         ),
                       ),
@@ -250,15 +381,13 @@ class _SettingsState extends State<Settings> {
                   ),
                 ),
 
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
 
                 const Text(
                   'GPS Update Distance',
                   style: TextStyle(
                     fontFamily: 'Urbanist',
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontSize: 24,
                   ),
                   textAlign: TextAlign.left,
@@ -324,7 +453,7 @@ class _SettingsState extends State<Settings> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              getColor(context, ColorType.importantButtonBackground),
+                              getColor(context, ColorType.sliderBackground),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
@@ -337,8 +466,7 @@ class _SettingsState extends State<Settings> {
                         child: Text(
                           'Apply',
                           style: TextStyle(
-                            color: getColor(context, ColorType.importantButtonText),
-                            fontWeight: FontWeight.w600,
+                            color: getColor(context, ColorType.opposite),
                           ),
                         ),
                       ),
@@ -405,14 +533,14 @@ class _SettingsState extends State<Settings> {
                 const SizedBox(height: 20),
 
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const Text(
                       'Team',
                       style: TextStyle(
                         fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                         fontSize: 24,
                       ),
                       textAlign: TextAlign.left,
@@ -423,7 +551,7 @@ class _SettingsState extends State<Settings> {
                     ElevatedButton.icon(
                       onPressed: () => launchUrl(contactURL),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: getColor(context, ColorType.importantButtonBackground),
+                        backgroundColor: getColor(context, ColorType.sliderBackground),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -431,16 +559,15 @@ class _SettingsState extends State<Settings> {
                         elevation: 0
                       ),
                       icon: Icon(
-                        Icons.email, 
-                        color: getColor(context, ColorType.importantButtonText),
+                        Icons.email_outlined, 
+                        color: getColor(context, ColorType.roomSearchText),
                         size: 20,
                       ), // The icon on the left
                       label: Text(
                         'Send Feedback',
                         style: TextStyle(
-                          color: getColor(context, ColorType.importantButtonText), 
+                          color: getColor(context, ColorType.opposite), 
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
                         ),
                       ), // The text on the right
                     ),

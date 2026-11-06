@@ -30,6 +30,8 @@ class FloorplansLayer extends CompositeMapLayer {
   Function() onUpdate = () {};
 
   GeoreferencedFloorplan? _source;
+  FloorplanPoiIndex? _poiIndex;
+  Set<Marker>? _searchMarkers;
   int _floorIndex = 0;
 
   /// Starts out matching the map's initial camera, since [onCameraMove] only
@@ -53,6 +55,9 @@ class FloorplansLayer extends CompositeMapLayer {
   LatLngBounds? _footprintBounds;
 
   Floorplan? get floorplan => _source?.floorplan;
+
+  /// Searchable rooms retain their building, floor, and projected coordinates.
+  List<LocatedFloorplanPoi> get searchablePois => _poiIndex?.pois ?? const [];
 
   /// Rough lat/lng bounding box of the loaded building's footprint, used to
   /// tell whether the camera is currently over it. Null until the footprint
@@ -105,11 +110,71 @@ class FloorplansLayer extends CompositeMapLayer {
   Future<void> _load() async {
     try {
       _source = await FloorplanService.loadDuderstadt();
+      _poiIndex = FloorplanPoiIndex(_source!);
     } catch (err) {
       stderr.writeln('FloorplansLayer: failed to load floorplan ($err)');
       return;
     }
     await _rebuild();
+  }
+
+  // creates markers for the nearest 
+  // returns average position of the POIs, to center on them
+  Future<LatLng> showNearbyPois(String type, LatLng origin, void Function(LocatedFloorplanPoi) tapCallback) async {
+    await load();
+    final index = _poiIndex;
+    if (index == null) throw StateError('Floorplan data is unavailable'); // add proper handling!!
+
+    final matches = index.nearest(type, origin); // get nearest 5 floorplan POIs
+    final icon = await FloorplanMarkerService.icon(type) ?? BitmapDescriptor.defaultMarker;
+    final highlighted = await FloorplanMarkerService.highlightedIcon(type) ?? BitmapDescriptor.defaultMarker;
+
+    // generate markers based on the matches found
+    _searchMarkers = {};
+    for (final match in matches) {
+      final id = MarkerId('poi_search_${match.floor.id}_${match.poi.id}');
+      _searchMarkers!.add(
+        Marker(
+          markerId: id,
+          position: match.position,
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          zIndexInt: FLOORPLAN_Z_MARKERS + 1,
+          onTap: () {
+            // replace this marker with
+            _searchMarkers = _searchMarkers?.map((marker) {
+              return marker.markerId == id
+                  ? marker.copyWith(iconParam: highlighted)
+                  : marker.copyWith(iconParam: icon);
+            }).toSet();
+        
+            _applyDetailLevel();
+            onUpdate();
+            tapCallback(match);
+          }
+        )
+      );
+    }
+    
+    _applyDetailLevel();
+    onUpdate();
+
+
+    // Return the average latitude and longitude of the matched POIs.
+    if (matches.isEmpty) return origin;
+    double latitude = 0;
+    double longitude = 0;
+    for (final match in matches) {
+      latitude += match.position.latitude;
+      longitude += match.position.longitude;
+    }
+    return LatLng(latitude / matches.length, longitude / matches.length);
+  }
+
+  void clearPoiSearch() {
+    _searchMarkers = null;
+    _applyDetailLevel();
+    onUpdate();
   }
 
   /// Switches which floor is drawn. Safe to call before [load] finishes.
@@ -392,5 +457,6 @@ class FloorplansLayer extends CompositeMapLayer {
         polylines = _wallPolylines;
         markers = _poiMarkers;
     }
+    if (_searchMarkers != null) markers = _searchMarkers!;
   }
 }

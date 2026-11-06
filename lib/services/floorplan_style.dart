@@ -130,6 +130,8 @@ const Map<String, String> FLOORPLAN_POI_ICONS = {
   FloorplanTypes.escalator: 'assets/floorplans/icons/escalator.png',
   FloorplanTypes.information: 'assets/floorplans/icons/info.png',
   FloorplanTypes.food: 'assets/floorplans/icons/food.png',
+  FloorplanTypes.printer: 'assets/floorplans/icons/printer.png',
+  FloorplanTypes.vendingMachine: 'assets/floorplans/icons/printer.png',
   FloorplanTypes.femaleBathroom: 'assets/floorplans/icons/bathroomF.png',
   FloorplanTypes.maleBathroom: 'assets/floorplans/icons/bathroomM.png',
   FloorplanTypes.neutralBathroom: 'assets/floorplans/icons/bathroomN.png',
