@@ -493,23 +493,22 @@ class _SettingsState extends State<Settings> {
                 ),
 
                 const SizedBox(height: 15),
-                personShowcase(context, "Ishan Kumar", "Executive Director", "assets/portraits/ishan.jpg", cropHeightOffset: -0.1, 
-                linkedInUrl: "https://www.linkedin.com/in/ishan-kumar-umich/"),
+                personShowcase(context, "Ishan Kumar", "Executive Director", "assets/portraits/ishan.jpg", cropHeightOffset: -0.1),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Andrew Yu", "Developer Operations Lead", "assets/portraits/andrew.jpg", cropHeightOffset: -0.2, linkedInUrl: "https://www.linkedin.com/in/ryan-lu-91505232a/"),
+                personShowcase(context, "Andrew Yu", "Developer Operations Lead", "assets/portraits/andrew.jpg", cropHeightOffset: -0.2),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Kate Anderson", "User Interface Lead", "assets/portraits/kate.jpg", cropHeightOffset: -0.1),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Harvey Kyllonen", "Frontend Lead", "assets/portraits/harvey.jpg", githubUrl: "https://github.com/kurz3m3"),
+                personShowcase(context, "Harvey Kyllonen", "Frontend Lead", "assets/portraits/harvey.jpg"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Isaac Wheeler", "Developer - Flow and UI", "assets/portraits/issac.jpg", cropHeightOffset: -0.2, githubUrl: "https://github.com/iswheeler" ),
+                personShowcase(context, "Isaac Wheeler", "Developer - Flow and UI", "assets/portraits/issac.jpg", cropHeightOffset: -0.2),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Matthew Jia", "Developer - Dark Mode and UI", "assets/portraits/matthew.jpg", instagramUrl: "https://www.instagram.com/matthewzjia"),
+                personShowcase(context, "Matthew Jia", "Developer - Dark Mode and UI", "assets/portraits/matthew.jpg"),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Edward Zhang", "Developer - Notifications", "assets/portraits/edward.jpg", cropHeightOffset: -0.2),
@@ -524,7 +523,7 @@ class _SettingsState extends State<Settings> {
                 personShowcase(context, "Ryan Lu", "Backend Lead", "assets/portraits/none.jpg"),
 
                 const SizedBox(height: heightBetween),
-                personShowcase(context, "Karen Lin", "UI Designer - Colors", "assets/portraits/none.jpg"),
+                personShowcase(context, "Karen Lin", "Designer - UI", "assets/portraits/none.jpg"),
 
                 const SizedBox(height: heightBetween),
                 personShowcase(context, "Aravind Kandarpa", "Developer - City Buses Backend", "assets/portraits/none.jpg"),
