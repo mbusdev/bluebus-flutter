@@ -22,6 +22,8 @@ google-services*.json
 GoogleService-Info.plist
 # auto generated
 lib/firebase_options.dart
+lib/backend
+spec.json
 
 # Flutter repo-specific
 /bin/cache/
