@@ -385,19 +385,53 @@ class NavOnBus extends NavigationStage {
   }
 
   @override
-  List<Polyline> getPolylines() {
-    // TODO: segment connection polylines
-    return _state.pathSegments
+  List<Polyline> getPolylines() => polylinesFromPathSegments(
+    _state.pathSegments,
+    (seg) => PolylineId("navonbus_polyline_${seg.hashCode}"),
+    (seg) => PolylineId("navonbus_polyline_conn_${seg.hashCode}"),
+  );
+
+  static List<Polyline> polylinesFromPathSegments(
+    List<BusPathSegment> segs,
+    PolylineId Function(BusPathSegment) idFn,
+    PolylineId Function(BusPathSegment) connIdFn,
+  ) {
+    final segmentConnections = <Polyline>[];
+    List<LatLng>? prevPath;
+    for (final seg in segs) {
+      final (path: path, rt: _) = seg;
+      final connStart = prevPath?.lastOrNull;
+      final connEnd = path.firstOrNull;
+      if (connStart != null &&
+          connEnd != null &&
+          connStart.haversineDistanceMetersTo(connEnd) > 10.0) {
+        segmentConnections.add(
+          Polyline(
+            polylineId: connIdFn(seg),
+            color: RouteColorService.getRouteColor(
+              "",
+            ), // get the placeholder color
+            points: [connStart, connEnd],
+            zIndex: 1998,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
+        );
+      }
+      prevPath = path;
+    }
+    return segs
         .map(
           (seg) => Polyline(
-            polylineId: PolylineId("navonbus_polyline_${seg.hashCode}"),
-            color: RouteColorService.getRouteColor(rt),
+            polylineId: idFn(seg),
+            color: RouteColorService.getRouteColor(seg.rt ?? ""),
             points: seg.path,
             zIndex: 1999,
             endCap: Cap.roundCap,
             jointType: JointType.round,
           ),
         )
+        .followedBy(segmentConnections)
         .toList();
   }
 
