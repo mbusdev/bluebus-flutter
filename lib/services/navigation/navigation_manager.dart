@@ -59,21 +59,7 @@ class NavigationStageStep {
   }
 }
 
-class CameraBehavior {
-  // Whether we auto recenter on the user
-  final bool follow;
-  // Whether we point the map in the direction of motion
-  final bool rotateWithHeading;
-
-  const CameraBehavior({this.follow = false, this.rotateWithHeading = false});
-
-  static const free = CameraBehavior();
-}
-
 sealed class NavigationStage {
-  // By Default, there should be no changes to the camera behavior.
-  CameraBehavior get cameraBehavior => CameraBehavior.free;
-
   // String title = "..."; //Don't use this anymore--implement getTitle() instead
   String getTitle() {
     return "Swim forward"; // Title displayed on the big bar at the top
@@ -247,11 +233,6 @@ class NavOnBus extends NavigationStage {
   LatLng? lastPosition;
 
   NavOnBus();
-
-  // NavOnBus state should rotate the camera to recenter.
-  @override
-  CameraBehavior get cameraBehavior =>
-      const CameraBehavior(follow: true, rotateWithHeading: true);
 
   @override
   void initWithLeg(Leg leg) {
@@ -443,10 +424,10 @@ class NavOnBus extends NavigationStage {
               icon: stop.id == state.departureStop
                   ? MapImageService.getOnBusStop() ?? stopBitmap
                   : stop.id == state.arrivalStop
-                  ? MapImageService.getOffBusStop() ?? stopBitmap
-                  : MapImageService.navigationIntermediateStopIcon,
+                      ? MapImageService.getOffBusStop() ?? stopBitmap
+                      : MapImageService.navigationIntermediateStopIcon,
               // icon: ,
-              anchor: const Offset(0.5, 0.5),
+              anchor: const Offset(0.5, 0.5)
               // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
             ),
           },
@@ -933,8 +914,6 @@ class NavigationManager {
   StreamSubscription<StageEvent>? _stageEventSub;
 
   int currentStage = 0; // Stores the current navigation state index
-
-  final cameraBehavior = ValueNotifier<CameraBehavior>(CameraBehavior.free);
   List<NavigationStage> stageList = [
     DemoStage(
       favoriteNumber: 1,
@@ -1100,24 +1079,15 @@ class NavigationManager {
   void nextStage() {
     currentStage = (currentStage + 1) % stageList.length;
     _activateStageSub(stageList[currentStage]);
-    _updateCameraBehavior();
   }
 
   void previousStage() {
     currentStage = (currentStage - 1) % stageList.length;
     _activateStageSub(stageList[currentStage]);
-    _updateCameraBehavior();
-  }
-
-  void _updateCameraBehavior() {
-    if (stageList.isEmpty) return;
-    cameraBehavior.value = stageList[currentStage].cameraBehavior;
   }
 
   void initFromJourney(Journey journey, Color walkingLineColor) {
     this.stageList.clear();
-    currentStage = 0; // A new journey starts at its first stage
-
 
     for (Leg leg in journey.legs) {
       // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
@@ -1150,7 +1120,6 @@ class NavigationManager {
 
     _overlay?.onNavigationUpdated();
     rebuildMarkersAndPolylines();
-    _updateCameraBehavior();
   }
 
   // TODO: Add start()/stop() methods
