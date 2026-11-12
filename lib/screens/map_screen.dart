@@ -1850,6 +1850,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       globallPaddingHasBeenSet = screenRadiusLoaded;
     }
 
+    // How far (as a fraction of the 45px-tall bottom row) the bottom controls
+    // must slide down to be fully off-screen on any device: the bottom padding
+    // they sit above, plus the row's own height and shadow (the +60).
+    final double hiddenSlide = (globalBottomPadding + 60) / 45;
+
     return FutureBuilder(
       future: _dataLoadingFuture,
       builder: (context, snapshot) {
@@ -2472,7 +2477,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                     // controls slide up into place at the
                                     // same time.
                                     offset: _floorplanControlsTakeOver
-                                        ? const Offset(0, 2)
+                                        ? Offset(0, hiddenSlide)
                                         : Offset.zero,
                                     child: (_journeyOverlayActive)
                                       ? Row(
@@ -2762,7 +2767,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                         (_floorplanControlsTakeOver &&
                                             !_floorplanOverlayEnabled)
                                         ? Offset.zero
-                                        : const Offset(0, 2),
+                                        : Offset(0, hiddenSlide),
                                     child: FloorplanEntryBar(
                                       onOpenFloorplan: () {
                                         setState(() {
@@ -2845,7 +2850,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               //         return LoadingScreen(loadpoint: loadpoint);
               //       },
               //     ),
-              //   ),
         );
       },
     );
