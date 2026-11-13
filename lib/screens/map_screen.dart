@@ -81,7 +81,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   );
   bool _isProgrammaticCameraMove = true;
 
-  bool _followUser = true;
   NavigationManager navigationManager = NavigationManager();
 
   // Set once startup data comes back. Null until then (and if the
@@ -203,6 +202,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _setupConnectivityMonitoring();
 
     navigationManager.init();
+    navigationManager.cameraBehavior.addListener(_onCameraBehaviorChanged);
 
     baseRoutesLayer.init(_favoriteStops, _selectedRoutes, onStopClicked);
     bannerLayer.init((banner) {
@@ -417,15 +417,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           (() async {
             canVibrate = await Haptics.canVibrate();
           })(),
+          // TESTING TOGGLES (remove before release): load the saved camera settings
           (() async {
             final prefs = await SharedPreferences.getInstance();
-            globalFollowDistanceThresholdMeters =
-                prefs.getDouble('follow_distance_threshold_meters') ??
-                globalFollowDistanceThresholdMeters;
-            globalGpsUpdateDistanceFilterMeters =
-                prefs.getInt('gps_update_distance_filter_meters') ??
-                globalGpsUpdateDistanceFilterMeters;
+            globalAutoRecenterEnabled =
+                prefs.getBool('auto_recenter_enabled') ??
+                globalAutoRecenterEnabled;
+            globalRotateWithHeadingEnabled =
+                prefs.getBool('rotate_with_heading_enabled') ??
+                globalRotateWithHeadingEnabled;
           })(),
+          // END TESTING TOGGLES
           (() async {
             screenRadius = await ScreenCornerRadius.get(); // load screen radius
             screenRadiusLoaded = true;
@@ -539,8 +541,10 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           return;
       }
 
-      // If follow mode is disabled, don't recenter automatically.
-      if (!_followUser) return;
+      // During navigation, the current stage decides whether to recenter.
+      // Outside navigation, the Auto Recenter setting decides.
+      final cam = _activeCameraBehavior;
+      if (!cam.follow) return;
       if (_userHasInteractedWithMap.value) {
         // log("Ignoring location update: user has interacted with map");
         return;
@@ -591,7 +595,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         lat: p.latitude,
         long: p.longitude,
         zoom: _currentCameraPos.value?.zoom,
-        bearing: _currentCameraPos.value?.bearing,
+        bearing: cam.rotateWithHeading && p.speed > 1
+            ? p.heading
+            : _currentCameraPos.value?.bearing,
       );
 
       // TODO: Update any navigation manager / UI that depends on live position here.
@@ -601,14 +607,43 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   }
 
   // Call to programmatically enable/disable follow mode. Wire this to your location FAB.
+  // Whether following actually happens is decided by navigationManager.cameraBehavior.
   void _setFollowMode(bool enabled) {
-    setState(() {
-      _followUser = enabled;
-      if (!enabled) return;
-      // When enabling follow mode, reset last-centered so next position recenters immediately.
-      _lastCenteredPos = null;
-      _userHasInteractedWithMap.value = false;
-    });
+    if (!enabled) return;
+    // When enabling follow mode, reset last-centered so next position recenters immediately.
+    _lastCenteredPos = null;
+    _userHasInteractedWithMap.value = false;
+  }
+
+  // What the camera should do right now: the current stage's behavior during
+  // navigation, otherwise the Auto Recenter / Rotate With Heading settings
+  // TESTING TOGGLES (remove before release): replace the CameraBehavior(...) below with CameraBehavior.free
+  CameraBehavior get _activeCameraBehavior => _navigationOverlayEnabled
+      ? navigationManager.cameraBehavior.value
+      : CameraBehavior(
+          follow: globalAutoRecenterEnabled,
+          rotateWithHeading:
+              globalAutoRecenterEnabled && globalRotateWithHeadingEnabled,
+        );
+
+  // Runs when the active navigation stage changes what the camera should do
+  void _onCameraBehaviorChanged() {
+    if (!mounted) return;
+    final cam = _activeCameraBehavior;
+    if (cam.follow) {
+      // Start following right away instead of waiting for the next GPS update
+      _setFollowMode(true);
+      _centerOnLocation(
+        true,
+        zoom: _currentCameraPos.value?.zoom,
+        // Face north again if the new behavior doesn't rotate
+        bearing: cam.rotateWithHeading ? _currentCameraPos.value?.bearing : 0,
+      );
+    } else if ((_currentCameraPos.value?.bearing ?? 0) != 0) {
+      // Undo the heading rotation once a following stage ends
+      _isProgrammaticCameraMove = true;
+      _setMapToNorth();
+    }
   }
 
   // need this to make sure that the stop names exist in the cache
@@ -749,6 +784,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _loadingMessageNotifier.dispose();
     _currentCameraPos.dispose();
     _userHasInteractedWithMap.dispose();
+    navigationManager.cameraBehavior.removeListener(_onCameraBehaviorChanged);
     _connectivitySubscription?.cancel();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
@@ -776,6 +812,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     liveBusesLayer.isVisible = true;
 
     navigationLayer.reload();
+    navigationManager.cameraBehavior.value = CameraBehavior.free; // this line could get moved into navigation manager when the stop() function is finished.
   }
 
   // Compute a lightweight fingerprint of the routes list to detect changes
@@ -1686,7 +1723,13 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
     if (userLocation) {
       Position? pos = await _getLastKnownLocation();
-      if (pos != null) position = pos;
+      if (pos != null) {
+        position = pos;
+        // Face the direction of travel right away instead of waiting for the next GPS update
+        if (_activeCameraBehavior.rotateWithHeading && pos.speed > 1) {
+          bearing = pos.heading;
+        }
+      }
     }
 
     // Animate the map camera to the user's location
@@ -2222,6 +2265,11 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                   );
                                                                   _centerOnLocation(
                                                                     true,
+                                                                    // Keep the rotation while standing still if the stage rotates the camera
+                                                                    bearing:
+                                                                        _activeCameraBehavior.rotateWithHeading
+                                                                        ? _currentCameraPos.value?.bearing
+                                                                        : null,
                                                                   );
                                                                 },
                                                                 heroTag:
