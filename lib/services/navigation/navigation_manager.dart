@@ -9,7 +9,8 @@ import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
 import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
-import 'package:bluebus/models/bus_stop.dart' show BusStop;
+import 'package:bluebus/models/bus_stop.dart' show BusStop, BusWithPrediction;
+import 'package:bluebus/services/bus_info_service.dart' show fetchStopData;
 import 'package:bluebus/models/journey.dart';
 import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
@@ -75,6 +76,32 @@ bool isUsableFix(Position p) => p.accuracy <= usableFixAccuracyMeters;
 
 double distanceMeters(Position p, LatLng point) =>
     LatLng(p.latitude, p.longitude).haversineDistanceMetersTo(point);
+
+/// Minutes until the next [routeId] bus reaches the stop, from that stop's
+/// live predictions, or null if none are for this route. Prefers the vehicle
+/// the planner picked ([vehicleId]) when the feed has it, otherwise the
+/// soonest bus on the route. "DUE" counts as 0; anything else that isn't a
+/// number (eg. "DLY") is skipped.
+int? soonestPredictionMinutes(
+  List<BusWithPrediction> predictions, {
+  required String routeId,
+  String vehicleId = '',
+}) {
+  int? soonest;
+  int? planned;
+  for (final BusWithPrediction p in predictions) {
+    if (p.id != routeId) continue;
+    final int? minutes = p.prediction == "DUE"
+        ? 0
+        : int.tryParse(p.prediction.trim());
+    if (minutes == null) continue;
+    if (soonest == null || minutes < soonest) soonest = minutes;
+    if (vehicleId.isNotEmpty && p.vehicleId == vehicleId) {
+      if (planned == null || minutes < planned) planned = minutes;
+    }
+  }
+  return planned ?? soonest;
+}
 
 sealed class NavigationStage {
   // String title = "..."; //Don't use this anymore--implement getTitle() instead
@@ -173,6 +200,34 @@ class MissedBusInfo {
     required this.leftStopAt,
   });
 }
+
+/// What the "your bus is arriving" card shows: the next bus the user still has
+/// to catch, and when it gets to their stop.
+class UpcomingBusInfo {
+  final String routeId;
+  final String stopId;
+  final String stopName;
+
+  /// When the bus reaches the stop, or null if neither the live feed nor the
+  /// timetable knows.
+  final DateTime? arrivesAt;
+
+  /// Whether [arrivesAt] is a live prediction rather than the timetable.
+  final bool live;
+
+  UpcomingBusInfo({
+    required this.routeId,
+    required this.stopId,
+    required this.stopName,
+    required this.arrivesAt,
+    required this.live,
+  });
+}
+
+/// Gets the live predictions for a stop. The real one is fetchStopData; tests
+/// pass their own so they never touch the network.
+typedef StopPredictionFetcher =
+    Future<List<BusWithPrediction>> Function(String stopId);
 
 sealed class StageEvent {}
 
@@ -339,11 +394,45 @@ class NavOnBus extends NavigationStage {
     state.stops;
     _boardingStop = legPoints.first;
     _arrivalStop = legPoints.last;
+    _pathMeters = legPoints.totalDistance();
+  }
+
+  /// Length of the ride along its stops, worked out once in initWithLeg.
+  double _pathMeters = 0;
+
+  /// A rough average bus speed, stops included (~15 mph), for when the
+  /// timetable doesn't say how long a ride takes.
+  static const double _assumedBusMetersPerSecond = 7.0;
+
+  /// Seconds between leaving the boarding stop and reaching the arrival stop,
+  /// per the timetable. Can be 0: timetable times are whole minutes, and the
+  /// planner has given short rides every stop at the same minute.
+  double get _scheduledSeconds {
+    final sts = state.stopTimes;
+    return (sts.last.arrivalTime - sts.first.departureTime).toDouble();
   }
 
   // Looked up once here rather than on every GPS fix
   late LatLng _boardingStop;
   late LatLng _arrivalStop;
+
+  /// Whether the user has left on (or walked away from) this bus: they left
+  /// the boarding stop, which is also what raises the missed bus prompt.
+  /// Until then the "your bus is arriving" card is about this bus.
+  bool get departed => leftStopPrompted;
+
+  String get routeId => state.rt;
+  String get boardingStopId => _leg.originID;
+
+  /// The vehicle the planner expects, or '' if it didn't say.
+  String get plannedVehicleId => _leg.trip?.vid ?? '';
+
+  /// When the timetable has this bus leaving the boarding stop.
+  DateTime? get scheduledDeparture {
+    final List<StopTime> times = state.stopTimes;
+    if (times.isEmpty) return null;
+    return serviceSecondsToDateTime(times.first.departureTime);
+  }
 
   // entering boarding stop circle = waiting for bus
   // leaving boarding stop circle = departed, prompt missed bus
@@ -410,9 +499,12 @@ class NavOnBus extends NavigationStage {
   @override
   // using seconds to match the walking stage right now, if you change this make
   // sure to adjust the use of length in percent_complete
+  //
+  // Never less than the ride's distance at an average bus speed, so a ride the
+  // timetable gives 0 minutes still shows up in the progress bar and moves the
+  // dot (instead of a 0-wide segment and a 0/0 progress).
   double get length {
-    final sts = state.stopTimes;
-    return (sts.last.arrivalTime.toDouble() - sts.first.departureTime);
+    return max(_scheduledSeconds, _pathMeters / _assumedBusMetersPerSecond);
   }
 
   @override
@@ -421,6 +513,10 @@ class NavOnBus extends NavigationStage {
   double get percent_complete {
     final pos = lastPosition;
     if (pos == null) return 0;
+
+    // No time span to measure against, so go by distance along the ride
+    final double scheduled = _scheduledSeconds;
+    if (scheduled <= 0) return _distanceFraction(pos);
 
     final sts = state.stopTimes;
     final stops = state.stops;
@@ -457,7 +553,24 @@ class NavOnBus extends NavigationStage {
           (sts[min(stepIdx + 1, sts.length - 1)].arrivalTime -
               sts[stepIdx].arrivalTime);
     }
-    return progress / length;
+    return (progress / scheduled).clamp(0.0, 1.0);
+  }
+
+  /// How far along the ride's path [pos] is, 0 to 1.
+  double _distanceFraction(LatLng pos) {
+    final points = state.points;
+    if (_pathMeters <= 0) return 0;
+    final (double along, _) = pos.nearestPolylineIndexAndDistanceContinuous(
+      points,
+    );
+    final int whole = along.floor();
+    double covered = points.sublist(0, whole + 1).totalDistance();
+    if (whole < points.length - 1) {
+      covered +=
+          points[whole].haversineDistanceMetersTo(points[whole + 1]) *
+          (along - whole);
+    }
+    return (covered / _pathMeters).clamp(0.0, 1.0);
   }
 
   /// the index of the last step reached/passed
@@ -1050,6 +1163,9 @@ class TimelineInfo {
 class NavigationManager {
   // TODO: Implement ChangeNotifier and learn how that works
 
+  NavigationManager({StopPredictionFetcher? fetchStopPredictions})
+    : _fetchStopPredictions = fetchStopPredictions ?? fetchStopData;
+
   // All stages subscribed and we listen to all of them
   // Its the hivemind..........
   final List<StreamSubscription<StageEvent>> _stageSubs = [];
@@ -1098,6 +1214,122 @@ class NavigationManager {
   String? rerouteError;
 
   bool isFinished = false; // Nav done!
+
+  // Code below for the live "bus arriving in mere moments"
+
+  final StopPredictionFetcher _fetchStopPredictions;
+
+  // How often the upcoming bus's live prediction is fetched
+  static const Duration _arrivalPollInterval = Duration(seconds: 30);
+
+  // is the live prediction stale? 
+  static const Duration _livePredictionMaxAge = Duration(minutes: 2);
+
+  Timer? _arrivalPoll;
+  ({int session, int stageIndex, DateTime arrivesAt, DateTime fetchedAt})?
+  _livePrediction;
+  int? _polledStageIndex; // so a newly upcoming bus is fetched right away
+
+  /// Index of the bus stage the card is about: the current stage if it's a
+  /// bus the user hasn't left on yet, or the next one if they're walking to
+  /// it. Null otherwise (riding, last walk, finished, or prompt showing), so
+  /// (if) after a transfer the card comes back on the walk to the next bus.
+  int? get _upcomingBusIndex {
+    if (!_active || isFinished || missedBusPrompt != null) return null;
+    for (int i = currentStage; i <= currentStage + 1; i++) {
+      if (i >= stageList.length) return null;
+      final NavigationStage stage = stageList[i];
+      if (stage is NavOnBus) return stage.departed ? null : i;
+      if (stage is! Walking) return null;
+    }
+    return null;
+  }
+
+  // bus info of bus to be displayed 
+  UpcomingBusInfo? get upcomingBus {
+    final int? index = _upcomingBusIndex;
+    if (index == null) return null;
+    final NavOnBus bus = stageList[index] as NavOnBus;
+
+    final live = _livePrediction;
+    final bool liveIsFresh =
+        live != null &&
+        live.session == _session &&
+        live.stageIndex == index &&
+        DateTime.now().difference(live.fetchedAt) < _livePredictionMaxAge;
+
+    return UpcomingBusInfo(
+      routeId: bus.routeId,
+      stopId: bus.boardingStopId,
+      stopName: getStopNameFromID(bus.boardingStopId),
+      arrivesAt: liveIsFresh ? live.arrivesAt : bus.scheduledDeparture,
+      live: liveIsFresh,
+    );
+  }
+
+  void _startArrivalPolling() {
+    _arrivalPoll?.cancel();
+    _livePrediction = null;
+    _polledStageIndex = null;
+    _arrivalPoll = Timer.periodic(
+      _arrivalPollInterval,
+      (_) => unawaited(_refreshLivePrediction()),
+    );
+    unawaited(_refreshLivePrediction());
+  }
+
+  void _stopArrivalPolling() {
+    _arrivalPoll?.cancel();
+    _arrivalPoll = null;
+    _livePrediction = null;
+    _polledStageIndex = null;
+  }
+
+  // called when upcoming bus might have changed due to a bus transfer etc. 
+  void _pollIfUpcomingBusChanged() {
+    if (_arrivalPoll == null) return;
+    final int? index = _upcomingBusIndex;
+    if (index != null && index != _polledStageIndex) {
+      unawaited(_refreshLivePrediction());
+    }
+  }
+
+  Future<void> _refreshLivePrediction() async {
+    final int? index = _upcomingBusIndex;
+    if (index == null) return;
+    final NavOnBus bus = stageList[index] as NavOnBus;
+    final int session = _session;
+    _polledStageIndex = index;
+
+    final List<BusWithPrediction> predictions;
+    try {
+      predictions = await _fetchStopPredictions(bus.boardingStopId);
+    } catch (e) {
+      // Offline or the feed is down: the card falls back to the timetable
+      // once the last prediction gets too old
+      stderr.writeln("Couldn't fetch arrivals for ${bus.boardingStopId}: $e");
+      return;
+    }
+    // Navigation stopped, restarted, or moved on while we were waiting
+    if (session != _session || _upcomingBusIndex != index) return;
+
+    final DateTime now = DateTime.now();
+    final int? minutes = soonestPredictionMinutes(
+      predictions,
+      routeId: bus.routeId,
+      vehicleId: bus.plannedVehicleId,
+    );
+    final DateTime? previous = _livePrediction?.arrivesAt;
+    _livePrediction = minutes == null
+        ? null
+        : (
+            session: session,
+            stageIndex: index,
+            arrivesAt: now.add(Duration(minutes: minutes)),
+            fetchedAt: now,
+          );
+    if (_livePrediction?.arrivesAt != previous) notifyOverlay();
+  }
 
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList = [
@@ -1233,6 +1465,9 @@ class NavigationManager {
     // The newly current stage hasn't heard where the user is yet
     final Position? p = _lastPosition;
     if (!isFinished && p != null) _forwardPosition(p);
+
+    // eg. got off one bus and now walking to the next
+    _pollIfUpcomingBusChanged();
   }
 
   void _setPrompt(MissedBusInfo? info, [int? stageIndex]) {
@@ -1341,6 +1576,7 @@ class NavigationManager {
   void stop() {
     _active = false;
     _session++;
+    _stopArrivalPolling();
     _teardownStages();
     _setPrompt(null);
     isRerouting = false;
@@ -1383,7 +1619,13 @@ class NavigationManager {
             currentStageLength * stageList[i].percent_complete;
       }
     }
-    activePositionPercentage = activePositionTime / total_estimated_time;
+    // Bad data (eg. every stage 0 long) must not reach the overlay as NaN:
+    // the progress bar can't lay that out
+    activePositionPercentage = total_estimated_time > 0
+        ? activePositionTime / total_estimated_time
+        : 0.0;
+    if (!activePositionPercentage.isFinite) activePositionPercentage = 0.0;
+    activePositionPercentage = activePositionPercentage.clamp(0.0, 1.0);
 
     List<TimelineStep> timelineSteps = [];
 
@@ -1391,7 +1633,9 @@ class NavigationManager {
       timelineSteps.add(
         TimelineStep(
           estimated_time: stageList[i].length,
-          percentage: stageList[i].length / total_estimated_time,
+          percentage: total_estimated_time > 0
+              ? stageList[i].length / total_estimated_time
+              : 0.0,
           color: stageList[i].getColor(),
           // TODO: Define a color for the stage in the stage itself
           // color: Colors.red
@@ -1509,6 +1753,7 @@ class NavigationManager {
       );
     }
     _active = true;
+    _startArrivalPolling();
 
     _overlay?.onNavigationUpdated();
     rebuildMarkersAndPolylines();
