@@ -122,13 +122,15 @@ extension LatLngGeometryHelpers on LatLng {
   /// Returns the closest point on the great circle containing [a] and [b] in euclidean
   Vector3 projectedToGreatCircle(LatLng a, LatLng b) {
     final point = toEuclideanUnitSphere();
-    point.applyProjection(
-      makePlaneProjection(
-        a.toEuclideanUnitSphere().cross(b.toEuclideanUnitSphere()),
-        Vector3.zero(),
-      ),
-    );
-    return point.normalized();
+    final normal = a.toEuclideanUnitSphere().cross(b.toEuclideanUnitSphere());
+    // a and b are the same point, so there's no single circle through them
+    if (normal.length == 0.0) return a.toEuclideanUnitSphere();
+    normal.normalize();
+    // Drop the point onto the circle's plane by removing its component along
+    // the plane's normal. (vector_math's makePlaneProjection can't be used for
+    // this: it builds -n*n^T rather than I - n*n^T, which sends the point to
+    // the circle's pole, a quarter of the way around the globe.)
+    return (point - normal * point.dot(normal)).normalized();
   }
 
   /// Returns the closest point on the geodesic between [a] and [b]
@@ -157,7 +159,7 @@ extension LatLngGeometryHelpers on LatLng {
   ///
   /// Returns an index and distance
   ///
-  /// WARNING: hasn't been tested yet, might be buggy
+  /// Tested in test/navigation/navigation_manager_test.dart
   (double, double) nearestPolylineIndexAndDistanceContinuous(
     List<LatLng> poly,
   ) {

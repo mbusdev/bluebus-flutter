@@ -49,3 +49,14 @@ int serviceSecondsBetween(int from, int to) {
   return diff < 0 ? diff + _secondsPerDay : diff;
 }
 
+/// The line under the navigation progress bar, eg. "eta 5:14 ● 21 min":
+/// local arrival time and minutes until then (rounded up, so it says "now"
+/// rather than "0 min" only once the time has actually come).
+String navigationEtaText(DateTime? arrival, {DateTime? now}) {
+  if (arrival == null) return "eta unknown";
+  final int minutes =
+      (arrival.difference(now ?? DateTime.now()).inSeconds / 60).ceil();
+  final String clock = DateFormat('h:mm').format(arrival.toLocal());
+  return "eta $clock ● ${minutes <= 0 ? "now" : "$minutes min"}";
+}
+
