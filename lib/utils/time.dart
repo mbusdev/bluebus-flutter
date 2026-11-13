@@ -1,4 +1,3 @@
-
 // utc secs after midnight -> michigan time
 import 'package:intl/intl.dart';
 
@@ -54,9 +53,26 @@ int serviceSecondsBetween(int from, int to) {
 /// rather than "0 min" only once the time has actually come).
 String navigationEtaText(DateTime? arrival, {DateTime? now}) {
   if (arrival == null) return "eta unknown";
-  final int minutes =
-      (arrival.difference(now ?? DateTime.now()).inSeconds / 60).ceil();
+  final int minutes = (arrival.difference(now ?? DateTime.now()).inSeconds / 60)
+      .ceil();
   final String clock = DateFormat('h:mm').format(arrival.toLocal());
   return "eta $clock ● ${minutes <= 0 ? "now" : "$minutes min"}";
 }
 
+// Based on live prediction or timetable, minutes only
+String upcomingBusText(
+  DateTime arrivesAt, {
+  required bool live,
+  DateTime? now,
+}) {
+  final int minutes =
+      (arrivesAt.difference(now ?? DateTime.now()).inSeconds / 60).ceil();
+  if (live) {
+    return minutes <= 0
+        ? "Your bus is arriving now"
+        : "Your bus is arriving in $minutes min";
+  }
+  return minutes <= 0
+      ? "Your bus is due now"
+      : "Your bus is scheduled in $minutes min";
+}
