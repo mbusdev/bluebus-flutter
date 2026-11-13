@@ -416,15 +416,17 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           (() async {
             canVibrate = await Haptics.canVibrate();
           })(),
+          // TESTING TOGGLES (remove before release): load the saved camera settings
           (() async {
             final prefs = await SharedPreferences.getInstance();
-            globalFollowDistanceThresholdMeters =
-                prefs.getDouble('follow_distance_threshold_meters') ??
-                globalFollowDistanceThresholdMeters;
-            globalGpsUpdateDistanceFilterMeters =
-                prefs.getInt('gps_update_distance_filter_meters') ??
-                globalGpsUpdateDistanceFilterMeters;
+            globalAutoRecenterEnabled =
+                prefs.getBool('auto_recenter_enabled') ??
+                globalAutoRecenterEnabled;
+            globalRotateWithHeadingEnabled =
+                prefs.getBool('rotate_with_heading_enabled') ??
+                globalRotateWithHeadingEnabled;
           })(),
+          // END TESTING TOGGLES
           (() async {
             screenRadius = await ScreenCornerRadius.get(); // load screen radius
             screenRadiusLoaded = true;
@@ -538,8 +540,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
           return;
       }
 
-      // Only recenter automatically when the current navigation stage asks for it.
-      final cam = navigationManager.cameraBehavior.value;
+      // During navigation, the current stage decides whether to recenter.
+      // Outside navigation, the Auto Recenter setting decides.
+      final cam = _activeCameraBehavior;
       if (!cam.follow) return;
       if (_userHasInteractedWithMap.value) {
         // log("Ignoring location update: user has interacted with map");
@@ -611,17 +614,29 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _userHasInteractedWithMap.value = false;
   }
 
+  // What the camera should do right now: the current stage's behavior during
+  // navigation, otherwise the Auto Recenter / Rotate With Heading settings
+  // TESTING TOGGLES (remove before release): replace the CameraBehavior(...) below with CameraBehavior.free
+  CameraBehavior get _activeCameraBehavior => _navigationOverlayEnabled
+      ? navigationManager.cameraBehavior.value
+      : CameraBehavior(
+          follow: globalAutoRecenterEnabled,
+          rotateWithHeading:
+              globalAutoRecenterEnabled && globalRotateWithHeadingEnabled,
+        );
+
   // Runs when the active navigation stage changes what the camera should do
   void _onCameraBehaviorChanged() {
     if (!mounted) return;
-    final cam = navigationManager.cameraBehavior.value;
+    final cam = _activeCameraBehavior;
     if (cam.follow) {
       // Start following right away instead of waiting for the next GPS update
       _setFollowMode(true);
       _centerOnLocation(
         true,
         zoom: _currentCameraPos.value?.zoom,
-        bearing: _currentCameraPos.value?.bearing,
+        // Face north again if the new behavior doesn't rotate
+        bearing: cam.rotateWithHeading ? _currentCameraPos.value?.bearing : 0,
       );
     } else if ((_currentCameraPos.value?.bearing ?? 0) != 0) {
       // Undo the heading rotation once a following stage ends
@@ -1693,8 +1708,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       if (pos != null) {
         position = pos;
         // Face the direction of travel right away instead of waiting for the next GPS update
-        if (navigationManager.cameraBehavior.value.rotateWithHeading &&
-            pos.speed > 1) {
+        if (_activeCameraBehavior.rotateWithHeading && pos.speed > 1) {
           bearing = pos.heading;
         }
       }
@@ -2235,7 +2249,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                     true,
                                                                     // Keep the rotation while standing still if the stage rotates the camera
                                                                     bearing:
-                                                                        navigationManager.cameraBehavior.value.rotateWithHeading
+                                                                        _activeCameraBehavior.rotateWithHeading
                                                                         ? _currentCameraPos.value?.bearing
                                                                         : null,
                                                                   );
