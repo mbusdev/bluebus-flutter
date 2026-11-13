@@ -749,6 +749,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _currentCameraPos.dispose();
     _userHasInteractedWithMap.dispose();
     _connectivitySubscription?.cancel();
+    _posSub?.cancel();
+    navigationManager.stop();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
     if (_busProviderRef != null && _busProviderListener != null) {
@@ -768,6 +770,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void hideNavigation() {
     _navigationOverlayEnabled = false;
+    navigationManager.stop();
 
     navigationLayer.isVisible = false;
     journeyLayer.isVisible = false;
@@ -1318,7 +1321,25 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               },
               scrollController: scrollController,
               onStartNavigation: (Journey journey) {
-                // TODO: Pass in the Journey from here and give it to the navigation overlay
+                final dest = _lastJourneyRequestDest;
+                final bool started = navigationManager.initFromJourney(
+                  journey,
+                  getColor(context, ColorType.mapWalkingLine),
+                  // Kept so the manager can reroute to the same place later
+                  destination: dest == null
+                      ? null
+                      : LatLng(dest['lat']!, dest['lon']!),
+                );
+                if (!started) {
+                  // Leave the directions sheet up so another route can be picked
+                  showMaizebusOKDialog(
+                    contextIn: context,
+                    title: "Error",
+                    content: "Couldn't start navigation for this route.",
+                  );
+                  return;
+                }
+
                 _bottomSheetController?.close();
 
                 baseRoutesLayer.isVisible = false;
@@ -1327,11 +1348,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 navigationLayer.isVisible = true;
 
                 navigationLayer.reload(); // This reloads the map
-
-                navigationManager.initFromJourney(
-                  journey,
-                  getColor(context, ColorType.mapWalkingLine),
-                );
 
                 setState(() {
                   _navigationOverlayEnabled = true;
