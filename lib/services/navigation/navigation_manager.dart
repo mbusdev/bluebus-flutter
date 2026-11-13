@@ -11,6 +11,7 @@ import 'package:bluebus/models/bus.dart';
 import 'package:bluebus/models/bus_route_line.dart';
 import 'package:bluebus/models/bus_stop.dart' show BusStop;
 import 'package:bluebus/models/journey.dart';
+import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/map_layers/navigation_layer.dart';
 import 'package:bluebus/services/route_color_service.dart';
 import 'package:bluebus/utils/geometry.dart';
@@ -58,6 +59,22 @@ class NavigationStageStep {
     return lineType;
   }
 }
+
+// stage transitions are based on user leaving or entering a radius around POI
+// "Trustworthiness" of a fix, does not trigger if above tolerance
+// (updated) with testing data for 20m
+const double usableFixAccuracyMeters = 20.0;
+
+// within a radius zone (ie. a stop or end of walk etc...)
+const double enterRadiusMeters = 35.0;
+
+// counts leaving a stop at this many meters, increased tolerance to account for wiggle room
+const double leaveRadiusMeters = 90.0;
+
+bool isUsableFix(Position p) => p.accuracy <= usableFixAccuracyMeters;
+
+double distanceMeters(Position p, LatLng point) =>
+    LatLng(p.latitude, p.longitude).haversineDistanceMetersTo(point);
 
 sealed class NavigationStage {
   // String title = "..."; //Don't use this anymore--implement getTitle() instead
@@ -138,21 +155,22 @@ sealed class NavigationStage {
 enum RerouteReason {
   wrongBus,
   walkPathChanged,
+  missedBus, // User clicks "I missed bus"
   // Feel free to add additional reasons as necessary
 }
 
-class BusPromptOption {
-  // DISCLAIMER: STRUCTURES SUBJECT TO CHANGE BECAUSE IM NOT SURE IF WE HAVE CUSTOM STRUCTURES
-  // going to remove this soon probably, since i can use the bus structure...
-  final String code; // "CN" "BB"...
-  final String label; // expanded name
-  final Color color;
-  final String? busNumber; // 3067 :)
-  BusPromptOption({
-    required this.code,
-    required this.label,
-    required this.color,
-    this.busNumber,
+// Info for missed bus prompt, exclusively dependent on user loc
+class MissedBusInfo {
+  final String routeId;
+  final String stopId; // The stop the user was meant to board at
+  final String stopName;
+  final DateTime leftStopAt; // used for timing
+
+  MissedBusInfo({
+    required this.routeId,
+    required this.stopId,
+    required this.stopName,
+    required this.leftStopAt,
   });
 }
 
@@ -164,6 +182,12 @@ class StageReroute extends StageEvent {
   final RerouteReason reason; // e.g. wrong bus, missed stop
   StageReroute(this.reason);
 }
+
+// Raised when user has based on location departed from bus stop
+class StageLeftStop extends StageEvent {
+  final MissedBusInfo info;
+  StageLeftStop(this.info);
+} // summons prompt
 
 // used to ensure that the stage is fully initialized
 class NavOnBusState {
@@ -232,6 +256,14 @@ class NavOnBus extends NavigationStage {
   late BitmapDescriptor stopBitmap = BitmapDescriptor.defaultMarker;
   LatLng? lastPosition;
 
+  late Leg _leg;
+
+  // Whether the user has been at the boarding stop, ie. waiting for the bus
+  bool reachedBoardingStop = false;
+
+  // Set once this stage has raised prompt so it only ever prompts once
+  bool leftStopPrompted = false;
+
   NavOnBus();
 
   @override
@@ -297,12 +329,65 @@ class NavOnBus extends NavigationStage {
 
     stopBitmap = BitmapDescriptor.defaultMarker;
     // stopBitmap = MapImageService.get
+
+    _leg = leg;
+
+    // Both getters throw if the boarding or arrival stop had no coordinates
+    // (those are skipped above). Better to find out now, so the manager can
+    // reject the journey, than halfway through drawing the overlay.
+    final legPoints = state.points;
+    state.stops;
+    _boardingStop = legPoints.first;
+    _arrivalStop = legPoints.last;
   }
 
+  // Looked up once here rather than on every GPS fix
+  late LatLng _boardingStop;
+  late LatLng _arrivalStop;
+
+  // entering boarding stop circle = waiting for bus
+  // leaving boarding stop circle = departed, prompt missed bus
+  // entering the arrival stop circle = arrived
   @override
   void receiveLocationUpdate(Position p) {
     lastPosition = LatLng(p.latitude, p.longitude);
-    // TODO: determine if stage is over
+
+    // Reject if fix tolerance is poor
+    if (!isUsableFix(p)) return;
+
+    final double fromBoardingStop = distanceMeters(p, _boardingStop);
+    if (fromBoardingStop <= enterRadiusMeters) {
+      reachedBoardingStop = true;
+    } else if (reachedBoardingStop &&
+        !leftStopPrompted &&
+        fromBoardingStop >= leaveRadiusMeters) {
+      _raiseLeftStop(DateTime.now());
+    }
+
+    // Emitted on every fix to ensure ability to complete, must also be in stage
+    if (distanceMeters(p, _arrivalStop) <= enterRadiusMeters) {
+      emit(StageComplete());
+    }
+  }
+
+  // TESTING ONLY!!! (Will force missed bus prompt unconditionally)
+  void debugForceLeftStop() {
+    if (leftStopPrompted) return;
+    _raiseLeftStop(DateTime.now());
+  }
+
+  void _raiseLeftStop(DateTime now) {
+    leftStopPrompted = true;
+    emit(
+      StageLeftStop(
+        MissedBusInfo(
+          routeId: state.rt,
+          stopId: _leg.originID,
+          stopName: getStopNameFromID(_leg.originID),
+          leftStopAt: now,
+        ),
+      ),
+    );
   }
 
   @override
@@ -573,6 +658,32 @@ class Walking extends NavigationStage {
   int _nextIndex = 0;
   static const double _reachThresholdMeters = 15.0;
 
+  // True once the user has reached the end of the walk
+  bool _completed = false;
+
+  // Length of the whole walk along its path, worked out once in initWithLeg
+  double _totalMeters = 0;
+
+  // Similar to bus stage progress, updates progress bar dot :)
+  @override
+  double get percent_complete {
+    if (_completed) return 1.0;
+    final LatLng? pos = currWalkingPos;
+    if (pos == null || _totalMeters <= 0) return 0.0;
+
+    final (double along, _) = pos.nearestPolylineIndexAndDistanceContinuous(
+      points,
+    );
+    final int whole = along.floor();
+    double covered = points.sublist(0, whole + 1).totalDistance();
+    if (whole < points.length - 1) {
+      covered +=
+          points[whole].haversineDistanceMetersTo(points[whole + 1]) *
+          (along - whole);
+    }
+    return (covered / _totalMeters).clamp(0.0, 1.0);
+  }
+
   double _distMeters(LatLng a, LatLng b) {
     const R = 6371000.0;
     final dLat = (b.latitude - a.latitude) * math.pi / 180;
@@ -608,31 +719,103 @@ class Walking extends NavigationStage {
     LatLng newLocation = LatLng(p.latitude, p.longitude);
     currWalkingPos = LatLng(p.latitude, p.longitude);
 
+    // The walk is over once the user is at its end, also similar to bus stage
+    if (isUsableFix(p) && distanceMeters(p, points.last) <= enterRadiusMeters) {
+      _completed = true;
+      emit(StageComplete());
+    }
+
     // check if it has not reached new waypoint
     if (_nextIndex >= points.length ||
         _distMeters(newLocation, points[_nextIndex]) > _reachThresholdMeters) {
       return false;
     }
 
-    // if it has reached new waypoint, update index, length left, and percent complete
+    // if it has reached new waypoint, update index (percent_complete works
+    // itself out from the user's position)
     _nextIndex++;
-
-    // TODO: update length and percent_complete here
 
     return true;
   }
 
+  // (TODO) We may want to make this not be extra precise ft wise
+  // Consider rounding to nearest 50 feet? 
   @override
   String getTitle() {
-    if (_nextIndex >= points.length) {
+    if (_completed || _nextIndex >= points.length) {
       return "You've arrived!";
     }
     final pos = currWalkingPos;
     if (pos == null) {
       return "Acquiring GPS…";
     }
-    final feet = (_distMeters(pos, points[_nextIndex]) * 3.28084).round();
-    return "${_directionWord(pos)} in $feet ft";
+    final (String? turn, double meters) = _nextTurn(pos);
+    final feet = (meters * 3.28084).round();
+    return turn == null ? "Continue for $feet ft" : "$turn in $feet ft";
+  }
+
+  // what is a turn what is not a turn, 30 degrees or less is a curve lol
+  static const double _turnThresholdDegrees = 30.0;
+
+  // Paths often round a corner over a few close points, so the turn at a
+  // point is judged from this far before it to this far after it.
+  static const double _turnWindowMeters = 10.0;
+
+  /// The next turn ahead of the user and how far along the path it is, or a
+  /// null turn (and the distance left to walk) if there isn't one.
+  ///
+  /// Turns are read from the path's own shape, ie. the direction it arrives
+  /// at a point versus the direction it leaves. Measuring from where the user
+  /// is relative to the path mostly picked up GPS noise, giving left for right
+  /// and U-turns on a straight walk.
+  (String?, double) _nextTurn(LatLng pos) {
+    final (double along, _) = pos.nearestPolylineIndexAndDistanceContinuous(
+      points,
+    );
+    final int ahead = min(along.floor() + 1, points.length - 1);
+    double meters = _distMeters(pos, points[ahead]);
+    for (int i = ahead; i < points.length - 1; i++) {
+      // Builds in a bit of wiggle room for ending the walk
+      if (_distMeters(points[i], points.last) > enterRadiusMeters) {
+        final String? turn = _turnAt(i);
+        if (turn != null) return (turn, meters);
+      }
+      meters += _distMeters(points[i], points[i + 1]);
+    }
+    return (null, meters);
+  }
+
+  /// What the path does at point i: "Turn right", "Turn left", "U-turn",
+  /// or null for (roughly) straight on.
+  String? _turnAt(int i) {
+    int before = i - 1;
+    double back = _distMeters(points[before], points[i]);
+    while (before > 0 && back < _turnWindowMeters) {
+      before--;
+      back += _distMeters(points[before], points[before + 1]);
+    }
+    int after = i + 1;
+    double forward = _distMeters(points[i], points[after]);
+    while (after < points.length - 1 && forward < _turnWindowMeters) {
+      forward += _distMeters(points[after], points[after + 1]);
+      after++;
+    }
+    // Repeated points, so there's no direction to speak of
+    if (back < 1 || forward < 1) return null;
+
+    // Clockwise change in heading, so 0-180 is to the right
+    final double change = (_bearing(points[i], points[after]) 
+                            - _bearing(points[before], points[i]) 
+                            + 360) 
+                          % 360;
+    // sorry Isaac this part is slightly unreadable
+    if (change < _turnThresholdDegrees ||
+        change > 360 - _turnThresholdDegrees) {
+      return null;
+    }
+    if (change <= 150) return "Turn right";
+    if (change >= 210) return "Turn left";
+    return "U-turn";
   }
 
   // Calculates the distance left in the walking stage
@@ -659,29 +842,10 @@ class Walking extends NavigationStage {
 
   @override
   String getSubtitle() {
-    if (_nextIndex >= points.length) {
+    if (_completed || _nextIndex >= points.length) {
       return "Walk complete";
     }
     return "Waypoint ${_nextIndex + 1} of ${points.length}";
-  }
-
-  String _directionWord(LatLng pos) {
-    if (_nextIndex == 0) {
-      return "Head";
-    }
-    final incoming = _bearing(points[_nextIndex - 1], pos);
-    final outgoing = _bearing(pos, points[_nextIndex]);
-    final diff = (outgoing - incoming + 360) % 360;
-    if (diff < 20 || diff > 340) {
-      return "Continue straight";
-    }
-    if (diff <= 170) {
-      return "Turn right";
-    }
-    if (diff >= 190) {
-      return "Turn left";
-    }
-    return "U-turn";
   }
 
   // Initializes the Walking stage given a Leg.
@@ -698,9 +862,13 @@ class Walking extends NavigationStage {
 
     points = List<LatLng>.unmodifiable(path);
     _nextIndex = 0;
+    _totalMeters = points.totalDistance();
+
+    // Drop the placeholder position so directions and progress are worked
+    // out from the user's real location (shows "Acquiring GPS…" until then)
+    currWalkingPos = null;
 
     length = leg_in.duration;
-    percent_complete = 0.0;
   }
 
   @override
@@ -882,7 +1050,54 @@ class TimelineInfo {
 class NavigationManager {
   // TODO: Implement ChangeNotifier and learn how that works
 
-  StreamSubscription<StageEvent>? _stageEventSub;
+  // All stages subscribed and we listen to all of them
+  // Its the hivemind..........
+  final List<StreamSubscription<StageEvent>> _stageSubs = [];
+
+  // Prevents gps fix stream when navigation inactive
+  bool _active = false;
+
+  // start stop counts (for nav)
+  int _session = 0;
+
+  Position? _lastPosition;
+
+  // Kept from initFromJourney so reroute() can plan and start again by itself
+  LatLng? _destination;
+  Color _walkingLineColor = Colors.black; // do we need to change this? 
+
+  // The current journey's planned arrival, in seconds after midnight UTC
+  int _arrivalSeconds = 0;
+
+  // ETA
+  DateTime? get arrivalTime {
+    final bool busAhead = stageList.skip(currentStage).any(
+      (stage) => stage is NavOnBus,
+    );
+    if (_active && !busAhead) {
+      double secondsLeft = 0;
+      for (int i = currentStage; i < stageList.length; i++) {
+        final NavigationStage stage = stageList[i];
+        final double fractionLeft = i == currentStage
+            ? 1 - stage.percent_complete
+            : 1;
+        secondsLeft += stage.length * fractionLeft;
+      }
+      return DateTime.now().add(Duration(seconds: secondsLeft.round()));
+    }
+    return _arrivalSeconds == 0
+        ? null
+        : serviceSecondsToDateTime(_arrivalSeconds);
+  }
+
+  // Overlay reads this
+  MissedBusInfo? missedBusPrompt;
+  int? _promptStageIndex;
+
+  bool isRerouting = false;
+  String? rerouteError;
+
+  bool isFinished = false; // Nav done!
 
   int currentStage = 0; // Stores the current navigation state index
   List<NavigationStage> stageList = [
@@ -930,10 +1145,32 @@ class NavigationManager {
     }
   }
 
+  // Overlay redraw interval
+  static const Duration _liveRefreshInterval = Duration(seconds: 1);
+  DateTime? _lastLiveRefresh;
+
   void receiveLocationUpdate(Position p) {
+    _lastPosition = p;
+    if (!_active) return;
+    _forwardPosition(p);
+
+    // The overlay only re-reads the timeline (and so each stage's
+    // percent_complete) when told to, so tell it now and then to keep the
+    // header and progress dot moving between stage changes.
+    final DateTime now = DateTime.now();
+    final DateTime? last = _lastLiveRefresh;
+    if (last == null || now.difference(last) >= _liveRefreshInterval) {
+      _lastLiveRefresh = now;
+      notifyOverlay();
+    }
+  }
+
+  // forward pos info to the actually active stage
+  void _forwardPosition(Position p) {
     stageList[currentStage].receiveLocationUpdate(p);
     if (currentStage < stageList.length - 1) {
-      stageList[currentStage + 1].receiveLocationUpdate(p);
+      final NavigationStage next = stageList[currentStage + 1];
+      if (next is NavOnBus) next.receiveLocationUpdate(p);
     }
   }
 
@@ -942,24 +1179,183 @@ class NavigationManager {
     _overlay?.onNavigationUpdated();
   }
 
-  // Overlay can display the "which bus are you on?" prompt
-  // We can call this
-  void showOopsDialog() {
-    // we're gonna do this for demo day, but this will be gone for mb3 
-    _overlay?.displayOopsDialog(Bus(fullness: "34", id: "123", position: LatLng(12.0, 12.0), routeId: "BB", heading: 1.0));
+  // TESTING ONLY!!! Emulates departure from boarding radius
+  // DO NOT USE NORMALLY IT WILL FORCE DIALOGUE
+  void debugForceLeftStop() {
+    for (int i = currentStage; i <= currentStage + 1 && i < stageList.length; i++) {
+      final stage = stageList[i];
+      if (stage is NavOnBus) {
+        stage.debugForceLeftStop();
+        return;
+      }
+    }
   }
 
-  void _activateStageSub(NavigationStage stage) {
-    // TODO: Call this whenever the stage is activated
-    _stageEventSub?.cancel(); // Drop the old subscription
-    _stageEventSub = stage.events.listen((event) {
-      switch (event) {
-        case StageComplete():
-        // Move on to the next stage
-        case StageReroute(:final reason):
-        // Handle the reroute
+  void _onStageEvent(NavigationStage stage, StageEvent event) {
+    // -1 means a stage from a journey we've since replaced
+    final int index = stageList.indexOf(stage);
+    if (index == -1 || !_active) return;
+
+    switch (event) {
+      case StageComplete():
+        // Exception accounted for: reaching the end of the bus ride while we still have the user walking to the stop
+        if (index == currentStage ||
+            (index == currentStage + 1 && stage is NavOnBus)) {
+          _advanceTo(index + 1);
+        }
+      case StageLeftStop(:final info):
+        if (index >= currentStage && missedBusPrompt == null) {
+          _setPrompt(info, index);
+          notifyOverlay();
+        }
+      case StageReroute(:final reason):
+        unawaited(reroute(reason));
+    }
+  }
+
+  /// Moves forward to stage index or finishes, CANNOT MOVE BACK
+  void _advanceTo(int index) {
+    if (isFinished || index <= currentStage) return;
+
+    if (index >= stageList.length) {
+      currentStage = stageList.length - 1;
+      isFinished = true;
+    } else {
+      currentStage = index;
+    }
+
+    // Did you fade answering the prompt? (If so it'll get rid of it)
+    final int? promptIndex = _promptStageIndex;
+    if (promptIndex != null && promptIndex < currentStage) _setPrompt(null);
+
+    notifyOverlay();
+
+    // The newly current stage hasn't heard where the user is yet
+    final Position? p = _lastPosition;
+    if (!isFinished && p != null) _forwardPosition(p);
+  }
+
+  void _setPrompt(MissedBusInfo? info, [int? stageIndex]) {
+    if (info == null && missedBusPrompt == null) return;
+    missedBusPrompt = info;
+    _promptStageIndex = info == null ? null : stageIndex;
+    if (info == null) {
+      _overlay?.clearMissedBusPrompt();
+    } else {
+      _overlay?.displayMissedBusPrompt(info);
+    }
+  }
+
+  // User confirmed in prompt that they are on the bus
+  void confirmBoarded() {
+    final int? promptIndex = _promptStageIndex;
+    if (promptIndex != null) _advanceTo(promptIndex);
+    _setPrompt(null);
+    notifyOverlay();
+  }
+
+  static const Duration _rerouteTimeout = Duration(seconds: 15);
+
+  // User needs to reroute, they clicked the button
+  Future<void> reroute([RerouteReason reason = RerouteReason.missedBus]) async {
+    if (isRerouting || !_active) return;
+    final int session = _session;
+    isRerouting = true;
+    rerouteError = null;
+    notifyOverlay();
+
+    List<Journey>? journeys;
+    String? error;
+    try {
+      final LatLng? destination = _destination;
+      final Position? origin =
+          _lastPosition ?? await Geolocator.getLastKnownPosition();
+      if (destination == null) {
+        error = "Can't reroute without a destination";
+      } else if (origin == null) {
+        error = "Waiting for GPS…";
+      } else {
+        journeys = await JourneyRepository.planJourney(
+          originLat: origin.latitude,
+          originLon: origin.longitude,
+          destLat: destination.latitude,
+          destLon: destination.longitude,
+        ).timeout(_rerouteTimeout);
       }
-    });
+    } catch (_) {
+      error = "Couldn't get a new route";
+    }
+
+    // User deliberately exited
+    if (session != _session) return;
+
+    isRerouting = false;
+    if (journeys != null && !_startBestJourney(journeys)) {
+      error = "No other routes right now";
+    }
+    rerouteError = error;
+    notifyOverlay();
+  }
+
+  // Earliest doable journey, or if none is possible
+  bool _startBestJourney(List<Journey> journeys) {
+    // A bus that's already gone (or about to be) would just ask again
+    final DateTime catchableAfter = DateTime.now().add(
+      const Duration(seconds: 60),
+    );
+    final candidates =
+        journeys.where((journey) {
+          // 0 means missing (Journey.fromJson defaults it)
+          if (journey.arrivalTime == 0) return false;
+          final DateTime? departure = _firstBusDeparture(journey);
+          return departure == null || !departure.isBefore(catchableAfter);
+        }).toList()..sort(
+          (a, b) => serviceSecondsToDateTime(
+            a.arrivalTime,
+          ).compareTo(serviceSecondsToDateTime(b.arrivalTime)),
+        );
+
+    for (final journey in candidates) {
+      if (initFromJourney(journey, _walkingLineColor)) return true;
+    }
+    return false;
+  }
+
+  // When the journey's first bus leaves its stop, or null if it has no bus
+  static DateTime? _firstBusDeparture(Journey journey) {
+    for (final leg in journey.legs) {
+      final Trip? trip = leg.trip;
+      if (leg.mode != LegMode.bus || trip == null) continue;
+      for (final st in trip.stopTimes) {
+        if (st.stop == leg.originID) {
+          return serviceSecondsToDateTime(st.departureTime);
+        }
+      }
+      return null;
+    }
+    return null;
+  }
+
+  // Ends navigation 
+  // Keeps old stages in order to prevent a overlay redraw from going bad
+  void stop() {
+    _active = false;
+    _session++;
+    _teardownStages();
+    _setPrompt(null);
+    isRerouting = false;
+    rerouteError = null;
+  }
+
+  // Cancelling first also drops any event still on its way from a stage
+  void _teardownStages() {
+    for (final sub in _stageSubs) {
+      sub.cancel();
+    }
+    _stageSubs.clear();
+    for (final stage in stageList) {
+      stage.dispose();
+    }
   }
 
   void setMapLayer(NavigationLayer mapLayer_in) {
@@ -1048,61 +1444,85 @@ class NavigationManager {
     return stageList[currentStage];
   }
 
+  // Stops at the ends rather than wrapping around
   void nextStage() {
-    currentStage = (currentStage + 1) % stageList.length;
-    _activateStageSub(stageList[currentStage]);
+    _advanceTo(currentStage + 1);
   }
 
   void previousStage() {
-    currentStage = (currentStage - 1) % stageList.length;
-    _activateStageSub(stageList[currentStage]);
+    if (currentStage == 0) return;
+    currentStage--;
+    isFinished = false;
+    notifyOverlay();
   }
 
-  void initFromJourney(Journey journey, Color walkingLineColor) {
-    this.stageList.clear();
-
-    for (Leg leg in journey.legs) {
-      // TODO: Call initWithLeg(leg) constructor here if it's a Bus leg
-
-      if (leg.mode == LegMode.walk) {
-        Walking walkingStage = Walking();
-        walkingStage.setColor(
-          walkingLineColor,
-        ); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
-        walkingStage.initWithLeg(leg);
-        this.stageList.add(walkingStage);
-      } else if (leg.mode == LegMode.bus) {
-        NavOnBus onBusStage = NavOnBus();
-        onBusStage.initWithLeg(leg);
-        this.stageList.add(onBusStage);
+  /// Starts navigating [journey]. Returns false, leaving whatever was running
+  /// untouched, if a stage can't be built from it (eg. a stop with no
+  /// coordinates).
+  bool initFromJourney(
+    Journey journey,
+    Color walkingLineColor, {
+    LatLng? destination,
+  }) {
+    // Build everything before touching the current stages: a reroute must
+    // never be able to wreck the navigation it's replacing.
+    final List<NavigationStage> stages = [];
+    try {
+      for (Leg leg in journey.legs) {
+        if (leg.mode == LegMode.walk) {
+          Walking walkingStage = Walking();
+          walkingStage.setColor(
+            walkingLineColor,
+          ); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
+          walkingStage.initWithLeg(leg);
+          stages.add(walkingStage);
+        } else if (leg.mode == LegMode.bus) {
+          NavOnBus onBusStage = NavOnBus();
+          onBusStage.initWithLeg(leg);
+          stages.add(onBusStage);
+        }
       }
+    } catch (e) {
+      stderr.writeln("Couldn't start navigation for this journey: $e");
+      for (final stage in stages) {
+        stage.dispose();
+      }
+      return false;
     }
+    if (stages.isEmpty) return false;
 
-    // this.stageList.add(
-    //   DemoStage(
-    //   favoriteNumber: 7,
-    //   length: 20.0,
-    //   percent_complete: 0.72,
-    //   startPoint: LatLng(42.297493, -83.710782),
-    //   endPoint: LatLng(42.398493, -83.811782),
-    //   color: Colors.orange,
-    //   lineType: LineType.Dashed
-    //  )
-    // );
+    _teardownStages();
+    stageList = stages;
+    currentStage = 0;
+    _session++;
+    isFinished = false;
+    rerouteError = null;
+    _setPrompt(null);
+    _walkingLineColor = walkingLineColor;
+    _arrivalSeconds = journey.arrivalTime;
+    if (destination != null) _destination = destination;
+
+    // Subscribe before anything can emit, drop events that have no listeners
+    for (final stage in stageList) {
+      _stageSubs.add(
+        stage.events.listen((event) => _onStageEvent(stage, event)),
+      );
+    }
+    _active = true;
 
     _overlay?.onNavigationUpdated();
     rebuildMarkersAndPolylines();
+
+    // The user may already be where a stage ends (eg. at the stop), and won't
+    // get a new fix until they move.
+    final Position? p = _lastPosition;
+    if (p != null) _forwardPosition(p);
+    return true;
   }
-
-  // TODO: Add start()/stop() methods
-
-  // - Allen: Get “Oops” code started. Find a way to talk to the NavigationOverlayWidget
-  // - Find a way to get the two to talk to each other: I.e. whenever `NavigationOverlayWidget` is created, it calls a specific method inside NavigationManager that says "Hey, I'm here, please save me in a member variable", so when the "Oops" stage happens later you can call localReferenceToOverlayWidget.displayOopsDialog(...)
-  //    The stage (e.g. "On bus") should call the "Oops" stage when it needs to
 }
 
 abstract class NavigationOverlayHost {
-  void displayOopsDialog(Bus bus); // just for the Oops state for now...
+  void displayMissedBusPrompt(MissedBusInfo info);
+  void clearMissedBusPrompt();
   void onNavigationUpdated(); // call navigation overlay widget to refresh
 }
-// TODO: Call dispose() on stages as they are removed
