@@ -8,7 +8,9 @@ import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/floating_draggable_sheet.dart';
+import 'package:bluebus/utils/time.dart';
 import 'package:bluebus/widgets/route_icon.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -32,11 +34,6 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   // in it. TODO: Compute this from the progress bar instead of hardcoding it.
   static const double _sheetCollapsed = 0.14;
   static const double _sheetExpanded = 0.85;
-
-  // The bus we're asking the user about, or null when no prompt is showing.
-  Bus? _missedBus;
-  DateTime? _missedBusRaisedAt;
-  Timer? _missedBusTicker;
 
   // Ours (not the sheet's) so we can watch the drag progress from out here.
   final DraggableScrollableController _sheetController =
@@ -71,13 +68,21 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     widget.navigationManager.registerOverlay(
       this,
     ); // does not set to null, see the navigation manager
+
+    // GPS fixes redraw the overlay, but standing still (eg. waiting at a
+    // stop) produces none, so this keeps the minutes until arrival counting.
+    _etaTicker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
   }
+
+  Timer? _etaTicker;
 
   @override
   void dispose() {
     // sets to null
     widget.navigationManager.unregisterOverlay(this);
-    _missedBusTicker?.cancel();
+    _etaTicker?.cancel();
     _sheetController.dispose();
     super.dispose();
   }
@@ -181,30 +186,17 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     ); // big beautiful pill (bbp)
   }
 
-  // Raises the "you might have missed your bus" prompt for [bus], which is the
-  // bus that just departed. It's pinned to the bottom of the sheet rather than
-  // shown as a dialog, so the map stays visible and undimmed behind it.
+  // The missed bus prompt ("On the Diag-to-Diag?") lives in the manager; these
+  // just redraw. It's pinned to the bottom of the sheet rather than shown as a
+  // dialog, so the map stays visible and undimmed behind it.
   @override
-  void displayOopsDialog(Bus bus) {
-    setState(() {
-      _missedBus = bus;
-      _missedBusRaisedAt = DateTime.now();
-    });
-    // Keeps the "left N minutes ago" line honest while the prompt is up.
-    _missedBusTicker?.cancel();
-    _missedBusTicker = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {});
-    });
+  void displayMissedBusPrompt(MissedBusInfo info) {
+    if (mounted) setState(() {});
   }
 
+  @override
   void clearMissedBusPrompt() {
-    _missedBusTicker?.cancel();
-    _missedBusTicker = null;
-    if (!mounted) return;
-    setState(() {
-      _missedBus = null;
-      _missedBusRaisedAt = null;
-    });
+    if (mounted) setState(() {});
   }
 
   // The prompt's height decides how far the collapsed sheet has to grow, and we
@@ -222,20 +214,16 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   }
 
   Widget missedBusPromptFooter() {
-    final Bus? bus = _missedBus;
-    if (bus == null) {
+    final NavigationManager manager = widget.navigationManager;
+    final MissedBusInfo? prompt = manager.missedBusPrompt;
+    if (prompt == null) {
       if (_promptHeight != 0.0) _measurePrompt(); // shrink the sheet back
       return const SizedBox.shrink();
     }
 
     _measurePrompt();
 
-    // TODO: This is "how long since we raised the prompt", not the bus's real
-    // departure time--that should ride along from the NavOnBus stage's trip
-    // data once a stage actually emits StageReroute(RerouteReason.wrongBus).
-    final int minutesAgo = DateTime.now()
-        .difference(_missedBusRaisedAt ?? DateTime.now())
-        .inMinutes;
+    final String? rerouteError = manager.rerouteError;
 
     return Container(
       key: _promptKey,
@@ -266,14 +254,16 @@ class _NavigationOverlayState extends State<NavigationOverlay>
           children: [
             Row(
               children: [
-                RouteIcon.small(bus.routeId),
+                RouteIcon.small(prompt.routeId),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // We only know the user left the stop, not that the
+                      // bus did, so ask rather than tell
                       Text(
-                        "${getPrettyRouteName(bus.routeId)} left $minutesAgo minute${minutesAgo == 1 ? "" : "s"} ago",
+                        "On the ${getPrettyRouteName(prompt.routeId)}?",
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -281,7 +271,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                         ),
                       ),
                       Text(
-                        "Not on this bus?",
+                        "You've left ${prompt.stopName}.",
                         style: TextStyle(
                           fontSize: 14,
                           color: getColor(
@@ -290,6 +280,14 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                           ), // temporary placeholder, resolving some oddities
                         ),
                       ),
+                      if (rerouteError != null)
+                        Text(
+                          rerouteError,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: getColor(context, ColorType.error),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -300,22 +298,22 @@ class _NavigationOverlayState extends State<NavigationOverlay>
               children: [
                 Expanded(
                   child: missedBusButton(
-                    () {
-                      // debugPrint("Missed bus prompt: user asked to be rerouted");
-                      // TODO: Actually trigger the reroute, and show the
-                      // "What bus are you on?" bus picker.
-                      clearMissedBusPrompt();
-                    },
-                    const Text("Reroute me"),
+                    // Ignore taps while a reroute is already underway
+                    manager.isRerouting ? () {} : () => manager.reroute(),
+                    Text(
+                      manager.isRerouting ? "Rerouting…" : "Reroute me",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     icon: Icons.refresh,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: missedBusButton(
-                    clearMissedBusPrompt,
-                    const Text("Dismiss"),
-                    icon: Icons.close,
+                    manager.confirmBoarded,
+                    const Text("I'm on it"),
+                    icon: Icons.check,
                   ),
                 ),
               ],
@@ -516,11 +514,16 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 ),
               ),
 
-              // MaterialButton(
-              //   color: Colors.red.shade900,
-              //   child: Text("Show Oops dialog"),
-              //   onPressed: () => widget.navigationManager.showOopsDialog(),
-              // ),
+              // Debug builds only: raises the missed bus prompt for the upcoming
+              // bus as if you'd just left its stop, so it can be tried without
+              // standing at a real one.
+              if (kDebugMode)
+                MaterialButton(
+                  color: Colors.red.shade900,
+                  child: Text("Show missed bus prompt"),
+                  onPressed: () =>
+                      widget.navigationManager.debugForceLeftStop(),
+                ),
               // Expanded(child: SizedBox.expand()),
               // SizedBox.expand(),
               // const Spacer(),
@@ -734,7 +737,9 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                               bottom: 5,
                             ),
                             child: Text(
-                              "eta 5:67 ● 21 min",
+                              navigationEtaText(
+                                widget.navigationManager.arrivalTime,
+                              ),
                               style: TextStyle(
                                 color: getColor(
                                   context,
