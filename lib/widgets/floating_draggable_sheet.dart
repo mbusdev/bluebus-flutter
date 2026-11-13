@@ -26,6 +26,7 @@ class FloatingDraggableSheet extends StatefulWidget {
     super.key,
     required this.builder,
     required this.color,
+    this.controller,
     this.collapsedSize = 0.12,
     this.expandedSize = 0.85,
     this.inset = 10,
@@ -34,6 +35,10 @@ class FloatingDraggableSheet extends StatefulWidget {
     this.topRadius = 25,
     this.boxShadow = const [],
   });
+
+  /// Optional controller, so the owner can watch the sheet's drag progress (or
+  /// drive it). One is created internally if this is null.
+  final DraggableScrollableController? controller;
 
   /// Builds the sheet's contents. The [ScrollController] must be handed to a
   /// scrollable descendant, exactly like [DraggableScrollableSheet.builder].
@@ -45,6 +50,8 @@ class FloatingDraggableSheet extends StatefulWidget {
 
   /// Height of the visible (floating) sheet as a fraction of the available
   /// height, excluding the [inset] below it.
+  ///
+  /// Can change to accomodate our new footer dialogue
   final double collapsedSize;
 
   /// Height of the fully expanded sheet as a fraction of the available height.
@@ -73,12 +80,54 @@ class FloatingDraggableSheet extends StatefulWidget {
 }
 
 class _FloatingDraggableSheetState extends State<FloatingDraggableSheet> {
-  final DraggableScrollableController _controller =
-      DraggableScrollableController();
+  /// Only created (and disposed) when the owner didn't pass one in.
+  DraggableScrollableController? _ownedController;
+
+  DraggableScrollableController get _controller =>
+      widget.controller ?? (_ownedController ??= DraggableScrollableController());
+
+  /// The height the [LayoutBuilder] last laid the sheet out against, so
+  /// [didUpdateWidget] can convert a [collapsedSize] into a real extent
+  /// outside of a layout pass.
+  double? _availableHeight;
+
+  /// The sheet's box always reaches the bottom of the screen and the inset is
+  /// drawn inside of it, so the collapsed box has to be taller by the inset for
+  /// the visible part to still be [collapsedSize] tall.
+  double _minSizeFor(double collapsedSize, double availableHeight) {
+    return (collapsedSize + widget.inset / availableHeight)
+        .clamp(0.0, widget.expandedSize);
+  }
+
+  @override
+  void didUpdateWidget(covariant FloatingDraggableSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.collapsedSize == oldWidget.collapsedSize) return;
+
+    // DraggableScrollableSheet reacts to a changed minChildSize by clamping,
+    // so it grows on its own but never shrinks back. Drive both directions
+    // explicitly instead, and only when the sheet is parked at the collapsed
+    // size--a sheet the user has dragged open shouldn't be yanked around.
+    final double? availableHeight = _availableHeight;
+    if (availableHeight == null) return;
+
+    final double oldMinSize = _minSizeFor(oldWidget.collapsedSize, availableHeight);
+    final double newMinSize = _minSizeFor(widget.collapsedSize, availableHeight);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.isAttached) return;
+      if (_controller.size > oldMinSize + 0.001) return; // user has it open
+      _controller.animateTo(
+        newMinSize,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ownedController?.dispose();
     super.dispose();
   }
 
@@ -86,12 +135,9 @@ class _FloatingDraggableSheetState extends State<FloatingDraggableSheet> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // The sheet's box always reaches the bottom of the screen and the inset
-        // is drawn inside of it, so the collapsed box has to be taller by the
-        // inset for the visible part to still be [collapsedSize] tall.
-        final double minSize = (widget.collapsedSize +
-                widget.inset / constraints.maxHeight)
-            .clamp(0.0, widget.expandedSize);
+        _availableHeight = constraints.maxHeight;
+        final double minSize =
+            _minSizeFor(widget.collapsedSize, constraints.maxHeight);
 
         return DraggableScrollableSheet(
           controller: _controller,
