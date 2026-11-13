@@ -1834,6 +1834,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         ),
                         child: Column(
                           children: [
+                            // Hidden (and untappable) during navigation, so
+                            // Settings can't be opened mid-trip. Keeps its
+                            // space so nothing below it moves.
+                            Visibility(
+                              visible: !_navigationOverlayEnabled,
+                              maintainSize: true,
+                              maintainAnimation: true,
+                              maintainState: true,
+                              child:
                             // if showing journey, show header
                             (_journeyOverlayActive)
                                 ? DecoratedBox(
@@ -2033,6 +2042,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                   ),
                                                   child: FloatingActionButton(
                                                     onPressed: () async {
+                                                      // Hidden during navigation anyway, but
+                                                      // never leave a trip for Settings
+                                                      if (_navigationOverlayEnabled) return;
                                                       // switch to settings menu
                                                       // with the MaterialPagesRoute animation
                                                       Navigator.push(
@@ -2062,6 +2074,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       ],
                                     ),
                                   ),
+                            ),
 
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 250),
