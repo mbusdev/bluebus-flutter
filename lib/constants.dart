@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'generated_client/api.dart' as backend;
 import 'models/banner_message.dart';
 
 // UPDATE WHEN RELAUNCH
@@ -41,6 +43,8 @@ const String BACKEND_URL = String.fromEnvironment(
 
 // base url to use when for backend requests via openapi generated clients
 final String backendOpenApiUrl = BACKEND_URL.replaceAll('/mbus/api/v3', '');
+
+final backend.ApiClient backendClient = backend.ApiClient(Dio(BaseOptions(baseUrl: backendOpenApiUrl)));
 
 List<Map<String, String>> globalAvailableRoutes = [];
 
