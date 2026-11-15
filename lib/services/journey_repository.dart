@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../constants.dart';
 import '../models/journey.dart';
 
@@ -10,20 +9,22 @@ class JourneyRepository {
     required double destLat,
     required double destLon,
   }) async {
-    final uri = Uri.parse('$BACKEND_URL/plan-journey').replace(queryParameters: {
-      'originLat': originLat.toString(),
-      'originLon': originLon.toString(),
-      'destLat': destLat.toString(),
-      'destLon': destLon.toString(),
-    });
-    final response = await http.get(uri);
-    if (response.statusCode != 200) {
-      throw Exception('Failed to plan journey: status ${response.statusCode}');
+    try {
+      final response = await backendClient.getMbusApiV3PlanJourney(
+        originLat: originLat,
+        originLon: originLon,
+        destLat: destLat,
+        destLon: destLon,
+      );
+      return response.journeys.map(Journey.fromBackend).toList();
+    } on DioException catch (e) {
+      final res = e.response;
+      if (res != null && res.statusCode != 200) {
+        throw Exception('Failed to plan journey: status ${res.statusCode}');
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
     }
-    final data = jsonDecode(response.body);
-    if (data == null || data['journeys'] == null) {
-      throw Exception('No journeys found in response');
-    }
-    return (data['journeys'] as List).map((e) => Journey.fromJson(e)).toList();
   }
 }
