@@ -11,6 +11,12 @@ CYAN="\033[36m";
 WHITE="\033[37m";
 RESET="\033[0m";
 
+# Set up the generated_client submodule and keep it up to date with the commit
+# ref specified. Note that something like `git submodule update --remote` is
+# needed to change the ref itself.
+git submodule update --init --recursive
+git config set submodule.recurse true
+
 if flutter --version; then
     echo "Found Flutter installation!"
 else
