@@ -798,7 +798,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         .toSet();
     final newRouteIds = routes.map((r) => r.routeId).toSet();
 
-    journeyLayer.setRoutesCache(routes);
     liveBusesLayer.setRoutesCache(routes);
 
     _routePolylines.removeWhere((key, _) {

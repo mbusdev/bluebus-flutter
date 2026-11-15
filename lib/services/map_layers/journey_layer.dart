@@ -41,7 +41,6 @@ class JourneyLayer extends CompositeMapLayer {
   Set<String> activeJourneyRoutes = {};
   Set<Marker> liveBusMarkers = {};
 
-  Map<String, List<BusRouteLine>> routesCache = {};
   BuildContext? context;
 
   GoogleMapController? _mapController;
@@ -106,13 +105,6 @@ class JourneyLayer extends CompositeMapLayer {
     }
   }
 
-  void setRoutesCache(List<BusRouteLine> routes) {
-    routesCache.clear();
-    for (BusRouteLine l in routes) {
-      routesCache.putIfAbsent(l.routeId, () => []).add(l);
-    }
-  }
-
   // Helper to extract a contiguous segment from polyline points between two latlngs
   // Return null if indices are invalid or segment is too short.
   List<LatLng>? _extractRouteSegment(
@@ -151,50 +143,16 @@ class JourneyLayer extends CompositeMapLayer {
     final vid = leg.trip.vid;
     if (vid != null) activeJourneyBusIds.add(vid);
 
-    final rt = leg.rt;
-    final line = determineRouteOfBusLeg(routesCache, rt, leg.originID, leg.destinationID);
-
-    // debugPrint("Tracing path from ${leg.originID} to ${leg.destinationID}");
-
-    final LatLng? startLatLng = getLatLongFromStopID(leg.originID);
-    final LatLng? endLatLng = getLatLongFromStopID(leg.destinationID);
-
-    if (startLatLng != null && endLatLng != null && line?.points != null) {
-      List<LatLng>? segment = _extractRouteSegment(
-        line!.points,
-        startLatLng,
-        endLatLng,
-      );
-      if (segment == null) {
-        // debugPrint("ERROR: Line segment is null!");
-
-        // If something went wrong tracing streets between stops, just draw a straight
-        //  line between the start and end
-        final polyline = Polyline(
-          startCap: Cap.roundCap,
-          endCap: Cap.roundCap,
-          jointType: JointType.round,
-          polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
-          points: [startLatLng, endLatLng],
-          color: RouteColorService.getRouteColor(leg.rt),
-          width: 6,
-        );
-        polylines.add(polyline);
-      } else {
-        final polyline = Polyline(
-          startCap: Cap.roundCap,
-          endCap: Cap.roundCap,
-          jointType: JointType.round,
-          polylineId: PolylineId('journey_${journey.hashCode}_$legIndex'),
-          points: segment,
-          color: RouteColorService.getRouteColor(leg.rt),
-          width: 6,
-        );
-        polylines.add(polyline);
-      }
+    polylines.addAll(
+      NavOnBus.polylinesFromPathSegments(
+        leg.busPathSegments,
+        (seg) => PolylineId("journey_${journey.hashCode}_${seg.hashCode}"),
+        (seg) => PolylineId("journey_${journey.hashCode}_conn_${seg.hashCode}"),
+      ),
+    );
 
       // add stop markers at endpoints of the segment (boarding/getting off)
-      if ((segment?.first != null)) {
+      if (leg.stopCoords.isNotEmpty) {
         // Making sure the marker has a valid location
 
         // BitmapDescriptor iconBitmap = await RouteIcon.small(
@@ -207,7 +165,7 @@ class JourneyLayer extends CompositeMapLayer {
           Marker(
             flat: true,
             markerId: MarkerId('journey_stop_${leg.originID}_$legIndex'),
-            position: segment?.first ?? startLatLng,
+            position: leg.stopCoords.first.location,
             icon:
                 _getOn ??
                 // iconBitmap ??
@@ -217,14 +175,11 @@ class JourneyLayer extends CompositeMapLayer {
             anchor: Offset(0.5, 0.5),
           ),
         );
-      }
-      if ((segment?.last != null)) {
-        // Making sure the marker has a valid location
         markers.add(
           Marker(
             flat: true,
             markerId: MarkerId('journey_stop_${leg.destinationID}_$legIndex'),
-            position: segment?.last ?? endLatLng,
+            position: leg.stopCoords.last.location,
             icon:
                 _getOff ??
                 BitmapDescriptor.defaultMarkerWithHue(
@@ -233,7 +188,6 @@ class JourneyLayer extends CompositeMapLayer {
           ),
         );
       }
-    }
   }
 
   void addWalkingLegMarkersAndPolylines(
