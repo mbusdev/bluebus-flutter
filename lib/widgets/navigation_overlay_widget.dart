@@ -719,7 +719,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                                         // ]
                                       ),
                                       child: RouteIcon(
-                                        rtid: stage.state.rt,
+                                        rtid: stage.rt,
                                         width: 40,
                                         height: 40,
                                         fontSize: 20,
