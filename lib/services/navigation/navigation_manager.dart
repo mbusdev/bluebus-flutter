@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 import 'dart:math' as math;
-
 import 'package:geolocator/geolocator.dart';
 import 'package:bluebus/constants.dart';
 import 'package:bluebus/globals.dart';
@@ -18,7 +17,7 @@ import 'package:bluebus/utils/time.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-enum LineType { Dotted, Dashed}
+enum LineType { Dotted, Dashed }
 
 class NavigationStageStep {
   String title;
@@ -32,7 +31,7 @@ class NavigationStageStep {
     this.subtitle,
     required this.time,
     required this.color,
-    required this.lineType
+    required this.lineType,
   });
 
   String getTitle() {
@@ -54,7 +53,6 @@ class NavigationStageStep {
   LineType getLineType() {
     return lineType;
   }
-
 }
 
 sealed class NavigationStage {
@@ -73,8 +71,10 @@ sealed class NavigationStage {
     return getTitle();
   }
 
-  double length = 0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
-  double percent_complete = 0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
+  double length =
+      0.0; // Estimated length of your segment, in minutes (i.e. is it a 20-minute walk or 12-minute bus ride?)
+  double percent_complete =
+      0.0; // Estimated completion percentage of your segment (i.e. if you're 32% of the way through your walk)
 
   List<NavigationStageStep> getSteps() {
     return []; // Get navigation stage steps
@@ -96,12 +96,19 @@ sealed class NavigationStage {
     return false;
   }
 
+  void receiveLocationUpdate(LatLng newLocation) {
+    // Do whatever you need to with the current location.
+    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
+    //    emit(StageComplete()) // If the user has reached the end!
+  }
+
   // Broadcast so the NavigationManager can unsubscribe and resubscribe to the
   // same stage (e.g. when the user pages backwards) without the stream
   // complaining that it has already been listened to.
   final _eventController = StreamController<StageEvent>.broadcast();
 
-  Stream<StageEvent> get events => _eventController.stream; // The NavigationManager does yourStage.events to listen in
+  Stream<StageEvent> get events => _eventController
+      .stream; // The NavigationManager does yourStage.events to listen in
 
   /// How a stage talks back to the NavigationManager. Call this from your
   /// stage (usually from receiveLocationUpdate) when something happens:
@@ -122,17 +129,11 @@ sealed class NavigationStage {
   void initWithLeg(Leg leg) {
     // Do cool stuff to set up your Stage with an e.g. walking or bus leg
   }
-
-  void receiveLocationUpdate(LatLng newLocation) {
-    // Do whatever you need to with the current location.
-    // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
-    //    emit(StageComplete()) // If the user has reached the end!
-  }
 }
 
 enum RerouteReason {
   wrongBus,
-  walkPathChanged
+  walkPathChanged,
   // Feel free to add additional reasons as necessary
 }
 
@@ -153,7 +154,9 @@ class BusPromptOption {
 }
 
 sealed class StageEvent {}
+
 class StageComplete extends StageEvent {}
+
 class StageReroute extends StageEvent {
   final RerouteReason reason; // e.g. wrong bus, missed stop
   StageReroute(this.reason);
@@ -403,24 +406,30 @@ class NavOnBus extends NavigationStage {
   }
 }
 
-typedef Edge = ({ BusStop from, BusStop to, List<LatLng> points });
-typedef AdjacencyEntry = ({ BusStop from, Set<({ BusStop stop, List<LatLng> points })> tos });
+typedef Edge = ({BusStop from, BusStop to, List<LatLng> points});
+typedef AdjacencyEntry = ({
+  BusStop from,
+  Set<({BusStop stop, List<LatLng> points})> tos,
+});
 BusRouteLine? determineRouteOfBusLeg(
-  Map<String, List<BusRouteLine>> routesCache, String rt, String originID, String destinationID
+  Map<String, List<BusRouteLine>> routesCache,
+  String rt,
+  String originID,
+  String destinationID,
 ) {
   List<BusRouteLine> candidates = routesCache[rt] ?? [];
 
   // happy path
-  final directLine = candidates
-    .where((line) {
-      final stpids = line.stops.map((s) => s.$2.id);
-      return stpids.skipWhile((stpid) => stpid != originID).contains(destinationID);
-    })
-    .firstOrNull;
+  final directLine = candidates.where((line) {
+    final stpids = line.stops.map((s) => s.$2.id);
+    return stpids
+        .skipWhile((stpid) => stpid != originID)
+        .contains(destinationID);
+  }).firstOrNull;
   if (directLine != null) return directLine;
 
   // big sad path: graph traverse the entire route...
-  final Map<String, AdjacencyEntry> adjacency = {};  // for stpids
+  final Map<String, AdjacencyEntry> adjacency = {}; // for stpids
   // make the adjacency structure ...
   for (final line in candidates) {
     (int, BusStop)? prev;
@@ -428,8 +437,10 @@ BusRouteLine? determineRouteOfBusLeg(
       if (prev != null) {
         final (prevIdx, prevStop) = prev;
         // ignore: prefer_collection_literals (for better type inference)
-        adjacency.putIfAbsent(prevStop.id, () => (from: prevStop, tos: Set()))
-            .tos.add((stop: stop, points: line.points.sublist(prevIdx, i + 1)));
+        adjacency
+            .putIfAbsent(prevStop.id, () => (from: prevStop, tos: Set()))
+            .tos
+            .add((stop: stop, points: line.points.sublist(prevIdx, i + 1)));
       }
       prev = (i, stop);
     }
@@ -452,7 +463,9 @@ BusRouteLine? determineRouteOfBusLeg(
       for (final entry in neighbors.tos) {
         queue.addLast((
           entry.stop.id,
-          edges.followedBy([(from: neighbors.from, to: entry.stop, points: entry.points)]).toList()
+          edges.followedBy([
+            (from: neighbors.from, to: entry.stop, points: entry.points),
+          ]).toList(),
         ));
       }
     }
@@ -478,7 +491,7 @@ BusRouteLine? determineRouteOfBusLeg(
   );
 }
 
-class ChooseBus extends NavigationStage{
+class ChooseBus extends NavigationStage {
   String title = "Choose a Bus";
   //Not sure if we actually need this. Depends on if we want to filter out some buses from certain stops.
   List<Bus> potentialBuses = [];
@@ -521,29 +534,35 @@ class ChooseBus extends NavigationStage{
 
 //I believe this is just NavWalking but I'm doing it here to be sure.
 class Walking extends NavigationStage {
-  List<LatLng> points = [ //dummy pts taken from google maps by the cctc (replace later)
+  List<LatLng> points = [
+    //dummy pts taken from google maps by the cctc (replace later)
     const LatLng(42.27792397921826, -83.73596985653457),
     const LatLng(42.27756042901099, -83.7359661838265),
     const LatLng(42.27754197988967, -83.73706331473826),
-    const LatLng(42.2775215703816,  -83.73809993417933),
+    const LatLng(42.2775215703816, -83.73809993417933),
     const LatLng(42.278481544159916, -83.73811396072821),
   ];
   WalkingLeg? leg;
   Color color = Colors.black;
 
-  LatLng? currWalkingPos = const LatLng(42.27831772684626, -83.73599054149456); //near cctc (replace w user's location)
+  LatLng? currWalkingPos = const LatLng(
+    42.27831772684626,
+    -83.73599054149456,
+  ); //near cctc (replace w user's location)
 
   int _nextIndex = 0;
   static const double _reachThresholdMeters = 15.0;
 
   double _distMeters(LatLng a, LatLng b) {
     const R = 6371000.0;
-    final dLat = (b.latitude - a.latitude)  * math.pi / 180;
+    final dLat = (b.latitude - a.latitude) * math.pi / 180;
     final dLon = (b.longitude - a.longitude) * math.pi / 180;
-    final s = math.sin(dLat / 2) * math.sin(dLat / 2) +
+    final s =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(a.latitude * math.pi / 180) *
-          math.cos(b.latitude * math.pi / 180) *
-          math.sin(dLon / 2) * math.sin(dLon / 2);
+            math.cos(b.latitude * math.pi / 180) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
     return 2 * R * math.asin(math.sqrt(s));
   }
 
@@ -552,12 +571,15 @@ class Walking extends NavigationStage {
     final lat1 = a.latitude * math.pi / 180;
     final lat2 = b.latitude * math.pi / 180;
     final y = math.sin(dLon) * math.cos(lat2);
-    final x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    final x =
+        math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
     return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
   void setColor(Color newColor) {
-    color = newColor; // Flutter won't let us call getColor(context, ...) because we can only get context from inside a widget. Thus, we have to thread it through all the way from map_screen.dart. Great.
+    color =
+        newColor; // Flutter won't let us call getColor(context, ...) because we can only get context from inside a widget. Thus, we have to thread it through all the way from map_screen.dart. Great.
   }
 
   //call this whenever a new gps fix arrives, returns true if a waypoint was just cleared (so the ui can refresh)
@@ -596,7 +618,8 @@ class Walking extends NavigationStage {
   // in feet based on the current user position
   double getDistanceLeftFeet() {
     double distLeft = 0;
-    if (currWalkingPos != null) { // if GPS is broken/off, use distance from _nextIndex to the destination
+    if (currWalkingPos != null) {
+      // if GPS is broken/off, use distance from _nextIndex to the destination
       distLeft = _distMeters(currWalkingPos!, points[_nextIndex]);
     }
     // calculate remaining walking distance
@@ -610,7 +633,7 @@ class Walking extends NavigationStage {
   // such as "Walk 67 ft"
   @override
   String getFixedTitle() {
-    return "Walk ${(getDistanceLeftFeet().round()).ceil()} min";
+    return "Walk ${(length / 60).ceil()} min";
   }
 
   @override
@@ -676,16 +699,12 @@ class Walking extends NavigationStage {
           // PatternItem.dash(30), // Longer dashes
           PatternItem.gap(15), // Longer gaps
         ],
-      )
+      ),
     ];
   }
-
-
 }
 
-
 class DemoStage extends NavigationStage {
-
   String getTitle() {
     return "This is a demo! #$favoriteNumber";
   }
@@ -715,11 +734,12 @@ class DemoStage extends NavigationStage {
     required this.startPoint,
     required this.endPoint,
     required this.color,
-    required this.lineType
+    required this.lineType,
   });
 
   @override
-  Color getColor() { // Return a random color
+  Color getColor() {
+    // Return a random color
     // return Color(this.favoriteNumber.hashCode | 0xFF000000); // Return a color derived from this.favoriteNumber
     return color;
   }
@@ -810,7 +830,7 @@ class DemoStage extends NavigationStage {
     // Do cool stuff to set up your Stage with an e.g. walking or bus leg
   }
 
-  void receiveLocationUpdate(Position p) {
+  void receiveLocationUpdate(LatLng p) {
     // Do whatever you need to with the current location.
     // You might want to do some processing (e.g. figure out if the user is close to the end of their walking path) and send a stage event, e.g.:
     //    _eventController.add(StageComplete()) // If the user has reached the end!
@@ -1031,7 +1051,7 @@ class NavigationManager {
           walkingStage.setColor(walkingLineColor); // Because Flutter won't let us get a Context inside WalkingStage because it isn't a widget. Womp womp
           walkingStage.initWithLeg(leg);
           this.stageList.add(walkingStage);
-      } 
+      }
     }
 
     // this.stageList.add(
