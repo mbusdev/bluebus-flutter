@@ -1588,6 +1588,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
   // over and over without constantly doing a full
   // hardware gps lock
   Future<Position?> _getLastKnownLocation() async {
+    // return null;
     try {
       // Check if location services are enabled on the device
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -1595,36 +1596,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Location services are disabled'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return null;
-      }
-
-      // Check and request location permissions if needed
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location permission denied'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return null;
-        } else {
-          //Center map once right after user grants location permissions
-          _centerOnLocation(true);
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location permissions are denied. Please enable them in settings',
-            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -1643,6 +1614,38 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     }
 
     return null;
+  }
+
+  Future<bool> askLocationPermissionIfNecessary() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('To use location, please enable location permissions in your device settings'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      } else {
+        //Center map once right after user grants location permissions
+        return true;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'To use location, please enable location permissions in your device settings',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+    return true;
   }
 
   Future<void> centerOnBusID(BusProvider busProvider, String busId) async {
@@ -1670,6 +1673,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     double? zoom,
     double? bearing,
   }) async {
+
     // at first create a default position. User location can overwrite later if needed
     Position position = Position(
       longitude: long,
@@ -2216,13 +2220,16 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                                     ),
                                                               ),
                                                               child: FloatingActionButton.small(
-                                                                onPressed: () {
-                                                                  _setFollowMode(
-                                                                    true,
-                                                                  );
-                                                                  _centerOnLocation(
-                                                                    true,
-                                                                  );
+                                                                onPressed: () async {
+                                                                  bool hasPermission = await askLocationPermissionIfNecessary();
+                                                                  if (hasPermission) {
+                                                                    _setFollowMode(
+                                                                      true,
+                                                                    );
+                                                                    _centerOnLocation(
+                                                                      true,
+                                                                    );
+                                                                  }
                                                                 },
                                                                 heroTag:
                                                                     'location_fab',
