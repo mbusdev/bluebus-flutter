@@ -28,10 +28,11 @@ abstract final class FloorplanTypes {
   static const String inaccessible = 'inaccessible';
   static const String information = 'information';
   static const String food = 'food';
+  static const String printer = 'printer';
   static const String vendingMachine = 'vending_machine';
-  static const String femaleBathroom = 'female_bathroom';
-  static const String maleBathroom = 'male_bathroom';
-  static const String neutralBathroom = 'neutral_bathroom';
+  static const String femaleBathroom = 'restroom_female';
+  static const String maleBathroom = 'restroom_male';
+  static const String neutralBathroom = 'restroom_neutral';
 
   /// The two georeferencing markers a floor carries so we can line its plan
   /// pixels up with the real world. See [FloorplanProjection].

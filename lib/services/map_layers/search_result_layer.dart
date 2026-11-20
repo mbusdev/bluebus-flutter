@@ -15,6 +15,7 @@ class SearchResultLayer extends CompositeMapLayer {
   @override
   Set<Marker> markers = {};
   LatLng position = LatLng(0,0);
+  BitmapDescriptor _icon = BitmapDescriptor.defaultMarker;
 
   @override
   Function() onUpdate = () {
@@ -38,13 +39,14 @@ class SearchResultLayer extends CompositeMapLayer {
     markers.add(Marker(
       flat: true,
       markerId: MarkerId('search_result'),
-      icon: BitmapDescriptor.defaultMarker,
+      icon: _icon,
       position: position,
     ));
   }
 
-  void setPosition(LatLng position_in) {
+  void setPosition(LatLng position_in, {BitmapDescriptor? icon}) {
     position = position_in;
+    _icon = icon ?? BitmapDescriptor.defaultMarker;
     updateMarkers();
     onUpdate();
   }
