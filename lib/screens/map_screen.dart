@@ -1408,7 +1408,14 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
       
       // get user position
       final position = await _getLastKnownLocation();
-      if (position == null) return;
+      if (position == null) {
+        showMaizebusOKDialog(
+          contextIn: context,
+          title: "Location Error",
+          content: "Please make sure you have location permissions enabled in settings before trying to get directions",
+        );
+        return;
+      }
 
       // show nearby POIs of the search
       // gets center of the markers, which returns the user position if no markers were found within 600m
