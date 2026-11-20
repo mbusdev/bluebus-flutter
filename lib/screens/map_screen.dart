@@ -1697,7 +1697,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
             ),
           );
           return null;
-        } else {
+        } else if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
           //Center map once right after user grants location permissions
           _centerOnLocation(true);
         }
