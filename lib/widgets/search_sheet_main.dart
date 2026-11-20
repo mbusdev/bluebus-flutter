@@ -191,43 +191,43 @@ class LocationSearchBar extends HookWidget {
     final refreshKey = useState(0);
 
     final locations = useMemoized(() async {
-      try {
-        final buildingResponse = await http.get(
-          Uri.parse(BACKEND_URL + '/getBuildingLocations'),
-        );
-        List<Location> buildingLocs = [];
-        if (buildingResponse.statusCode == 200 &&
-            buildingResponse.body.trim().isNotEmpty &&
-            buildingResponse.body.trim() != '{}') {
-          final buildingLocations =
-              jsonDecode(buildingResponse.body) as List<dynamic>;
-          buildingLocs = buildingLocations.map((building) {
-            final name = building['buildingName'] as String;
-            final abbrev = building['abbrev'] as String?;
-            final altName = building['altName'] as String?;
-            final lat = building['lat'] as double;
-            final long = building['long'] as double;
-            return Location(
-              name,
-              (abbrev != null) ? abbrev : "",
-              [if (abbrev != null) abbrev, if (altName != null) altName],
-              false,
-              latlng: LatLng(lat, long),
-            );
-          }).toList();
-        }
+      // try fetching three times from backend,
+      // then if it doesn't work stop trying and just return stops
+      for (var i = 0; i < 3; ++i) {
+        try {
+          final buildingResponse = await http.get(
+            Uri.parse(BACKEND_URL + '/getBuildingLocations'),
+          );
+          List<Location> buildingLocs = [];
+          if (buildingResponse.statusCode == 200 &&
+              buildingResponse.body.trim().isNotEmpty &&
+              buildingResponse.body.trim() != '{}') {
+            final buildingLocations =
+                jsonDecode(buildingResponse.body) as List<dynamic>;
+            buildingLocs = buildingLocations.map((building) {
+              final name = building['buildingName'] as String;
+              final abbrev = building['abbrev'] as String?;
+              final altName = building['altName'] as String?;
+              final lat = building['lat'] as double;
+              final long = building['long'] as double;
+              return Location(
+                name,
+                (abbrev != null) ? abbrev : "",
+                [if (abbrev != null) abbrev, if (altName != null) altName],
+                false,
+                latlng: LatLng(lat, long),
+              );
+            }).toList();
+          }
 
-        final allLocs = [...buildingLocs, ...globalStopLocs];
-        if (allLocs.isEmpty) {
-          refreshKey.value++;
+          final allLocs = [...buildingLocs, ...globalStopLocs];
+          if (allLocs.isEmpty) continue; // try again if empty
+          return allLocs;
+        } catch (e) {
+          stderr.writeln('Failed to fetch locations: $e');
         }
-
-        return allLocs;
-      } catch (e) {
-        stderr.writeln('Failed to fetch locations: $e');
-        refreshKey.value++;
-        return globalStopLocs;
       }
+      return globalStopLocs;
     }, [refreshKey.value]);
 
     // buildings and stops ngram index
