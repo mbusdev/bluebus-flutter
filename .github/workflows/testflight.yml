@@ -68,6 +68,10 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
+          # build_app reads Xcode's build settings first. With Swift packages that can take well
+          # over fastlane's default 3 seconds on a fresh runner, which made a build fail.
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: 120
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: 3
       # Comments when the build succeeds or hits its time limit. A timed-out step reports
       # 'failure' like any other error, so the time it ran for tells the two apart.
       - name: Comment on PR
