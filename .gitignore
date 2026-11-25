@@ -102,6 +102,10 @@ unlinked_spec.ds
 **/ios/Runner/GeneratedPluginRegistrant.*
 **/ios/Flutter/gmap.xcconfig
 
+# iOS build outputs
+*.ipa
+*.dSYM.zip
+
 # macOS
 **/Flutter/ephemeral/
 **/Pods/

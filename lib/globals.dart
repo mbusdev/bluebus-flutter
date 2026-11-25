@@ -3,8 +3,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 List<Location> globalStopLocs = [];
 
-double globalFollowDistanceThresholdMeters = 8.0;
-int globalGpsUpdateDistanceFilterMeters = 5;
+double globalFollowDistanceThresholdMeters = 16.0;
+int globalGpsUpdateDistanceFilterMeters = 20;
+
+// TESTING TOGGLES (remove before release): camera behavior outside of navigation, toggled in settings.
+// Both off by default, so the main map doesn't recenter or rotate; only navigation stages (NavOnBus) do.
+bool globalAutoRecenterEnabled = false;
+bool globalRotateWithHeadingEnabled = false;
+// END TESTING TOGGLES
 
 // the global app padding
 // don't modify these here, instead use the helper function in map_screen.dart that sets these based on phone type and safe area insets
