@@ -1,0 +1,36 @@
+name: TestFlight from PR
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  testflight:
+    if: >
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/testflight') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+               github.event.comment.author_association)
+    runs-on: macos-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.3', bundler-cache: true, working-directory: ios }
+      - run: bundle exec fastlane beta
+        working-directory: ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+      - run: gh pr comment ${{ github.event.issue.number }} --body "This branch is now on TestFlight. Look for the build marked PR #${{ github.event.issue.number }}."
+        env:
+          GH_TOKEN: ${{ github.token }}
