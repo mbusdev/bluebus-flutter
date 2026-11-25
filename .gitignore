@@ -102,6 +102,10 @@ unlinked_spec.ds
 **/ios/Runner/GeneratedPluginRegistrant.*
 **/ios/Flutter/gmap.xcconfig
 
+# iOS build outputs
+*.ipa
+*.dSYM.zip
+
 # macOS
 **/Flutter/ephemeral/
 **/Pods/
@@ -134,3 +138,6 @@ app.*.symbols
 !/dev/ci/**/Gemfile.lock
 local.properties
 assets/floorplans/dudeMap.json
+
+# temporary local floor plans
+/assets/floorplans
