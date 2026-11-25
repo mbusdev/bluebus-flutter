@@ -2,22 +2,45 @@ name: TestFlight from PR
 on:
   issue_comment:
     types: [created]
+  # TEMP: lets this workflow be tested from Polish-Testflight before it's on main. Only pushes
+  # whose latest commit message contains [testflight] start a build; they build and comment on
+  # the PR in TEST_PR_NUMBER below. Remove this trigger and the blocks marked TEMP before merging.
+  push:
+    branches: [Polish-Testflight]
 
 jobs:
   testflight:
     if: >
-      github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/testflight') &&
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
-               github.event.comment.author_association)
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[testflight]')) ||
+      (github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/testflight') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+                github.event.comment.author_association))
     runs-on: macos-latest
+    # Longer than the build step's own limit, so the comment step still runs after a build timeout
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: write
+      issues: write # PR conversation comments go through the issues API
     steps:
-      - uses: actions/checkout@v4
+      - name: Find PR and comment that the build started
+        id: pr
+        uses: actions/github-script@v7
+        env:
+          # TEMP: the PR a test push builds and comments on. It needs the fastlane setup in ios/.
+          TEST_PR_NUMBER: 125
         with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
+          script: |
+            // TEMP: a push has no PR attached, so use the test PR
+            const pr = context.eventName === 'push' ? Number(process.env.TEST_PR_NUMBER) : context.issue.number;
+            core.setOutput('number', pr);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({ ...context.repo, issue_number: pr,
+              body: `Building PR #${pr} for TestFlight. This usually takes about 20 minutes. [Run log](${runUrl})` });
+      - uses: actions/checkout@v6
+        with:
+          ref: refs/pull/${{ steps.pr.outputs.number }}/head
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - uses: ruby/setup-ruby@v1
@@ -31,7 +54,12 @@ jobs:
           echo "GMapApiKey=$GOOGLE_MAPS_API_KEY" > ios/Flutter/gmap.xcconfig
           echo "$FIREBASE_OPTIONS_DART_BASE64" | base64 --decode > lib/firebase_options.dart
           echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
-      - run: bundle exec fastlane beta
+      - name: Record build start
+        run: echo "BUILD_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Build and upload to TestFlight
+        id: beta
+        timeout-minutes: 45 # keep in sync with BUILD_TIMEOUT_MINUTES in the comment step
+        run: bundle exec fastlane beta
         working-directory: ios
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -39,7 +67,28 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-      - run: gh pr comment ${{ github.event.issue.number }} --body "This branch is now on TestFlight. Look for the build marked PR #${{ github.event.issue.number }}."
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+      # Comments when the build succeeds or hits its time limit. A timed-out step reports
+      # 'failure' like any other error, so the time it ran for tells the two apart.
+      - name: Comment on PR
+        if: always() && (steps.beta.outcome == 'success' || steps.beta.outcome == 'failure')
+        uses: actions/github-script@v7
         env:
-          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          OUTCOME: ${{ steps.beta.outcome }}
+          BUILD_TIMEOUT_MINUTES: 45
+        with:
+          script: |
+            const pr = Number(process.env.PR_NUMBER);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const elapsed = Date.now() / 1000 - Number(process.env.BUILD_STARTED_AT);
+            const limit = Number(process.env.BUILD_TIMEOUT_MINUTES) * 60;
+            let body;
+            if (process.env.OUTCOME === 'success') {
+              body = `This branch is now on TestFlight. Look for the build marked PR #${pr}.`;
+            } else if (elapsed >= limit - 60) {
+              body = `The TestFlight build for PR #${pr} timed out after ${process.env.BUILD_TIMEOUT_MINUTES} minutes. [Run log](${runUrl})`;
+            } else {
+              return; // an ordinary failure: no comment
+            }
+            await github.rest.issues.createComment({ ...context.repo, issue_number: pr, body });
