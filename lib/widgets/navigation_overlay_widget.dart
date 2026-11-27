@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:bluebus/constants.dart';
@@ -7,7 +8,9 @@ import 'package:bluebus/services/journey_repository.dart';
 import 'package:bluebus/services/navigation/navigation_manager.dart';
 import 'package:bluebus/widgets/dialog.dart';
 import 'package:bluebus/widgets/floating_draggable_sheet.dart';
+import 'package:bluebus/utils/time.dart';
 import 'package:bluebus/widgets/route_icon.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -27,6 +30,59 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   bool planJourneyInProgress = false;
   TimelineInfo timelineInfo = TimelineInfo();
 
+  // Fraction of the screen the sheet occupies with nothing but the progress bar
+  // in it. TODO: Compute this from the progress bar instead of hardcoding it.
+  static const double _sheetCollapsed = 0.14;
+  static const double _sheetExpanded = 0.85;
+
+  // Flip to true to get the red "Show missed bus prompt" button back (debug
+  // builds only), for trying the prompt without standing at a real stop.
+  static const bool _showDebugButtons = false;
+
+  // Ours (not the sheet's) so we can watch the drag progress from out here.
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
+
+  // The prompt is pinned below the scrollable, so the collapsed sheet has to
+  // grow by however tall the prompt turns out to be.
+  final GlobalKey _promptKey = GlobalKey();
+  double _promptHeight = 0.0;
+
+  // The drag handle, progress bar and ETA line at the top of the sheet. While
+  // the prompt is up, the collapsed sheet shows exactly this much above it, so
+  // none of the step list pokes out in between.
+  final GlobalKey _headerKey = GlobalKey();
+  double _headerHeight = 0.0;
+
+  // The ListView's top padding above the header, and a little room below it
+  // (inside the spacer before the steps, so nothing shows there).
+  static const double _headerTopPadding = 15.0;
+  static const double _headerBottomGap = 5.0;
+
+  // Height the sheet lays itself out against, so fractions of it match the
+  // sheet's own. Set in build.
+  double _overlayHeight = 0.0;
+
+  double get _collapsedSize {
+    final double height = _overlayHeight > 0
+        ? _overlayHeight
+        : MediaQuery.sizeOf(context).height;
+    final bool promptUp = widget.navigationManager.missedBusPrompt != null;
+    final double base = (promptUp && _headerHeight > 0)
+        ? (_headerTopPadding + _headerHeight + _headerBottomGap) / height
+        : _sheetCollapsed;
+    return base + (_promptHeight / height);
+  }
+
+  /// 0 while the sheet is collapsed, 1 once it's fully expanded.
+  double _sheetProgress() {
+    if (!_sheetController.isAttached) return 0.0;
+    final double minSize = _collapsedSize;
+    return ((_sheetController.size - minSize) /
+            max(_sheetExpanded - minSize, 0.0001))
+        .clamp(0.0, 1.0);
+  }
+
   void updateTimeline() {
     // Call this after all the stages are loaded (or stages change)
     timelineInfo = widget.navigationManager.getTimeline();
@@ -39,12 +95,22 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     widget.navigationManager.registerOverlay(
       this,
     ); // does not set to null, see the navigation manager
+
+    // GPS fixes redraw the overlay, but standing still (eg. waiting at a
+    // stop) produces none, so this keeps the minutes until arrival counting.
+    _etaTicker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
   }
+
+  Timer? _etaTicker;
 
   @override
   void dispose() {
     // sets to null
     widget.navigationManager.unregisterOverlay(this);
+    _etaTicker?.cancel();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -57,6 +123,7 @@ class _NavigationOverlayState extends State<NavigationOverlay>
   }
 
   // the regular busOptions button
+  // NOTE: Currently not in use to match UI refactor but will leave it here for someone to use maybe
   Widget busOptionButton(Bus bus, VoidCallback onTap) {
     return Material(
       color: Colors.white,
@@ -116,73 +183,232 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     );
   }
 
-  // making this reusable, bit unecessary but if you need a red button with text!
-  Widget missedBusButton(VoidCallback onTap, Text text) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-        ),
-        child: text, // using passed in text parameter
+  // Special missedBusButton widget to trigger a reroute later...
+  // Notes: Can choose custom text, and an optional leading icon.
+  // No fixed width--wrap it in an Expanded/SizedBox to size it.
+  // Grey with an outline by default; pass colors for a solid button instead
+  // (eg. the red "Exit navigation").
+  Widget missedBusButton(
+    VoidCallback onTap,
+    Text text, {
+    IconData? icon,
+    Color? backgroundColor,
+    Color? foregroundColor,
+  }) {
+    final ButtonStyle style = ElevatedButton.styleFrom(
+      backgroundColor: backgroundColor ?? Colors.black12,
+      foregroundColor: foregroundColor ?? const Color.fromARGB(255, 40, 40, 40),
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: backgroundColor != null
+            ? BorderSide.none
+            : BorderSide(
+                color: getColor(context, ColorType.navigationStepsGray),
+              ),
       ),
-    ); // the beautiful pill of doom and despair
+    );
+
+    return SizedBox(
+      height: 50.0,
+      child: icon == null
+          ? ElevatedButton(onPressed: onTap, style: style, child: text)
+          : ElevatedButton.icon(
+              onPressed: onTap,
+              style: style,
+              icon: Icon(icon, size: 18),
+              label: text,
+            ),
+    ); // big beautiful pill (bbp)
   }
 
-  // The code below should diplay the "which bus are you on" popup from UI Team
-  // Should currently show (#4) (Version of the design..)
+  // The missed bus prompt ("On the Diag-to-Diag?") lives in the manager; these
+  // just redraw. It's pinned to the bottom of the sheet rather than shown as a
+  // dialog, so the map stays visible and undimmed behind it.
   @override
-  void displayOopsDialog() {
-    showUndismissableMaizebusDialog(
-      contextIn: context,
-      title: Text("Which bus are you on?"),
-      // Builder so the buttons below get a context underneath the dialog route and can pop it
-      content: Builder(
-        builder: (dialogContext) => Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 10.0,
-          children: [
-            // All of this data is currently placeholder
-            busOptionButton(
-              Bus(
-                id: "1234",
-                position: LatLng(12.1, 12.1),
-                routeId: "NES",
-                heading: 12.0,
-                fullness: "67%",
-                routeColor: Color.fromARGB(255, 9, 9, 239),
+  void displayMissedBusPrompt(MissedBusInfo info) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void clearMissedBusPrompt() {
+    if (mounted) setState(() {});
+  }
+
+  // The prompt's height decides how far the collapsed sheet has to grow, and we
+  // only know it once it's laid out. Only setState on an actual change, or this
+  // rebuilds forever.
+  void _measurePrompt() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final double height = _promptKey.currentContext?.size?.height ?? 0.0;
+      final double header =
+          _headerKey.currentContext?.size?.height ?? _headerHeight;
+      if ((height - _promptHeight).abs() < 0.5 &&
+          (header - _headerHeight).abs() < 0.5) {
+        return;
+      }
+      setState(() {
+        _promptHeight = height;
+        _headerHeight = header;
+      });
+    });
+  }
+
+  Widget missedBusPromptFooter() {
+    final NavigationManager manager = widget.navigationManager;
+    final MissedBusInfo? prompt = manager.missedBusPrompt;
+    if (prompt == null) {
+      if (_promptHeight != 0.0) _measurePrompt(); // shrink the sheet back
+      return const SizedBox.shrink();
+    }
+
+    _measurePrompt();
+
+    final String? rerouteError = manager.rerouteError;
+
+    return Container(
+      key: _promptKey,
+      color: getColor(context, ColorType.infoCardColor),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Separates the prompt from the steps, stopping short of the sheet's
+          // edges in line with the prompt's own padding
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 15,
+            endIndent: 15,
+            color: getColor(context, ColorType.navigationStepsGray),
+          ),
+          AnimatedBuilder(
+            // Only the padding follows the drag: while the sheet floats, the home
+            // indicator is below it, but an expanded sheet is flush with the screen
+            // and the buttons would land underneath it.
+            animation: _sheetController,
+            builder: (context, child) => Padding(
+              padding: EdgeInsets.fromLTRB(
+                15,
+                15,
+                15,
+                12 +
+                    MediaQuery.viewPaddingOf(context).bottom * _sheetProgress(),
               ),
-              () {
-                // debugPrint("Oops dialog: picked bus 1234 (NES)");
-                Navigator.pop(dialogContext);
-              },
+              child: child,
             ),
-            busOptionButton(
-              Bus(
-                id: "5678",
-                position: LatLng(12.1, 12.1),
-                routeId: "BB",
-                heading: 12.0,
-                fullness: "67%",
-                routeColor: Color.fromARGB(255, 9, 9, 239),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    RouteIcon.small(prompt.routeId),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // We only know the user left the stop, not that the
+                          // bus did, so ask rather than tell
+                          Text(
+                            "On the ${getPrettyRouteName(prompt.routeId)}?",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: getColor(context, ColorType.opposite),
+                            ),
+                          ),
+                          Text(
+                            "You've left ${prompt.stopName}.",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: getColor(
+                                context,
+                                ColorType.opposite,
+                              ), // temporary placeholder, resolving some oddities
+                            ),
+                          ),
+                          if (rerouteError != null)
+                            Text(
+                              rerouteError,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: getColor(context, ColorType.error),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: missedBusButton(
+                        // Ignore taps while a reroute is already underway
+                        manager.isRerouting ? () {} : () => manager.reroute(),
+                        Text(
+                          manager.isRerouting ? "Rerouting…" : "Reroute me",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        icon: Icons.refresh,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: missedBusButton(
+                        manager.confirmBoarded,
+                        const Text("I'm on it"),
+                        icon: Icons.check,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // "Your bus is arriving in 4 min", with the route's badge
+  Widget upcomingBusCard(UpcomingBusInfo bus) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+      padding: EdgeInsets.all(4),
+
+      decoration: BoxDecoration(
+        color: getColor(context, ColorType.navigationTopCardBG),
+        boxShadow: [
+          BoxShadow(
+            color: getColor(context, ColorType.mapButtonShadow),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Row(
+        children: [
+          RouteIcon(rtid: bus.routeId, width: 35, height: 35, fontSize: 20),
+          SizedBox.square(dimension: 10),
+          Expanded(
+            child: Text(
+              upcomingBusText(bus.arrivesAt!, live: bus.live),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              () {
-                // debugPrint("Oops dialog: picked bus 5678 (BB)");
-                Navigator.pop(dialogContext);
-              },
             ),
-            missedBusButton(() {
-              // debugPrint("Oops dialog: user missed the bus");
-              Navigator.pop(dialogContext);
-            }, Text("I missed the bus")),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -197,6 +423,19 @@ class _NavigationOverlayState extends State<NavigationOverlay>
     //     // TODO: Handle this case.
     //     throw UnimplementedError();
     // }
+    // The sheet sizes itself as a fraction of this height, so _collapsedSize
+    // converts to fractions of it too.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _overlayHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 0.0; // falls back to the screen height
+        return _buildOverlay(context);
+      },
+    );
+  }
+
+  Widget _buildOverlay(BuildContext context) {
     return Stack(
       children: [
         Padding(
@@ -346,42 +585,23 @@ class _NavigationOverlayState extends State<NavigationOverlay>
                 ],
               ),
 
-              Container(
-                margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                padding: EdgeInsets.all(4),
+              // Only while there's a bus still to catch (walking to it or
+              // waiting at its stop), so it comes back after a transfer
+              if (widget.navigationManager.upcomingBus case final bus?
+                  when bus.arrivesAt != null)
+                upcomingBusCard(bus),
 
-                decoration: BoxDecoration(
-                  color: getColor(context, ColorType.navigationTopCardBG),
-                  boxShadow: [
-                    BoxShadow(
-                      color: getColor(context, ColorType.mapButtonShadow),
-                      blurRadius: 10,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                  borderRadius: BorderRadius.circular(25),
+              // Debug builds only, and hidden unless _showDebugButtons is
+              // flipped on: raises the missed bus prompt for the upcoming bus
+              // as if you'd just left its stop, so it can be tried without
+              // standing at a real one.
+              if (kDebugMode && _showDebugButtons)
+                MaterialButton(
+                  color: Colors.red.shade900,
+                  child: Text("Show missed bus prompt"),
+                  onPressed: () =>
+                      widget.navigationManager.debugForceLeftStop(),
                 ),
-                child: Row(
-                  children: [
-                    RouteIcon(rtid: "BB", width: 35, height: 35, fontSize: 20),
-                    SizedBox.square(dimension: 10),
-                    Text(
-                      "You bus is arriving in mere moments",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // MaterialButton(
-              //   color: Colors.red.shade900,
-              //   child: Text("Show Oops dialog"),
-              //   onPressed: () => widget.navigationManager.showOopsDialog(),
-              // ),
               // Expanded(child: SizedBox.expand()),
               // SizedBox.expand(),
               // const Spacer(),
@@ -407,9 +627,10 @@ class _NavigationOverlayState extends State<NavigationOverlay>
 
         // TODO: Add a scrim that fades in when you drag up on the progress bar so that the background is darkened behind the DraggableScrollableSheet
         FloatingDraggableSheet(
+          controller: _sheetController,
           collapsedSize:
-              0.14, // TODO: Compute the height of the progress bar dynamically instead of using 14% of screen height as a hardcoded number
-          expandedSize: 0.85,
+              _collapsedSize, // Grows to make room for the missed bus prompt
+          expandedSize: _sheetExpanded,
           screenCornerRadius: globalScreenBottomRadius,
           color: getColor(context, ColorType.infoCardColor),
           boxShadow: [
@@ -420,488 +641,551 @@ class _NavigationOverlayState extends State<NavigationOverlay>
             ),
           ],
           builder: (context, scrollController) {
-            return ListView(
-              controller: scrollController,
-              padding: EdgeInsets.all(15),
+            // The missed bus prompt sits outside the scrollable so that it
+            // stays pinned to the bottom of the sheet however far it's dragged
+            // up, with the steps scrolling underneath it.
+            return Column(
               children: [
-                // Container(
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: EdgeInsets.all(15),
+                    children: [
+                      // Container(
 
-                // margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                // padding: EdgeInsets.all(8),
+                      // margin: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                      // padding: EdgeInsets.all(8),
 
-                // decoration: BoxDecoration(
-                //   color: getColor(context, ColorType.infoCardColor),
-                //   boxShadow: [
-                //     BoxShadow(
-                //       color: getColor(
-                //         context,
-                //         ColorType.mapButtonShadow,
-                //       ),
-                //       blurRadius: 10,
-                //       offset: Offset(0, 6),
-                //     ),
-                //   ],
-                //   borderRadius:
-                //       BorderRadius.circular(25),
-                // ),
-                // child:
+                      // decoration: BoxDecoration(
+                      //   color: getColor(context, ColorType.infoCardColor),
+                      //   boxShadow: [
+                      //     BoxShadow(
+                      //       color: getColor(
+                      //         context,
+                      //         ColorType.mapButtonShadow,
+                      //       ),
+                      //       blurRadius: 10,
+                      //       offset: Offset(0, 6),
+                      //     ),
+                      //   ],
+                      //   borderRadius:
+                      //       BorderRadius.circular(25),
+                      // ),
+                      // child:
 
-                // TODO: Figure out why the map panning is so laggy if there's a DraggableScrollableSheet on top
+                      // TODO: Figure out why the map panning is so laggy if there's a DraggableScrollableSheet on top
 
-                // NEXT STEPS TODO: get the steps showing inside the DraggableScrollableSheet and fix the lagging!
-                Row(
-                  // Drag handle
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 60,
-                      height: 5,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: getColor(
-                            context,
-                            ColorType.navigationCardProgressBG,
-                          ), // TODO: Make this a real color in constants.dart
-                          borderRadius: BorderRadius.circular(1000),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                      // NEXT STEPS TODO: get the steps showing inside the DraggableScrollableSheet and fix the lagging!
 
-                Column(
-                  children: [
-                    // ClipRRect(
-                    //   borderRadius: BorderRadius.circular(12),
-
-                    // child:
-                    Padding(
-                      padding: EdgeInsets.only(left: 10, right: 10),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          const double dotSize = 30.0;
-                          const double barHeight = 15.0;
-                          const double topPadding = dotSize;
-                          const double bottomPadding =
-                              10.0; // Space between the bar and the ETA text below it
-                          final double progressWidth =
-                              constraints.maxWidth *
-                              this.timelineInfo.activePositionPercentage;
-                          final double dotLeft = progressWidth - (dotSize / 2);
-                          // Centers the dot on the bar independently of the paddings above/below it
-                          const double dotTop =
-                              topPadding + (barHeight / 2) - (dotSize / 2);
-
-                          return Stack(
-                            clipBehavior: Clip.none,
+                      // Everything the collapsed sheet shows above the
+                      // missed bus prompt; measured for _collapsedSize
+                      Column(
+                        key: _headerKey,
+                        children: [
+                          Row(
+                            // Drag handle
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  top: topPadding,
-                                  bottom: bottomPadding,
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Stack(
-                                    children: [
-                                      Row(
-                                        children: this
-                                            .timelineInfo
-                                            .timelineSteps
-                                            .map((item) {
-                                              return Flexible(
-                                                flex: item.estimated_time
-                                                    .floor(), // Proportionally sizes to each item's time
-                                                child: Container(
-                                                  height: barHeight,
-                                                  decoration: BoxDecoration(
-                                                    color: item.color,
-                                                  ),
-                                                ),
-                                              );
-                                            })
-                                            .toList(),
-                                      ),
-                                      Positioned(
-                                        // Progress fill covering everything before the dot
-                                        left: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        width: progressWidth,
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: maizeBusBlue,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                              // Container(
-                              //     width: dotSize,
-                              //     height: dotSize,
-                              //     decoration: const BoxDecoration(
-                              //       color: Colors.red,
-                              //       shape: BoxShape.circle
-                              //     ),
-                              //   ),
-                              Positioned(
-                                // TODO: Make this thing animate smoooooothly!
-                                left: dotLeft,
-                                top: dotTop,
-                                child: Container(
-                                  width: dotSize,
-                                  height: dotSize,
+                              SizedBox(
+                                width: 60,
+                                height: 5,
+                                child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: getColor(
                                       context,
-                                      ColorType.infoCardColor,
-                                    ),
-                                    border: Border.all(
-                                      color: getColor(
-                                        context,
-                                        ColorType.navigationCardProgressFG,
-                                      ),
-                                      width: 5,
-                                    ),
-                                    shape: BoxShape.circle,
+                                      ColorType.navigationCardProgressBG,
+                                    ), // TODO: Make this a real color in constants.dart
+                                    borderRadius: BorderRadius.circular(1000),
                                   ),
                                 ),
                               ),
                             ],
-                          );
-                        },
-                      ),
-                    ),
+                          ),
 
-                    Padding(
-                      padding: EdgeInsets.only(left: 10, right: 10, bottom: 5),
-                      child: Text(
-                        "eta 5:67 ● 21 min",
-                        style: TextStyle(
-                          color: getColor(context, ColorType.navigationCardFG),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ],
-                  // )
-                ),
-
-                SizedBox.square(dimension: 20.0),
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.navigationManager.stageList.asMap().entries.map((
-                    entry,
-                  ) {
-                    int index = entry.key;
-                    NavigationStage stage = entry.value;
-
-                    bool shouldRoundTopCorners =
-                        (index == 0) || stage.hasRoundedCorners();
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Stack(
-                          children: [
-                            Row(
-                              children: [
-                                // ======== THIS IS THE TITLE LINE FOR EACH NAVIGATION STAGE ========
-                                Padding(padding: EdgeInsets.only(left: 10)),
-
-                                Container(
-                                  // Gray background behind colorful line segment
-                                  width: 30,
-                                  height: 50,
-                                  decoration: (index != 0)
-                                      ? BoxDecoration(
-                                          color: getColor(
-                                            context,
-                                            ColorType.navigationStepsGray,
-                                          ),
-                                          borderRadius: BorderRadius.only(
-                                            bottomLeft:
-                                                (index ==
-                                                    widget
-                                                            .navigationManager
-                                                            .stageList
-                                                            .length -
-                                                        1)
-                                                ? Radius.circular(20)
-                                                : Radius.circular(0),
-                                            bottomRight:
-                                                (index ==
-                                                    widget
-                                                            .navigationManager
-                                                            .stageList
-                                                            .length -
-                                                        1)
-                                                ? Radius.circular(20)
-                                                : Radius.circular(0),
-                                          ),
-                                        )
-                                      : null,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: stage.getColor(),
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: (shouldRoundTopCorners)
-                                            ? Radius.circular(20)
-                                            : Radius.circular(0),
-                                        topRight: (shouldRoundTopCorners)
-                                            ? Radius.circular(20)
-                                            : Radius.circular(0),
-                                        // bottomLeft: Radius.circular(20),
-                                        // bottomRight: Radius.circular(20)
-                                        bottomLeft:
-                                            (index ==
-                                                widget
-                                                        .navigationManager
-                                                        .stageList
-                                                        .length -
-                                                    1)
-                                            ? Radius.circular(20)
-                                            : Radius.circular(0),
-                                        bottomRight:
-                                            (index ==
-                                                widget
-                                                        .navigationManager
-                                                        .stageList
-                                                        .length -
-                                                    1)
-                                            ? Radius.circular(20)
-                                            : Radius.circular(0),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                Padding(padding: EdgeInsets.only(left: 15)),
-                                Text(
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  stage.getFixedTitle(),
-                                ),
-                                // Spacer(),
-                                Container(width: 40),
-                                // Text(stage.g())
-                              ],
-                            ),
-
-                            stage is NavOnBus
-                                ? Padding(
-                                    padding: EdgeInsets.only(left: 1),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                          9999,
-                                        ),
-                                        border: Border.all(
-                                          color: getColor(
-                                            context,
-                                            ColorType.infoCardColor,
-                                          ),
-                                          width: 4,
-                                        ),
-                                        // boxShadow: [
-                                        //   BoxShadow(
-                                        //     blurRadius: 3,
-                                        //     spreadRadius: 0,
-                                        //     color: Color(0x88000000)
-                                        //   )
-                                        // ]
-                                      ),
-                                      child: RouteIcon(
-                                        rtid: stage.state.rt,
-                                        width: 40,
-                                        height: 40,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                  )
-                                // Text(stage.state.rt)
-                                : SizedBox.shrink(),
-
-                            // Text("HIIIII"),
-                          ],
-                        ),
-
-                        ...stage.getSteps().asMap().entries.map((entry) {
-                          int sub_index = entry.key;
-                          NavigationStageStep step = entry.value;
-                          // NEXT STEPS TODO: get live location showing on the step list
-
-                          bool shouldRoundBottomCorners = false;
-
-                          if (index ==
-                                  widget.navigationManager.stageList.length -
-                                      1 &&
-                              sub_index == stage.getSteps().length - 1) {
-                            shouldRoundBottomCorners = true;
-                          }
-
-                          if (stage.hasRoundedCorners() &&
-                              sub_index == stage.getSteps().length - 1) {
-                            shouldRoundBottomCorners = true;
-                          }
-
-                          return Stack(
+                          Column(
                             children: [
-                              Positioned(
-                                left: 10,
-                                top: 0,
-                                bottom: 0,
-                                width: 30,
-                                child: Container(
-                                  // Gray background behind colorful line segment
-                                  width: 30,
-                                  // height: 40,
-                                  decoration:
-                                      (index !=
-                                          widget
-                                                  .navigationManager
-                                                  .stageList
-                                                  .length -
-                                              1)
-                                      ? BoxDecoration(
-                                          // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
-                                          color: getColor(
-                                            context,
-                                            ColorType.navigationStepsGray,
-                                          ),
-                                        )
-                                      : null,
-                                  child: Container(
-                                    // Colorful line segment
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: step.getColor(),
-                                      borderRadius: BorderRadius.only(
-                                        bottomLeft: (shouldRoundBottomCorners)
-                                            ? Radius.circular(20)
-                                            : Radius.zero,
-                                        bottomRight: (shouldRoundBottomCorners)
-                                            ? Radius.circular(20)
-                                            : Radius.zero,
-                                      ),
-                                    ),
+                              // ClipRRect(
+                              //   borderRadius: BorderRadius.circular(12),
 
-                                    child: Container(
-                                      // Inside dot or dash
-                                      width: step.lineType == LineType.Dotted
-                                          ? ((sub_index ==
-                                                    stage.getSteps().length - 1)
-                                                ? 20
-                                                : 10)
-                                          : 4,
-                                      height: step.lineType == LineType.Dotted
-                                          ? ((sub_index ==
-                                                    stage.getSteps().length - 1)
-                                                ? 20
-                                                : 10)
-                                          : 16,
-                                      // color: Colors.white,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(100),
+                              // child:
+                              Padding(
+                                padding: EdgeInsets.only(left: 10, right: 10),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    const double dotSize = 30.0;
+                                    const double barHeight = 15.0;
+                                    const double topPadding = dotSize;
+                                    const double bottomPadding =
+                                        10.0; // Space between the bar and the ETA text below it
+                                    final double progressWidth =
+                                        constraints.maxWidth *
+                                        this
+                                            .timelineInfo
+                                            .activePositionPercentage;
+                                    final double dotLeft =
+                                        progressWidth - (dotSize / 2);
+                                    // Centers the dot on the bar independently of the paddings above/below it
+                                    const double dotTop =
+                                        topPadding +
+                                        (barHeight / 2) -
+                                        (dotSize / 2);
+
+                                    return Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Padding(
+                                          padding: EdgeInsets.only(
+                                            top: topPadding,
+                                            bottom: bottomPadding,
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            child: Stack(
+                                              children: [
+                                                Row(
+                                                  children: this
+                                                      .timelineInfo
+                                                      .timelineSteps
+                                                      .map((item) {
+                                                        return Flexible(
+                                                          // Proportionally sizes to each item's time. At
+                                                          // least 1: flex 0 makes the segment non-flexible
+                                                          // and it then can't size itself in the row
+                                                          flex: max(
+                                                            1,
+                                                            item.estimated_time
+                                                                .round(),
+                                                          ),
+                                                          child: Container(
+                                                            height: barHeight,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                                  color: item
+                                                                      .color,
+                                                                ),
+                                                          ),
+                                                        );
+                                                      })
+                                                      .toList(),
+                                                ),
+                                                Positioned(
+                                                  // Progress fill covering everything before the dot
+                                                  left: 0,
+                                                  top: 0,
+                                                  bottom: 0,
+                                                  width: progressWidth,
+                                                  child: DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                      color: maizeBusBlue,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      // color: Colors.white
-                                    ),
-                                  ),
+
+                                        // Container(
+                                        //     width: dotSize,
+                                        //     height: dotSize,
+                                        //     decoration: const BoxDecoration(
+                                        //       color: Colors.red,
+                                        //       shape: BoxShape.circle
+                                        //     ),
+                                        //   ),
+                                        Positioned(
+                                          // TODO: Make this thing animate smoooooothly!
+                                          left: dotLeft,
+                                          top: dotTop,
+                                          child: Container(
+                                            width: dotSize,
+                                            height: dotSize,
+                                            decoration: BoxDecoration(
+                                              color: getColor(
+                                                context,
+                                                ColorType.infoCardColor,
+                                              ),
+                                              border: Border.all(
+                                                color: getColor(
+                                                  context,
+                                                  ColorType
+                                                      .navigationCardProgressFG,
+                                                ),
+                                                width: 5,
+                                              ),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
 
                               Padding(
-                                padding: EdgeInsetsGeometry.only(
-                                  top: 10,
-                                  bottom: 10,
-                                  left: 55,
+                                padding: EdgeInsets.only(
+                                  left: 10,
+                                  right: 10,
+                                  bottom: 5,
                                 ),
-                                child: Row(
-                                  children: [
-                                    // Padding(padding: EdgeInsets.only(left: 20)),
-
-                                    // Padding(padding: EdgeInsets.only(left: 20)),
-                                    Expanded(child: Text(step.getTitle())),
-
-                                    // // Spacer(),
-                                    // Container(width: 40),
-                                    Text(step.getTime()),
-                                  ],
+                                child: Text(
+                                  navigationEtaText(
+                                    widget.navigationManager.arrivalTime,
+                                  ),
+                                  style: TextStyle(
+                                    color: getColor(
+                                      context,
+                                      ColorType.navigationCardFG,
+                                    ),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                  ),
                                 ),
                               ),
                             ],
+                            // )
+                          ),
+                        ],
+                      ),
+
+                      SizedBox.square(dimension: 20.0),
+
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: widget.navigationManager.stageList.asMap().entries.map((
+                          entry,
+                        ) {
+                          int index = entry.key;
+                          NavigationStage stage = entry.value;
+
+                          bool shouldRoundTopCorners =
+                              (index == 0) || stage.hasRoundedCorners();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Stack(
+                                children: [
+                                  Row(
+                                    children: [
+                                      // ======== THIS IS THE TITLE LINE FOR EACH NAVIGATION STAGE ========
+                                      Padding(
+                                        padding: EdgeInsets.only(left: 10),
+                                      ),
+
+                                      Container(
+                                        // Gray background behind colorful line segment
+                                        width: 30,
+                                        height: 50,
+                                        decoration: (index != 0)
+                                            ? BoxDecoration(
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.navigationStepsGray,
+                                                ),
+                                                borderRadius: BorderRadius.only(
+                                                  bottomLeft:
+                                                      (index ==
+                                                          widget
+                                                                  .navigationManager
+                                                                  .stageList
+                                                                  .length -
+                                                              1)
+                                                      ? Radius.circular(20)
+                                                      : Radius.circular(0),
+                                                  bottomRight:
+                                                      (index ==
+                                                          widget
+                                                                  .navigationManager
+                                                                  .stageList
+                                                                  .length -
+                                                              1)
+                                                      ? Radius.circular(20)
+                                                      : Radius.circular(0),
+                                                ),
+                                              )
+                                            : null,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: stage.getColor(),
+                                            borderRadius: BorderRadius.only(
+                                              topLeft: (shouldRoundTopCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                              topRight: (shouldRoundTopCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                              // bottomLeft: Radius.circular(20),
+                                              // bottomRight: Radius.circular(20)
+                                              bottomLeft:
+                                                  (index ==
+                                                      widget
+                                                              .navigationManager
+                                                              .stageList
+                                                              .length -
+                                                          1)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                              bottomRight:
+                                                  (index ==
+                                                      widget
+                                                              .navigationManager
+                                                              .stageList
+                                                              .length -
+                                                          1)
+                                                  ? Radius.circular(20)
+                                                  : Radius.circular(0),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      Padding(
+                                        padding: EdgeInsets.only(left: 15),
+                                      ),
+                                      Text(
+                                        style: TextStyle(
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        stage.getFixedTitle(),
+                                      ),
+                                      // Spacer(),
+                                      Container(width: 40),
+                                      // Text(stage.g())
+                                    ],
+                                  ),
+
+                                  stage is NavOnBus
+                                      ? Padding(
+                                          padding: EdgeInsets.only(left: 1),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(9999),
+                                              border: Border.all(
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.infoCardColor,
+                                                ),
+                                                width: 4,
+                                              ),
+                                              // boxShadow: [
+                                              //   BoxShadow(
+                                              //     blurRadius: 3,
+                                              //     spreadRadius: 0,
+                                              //     color: Color(0x88000000)
+                                              //   )
+                                              // ]
+                                            ),
+                                            child: RouteIcon(
+                                              rtid: stage.state.rt,
+                                              width: 40,
+                                              height: 40,
+                                              fontSize: 20,
+                                            ),
+                                          ),
+                                        )
+                                      // Text(stage.state.rt)
+                                      : SizedBox.shrink(),
+
+                                  // Text("HIIIII"),
+                                ],
+                              ),
+
+                              ...stage.getSteps().asMap().entries.map((entry) {
+                                int sub_index = entry.key;
+                                NavigationStageStep step = entry.value;
+                                // NEXT STEPS TODO: get live location showing on the step list
+
+                                bool shouldRoundBottomCorners = false;
+
+                                if (index ==
+                                        widget
+                                                .navigationManager
+                                                .stageList
+                                                .length -
+                                            1 &&
+                                    sub_index == stage.getSteps().length - 1) {
+                                  shouldRoundBottomCorners = true;
+                                }
+
+                                if (stage.hasRoundedCorners() &&
+                                    sub_index == stage.getSteps().length - 1) {
+                                  shouldRoundBottomCorners = true;
+                                }
+
+                                return Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 10,
+                                      top: 0,
+                                      bottom: 0,
+                                      width: 30,
+                                      child: Container(
+                                        // Gray background behind colorful line segment
+                                        width: 30,
+                                        // height: 40,
+                                        decoration:
+                                            (index !=
+                                                widget
+                                                        .navigationManager
+                                                        .stageList
+                                                        .length -
+                                                    1)
+                                            ? BoxDecoration(
+                                                // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
+                                                color: getColor(
+                                                  context,
+                                                  ColorType.navigationStepsGray,
+                                                ),
+                                              )
+                                            : null,
+                                        child: Container(
+                                          // Colorful line segment
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: step.getColor(),
+                                            borderRadius: BorderRadius.only(
+                                              bottomLeft:
+                                                  (shouldRoundBottomCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.zero,
+                                              bottomRight:
+                                                  (shouldRoundBottomCorners)
+                                                  ? Radius.circular(20)
+                                                  : Radius.zero,
+                                            ),
+                                          ),
+
+                                          child: Container(
+                                            // Inside dot or dash
+                                            width:
+                                                step.lineType == LineType.Dotted
+                                                ? ((sub_index ==
+                                                          stage
+                                                                  .getSteps()
+                                                                  .length -
+                                                              1)
+                                                      ? 20
+                                                      : 10)
+                                                : 4,
+                                            height:
+                                                step.lineType == LineType.Dotted
+                                                ? ((sub_index ==
+                                                          stage
+                                                                  .getSteps()
+                                                                  .length -
+                                                              1)
+                                                      ? 20
+                                                      : 10)
+                                                : 16,
+                                            // color: Colors.white,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.all(
+                                                Radius.circular(100),
+                                              ),
+                                            ),
+                                            // color: Colors.white
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    Padding(
+                                      padding: EdgeInsetsGeometry.only(
+                                        top: 10,
+                                        bottom: 10,
+                                        left: 55,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Padding(padding: EdgeInsets.only(left: 20)),
+
+                                          // Padding(padding: EdgeInsets.only(left: 20)),
+                                          Expanded(
+                                            child: Text(step.getTitle()),
+                                          ),
+
+                                          // // Spacer(),
+                                          // Container(width: 40),
+                                          Text(step.getTime()),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+
+                                // return Row(
+                                //   children: [
+                                //     Padding(padding: EdgeInsets.only(left: 20)),
+                                //     Container( // Gray background behind colorful line segment
+                                //       width: 30,
+                                //       height: 40,
+                                //       decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
+                                //         // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
+                                //         color: getColor(context, ColorType.navigationStepsGray)
+                                //       ) : null,
+                                //       child: Container( // Colorful line segment
+                                //         alignment: Alignment.center,
+                                //         decoration: BoxDecoration(
+                                //           color: step.getColor(),
+                                //           borderRadius: BorderRadius.only(
+                                //             bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
+                                //             bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
+                                //           )
+                                //         ),
+
+                                //         child: Container( // Inside dot or dash
+                                //           width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
+                                //           height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
+                                //           // color: Colors.white,
+                                //           decoration: BoxDecoration(
+                                //             color: Colors.white,
+                                //             borderRadius: BorderRadius.all(Radius.circular(100))
+                                //           ),
+                                //           // color: Colors.white
+                                //         )
+                                //       ),
+                                //     ),
+                                //     Padding(padding: EdgeInsets.only(left: 20)),
+                                //     Expanded(
+                                //       child: Text(step.getTitle() + step.getTitle()),
+                                //     ),
+
+                                //     // // Spacer(),
+                                //     // Container(width: 40),
+                                //     Text(step.getTime())
+                                //   ]
+                                // );
+                              }).toList(),
+                            ],
                           );
-
-                          // return Row(
-                          //   children: [
-                          //     Padding(padding: EdgeInsets.only(left: 20)),
-                          //     Container( // Gray background behind colorful line segment
-                          //       width: 30,
-                          //       height: 40,
-                          //       decoration: (index != widget.navigationManager.stageList.length - 1) ? BoxDecoration(
-                          //         // Only show the gray background if the box shouldn't have a rounded bottom (i.e. isn't at the end of the stage list)
-                          //         color: getColor(context, ColorType.navigationStepsGray)
-                          //       ) : null,
-                          //       child: Container( // Colorful line segment
-                          //         alignment: Alignment.center,
-                          //         decoration: BoxDecoration(
-                          //           color: step.getColor(),
-                          //           borderRadius: BorderRadius.only(
-                          //             bottomLeft: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero,
-                          //             bottomRight: (shouldRoundBottomCorners) ? Radius.circular(20) : Radius.zero
-                          //           )
-                          //         ),
-
-                          //         child: Container( // Inside dot or dash
-                          //           width: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 4,
-                          //           height: step.lineType == LineType.Dotted ? ((sub_index == stage.getSteps().length - 1) ? 20 : 10) : 16,
-                          //           // color: Colors.white,
-                          //           decoration: BoxDecoration(
-                          //             color: Colors.white,
-                          //             borderRadius: BorderRadius.all(Radius.circular(100))
-                          //           ),
-                          //           // color: Colors.white
-                          //         )
-                          //       ),
-                          //     ),
-                          //     Padding(padding: EdgeInsets.only(left: 20)),
-                          //     Expanded(
-                          //       child: Text(step.getTitle() + step.getTitle()),
-                          //     ),
-
-                          //     // // Spacer(),
-                          //     // Container(width: 40),
-                          //     Text(step.getTime())
-                          //   ]
-                          // );
+                          // return Text(stage.getTitle());
                         }).toList(),
-                      ],
-                    );
-                    // return Text(stage.getTitle());
-                  }).toList(),
-                ),
+                      ),
 
-                Padding(
-                  padding: EdgeInsets.only(top: 15, left: 10, right: 10),
-                  child: missedBusButton(
-                    // Routes through the map screen's PopScope, so this does exactly
-                    // what the Android system back button does (closes this overlay)
-                    () => Navigator.maybePop(context),
-                    const Text("Exit navigation"),
+                      Padding(
+                        padding: EdgeInsets.only(top: 15, left: 10, right: 10),
+                        child: missedBusButton(
+                          // Routes through the map screen's PopScope, so this does exactly
+                          // what the Android system back button does (closes this overlay)
+                          () => Navigator.maybePop(context),
+                          const Text("Exit navigation"),
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+
+                      // )
+                    ],
                   ),
                 ),
-
-                // )
+                missedBusPromptFooter(),
               ],
             );
           },

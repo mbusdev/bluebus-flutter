@@ -750,6 +750,8 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
     _currentCameraPos.dispose();
     _userHasInteractedWithMap.dispose();
     _connectivitySubscription?.cancel();
+    _posSub?.cancel();
+    navigationManager.stop();
     Provider.of<BusProvider>(context, listen: false).stopBusUpdates();
 
     if (_busProviderRef != null && _busProviderListener != null) {
@@ -769,6 +771,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
 
   void hideNavigation() {
     _navigationOverlayEnabled = false;
+    navigationManager.stop();
 
     navigationLayer.isVisible = false;
     journeyLayer.isVisible = false;
@@ -1319,7 +1322,25 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
               },
               scrollController: scrollController,
               onStartNavigation: (Journey journey) {
-                // TODO: Pass in the Journey from here and give it to the navigation overlay
+                final dest = _lastJourneyRequestDest;
+                final bool started = navigationManager.initFromJourney(
+                  journey,
+                  getColor(context, ColorType.mapWalkingLine),
+                  // Kept so the manager can reroute to the same place later
+                  destination: dest == null
+                      ? null
+                      : LatLng(dest['lat']!, dest['lon']!),
+                );
+                if (!started) {
+                  // Leave the directions sheet up so another route can be picked
+                  showMaizebusOKDialog(
+                    contextIn: context,
+                    title: "Error",
+                    content: "Couldn't start navigation for this route.",
+                  );
+                  return;
+                }
+
                 _bottomSheetController?.close();
 
                 baseRoutesLayer.isVisible = false;
@@ -1328,11 +1349,6 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                 navigationLayer.isVisible = true;
 
                 navigationLayer.reload(); // This reloads the map
-
-                navigationManager.initFromJourney(
-                  journey,
-                  getColor(context, ColorType.mapWalkingLine),
-                );
 
                 setState(() {
                   _navigationOverlayEnabled = true;
@@ -1836,6 +1852,15 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                         ),
                         child: Column(
                           children: [
+                            // Hidden (and untappable) during navigation, so
+                            // Settings can't be opened mid-trip. Keeps its
+                            // space so nothing below it moves.
+                            Visibility(
+                              visible: !_navigationOverlayEnabled,
+                              maintainSize: true,
+                              maintainAnimation: true,
+                              maintainState: true,
+                              child:
                             // if showing journey, show header
                             (_journeyOverlayActive)
                                 ? DecoratedBox(
@@ -2035,6 +2060,9 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                                   ),
                                                   child: FloatingActionButton(
                                                     onPressed: () async {
+                                                      // Hidden during navigation anyway, but
+                                                      // never leave a trip for Settings
+                                                      if (_navigationOverlayEnabled) return;
                                                       // switch to settings menu
                                                       // with the MaterialPagesRoute animation
                                                       Navigator.push(
@@ -2064,6 +2092,7 @@ class _MaizeBusCoreState extends State<MaizeBusCore> {
                                       ],
                                     ),
                                   ),
+                            ),
 
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 250),
