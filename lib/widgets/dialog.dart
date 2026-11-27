@@ -104,3 +104,75 @@ Future<T?> showUndismissableMaizebusDialog<T>({
     },
   );
 }
+
+
+// Shows any number of buttons as options,
+// and the Future returns the string of the button that was selected by the user
+Future<String?> showDialogOptions({
+  required BuildContext contextIn,
+  required String title,
+  required String content,
+  required List<String> options,
+}) {
+  return showDialog<String>(
+    context: contextIn,
+    builder: (BuildContext context) {
+      // generate buttons list
+      List<Widget> buttons = [];
+
+      for (final String buttonText in options) {
+        buttons.add(SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
+              backgroundColor: getColor(context, ColorType.importantButtonBackground),
+              foregroundColor: getColor(context, ColorType.importantButtonText),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30), // Rounded corners
+              ),
+              elevation: 0
+            ),
+            onPressed: () => Navigator.pop(context, buttonText),
+            child: Text(
+              buttonText,
+              style: TextStyle(
+                color: getColor(context, ColorType.importantButtonText),
+                fontSize: 18, 
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Urbanist',
+              ),
+            )
+          ),
+        ));
+      }
+
+      return AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(36.0),
+        ),
+        backgroundColor: getColor(context, ColorType.background),
+        titlePadding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+        titleTextStyle: TextStyle(
+          color: getColor(context, ColorType.opposite),
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Urbanist',
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+        contentTextStyle: TextStyle(
+          color: getColor(context, ColorType.opposite),
+          fontSize: 18,
+          fontFamily: 'Urbanist',
+        ),
+        actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        actionsAlignment: MainAxisAlignment.end,
+        
+        title: Text(title),
+        content: Text(content),
+        actionsOverflowButtonSpacing: 12,
+        actions: buttons
+      );
+    },
+  );
+}

@@ -158,6 +158,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                       backgroundColor: Colors.transparent,
                                       builder: (BuildContext context) {
                                         return SearchSheet(
+                                          isRoomSearch: false,
                                           onSearch: (Location location, isStop, id) {
                                             final searchCoordinates = location.latlng;
                                             // null-proofing
@@ -218,6 +219,7 @@ class _DirectionsSheetState extends State<DirectionsSheet> {
                                       backgroundColor: Colors.transparent,
                                       builder: (BuildContext context) {
                                         return SearchSheet(
+                                          isRoomSearch: false,
                                           onSearch: (Location location, isStop, id) {
                                             final searchCoordinates = location.latlng;
                                             // null-proofing
