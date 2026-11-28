@@ -52,6 +52,14 @@ You have two options for getting your API key: either use a Maps Demo Key or get
 2. Follow <https://firebase.google.com/docs/flutter/setup>
 3. (iOS) Do this <https://firebase.google.com/docs/cloud-messaging/get-started?platform=flutter#upload-authentication-key>
 
+## Generated Backend Clients
+
+Included as a submodule. If there are changes to the backend that you'd like to
+incorporate you can update the submodule to the most recent version with
+`git submodule update --remote`. If your branch depends on a specific version
+of the backend you may need to change the target branch of the submodule, which
+would require making edits to `.gitmodules`.
+
 ## Running the App (IOS)
 
 1. **Launch the iOS Simulator:**
